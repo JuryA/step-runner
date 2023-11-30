@@ -28,7 +28,7 @@ type entry struct {
 
 func New() (*Definitions, error) {
 	cacheDir := os.TempDir() + string(os.PathSeparator) + "step-runner-cache-" + strconv.Itoa(int(rand.Uint32()))
-	err := os.Mkdir(cacheDir, 0750)
+	err := os.MkdirAll(cacheDir, 0750)
 	if err != nil {
 		return nil, fmt.Errorf("making cache dir %q: %w", cacheDir, err)
 	}
