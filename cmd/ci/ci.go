@@ -37,11 +37,10 @@ func run() error {
 	// Inherit process environment
 	// TODO: require all steps to set all required environment variables from job context
 	for _, e := range os.Environ() {
-		fields := strings.Split(e, "=")
-		if len(fields) != 2 {
-			continue
+		k, v, ok := strings.Cut(e, "=")
+		if ok {
+			globalCtx.Env[k] = v
 		}
-		globalCtx.Env[fields[0]] = fields[1]
 	}
 	execution, err := runner.New(defs, globalCtx, def.Steps)
 	if err != nil {
