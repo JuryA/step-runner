@@ -2,9 +2,8 @@ package output
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
-	"strconv"
+	"path/filepath"
 	"strings"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
@@ -26,17 +25,16 @@ type Files struct {
 }
 
 func New(step *proto.Step) (*Files, error) {
-	dir := os.TempDir() + string(os.PathSeparator) + "step-runner-output-" + strconv.Itoa(int(rand.Uint32()))
-	err := os.Mkdir(dir, 0750)
+	dir, err := os.MkdirTemp("", "step-runner-output-*")
 	if err != nil {
 		return nil, fmt.Errorf("making output directoy: %w", err)
 	}
-	outputFile := dir + string(os.PathSeparator) + outputFilename
+	outputFile := filepath.Join(dir, outputFilename)
 	err = os.WriteFile(outputFile, []byte{}, 0660)
 	if err != nil {
 		return nil, fmt.Errorf("creating output file: %w", err)
 	}
-	exportFile := dir + string(os.PathSeparator) + exportFilename
+	exportFile := filepath.Join(dir, exportFilename)
 	err = os.WriteFile(exportFile, []byte{}, 0660)
 	if err != nil {
 		return nil, fmt.Errorf("creating export file: %w", err)

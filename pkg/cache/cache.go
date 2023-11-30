@@ -2,11 +2,9 @@ package cache
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -27,8 +25,7 @@ type entry struct {
 }
 
 func New() (*Definitions, error) {
-	cacheDir := filepath.Join(os.TempDir(), fmt.Sprintf("step-runner-cache-%d", rand.Uint32()))
-	err := os.MkdirAll(cacheDir, 0750)
+	cacheDir, err := os.MkdirTemp("", "step-runner-cache-*")
 	if err != nil {
 		return nil, fmt.Errorf("making cache dir %q: %w", cacheDir, err)
 	}
@@ -76,8 +73,7 @@ func (d *Definitions) fetchLocal(s string) (*entry, error) {
 }
 
 func (d *Definitions) fetchGit(s string) (*entry, error) {
-	dir := d.cacheDir + string(os.PathSeparator) + strconv.Itoa(int(rand.Uint32()))
-	err := os.Mkdir(dir, 0750)
+	dir, err := os.MkdirTemp(d.cacheDir, "step-*")
 	if err != nil {
 		return nil, fmt.Errorf("making dir for cloning: %w", err)
 	}
@@ -90,7 +86,7 @@ func (d *Definitions) fetchGit(s string) (*entry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("couldn't figure out the folder in %q: %w", s, err)
 	}
-	return load(dir + string(os.PathSeparator) + folder)
+	return load(filepath.Join(dir, folder))
 }
 
 func execIn(dir string, c string, args ...string) error {
@@ -107,7 +103,7 @@ func execIn(dir string, c string, args ...string) error {
 }
 
 func load(dir string) (*entry, error) {
-	filename := dir + string(os.PathSeparator) + "step.yml"
+	filename := filepath.Join(dir, "step.yml")
 	spec, def, err := step.LoadSpecDef(filename)
 	if err != nil {
 		return nil, fmt.Errorf("loading file %q: %w", dir, err)
