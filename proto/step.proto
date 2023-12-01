@@ -1,0 +1,81 @@
+syntax = "proto3";
+package proto;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "../proto";
+
+message Step {
+    string name = 1; 
+    string step = 2;
+    map<string,string> env = 3;
+    map<string,google.protobuf.Value> inputs = 4;
+}
+
+message Definition {
+    DefinitionType type = 1;
+    Exec exec = 2;
+    repeated Step steps = 3;
+    message Exec {
+        repeated string command = 1;
+        string work_dir = 2;
+    }
+    map<string,string> outputs = 4;
+}
+
+enum DefinitionType {
+    definition_type_unspecified = 0;
+    exec = 1;
+    steps = 2;
+}
+
+message Spec {
+    Content spec = 1;
+    message Content {
+        map<string,Input> inputs = 1;
+        message Input {
+            InputType type = 1;
+            google.protobuf.Value default = 2;
+        }
+        map<string,Output> outputs = 2;
+        message Output {
+            string default = 1;
+        }
+    }
+}
+
+message StepDefinition {
+    Spec spec = 1;
+    Definition definition = 2;
+    string dir = 3;
+}
+
+message StepCall {
+    map<string,google.protobuf.Value> inputs = 1;
+    map<string,string> env = 2;
+}
+
+enum InputType {
+    spec_type_unspecified = 0;
+    string = 1;
+    number = 2;
+    bool = 3;
+    struct = 4;
+    list = 5;
+}
+
+message StepResult {
+    Step step = 1;
+    StepDefinition stepDefinition = 2;
+    enum Status {
+        unspecified = 0;
+        running = 1;
+        success = 2;
+        failure = 3;
+    }
+    Status status = 4;
+    map<string,string> outputs = 5;
+    map<string,string> exports = 6;
+    int32 exit_code = 7;
+    repeated StepResult children_step_results = 8;
+}

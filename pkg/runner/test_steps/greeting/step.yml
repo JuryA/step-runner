@@ -1,0 +1,24 @@
+spec:
+  inputs:
+    name:
+      type: string
+      default: steppy
+    age:
+      type: number
+      default: 1
+    hungry:
+      type: bool
+      default: false
+    favorites:
+      type: struct
+      default:
+        color: red
+---
+type: exec
+exec:
+  command:
+    - go
+    - run
+    - .
+    - --name=${{inputs.name}}
+    - --greeting=meet ${{inputs.name}} who is ${{inputs.age}} likes ${{inputs.favorites}} and is hungry ${{inputs.hungry}}
