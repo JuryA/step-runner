@@ -5,10 +5,21 @@ import (
 	"fmt"
 	"strings"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	"google.golang.org/protobuf/types/known/structpb"
 )
+
+func InterpolateString(globalCtx *context.Global, stepsCtx *context.Steps, value string) string {
+	matches := merge(globalMatches(globalCtx), outputMatches(stepsCtx))
+	return replaceAll(structpb.NewStringValue(value), matches).GetStringValue()
+}
+
+func InterpolateProtoValue(globalCtx *context.Global, stepsCtx *context.Steps, value *structpb.Value) *structpb.Value {
+	matches := merge(globalMatches(globalCtx), outputMatches(stepsCtx))
+	return replaceAll(value, matches)
+}
 
 func InterpolateInputs(globalCtx *context.Global, stepsCtx *context.Steps, step *proto.Step) error {
 	matches := merge(globalMatches(globalCtx), outputMatches(stepsCtx))
