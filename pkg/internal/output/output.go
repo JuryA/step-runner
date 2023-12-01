@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/joho/godotenv"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -18,13 +19,13 @@ const (
 )
 
 type Files struct {
-	step       *proto.Step
+	stepCtx    *context.Steps
 	dir        string
 	outputFile string
 	exportFile string
 }
 
-func New(step *proto.Step) (*Files, error) {
+func New(stepCtx *context.Steps) (*Files, error) {
 	dir, err := os.MkdirTemp("", "step-runner-output-*")
 	if err != nil {
 		return nil, fmt.Errorf("making output directoy: %w", err)
@@ -39,25 +40,21 @@ func New(step *proto.Step) (*Files, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating export file: %w", err)
 	}
-	if step.Env == nil {
-		step.Env = map[string]string{}
-	}
-	step.Env[outputFileKey] = outputFile
-	step.Env[exportFileKey] = exportFile
+	stepCtx.Env[outputFileKey] = outputFile
+	stepCtx.Env[exportFileKey] = exportFile
 	return &Files{
-		step:       step,
+		stepCtx:    stepCtx,
 		dir:        dir,
 		outputFile: outputFile,
 		exportFile: exportFile,
 	}, nil
 }
 
-func (f *Files) OutputTo(stepCtx *context.Steps, result *proto.StepResult) error {
+func (f *Files) OutputTo(result *proto.StepResult) error {
 	outputs, err := godotenv.Read(f.outputFile)
 	if err != nil {
 		return fmt.Errorf("reading outputs: %w", err)
 	}
-	stepCtx.Outputs[f.step.Name] = outputs
 	result.Outputs = outputs
 	return nil
 }
@@ -74,12 +71,6 @@ func (f *Files) ExportTo(globalCtx *context.Global, result *proto.StepResult) er
 	return nil
 }
 
-func (f *Files) Cleanup(result *proto.StepResult) {
-	delete(f.step.Env, outputFileKey)
-	delete(f.step.Env, exportFileKey)
-	if result != nil {
-		delete(result.Step.Env, outputFileKey)
-		delete(result.Step.Env, exportFileKey)
-	}
+func (f *Files) Cleanup() {
 	os.RemoveAll(f.dir)
 }
