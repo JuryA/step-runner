@@ -18,12 +18,12 @@ var Cmd = &cobra.Command{
 	Use:   "ci",
 	Short: "Run steps in a CI environment variable STEPS",
 	Args:  cobra.ExactArgs(0),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: run,
 		return run()
 	},
 }
 
-func run() error {
+func run(cmd *cobra.Command, args []string) error {
 	steps := os.Getenv("STEPS")
 	def, err := step.ReadSteps(steps)
 	if err != nil {
