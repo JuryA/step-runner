@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
@@ -38,7 +37,7 @@ func run() error {
 	globalCtx := context.NewGlobal()
 	globalCtx.InheritEnv(os.Environ()...)
 
-	execution, err := runner.New(globalCtx)
+	execution, err := runner.New(defs)
 	if err != nil {
 		return fmt.Errorf("creating execution: %w", err)
 	}
@@ -51,12 +50,12 @@ func run() error {
 	}
 	stepCall := &proto.StepCall{}
 
-	result, err = execution.Run(ctx.Background(), specDefinition, stepCall, globalCtx)
+	result, err := execution.Run(ctx.Background(), specDefinition, stepCall, globalCtx)
 	if err != nil {
 		return fmt.Errorf("running execution: %w", err)
 	}
 
-	bytes, err := json.MarshalIndent(results, "", "  ")
+	bytes, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		return fmt.Errorf("error marshaling step results: %w", err)
 	}
