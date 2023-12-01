@@ -30,32 +30,32 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", steps, err)
 	}
+
 	defs, err := cache.New()
 	if err != nil {
 		return fmt.Errorf("creating cache: %w", err)
 	}
 	globalCtx := context.NewGlobal()
-	// Inherit process environment
-	// TODO: require all steps to set all required environment variables from job context
-	for _, e := range os.Environ() {
-		k, v, ok := strings.Cut(e, "=")
-		if ok {
-			globalCtx.Env[k] = v
-		}
-	}
-	execution, err := runner.New(ctx.Background(), defs, globalCtx, def.Steps)
+	globalCtx.InheritEnv(os.Environ()...)
+
+	execution, err := runner.New(globalCtx)
 	if err != nil {
 		return fmt.Errorf("creating execution: %w", err)
 	}
-	var results []*proto.StepResult
-	fn := func(r *proto.StepResult, log string) {
-		results = append(results, r)
-		fmt.Println(log)
+
+	specDefinition := &proto.StepDefinition{
+		Spec: &proto.Spec{
+			Spec: &proto.Spec_Content{},
+		},
+		Definition: def,
 	}
-	err = execution.Run(fn)
+	stepCall := &proto.StepCall{}
+
+	result, err = execution.Run(ctx.Background(), specDefinition, stepCall, globalCtx)
 	if err != nil {
 		return fmt.Errorf("running execution: %w", err)
 	}
+
 	bytes, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		return fmt.Errorf("error marshaling step results: %w", err)

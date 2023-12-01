@@ -3,6 +3,7 @@ package context
 import (
 	"io"
 	"os"
+	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -20,6 +21,15 @@ func NewGlobal() *Global {
 		Env: map[string]string{},
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
+	}
+}
+
+func (g *Global) InheritEnv(envs... string) {
+	for _, e := range envs {
+		k, v, ok := strings.Cut(e, "=")
+		if ok {
+			g.Env[k] = v
+		}
 	}
 }
 
