@@ -11,13 +11,13 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-func InterpolateString(globalCtx *context.Global, stepsCtx *context.Steps, value string) string {
-	matches := merge(globalMatches(globalCtx), outputMatches(stepsCtx))
+func InterpolateString(stepsCtx *context.Steps, value string) string {
+	matches := merge(globalMatches(stepsCtx.Global), outputMatches(stepsCtx))
 	return replaceAll(structpb.NewStringValue(value), matches).GetStringValue()
 }
 
-func InterpolateProtoValue(globalCtx *context.Global, stepsCtx *context.Steps, value *structpb.Value) *structpb.Value {
-	matches := merge(globalMatches(globalCtx), outputMatches(stepsCtx))
+func InterpolateProtoValue(stepsCtx *context.Steps, value *structpb.Value) *structpb.Value {
+	matches := merge(globalMatches(stepsCtx.Global), outputMatches(stepsCtx))
 	return replaceAll(value, matches)
 }
 

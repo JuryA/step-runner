@@ -47,11 +47,12 @@ message Spec {
 message StepDefinition {
     Spec spec = 1;
     Definition definition = 2;
+    string dir = 3;
 }
 
 message StepCall {
     map<string,google.protobuf.Value> inputs = 1;
-    map<string,string> envs = 2;
+    map<string,string> env = 2;
 }
 
 enum InputType {
@@ -65,8 +66,7 @@ enum InputType {
 
 message StepResult {
     Step step = 1;
-    Spec spec = 2;
-    Definition def = 3;
+    StepDefinition stepDefinition = 2;
     enum Status {
         unspecified = 0;
         running = 1;

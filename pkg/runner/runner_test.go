@@ -4,6 +4,7 @@ import (
 	ctx "context"
 	"os"
 	"testing"
+	"bytes"
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
@@ -141,30 +142,38 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 		t.Run(c.name, func(t *testing.T) {
 			def, err := step.ReadSteps(c.yaml)
 			require.NoError(t, err)
+
 			defs, err := cache.New()
 			require.NoError(t, err)
 			defer defs.Cleanup()
+	
+			runner, err := New(defs)
+			require.NoError(t, err)
+
+			var log bytes.Buffer
+
 			globalCtx := context.NewGlobal()
 			globalCtx.Env["HOME"] = os.Getenv("HOME") // for `go run` steps
-			runner, err := New(ctx.Background(), defs, globalCtx, def.Steps)
-			require.NoError(t, err)
-			var (
-				results []*proto.StepResult
-				log     string
-			)
-			fn := func(r *proto.StepResult, l string) {
-				results = append(results, r)
-				log += l
+			globalCtx.Stdout = &log
+			globalCtx.Stderr = &log
+
+			specDefinition := &proto.StepDefinition{
+				Spec: &proto.Spec{
+					Spec: &proto.Spec_Content{},
+				},
+				Definition: def,
 			}
-			err = runner.Run(fn)
+			stepCall := &proto.StepCall{}
+
+			result, err := runner.Run(ctx.Background(), specDefinition, stepCall, globalCtx)
 			if c.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 				if c.wantLog != "" {
-					require.Equal(t, c.wantLog, log)
+					require.Equal(t, c.wantLog, log.String())
 				}
-				c.wantResults(t, results)
+				c.wantResults(t, result.ChildrenStepResults)
 			}
 		})
 	}
