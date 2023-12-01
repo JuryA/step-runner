@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/step-runner
 
-go 1.23
+go 1.21
 
 require (
 	github.com/golang/protobuf v1.5.0
