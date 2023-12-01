@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"github.com/joho/godotenv"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -53,7 +53,7 @@ func New(step *proto.Step) (*Files, error) {
 }
 
 func (f *Files) OutputTo(stepCtx *context.Steps, result *proto.StepResult) error {
-	outputs, err := readFile(f.outputFile)
+	outputs, err := godotenv.Read(f.outputFile)
 	if err != nil {
 		return fmt.Errorf("reading outputs: %w", err)
 	}
@@ -63,7 +63,7 @@ func (f *Files) OutputTo(stepCtx *context.Steps, result *proto.StepResult) error
 }
 
 func (f *Files) ExportTo(globalCtx *context.Global, result *proto.StepResult) error {
-	exports, err := readFile(f.exportFile)
+	exports, err := godotenv.Read(f.exportFile)
 	if err != nil {
 		return fmt.Errorf("reading exports: %w", err)
 	}
@@ -82,26 +82,4 @@ func (f *Files) Cleanup(result *proto.StepResult) {
 		delete(result.Step.Env, exportFileKey)
 	}
 	os.RemoveAll(f.dir)
-}
-
-func readFile(filename string) (map[string]string, error) {
-	bytes, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("reading file %v: %w", filename, err)
-	}
-	out := map[string]string{}
-	lines := strings.Split(string(bytes), "\n")
-	for _, l := range lines {
-		if len(l) == 0 {
-			continue
-		}
-		fields := strings.Split(l, "=")
-		if len(fields) < 2 {
-			return nil, fmt.Errorf("invalid line %q", l)
-		}
-		key := fields[0]
-		value := l[len(key)+1:]
-		out[key] = value
-	}
-	return out, nil
 }
