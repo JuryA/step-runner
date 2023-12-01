@@ -21,3 +21,15 @@ docker-build:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build -t $IMAGE_TAG .
     - docker push $IMAGE_TAG
+
+e2e:
+  stage: e2e
+  image: $IMAGE_TAG
+  variables:
+    STEPS: |
+      type: steps
+      steps:
+        - name: hello-world
+          step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/step-runner-e2e-test-project
+          inputs:
+            echo: ${CI_PIPELINE_ID}
