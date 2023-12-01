@@ -25,6 +25,8 @@ docker-build:
 e2e:
   stage: e2e
   image: $IMAGE_TAG
+  script:
+    - /step-runner ci
   variables:
     STEPS: |
       type: steps
