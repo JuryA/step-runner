@@ -5,7 +5,7 @@ stages:
   - deploy
 
 docker-build:
-  env:
+  variables:
     REGISTRY: ${CI_REGISTRY}/${CI_PROJECT_PATH}
     TAG: development-${CI_PIPELINE_ID}
   script:
