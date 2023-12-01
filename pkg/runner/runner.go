@@ -33,13 +33,12 @@ func (e *Execution) createContext(specDefinition *proto.StepDefinition, stepCall
 	// Match inputs with definition
 	for key, value := range specDefinition.Spec.Spec.Inputs {
 		callValue := stepCall.Inputs[key]
-		if value.Default == nil {
-			if callValue == nil {
-				return nil, fmt.Errorf("input %q required, but not defined", key)
-			}
+		if callValue != nil {
 			stepsCtx.Inputs[key] = callValue
-		} else {
+		} else if value.Default != nil {
 			stepsCtx.Inputs[key] = value.Default
+		} else {
+			return nil, fmt.Errorf("input %q required, but not defined", key)
 		}
 	}
 
@@ -60,14 +59,19 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, s
 		return nil, err
 	}
 
-	var result *proto.StepResult
+	result := &proto.StepResult{
+		StepDefinition: specDefinition,
+		Status: proto.StepResult_success,
+		Outputs: make(map[string]string),
+		Exports: make(map[string]string),
+	}
 
 	switch specDefinition.Definition.Type {
 	case proto.DefinitionType_exec:
-		result, err = e.runExec(ctx, specDefinition.Definition.Exec, stepsCtx)
+		err = e.runExec(result, ctx, specDefinition.Definition.Exec, stepsCtx)
 
 	case proto.DefinitionType_steps:
-		result, err = e.runSteps(ctx, specDefinition.Definition.Steps, stepsCtx)
+		err = e.runSteps(result, ctx, specDefinition.Definition.Steps, stepsCtx)
 
 	default:
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
@@ -75,18 +79,22 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, s
 
 	if result != nil {
 		result.StepDefinition = specDefinition
+
+		for k, v := range specDefinition.Definition.Outputs {
+			result.Outputs[k] = expression.InterpolateString(stepsCtx, v)
+		}
 	}
 	return result, err
 }
 
-func (e *Execution) runExec(ctx ctx.Context, execDefinition *proto.Definition_Exec, stepsCtx *context.Steps) (*proto.StepResult, error) {
+func (e *Execution) runExec(result *proto.StepResult, ctx ctx.Context, execDefinition *proto.Definition_Exec, stepsCtx *context.Steps) error {
 	if err := ctx.Err(); err != nil {
-		return nil, fmt.Errorf("exec cancelled: %w", err)
+		return fmt.Errorf("exec cancelled: %w", err)
 	}
 
 	files, err := output.New(stepsCtx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer files.Cleanup()
 
@@ -109,44 +117,43 @@ func (e *Execution) runExec(ctx ctx.Context, execDefinition *proto.Definition_Ex
 	cmd.Stderr = stepsCtx.Global.Stderr
 	err = cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("exec: %w", err)
-	}
-	exitCode := cmd.ProcessState.ExitCode()
-	status := proto.StepResult_failure
-	if exitCode == 0 {
-		status = proto.StepResult_success
+		return fmt.Errorf("exec: %w", err)
 	}
 
-	result := &proto.StepResult{
-		Status:   status,
-		ExitCode: int32(exitCode),
+	if cmd.ProcessState.ExitCode() != 0 {
+		result.ExitCode = int32(cmd.ProcessState.ExitCode())
+		result.Status = proto.StepResult_failure
 	}
 
 	err = files.OutputTo(result)
 	if err != nil {
-		return nil, fmt.Errorf("outputting: %w", err)
+		return fmt.Errorf("outputting: %w", err)
 	}
 	err = files.ExportTo(stepsCtx.Global, result)
 	if err != nil {
-		return nil, fmt.Errorf("exporting: %w", err)
+		return fmt.Errorf("exporting: %w", err)
 	}
 
-	return result, nil
+	return nil
 }
 
-func (e *Execution) runSteps(ctx ctx.Context, stepsDefinition []*proto.Step, stepsCtx *context.Steps) (*proto.StepResult, error) {
-	result := &proto.StepResult{}
-
+func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDefinition []*proto.Step, stepsCtx *context.Steps) error {
 	for _, step := range stepsDefinition {
 		stepResult, err := e.runStep(ctx, step, stepsCtx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		result.ChildrenStepResults = append(result.ChildrenStepResults, stepResult)
+
+		// One step failed, return early
+		if stepResult.Status == proto.StepResult_failure {
+			result.Status = proto.StepResult_failure
+			break
+		}
 	}
 
-	return result, nil
+	return nil
 }
 
 func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx *context.Steps) (*proto.StepResult, error) {

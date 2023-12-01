@@ -23,6 +23,14 @@ func NewGlobal() *Global {
 	}
 }
 
+func (g *Global) GetMatches() map[string]*structpb.Value {
+	m := make(map[string]*structpb.Value)
+	for k, v := range g.Job {
+		m["job." + k] = structpb.NewStringValue(v)
+	}
+	return m
+}
+
 type Steps struct {
 	Global *Global
 
@@ -38,6 +46,22 @@ func NewSteps() *Steps {
 		Inputs: map[string]*structpb.Value{},
 		Outputs: map[string]map[string]string{},
 	}
+}
+
+func (s *Steps) GetMatches() map[string]*structpb.Value {
+	m := make(map[string]*structpb.Value)
+	for k, v := range s.Global.GetMatches() {
+		m[k] = v
+	}
+	for name, value := range s.Inputs {
+		m["inputs." + name] = value
+	}
+	for step, outputs := range s.Outputs {
+		for name, value := range outputs {
+			m["steps." + step + ".outputs." + name] = structpb.NewStringValue(value)
+		}
+	}
+	return m
 }
 
 func (s *Steps) GetEnvs() map[string]string {
