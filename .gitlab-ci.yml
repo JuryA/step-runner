@@ -5,10 +5,10 @@ stages:
   - deploy
 
 docker-build:
+  image: docker:20.10.16
   variables:
     REGISTRY: ${CI_REGISTRY}/${CI_PROJECT_PATH}
     TAG: development-${CI_PIPELINE_ID}
   script:
     - docker build -t ${REGISTRY}:${TAG} .
     - docker push ${REGISTRY}:${TAG}
-
