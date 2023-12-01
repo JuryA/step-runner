@@ -18,9 +18,7 @@ var Cmd = &cobra.Command{
 	Use:   "ci",
 	Short: "Run steps in a CI environment variable STEPS",
 	Args:  cobra.ExactArgs(0),
-	RunE: run,
-		return run()
-	},
+	RunE:  run,
 }
 
 func run(cmd *cobra.Command, args []string) error {
