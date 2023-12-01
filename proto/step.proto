@@ -37,11 +37,21 @@ message Spec {
             InputType type = 1;
             google.protobuf.Value default = 2;
         }
-	map<string,Output> outputs = 2;
+        map<string,Output> outputs = 2;
         message Output {
             string default = 1;
         }
     }
+}
+
+message StepDefinition {
+    Spec spec = 1;
+    Definition definition = 2;
+}
+
+message StepCall {
+    map<string,google.protobuf.Value> inputs = 1;
+    map<string,string> envs = 2;
 }
 
 enum InputType {
