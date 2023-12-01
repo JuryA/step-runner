@@ -5,6 +5,7 @@ stages:
   - deploy
 
 test:
+  image: golang:1.21
   script:
     - go test ./...
 
