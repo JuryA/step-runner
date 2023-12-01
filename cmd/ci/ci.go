@@ -1,6 +1,7 @@
 package ci
 
 import (
+	ctx "context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -42,7 +43,7 @@ func run() error {
 			globalCtx.Env[k] = v
 		}
 	}
-	execution, err := runner.New(defs, globalCtx, def.Steps)
+	execution, err := runner.New(ctx.Background(), defs, globalCtx, def.Steps)
 	if err != nil {
 		return fmt.Errorf("creating execution: %w", err)
 	}

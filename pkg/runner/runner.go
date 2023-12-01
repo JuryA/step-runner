@@ -1,6 +1,7 @@
 package runner
 
 import (
+	ctx "context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -13,14 +14,16 @@ import (
 )
 
 type Execution struct {
+	ctx       ctx.Context
 	defs      *cache.Definitions
 	globalCtx *context.Global
 	stepsCtx  *context.Steps
 	steps     []*proto.Step
 }
 
-func New(defs *cache.Definitions, globalCtx *context.Global, steps []*proto.Step) (*Execution, error) {
+func New(ctx ctx.Context, defs *cache.Definitions, globalCtx *context.Global, steps []*proto.Step) (*Execution, error) {
 	return &Execution{
+		ctx:       ctx,
 		defs:      defs,
 		globalCtx: globalCtx,
 		stepsCtx:  context.NewSteps(),
@@ -36,11 +39,14 @@ func (e *Execution) Run(fn Return) error {
 
 func (e *Execution) run(stepsCtx *context.Steps, steps []*proto.Step, trace Return) error {
 	for _, s := range steps {
+		if err := e.ctx.Err(); err != nil {
+			return fmt.Errorf("run cancelled: %w", err)
+		}
 		err := expression.InterpolateInputs(e.globalCtx, e.stepsCtx, s)
 		if err != nil {
 			return fmt.Errorf("interpolating step %q: %w", s.Name, err)
 		}
-		spec, def, dir, err := e.defs.Get(s.Step)
+		spec, def, dir, err := e.defs.Get(e.ctx, s.Step)
 		if err != nil {
 			return fmt.Errorf("getting step %q definition: %w", s.Name, err)
 		}
@@ -92,6 +98,9 @@ func (e *Execution) run(stepsCtx *context.Steps, steps []*proto.Step, trace Retu
 }
 
 func (e *Execution) runExec(s *proto.Step, spec *proto.Spec, def *proto.Definition, dir string) (*proto.StepResult, string, error) {
+	if err := e.ctx.Err(); err != nil {
+		return nil, "", fmt.Errorf("exec cancelled: %w", err)
+	}
 	cmd := exec.Command(def.Exec.Command[0], def.Exec.Command[1:]...)
 	cmd.Dir = dir
 	// Only explicitly provided environment variables
@@ -121,6 +130,9 @@ func (e *Execution) runExec(s *proto.Step, spec *proto.Spec, def *proto.Definiti
 }
 
 func (e *Execution) runSteps(s *proto.Step, spec *proto.Spec, def *proto.Definition) (*proto.StepResult, string, error) {
+	if err := e.ctx.Err(); err != nil {
+		return nil, "", fmt.Errorf("steps cancelled: %w", err)
+	}
 	var log strings.Builder
 	result := &proto.StepResult{
 		Step: s,

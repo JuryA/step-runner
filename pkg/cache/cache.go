@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -39,7 +40,10 @@ func (d *Definitions) Cleanup() {
 	os.RemoveAll(d.cacheDir)
 }
 
-func (d *Definitions) Get(step string) (*proto.Spec, *proto.Definition, string, error) {
+func (d *Definitions) Get(ctx context.Context, step string) (*proto.Spec, *proto.Definition, string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, nil, "", fmt.Errorf("get cancelled: %w", err)
+	}
 	d.mux.Lock()
 	defer d.mux.Unlock()
 	var err error

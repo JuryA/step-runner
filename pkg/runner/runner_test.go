@@ -1,6 +1,7 @@
 package runner
 
 import (
+	ctx "context"
 	"os"
 	"testing"
 
@@ -145,7 +146,7 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 			defer defs.Cleanup()
 			globalCtx := context.NewGlobal()
 			globalCtx.Env["HOME"] = os.Getenv("HOME") // for `go run` steps
-			runner, err := New(defs, globalCtx, def.Steps)
+			runner, err := New(ctx.Background(), defs, globalCtx, def.Steps)
 			require.NoError(t, err)
 			var (
 				results []*proto.StepResult
