@@ -53,6 +53,7 @@ docker-push:
   services:
     - docker:20.10.16-dind
   script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker pull $IMAGE_TAG
     - docker tag $IMAGE_TAG $CI_REGISTRY_IMAGE:v0
     - docker push $CI_REGISTRY_IMAGE:v0
