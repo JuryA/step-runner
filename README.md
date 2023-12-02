@@ -10,7 +10,7 @@ hello-world-job:
       type: steps
       steps:
         - name: hello-world-step
-          step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/step-runner-e2e-test-project
+          step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step
           inputs:
             echo: hello world
   artifacts:
