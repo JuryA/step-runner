@@ -2,10 +2,17 @@ variables:
   IMAGE_TAG: $CI_REGISTRY_IMAGE:pipeline-$CI_PIPELINE_ID
 
 stages:
+  - debug
   - test
   - build
   - e2e
   - deploy
+
+debug-jq:
+  stage: debug
+  script:
+    - apt update
+    - apt install -y jq
 
 go-test:
   stage: test
