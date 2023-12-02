@@ -23,7 +23,7 @@ docker-build:
     - docker build -t $IMAGE_TAG .
     - docker push $IMAGE_TAG
 
-e2e:
+run-e2e:
   stage: e2e
   image: $IMAGE_TAG
   script:
@@ -36,3 +36,11 @@ e2e:
           step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/step-runner-e2e-test-project
           inputs:
             echo: ${CI_PIPELINE_ID}
+  artifacts:
+    paths:
+      - step-results.json
+
+verify-e2e:
+  stage: e2e
+  script:
+    - if [[ $(jq -r '.children_step_results[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
