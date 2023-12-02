@@ -1,0 +1,61 @@
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:pipeline-$CI_PIPELINE_ID
+
+stages:
+  - test
+  - build
+  - e2e
+  - deploy
+
+go-test:
+  stage: test
+  image: golang:1.21
+  script:
+    - go test ./...
+
+docker-build:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $IMAGE_TAG .
+    - docker push $IMAGE_TAG
+
+run-e2e:
+  stage: e2e
+  image: $IMAGE_TAG
+  script:
+    - /step-runner ci
+  variables:
+    STEPS: |
+      type: steps
+      steps:
+        - name: hello-world
+          step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/step-runner-e2e-test-project
+          inputs:
+            echo: ${CI_PIPELINE_ID}
+  artifacts:
+    paths:
+      - step-results.json
+
+verify-e2e:
+  stage: e2e
+  needs: ["run-e2e"]
+  script:
+    - apt update && apt install -y jq
+    - if [[ $(jq -r '.children_step_results[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
+
+docker-push:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker pull $IMAGE_TAG
+    - docker tag $IMAGE_TAG $CI_REGISTRY_IMAGE:v0
+    - docker push $CI_REGISTRY_IMAGE:v0
