@@ -2,17 +2,10 @@ variables:
   IMAGE_TAG: $CI_REGISTRY_IMAGE:pipeline-$CI_PIPELINE_ID
 
 stages:
-  - debug
   - test
   - build
   - e2e
   - deploy
-
-debug-jq:
-  stage: debug
-  script:
-    - apt update
-    - apt install -y jq
 
 go-test:
   stage: test
@@ -51,4 +44,5 @@ verify-e2e:
   stage: e2e
   needs: ["run-e2e"]
   script:
+    - apt update && apt install -y jq
     - if [[ $(jq -r '.children_step_results[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
