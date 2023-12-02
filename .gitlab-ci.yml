@@ -42,5 +42,6 @@ run-e2e:
 
 verify-e2e:
   stage: e2e
+  needs: ["run-e2e"]
   script:
     - if [[ $(jq -r '.children_step_results[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
