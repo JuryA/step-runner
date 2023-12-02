@@ -46,3 +46,13 @@ verify-e2e:
   script:
     - apt update && apt install -y jq
     - if [[ $(jq -r '.children_step_results[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
+
+docker-push:
+  stage: deploy
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker pull $IMAGE_TAG
+    - docker tag $IMAGE_TAG $CI_REGISTRY_IMAGE:v0
+    - docker push $CI_REGISTRY_IMAGE:v0
