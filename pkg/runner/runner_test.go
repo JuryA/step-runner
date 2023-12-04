@@ -1,10 +1,11 @@
 package runner
 
 import (
+	"bytes"
 	ctx "context"
+	"errors"
 	"os"
 	"testing"
-	"bytes"
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
@@ -19,7 +20,7 @@ func TestRun(t *testing.T) {
 		yaml        string
 		wantLog     string
 		wantResults func(*testing.T, []*proto.StepResult)
-		wantErr     bool
+		wantErr     error
 	}{{
 		name: "greeting with defaults",
 		yaml: `
@@ -98,12 +99,7 @@ steps:
     step: ./test_steps/greeting
     inputs:
       name: ${{steps.greet-sponge-bob.outputs.name}}`,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 2)
-			require.Equal(t, "sponge bob", results[0].Outputs["crew-name-1"])
-			require.Equal(t, "sponge bob", results[0].ChildrenStepResults[0].Outputs["name"])
-			require.Equal(t, "${{steps.greet-sponge-bob.outputs.name}}", results[1].Outputs["name"]) // not expanded
-		},
+		wantErr: errors.New(`Cannot assign input "name" due to error: "steps.greet-sponge-bob.outputs.name" cannot be evaluated`),
 	}, {
 		name: "complex steps",
 		yaml: `
@@ -146,7 +142,6 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 			defs, err := cache.New()
 			require.NoError(t, err)
 			defer defs.Cleanup()
-	
 			runner, err := New(defs)
 			require.NoError(t, err)
 
@@ -166,8 +161,8 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 			stepCall := &proto.StepCall{}
 
 			result, err := runner.Run(ctx.Background(), specDefinition, stepCall, globalCtx)
-			if c.wantErr {
-				require.Error(t, err)
+			if c.wantErr != nil {
+				require.Equal(t, c.wantErr, err)
 			} else {
 				require.NoError(t, err)
 				if c.wantLog != "" {
