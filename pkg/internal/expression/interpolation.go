@@ -3,7 +3,6 @@ package expression
 import (
 	"fmt"
 	"regexp"
-	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -16,14 +15,15 @@ const InterpolateClose = "}}"
 var interpolateRegex = regexp.MustCompile(regexp.QuoteMeta(InterpolateOpen) + "|" + regexp.QuoteMeta(InterpolateClose))
 
 func interpolateString(stepsCtx *context.Steps, value string) (*structpb.Value, error) {
-	output := []string{}
+	output := []*structpb.Value{}
 	depth := 0
 	prev_idx := 0
 	open_idx := 0
 
 	for _, loc := range interpolateRegex.FindAllStringIndex(value, -1) {
-		if depth == 0 {
-			output = append(output, value[prev_idx:loc[0]])
+		if depth == 0 && prev_idx != loc[0] {
+			// add prefix to output
+			output = append(output, structpb.NewStringValue(value[prev_idx:loc[0]]))
 		}
 		prev_idx = loc[1]
 
@@ -34,7 +34,6 @@ func interpolateString(stepsCtx *context.Steps, value string) (*structpb.Value, 
 			if depth == 1 {
 				open_idx = loc[1]
 			}
-			break
 
 		case InterpolateClose:
 			depth -= 1
@@ -51,12 +50,7 @@ func interpolateString(stepsCtx *context.Steps, value string) (*structpb.Value, 
 			if err != nil {
 				return nil, err
 			}
-			insideValueString, err := ValueToString(insideValue)
-			if err != nil {
-				return nil, err
-			}
-			output = append(output, insideValueString)
-			break
+			output = append(output, insideValue)
 
 		default:
 		}
@@ -66,8 +60,26 @@ func interpolateString(stepsCtx *context.Steps, value string) (*structpb.Value, 
 		return nil, fmt.Errorf("The %q is not closed: ${{ ... }}", value[open_idx:])
 	}
 
-	output = append(output, value[prev_idx:])
-	res := strings.Join(output, "")
+	// add suffix to output
+	if prev_idx != len(value) {
+		output = append(output, structpb.NewStringValue(value[prev_idx:]))
+	}
+
+	// retain type if this is single item, otherwise convert to string
+	if len(output) == 1 {
+		return output[0], nil
+	}
+
+	// concat all items
+	res := ""
+	for _, o := range output {
+		str, err := ValueToString(o)
+		if err != nil {
+			return nil, err
+		}
+		res += str
+	}
+
 	return structpb.NewStringValue(res), nil
 }
 

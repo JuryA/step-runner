@@ -65,6 +65,12 @@ func TestExpandString(t *testing.T) {
 	}, {
 		value:   `${{ job.job_id }} }}`,
 		wantErr: errors.New(`The " job.job_id }} " has extra '}}'`),
+	}, {
+		value: `${{inputs.light_cycle}}`,
+		want:  `{"color":"yellow","number":3}`,
+	}, {
+		value: `PREFIX ${{inputs.light_cycle}} SUFFIX`,
+		want:  `PREFIX {"color":"yellow","number":3} SUFFIX`,
 	}}
 	for _, c := range cases {
 		t.Run(c.value, func(t *testing.T) {
@@ -101,10 +107,20 @@ func TestExpand(t *testing.T) {
 		want:  structpb.NewStringValue("Kevin Flynn"),
 	}, {
 		value: structpb.NewStringValue("${{inputs.light_cycle}}"),
-		want:  structpb.NewStringValue(`{"color":"yellow","number":3}`),
+		want: structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
+			"color":  structpb.NewStringValue("yellow"),
+			"number": structpb.NewNumberValue(3),
+		}}),
+	}, {
+		value: structpb.NewStringValue("PREFIX ${{inputs.light_cycle}} SUFFIX"),
+		want:  structpb.NewStringValue(`PREFIX {"color":"yellow","number":3} SUFFIX`),
 	}, {
 		value: structpb.NewStringValue("${{inputs.team_members}}"),
-		want:  structpb.NewStringValue(`["tron","ram","flynn"]`),
+		want: structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
+			structpb.NewStringValue("tron"),
+			structpb.NewStringValue("ram"),
+			structpb.NewStringValue("flynn"),
+		}}),
 	}, {
 		value: structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
 			"replace within": structpb.NewStringValue("${{inputs.name}}"),
