@@ -1,5 +1,5 @@
 variables:
-  IMAGE_TAG: $CI_REGISTRY_IMAGE:pipeline-$CI_PIPELINE_ID
+  IMAGE_TAG: $CI_REGISTRY_IMAGE/pipelines:$CI_PIPELINE_IID
 
 stages:
   - test
