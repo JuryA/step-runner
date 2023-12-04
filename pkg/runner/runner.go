@@ -15,12 +15,12 @@ import (
 )
 
 type Execution struct {
-	defs      *cache.Definitions
+	defs *cache.Definitions
 }
 
 func New(defs *cache.Definitions) (*Execution, error) {
 	return &Execution{
-		defs:      defs,
+		defs: defs,
 	}, nil
 }
 
@@ -61,9 +61,9 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, s
 
 	result := &proto.StepResult{
 		StepDefinition: specDefinition,
-		Status: proto.StepResult_success,
-		Outputs: make(map[string]string),
-		Exports: make(map[string]string),
+		Status:         proto.StepResult_success,
+		Outputs:        make(map[string]string),
+		Exports:        make(map[string]string),
 	}
 
 	switch specDefinition.Definition.Type {
@@ -81,7 +81,12 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, s
 		result.StepDefinition = specDefinition
 
 		for k, v := range specDefinition.Definition.Outputs {
-			result.Outputs[k] = expression.InterpolateString(stepsCtx, v)
+			res, resErr := expression.ExpandString(stepsCtx, v)
+			if resErr == nil {
+				result.Outputs[k] = res
+			} else {
+				fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
+			}
 		}
 	}
 	return result, err
@@ -100,13 +105,20 @@ func (e *Execution) runExec(result *proto.StepResult, ctx ctx.Context, execDefin
 
 	cmdArgs := []string{}
 	for _, arg := range execDefinition.Command {
-		expandedArg := expression.InterpolateString(stepsCtx, arg)
-		cmdArgs = append(cmdArgs, expandedArg)
+		res, resErr := expression.ExpandString(stepsCtx, arg)
+		if resErr != nil {
+			return fmt.Errorf("Cannot interpolate command argument %q due to err: %s", arg, resErr.Error())
+		}
+		cmdArgs = append(cmdArgs, res)
 	}
 
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	if execDefinition.WorkDir != "" {
-		cmd.Dir = expression.InterpolateString(stepsCtx, execDefinition.WorkDir)
+		res, resErr := expression.ExpandString(stepsCtx, execDefinition.WorkDir)
+		if resErr != nil {
+			return fmt.Errorf("Cannot interpolate command workdir %q due to err: %s", execDefinition.WorkDir, resErr.Error())
+		}
+		cmd.Dir = res
 	} else {
 		cmd.Dir = stepsCtx.Dir
 	}
@@ -162,7 +174,11 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 	// Expand inputs
 	stepCall.Inputs = make(map[string]*structpb.Value)
 	for k, v := range stepReference.Inputs {
-		stepCall.Inputs[k] = expression.InterpolateProtoValue(stepsCtx, v)
+		res, resErr := expression.Expand(stepsCtx, v)
+		if resErr != nil {
+			return nil, fmt.Errorf("Cannot assign input %q due to error: %s", k, resErr.Error())
+		}
+		stepCall.Inputs[k] = res
 	}
 
 	// Clone and expand env
@@ -171,7 +187,11 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 		stepCall.Env[k] = v
 	}
 	for k, v := range stepReference.Env {
-		stepCall.Env[k] = expression.InterpolateString(stepsCtx, v)
+		res, resErr := expression.ExpandString(stepsCtx, v)
+		if resErr != nil {
+			return nil, fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
+		}
+		stepCall.Env[k] = res
 	}
 
 	spec, def, dir, err := e.defs.Get(ctx, stepReference.Step)
@@ -181,9 +201,9 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 
 	// TODO: The `defs.Get` should return `proto.StepDefinition`
 	stepDef := &proto.StepDefinition{
-		Spec: spec,
+		Spec:       spec,
 		Definition: def,
-		Dir: dir,
+		Dir:        dir,
 	}
 
 	result, err := e.Run(ctx, stepDef, stepCall, stepsCtx.Global)

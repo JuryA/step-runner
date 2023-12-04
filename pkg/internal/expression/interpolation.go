@@ -1,0 +1,125 @@
+package expression
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+
+	"google.golang.org/protobuf/types/known/structpb"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/context"
+)
+
+const InterpolateOpen = "${{"
+const InterpolateClose = "}}"
+
+var interpolateRegex = regexp.MustCompile(regexp.QuoteMeta(InterpolateOpen) + "|" + regexp.QuoteMeta(InterpolateClose))
+
+func interpolateString(stepsCtx *context.Steps, value string) (*structpb.Value, error) {
+	output := []string{}
+	depth := 0
+	prev_idx := 0
+	open_idx := 0
+
+	for _, loc := range interpolateRegex.FindAllStringIndex(value, -1) {
+		if depth == 0 {
+			output = append(output, value[prev_idx:loc[0]])
+		}
+		prev_idx = loc[1]
+
+		switch value[loc[0]:loc[1]] {
+		case InterpolateOpen:
+			depth += 1
+
+			if depth == 1 {
+				open_idx = loc[1]
+			}
+			break
+
+		case InterpolateClose:
+			depth -= 1
+
+			insideString := value[open_idx:loc[0]]
+
+			if depth < 0 {
+				return nil, fmt.Errorf("The %q has extra '}}'", insideString)
+			} else if depth > 0 {
+				break
+			}
+
+			insideValue, err := Evaluate(stepsCtx, insideString)
+			if err != nil {
+				return nil, err
+			}
+			insideValueString, err := ValueToString(insideValue)
+			if err != nil {
+				return nil, err
+			}
+			output = append(output, insideValueString)
+			break
+
+		default:
+		}
+	}
+
+	if depth > 0 {
+		return nil, fmt.Errorf("The %q is not closed: ${{ ... }}", value[open_idx:])
+	}
+
+	output = append(output, value[prev_idx:])
+	res := strings.Join(output, "")
+	return structpb.NewStringValue(res), nil
+}
+
+func expandStruct(stepsCtx *context.Steps, value *structpb.Struct) (*structpb.Value, error) {
+	res := &structpb.Struct{Fields: make(map[string]*structpb.Value, len(value.Fields))}
+
+	for fieldKey, fieldValue := range value.Fields {
+		fieldNewValue, err := Expand(stepsCtx, fieldValue)
+		if err != nil {
+			return nil, err
+		}
+		res.Fields[fieldKey] = fieldNewValue
+	}
+	return structpb.NewStructValue(res), nil
+}
+
+func expandList(stepsCtx *context.Steps, value *structpb.ListValue) (*structpb.Value, error) {
+	res := &structpb.ListValue{Values: make([]*structpb.Value, len(value.Values))}
+
+	for listIndex, listValue := range value.Values {
+		listNewValue, err := Expand(stepsCtx, listValue)
+		if err != nil {
+			return nil, err
+		}
+		res.Values[listIndex] = listNewValue
+	}
+	return structpb.NewListValue(res), nil
+}
+
+// The Expand rewrites struct/list/string mutating data structure
+func Expand(stepsCtx *context.Steps, value *structpb.Value) (*structpb.Value, error) {
+	switch value.Kind.(type) {
+	case *structpb.Value_StringValue:
+		return interpolateString(stepsCtx, value.GetStringValue())
+
+	case *structpb.Value_StructValue:
+		return expandStruct(stepsCtx, value.GetStructValue())
+
+	case *structpb.Value_ListValue:
+		return expandList(stepsCtx, value.GetListValue())
+
+	default:
+		return value, nil
+	}
+}
+
+// The ExpandString rewrites string and returns string
+func ExpandString(stepsCtx *context.Steps, value string) (string, error) {
+	res, err := interpolateString(stepsCtx, value)
+	if err != nil {
+		return "", err
+	}
+
+	return ValueToString(res)
+}
