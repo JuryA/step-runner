@@ -5,8 +5,6 @@ import (
 	"regexp"
 
 	"google.golang.org/protobuf/types/known/structpb"
-
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 )
 
 const InterpolateOpen = "${{"
@@ -14,7 +12,7 @@ const InterpolateClose = "}}"
 
 var interpolateRegex = regexp.MustCompile(regexp.QuoteMeta(InterpolateOpen) + "|" + regexp.QuoteMeta(InterpolateClose))
 
-func interpolateString(stepsCtx *context.Steps, value string) (*structpb.Value, error) {
+func interpolateString(obj interface{}, value string) (*structpb.Value, error) {
 	output := []*structpb.Value{}
 	depth := 0
 	prev_idx := 0
@@ -46,7 +44,7 @@ func interpolateString(stepsCtx *context.Steps, value string) (*structpb.Value, 
 				break
 			}
 
-			insideValue, err := Evaluate(stepsCtx, insideString)
+			insideValue, err := Evaluate(obj, insideString)
 			if err != nil {
 				return nil, err
 			}
@@ -83,11 +81,11 @@ func interpolateString(stepsCtx *context.Steps, value string) (*structpb.Value, 
 	return structpb.NewStringValue(res), nil
 }
 
-func expandStruct(stepsCtx *context.Steps, value *structpb.Struct) (*structpb.Value, error) {
+func expandStruct(obj interface{}, value *structpb.Struct) (*structpb.Value, error) {
 	res := &structpb.Struct{Fields: make(map[string]*structpb.Value, len(value.Fields))}
 
 	for fieldKey, fieldValue := range value.Fields {
-		fieldNewValue, err := Expand(stepsCtx, fieldValue)
+		fieldNewValue, err := Expand(obj, fieldValue)
 		if err != nil {
 			return nil, err
 		}
@@ -96,11 +94,11 @@ func expandStruct(stepsCtx *context.Steps, value *structpb.Struct) (*structpb.Va
 	return structpb.NewStructValue(res), nil
 }
 
-func expandList(stepsCtx *context.Steps, value *structpb.ListValue) (*structpb.Value, error) {
+func expandList(obj interface{}, value *structpb.ListValue) (*structpb.Value, error) {
 	res := &structpb.ListValue{Values: make([]*structpb.Value, len(value.Values))}
 
 	for listIndex, listValue := range value.Values {
-		listNewValue, err := Expand(stepsCtx, listValue)
+		listNewValue, err := Expand(obj, listValue)
 		if err != nil {
 			return nil, err
 		}
@@ -110,16 +108,16 @@ func expandList(stepsCtx *context.Steps, value *structpb.ListValue) (*structpb.V
 }
 
 // The Expand rewrites struct/list/string mutating data structure
-func Expand(stepsCtx *context.Steps, value *structpb.Value) (*structpb.Value, error) {
+func Expand(obj interface{}, value *structpb.Value) (*structpb.Value, error) {
 	switch value.Kind.(type) {
 	case *structpb.Value_StringValue:
-		return interpolateString(stepsCtx, value.GetStringValue())
+		return interpolateString(obj, value.GetStringValue())
 
 	case *structpb.Value_StructValue:
-		return expandStruct(stepsCtx, value.GetStructValue())
+		return expandStruct(obj, value.GetStructValue())
 
 	case *structpb.Value_ListValue:
-		return expandList(stepsCtx, value.GetListValue())
+		return expandList(obj, value.GetListValue())
 
 	default:
 		return value, nil
@@ -127,8 +125,8 @@ func Expand(stepsCtx *context.Steps, value *structpb.Value) (*structpb.Value, er
 }
 
 // The ExpandString rewrites string and returns string
-func ExpandString(stepsCtx *context.Steps, value string) (string, error) {
-	res, err := interpolateString(stepsCtx, value)
+func ExpandString(obj interface{}, value string) (string, error) {
+	res, err := interpolateString(obj, value)
 	if err != nil {
 		return "", err
 	}

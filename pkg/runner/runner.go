@@ -25,8 +25,7 @@ func New(defs cache.Cache) (*Execution, error) {
 }
 
 func (e *Execution) createContext(specDefinition *proto.StepDefinition, stepCall *proto.StepCall, globalCtx *context.Global) (*context.Steps, error) {
-	stepsCtx := context.NewSteps()
-	stepsCtx.Global = globalCtx
+	stepsCtx := context.NewSteps(globalCtx)
 	stepsCtx.Env = stepCall.Env
 	stepsCtx.Dir = specDefinition.Dir
 
@@ -205,6 +204,6 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 	}
 
 	result.Step = stepReference
-	stepsCtx.Outputs[stepReference.Name] = result.Outputs
+	stepsCtx.Steps[stepReference.Name] = result
 	return result, nil
 }

@@ -2,17 +2,20 @@ package context
 
 import (
 	"io"
+	"maps"
 	"os"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
+
+	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type Global struct {
-	Job    map[string]string
-	Env    map[string]string
-	Stdout io.Writer
-	Stderr io.Writer
+	Job    map[string]string `json:"job"`
+	Env    map[string]string `json:"-"`
+	Stdout io.Writer         `json:"-"`
+	Stderr io.Writer         `json:"-"`
 }
 
 func NewGlobal() *Global {
@@ -33,51 +36,22 @@ func (g *Global) InheritEnv(envs ...string) {
 	}
 }
 
-func (g *Global) GetMatches() map[string]*structpb.Value {
-	m := make(map[string]*structpb.Value)
-	for k, v := range g.Env {
-		m["env."+k] = structpb.NewStringValue(v)
-	}
-	for k, v := range g.Job {
-		m["job."+k] = structpb.NewStringValue(v)
-	}
-	return m
-}
-
 type Steps struct {
-	Global *Global
+	*Global
 
-	Dir     string
-	Env     map[string]string
-	Inputs  map[string]*structpb.Value
-	Outputs map[string]map[string]string
+	Dir    string                       `json:"-"`
+	Env    map[string]string            `json:"env"`
+	Inputs map[string]*structpb.Value   `json:"inputs"`
+	Steps  map[string]*proto.StepResult `json:"steps"`
 }
 
-func NewSteps() *Steps {
+func NewSteps(global *Global) *Steps {
 	return &Steps{
-		Env:     map[string]string{},
-		Inputs:  map[string]*structpb.Value{},
-		Outputs: map[string]map[string]string{},
+		Global: global,
+		Env:    maps.Clone(global.Env),
+		Inputs: map[string]*structpb.Value{},
+		Steps:  map[string]*proto.StepResult{},
 	}
-}
-
-func (s *Steps) GetMatches() map[string]*structpb.Value {
-	m := make(map[string]*structpb.Value)
-	for k, v := range s.Global.GetMatches() {
-		m[k] = v
-	}
-	for name, value := range s.Env {
-		m["env."+name] = structpb.NewStringValue(value)
-	}
-	for name, value := range s.Inputs {
-		m["inputs."+name] = value
-	}
-	for step, outputs := range s.Outputs {
-		for name, value := range outputs {
-			m["steps."+step+".outputs."+name] = structpb.NewStringValue(value)
-		}
-	}
-	return m
 }
 
 func (s *Steps) GetEnvs() map[string]string {

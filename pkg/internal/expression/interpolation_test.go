@@ -6,21 +6,27 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
-
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 )
 
-func textContextSteps() *context.Steps {
-	return &context.Steps{
-		Global: &context.Global{
+type GlobalContext struct {
+	Job map[string]string `json:"job"`
+}
+
+type StepContext struct {
+	*GlobalContext
+	Env    map[string]string          `json:"env"`
+	Inputs map[string]*structpb.Value `json:"inputs"`
+}
+
+func textContextSteps() *StepContext {
+	return &StepContext{
+		GlobalContext: &GlobalContext{
 			Job: map[string]string{
 				"job_id": "1982",
 			},
-			Env: map[string]string{
-				"MOVIE": "tron",
-			},
 		},
 		Env: map[string]string{
+			"MOVIE": "tron",
 			"WHERE": "inside",
 		},
 		Inputs: map[string]*structpb.Value{
@@ -35,7 +41,6 @@ func textContextSteps() *context.Steps {
 				structpb.NewStringValue("flynn"),
 			}}),
 		},
-		Outputs: map[string]map[string]string{},
 	}
 }
 
@@ -55,10 +60,10 @@ func TestExpandString(t *testing.T) {
 		want:  "1982:tron",
 	}, {
 		value:   "${{ job.undefined_key }}",
-		wantErr: errors.New(`"job.undefined_key" cannot be evaluated`),
+		wantErr: errors.New(`job.undefined_key: the "undefined_key" was not found`),
 	}, {
 		value:   `${{ job["${{ job.key }}"] }}`,
-		wantErr: errors.New(`"job[\"${{ job.key }}\"]" cannot be evaluated`),
+		wantErr: errors.New(`job["${{ job.key }}"]: the "job[\"${{ job" was not found`),
 	}, {
 		value:   `${{ job.job_id`,
 		wantErr: errors.New(`The " job.job_id" is not closed: ${{ ... }}`),
