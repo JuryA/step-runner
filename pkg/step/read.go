@@ -3,227 +3,136 @@ package step
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
-	"gitlab.com/gitlab-org/step-runner/proto"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"gopkg.in/yaml.v3"
+
+	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
+const defaultStorePerm = 0o640
+
 func LoadSpecDef(filename string) (*proto.Spec, *proto.Definition, error) {
-	f, err := os.Open(filename)
+	buf, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, nil, fmt.Errorf("opening yaml file %v: %w", filename, err)
+		return nil, nil, fmt.Errorf("reading file: %w", err)
 	}
-	defer f.Close()
-	var (
-		spec any
-		def  any
-	)
-	err = readYAML(f, &spec, &def)
-	if err != nil {
-		return nil, nil, fmt.Errorf("loading step definition: %w", err)
-	}
-	return specDefToProto(spec, def)
+
+	return ReadSpecDef(string(buf))
 }
 
 func ReadSpecDef(stepDefinitionYAML string) (*proto.Spec, *proto.Definition, error) {
-	r := strings.NewReader(stepDefinitionYAML)
 	var (
-		spec any
-		def  any
+		spec proto.Spec
+		def  proto.Definition
 	)
-	err := readYAML(r, &spec, &def)
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading step spec and def: %w", err)
-	}
-	return specDefToProto(spec, def)
-}
 
-func specDefToProto(spec, def any) (*proto.Spec, *proto.Definition, error) {
-	specJSON, err := json.Marshal(spec)
-	if err != nil {
-		return nil, nil, fmt.Errorf("converting spec to json: %w", err)
+	if err := unmarshal(stepDefinitionYAML, &spec, &def); err != nil {
+		return nil, nil, err
 	}
-	s := proto.Spec{}
-	err = protojson.Unmarshal(specJSON, &s)
-	if err != nil {
-		return nil, nil, fmt.Errorf("converting spec to proto: %w", err)
-	}
-	defJSON, err := json.Marshal(def)
-	if err != nil {
-		return nil, nil, fmt.Errorf("converting def to json: %w", err)
-	}
-	d := proto.Definition{}
-	err = protojson.Unmarshal(defJSON, &d)
-	if err != nil {
-		return nil, nil, fmt.Errorf("converting def to proto: %w", err)
-	}
-	return &s, &d, nil
+
+	return &spec, &def, nil
 }
 
 func StoreSpecDef(spec *proto.Spec, def *proto.Definition, filename string) error {
-	specAny, defAny, err := protoToSpecDef(spec, def)
+	encoded, err := WriteSpecDef(spec, def)
 	if err != nil {
 		return err
 	}
-	f, err := os.Open(filename)
-	if err != nil {
-		return fmt.Errorf("opening output file %v: %w", filename, err)
-	}
-	defer f.Close()
-	err = writeYaml(f, specAny, defAny)
-	if err != nil {
-		return fmt.Errorf("storing step spec and def: %w", err)
-	}
-	return nil
+
+	return os.WriteFile(filename, []byte(encoded), defaultStorePerm)
 }
 
 func WriteSpecDef(spec *proto.Spec, def *proto.Definition) (string, error) {
-	specAny, defAny, err := protoToSpecDef(spec, def)
-	if err != nil {
-		return "", fmt.Errorf("writing step spec and def: %w", err)
-	}
-	w := &strings.Builder{}
-	err = writeYaml(w, specAny, defAny)
-	if err != nil {
-		return "", fmt.Errorf("writing step spec and def yaml: %w", err)
-	}
-	return w.String(), nil
-}
-
-func protoToSpecDef(spec *proto.Spec, def *proto.Definition) (any, any, error) {
-	specJSON, err := protojson.Marshal(spec)
-	if err != nil {
-		return nil, nil, fmt.Errorf("converting spec to json: %w", err)
-	}
-	var s any
-	err = json.Unmarshal(specJSON, &s)
-	if err != nil {
-		return nil, nil, fmt.Errorf("converting spec to any: %w", err)
-	}
-	defJSON, err := protojson.Marshal(def)
-	if err != nil {
-		return nil, nil, fmt.Errorf("conversting def to json: %w", err)
-	}
-	var d any
-	err = json.Unmarshal(defJSON, &d)
-	if err != nil {
-		return nil, nil, fmt.Errorf("converting def to any: %w", err)
-	}
-	return s, d, nil
+	return marshal(spec, def)
 }
 
 func LoadSteps(filename string) (*proto.Definition, error) {
-	f, err := os.Open(filename)
+	buf, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("opening yaml file %v: %w", filename, err)
+		return nil, fmt.Errorf("reading file: %w", err)
 	}
-	var steps any
-	defer f.Close()
-	err = readYAML(f, &steps)
-	if err != nil {
-		return nil, fmt.Errorf("loading steps: %w", err)
-	}
-	return stepsToProto(steps)
+
+	return ReadSteps(string(buf))
 }
 
 func ReadSteps(stepsYAML string) (*proto.Definition, error) {
-	r := strings.NewReader(stepsYAML)
-	var steps any
-	err := readYAML(r, &steps)
-	if err != nil {
-		return nil, fmt.Errorf("reading steps: %w", err)
-	}
-	return stepsToProto(steps)
-}
+	var (
+		def proto.Definition
+	)
 
-func stepsToProto(steps any) (*proto.Definition, error) {
-	defJSON, err := json.Marshal(steps)
-	if err != nil {
-		return nil, fmt.Errorf("converting def to json: %w", err)
+	if err := unmarshal(stepsYAML, &def); err != nil {
+		return nil, err
 	}
-	d := proto.Definition{}
-	err = protojson.Unmarshal(defJSON, &d)
-	if err != nil {
-		return nil, fmt.Errorf("converting def to proto: %w", err)
-	}
-	if d.Type != proto.DefinitionType_steps {
-		return nil, fmt.Errorf("want a definition of type steps. got %v", d.Type)
-	}
-	return &d, nil
+
+	return &def, nil
 }
 
 func StoreSteps(def *proto.Definition, filename string) error {
-	if def.Type != proto.DefinitionType_steps {
-		return fmt.Errorf("want a definition of type steps. got %v", def.Type)
-	}
-	defAny, err := protoToDef(def)
+	encoded, err := WriteSteps(def)
 	if err != nil {
 		return err
 	}
-	f, err := os.Open(filename)
-	if err != nil {
-		return fmt.Errorf("opening output file %v: %w", filename, err)
-	}
-	defer f.Close()
-	err = writeYaml(f, defAny)
-	if err != nil {
-		return fmt.Errorf("storing step definition: %w", err)
-	}
-	return nil
+
+	return os.WriteFile(filename, []byte(encoded), defaultStorePerm)
 }
 
 func WriteSteps(def *proto.Definition) (string, error) {
 	if def.Type != proto.DefinitionType_steps {
 		return "", fmt.Errorf("want a definition of type steps. got %v", def.Type)
 	}
-	defAny, err := protoToDef(def)
-	if err != nil {
-		return "", fmt.Errorf("writing step def: %w", err)
-	}
-	w := &strings.Builder{}
-	err = writeYaml(w, defAny)
-	if err != nil {
-		return "", fmt.Errorf("writing step def: %w", err)
-	}
-	return w.String(), nil
+
+	return marshal(def)
 }
 
-func protoToDef(def *proto.Definition) (any, error) {
-	defJSON, err := protojson.Marshal(def)
-	if err != nil {
-		return nil, fmt.Errorf("converting def to json: %w", err)
-	}
-	var d any
-	err = json.Unmarshal(defJSON, &d)
-	if err != nil {
-		return nil, fmt.Errorf("converting def to any: %w", err)
-	}
-	return &d, nil
-}
-
-func readYAML(reader io.Reader, subjects ...any) (err error) {
-	d := yaml.NewDecoder(reader)
+func unmarshal(input string, subjects ...protoreflect.ProtoMessage) error {
+	d := yaml.NewDecoder(strings.NewReader(input))
 	d.KnownFields(true)
+
 	for _, subject := range subjects {
-		err := d.Decode(subject)
+		var decoded any
+		err := d.Decode(&decoded)
 		if err != nil {
-			return fmt.Errorf("decoding yaml file: %w", err)
+			return fmt.Errorf("decoding: %w", err)
+		}
+
+		// convert to json
+		encoded, err := json.Marshal(decoded)
+		if err != nil {
+			return fmt.Errorf("converting to json: %w", err)
+		}
+
+		// convert to proto
+		if err := protojson.Unmarshal(encoded, subject); err != nil {
+			return fmt.Errorf("converting to proto: %w", err)
 		}
 	}
+
 	return nil
 }
 
-func writeYaml(writer io.Writer, subjects ...any) (err error) {
-	d := yaml.NewEncoder(writer)
+func marshal(subjects ...protoreflect.ProtoMessage) (string, error) {
+	var sb strings.Builder
+	d := yaml.NewEncoder(&sb)
+
 	for _, subject := range subjects {
-		err := d.Encode(subject)
+		encoded, err := protojson.Marshal(subject)
 		if err != nil {
-			return fmt.Errorf("encoding yaml file: %w", err)
+			return "", fmt.Errorf("converting to json: %w", err)
+		}
+
+		var val any
+		if err := json.Unmarshal(encoded, &val); err != nil {
+			return "", fmt.Errorf("unmarshaling: %w", err)
+		}
+
+		if err := d.Encode(val); err != nil {
+			return "", fmt.Errorf("marshal: %w", err)
 		}
 	}
-	return nil
+
+	return sb.String(), nil
 }
