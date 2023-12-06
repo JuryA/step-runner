@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func TestReadWriteSpecDef(t *testing.T) {
+func TestSerialize(t *testing.T) {
 	cases := []struct {
 		name     string
 		yaml     string
@@ -47,7 +47,7 @@ type: exec
 			},
 		},
 	}, {
-		name: "everything",
+		name: "complex type: exec",
 		yaml: `
 spec:
     inputs:
@@ -121,81 +121,10 @@ type: exec
 			},
 		},
 	}, {
-		name: "documents out of order",
+		name: "complex type: steps",
 		yaml: `
-type: exec
-exec:
-  command: [echo, "${{inputs.name}}"]
+spec: {}
 ---
-spec:
-  inputs:
-    name:
-`,
-		wantErr: true,
-	}, {
-		name: "missing spec",
-		yaml: `
-type: exec
-exec:
-  command: [echo, "${{inputs.name}}"]
-`,
-		wantErr: true,
-	}, {
-		name: "missing exec",
-		yaml: `
-spec:
-  inputs:
-    name:
-`,
-		wantErr: true,
-	}}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			spec, def, err := ReadSpecDef(c.yaml)
-			if c.wantErr {
-				require.Error(t, err)
-				require.Nil(t, spec)
-				require.Nil(t, def)
-			} else {
-				require.NoError(t, err)
-				if !protobuf.Equal(c.wantSpec, spec) {
-					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantSpec, spec)
-				}
-				if !protobuf.Equal(c.wantDef, def) {
-					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantDef, def)
-				}
-				yaml, err := WriteSpecDef(spec, def)
-				require.NoError(t, err)
-				require.Equal(t, strings.TrimSpace(c.yaml), strings.TrimSpace(yaml))
-			}
-		})
-	}
-}
-
-func TestReadWriteSteps(t *testing.T) {
-	cases := []struct {
-		name      string
-		yaml      string
-		wantErr   bool
-		wantSteps *proto.Definition
-	}{{
-		name: "simple case",
-		yaml: `
-steps:
-    - name: foo
-      step: bar
-type: steps
-`,
-		wantSteps: &proto.Definition{
-			Type: proto.DefinitionType_steps,
-			Steps: []*proto.Step{{
-				Name: "foo",
-				Step: "bar",
-			}},
-		},
-	}, {
-		name: "everything",
-		yaml: `
 outputs:
     eye_color: brown
 steps:
@@ -218,7 +147,8 @@ steps:
       step: ../steps/redux
 type: steps
 `,
-		wantSteps: &proto.Definition{
+		wantSpec: &proto.Spec{Spec: &proto.Spec_Content{}},
+		wantDef: &proto.Definition{
 			Type: proto.DefinitionType_steps,
 			Steps: []*proto.Step{{
 				Name: "foo to the max",
@@ -253,19 +183,50 @@ type: steps
 				"eye_color": "brown",
 			},
 		},
+	}, {
+		name: "documents out of order",
+		yaml: `
+type: exec
+exec:
+  command: [echo, "${{inputs.name}}"]
+---
+spec:
+  inputs:
+    name:
+`,
+		wantErr: true,
+	}, {
+		name: "missing spec",
+		yaml: `
+type: exec
+exec:
+  command: [echo, "${{inputs.name}}"]
+`,
+		wantErr: true,
+	}, {
+		name: "missing exec",
+		yaml: `
+spec:
+  inputs:
+    name:
+`,
+		wantErr: true,
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			steps, err := ReadSteps(c.yaml)
+			stepDef, err := Deserialize(c.yaml, "")
 			if c.wantErr {
 				require.Error(t, err)
-				require.Nil(t, steps)
+				require.Nil(t, stepDef)
 			} else {
 				require.NoError(t, err)
-				if !protobuf.Equal(c.wantSteps, steps) {
-					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantSteps, steps)
+				if !protobuf.Equal(c.wantSpec, stepDef.Spec) {
+					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantSpec, stepDef.Spec)
 				}
-				yaml, err := WriteSteps(steps)
+				if !protobuf.Equal(c.wantDef, stepDef.Definition) {
+					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantDef, stepDef.Definition)
+				}
+				yaml, err := Serialize(stepDef)
 				require.NoError(t, err)
 				require.Equal(t, strings.TrimSpace(c.yaml), strings.TrimSpace(yaml))
 			}

@@ -15,7 +15,7 @@ import (
 )
 
 type Cache interface {
-	Get(ctx context.Context, step string) (*proto.Spec, *proto.Definition, string, error)
+	Get(ctx context.Context, step string) (*proto.StepDefinition, error)
 }
 
 var _ Cache = &cache{}
@@ -36,14 +36,14 @@ func New() (Cache, error) {
 	}, nil
 }
 
-func (c *cache) Get(ctx context.Context, stepRef string) (*proto.Spec, *proto.Definition, string, error) {
-	load := func(dir string) (*proto.Spec, *proto.Definition, string, error) {
+func (c *cache) Get(ctx context.Context, stepRef string) (*proto.StepDefinition, error) {
+	load := func(dir string) (*proto.StepDefinition, error) {
 		filename := filepath.Join(dir, "step.yml")
-		spec, def, err := step.LoadSpecDef(filename)
+		stepDefinition, err := step.Read(filename)
 		if err != nil {
-			return nil, nil, "", fmt.Errorf("loading file %q: %w", dir, err)
+			return nil, fmt.Errorf("loading file %q: %w", dir, err)
 		}
-		return spec, def, dir, nil
+		return stepDefinition, nil
 	}
 	switch {
 	case strings.HasPrefix(stepRef, "."):
@@ -51,11 +51,11 @@ func (c *cache) Get(ctx context.Context, stepRef string) (*proto.Spec, *proto.De
 	case strings.HasPrefix(stepRef, "https+git"):
 		dir, err := c.getCacheDir(ctx, stepRef)
 		if err != nil {
-			return nil, nil, "", fmt.Errorf("fetching step %q: %w", stepRef, err)
+			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}
 		return load(dir)
 	default:
-		return nil, nil, "", fmt.Errorf("invalid step reference: %v", stepRef)
+		return nil, fmt.Errorf("invalid step reference: %v", stepRef)
 	}
 }
 

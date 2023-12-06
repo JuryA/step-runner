@@ -194,19 +194,12 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 		stepCall.Env[k] = res
 	}
 
-	spec, def, dir, err := e.defs.Get(ctx, stepReference.Step)
+	stepDefinition, err := e.defs.Get(ctx, stepReference.Step)
 	if err != nil {
 		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
 	}
 
-	// TODO: The `defs.Get` should return `proto.StepDefinition`
-	stepDef := &proto.StepDefinition{
-		Spec:       spec,
-		Definition: def,
-		Dir:        dir,
-	}
-
-	result, err := e.Run(ctx, stepDef, stepCall, stepsCtx.Global)
+	result, err := e.Run(ctx, stepDefinition, stepCall, stepsCtx.Global)
 	if err != nil {
 		return nil, err
 	}

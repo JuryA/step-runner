@@ -24,6 +24,8 @@ func TestRun(t *testing.T) {
 	}{{
 		name: "greeting with defaults",
 		yaml: `
+spec: {}
+---
 type: steps
 steps:
   - name: greet-steppy
@@ -38,6 +40,8 @@ steps:
 	}, {
 		name: "greeting outputs and exports name parameter",
 		yaml: `
+spec: {}
+---
 type: steps
 steps:
   - name: greet-foo
@@ -53,6 +57,8 @@ steps:
 	}, {
 		name: "can access outputs of a previous step",
 		yaml: `
+spec: {}
+---
 type: steps
 steps:
   - name: greet-foo
@@ -72,6 +78,8 @@ steps:
 	}, {
 		name: "can access outputs of a composite step",
 		yaml: `
+spec: {}
+---
 type: steps
 steps:
   - name: greet-the-crew
@@ -90,6 +98,8 @@ steps:
 	}, {
 		name: "cannot access outputs of composite children",
 		yaml: `
+spec: {}
+---
 type: steps
 steps:
   - name: greet-the-crew
@@ -103,6 +113,8 @@ steps:
 	}, {
 		name: "complex steps",
 		yaml: `
+spec: {}
+---
 type: steps
 steps:
   - name: greet-steppy
@@ -136,7 +148,7 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			def, err := step.ReadSteps(c.yaml)
+			stepDef, err := step.Deserialize(c.yaml, "")
 			require.NoError(t, err)
 
 			defs, err := cache.New()
@@ -151,15 +163,9 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 			globalCtx.Stdout = &log
 			globalCtx.Stderr = &log
 
-			specDefinition := &proto.StepDefinition{
-				Spec: &proto.Spec{
-					Spec: &proto.Spec_Content{},
-				},
-				Definition: def,
-			}
 			stepCall := &proto.StepCall{}
 
-			result, err := runner.Run(ctx.Background(), specDefinition, stepCall, globalCtx)
+			result, err := runner.Run(ctx.Background(), stepDef, stepCall, globalCtx)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {

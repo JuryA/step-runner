@@ -36,12 +36,10 @@ run-e2e:
     - /step-runner ci
   variables:
     STEPS: |
-      type: steps
-      steps:
-        - name: hello-world
-          step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step
-          inputs:
-            echo: ${CI_PIPELINE_ID}
+      - name: hello-world
+        step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step
+        inputs:
+          echo: ${CI_PIPELINE_ID}
   artifacts:
     paths:
       - step-results.json
