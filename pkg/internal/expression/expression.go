@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func Evaluate(obj interface{}, s string) (*structpb.Value, error) {
+func Evaluate(obj any, s string) (*structpb.Value, error) {
 	s = strings.TrimSpace(s)
 	for _, key := range strings.Split(s, ".") {
 		res, err := DigObject(obj, key)

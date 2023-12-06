@@ -12,7 +12,7 @@ const InterpolateClose = "}}"
 
 var interpolateRegex = regexp.MustCompile(regexp.QuoteMeta(InterpolateOpen) + "|" + regexp.QuoteMeta(InterpolateClose))
 
-func interpolateString(obj interface{}, value string) (*structpb.Value, error) {
+func interpolateString(obj any, value string) (*structpb.Value, error) {
 	output := []*structpb.Value{}
 	depth := 0
 	prev_idx := 0
@@ -81,7 +81,7 @@ func interpolateString(obj interface{}, value string) (*structpb.Value, error) {
 	return structpb.NewStringValue(res), nil
 }
 
-func expandStruct(obj interface{}, value *structpb.Struct) (*structpb.Value, error) {
+func expandStruct(obj any, value *structpb.Struct) (*structpb.Value, error) {
 	res := &structpb.Struct{Fields: make(map[string]*structpb.Value, len(value.Fields))}
 
 	for fieldKey, fieldValue := range value.Fields {
@@ -94,7 +94,7 @@ func expandStruct(obj interface{}, value *structpb.Struct) (*structpb.Value, err
 	return structpb.NewStructValue(res), nil
 }
 
-func expandList(obj interface{}, value *structpb.ListValue) (*structpb.Value, error) {
+func expandList(obj any, value *structpb.ListValue) (*structpb.Value, error) {
 	res := &structpb.ListValue{Values: make([]*structpb.Value, len(value.Values))}
 
 	for listIndex, listValue := range value.Values {
@@ -108,7 +108,7 @@ func expandList(obj interface{}, value *structpb.ListValue) (*structpb.Value, er
 }
 
 // The Expand rewrites struct/list/string mutating data structure
-func Expand(obj interface{}, value *structpb.Value) (*structpb.Value, error) {
+func Expand(obj any, value *structpb.Value) (*structpb.Value, error) {
 	switch value.Kind.(type) {
 	case *structpb.Value_StringValue:
 		return interpolateString(obj, value.GetStringValue())
@@ -125,7 +125,7 @@ func Expand(obj interface{}, value *structpb.Value) (*structpb.Value, error) {
 }
 
 // The ExpandString rewrites string and returns string
-func ExpandString(obj interface{}, value string) (string, error) {
+func ExpandString(obj any, value string) (string, error) {
 	res, err := interpolateString(obj, value)
 	if err != nil {
 		return "", err

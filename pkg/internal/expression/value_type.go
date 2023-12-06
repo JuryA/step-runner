@@ -19,7 +19,7 @@ func ValueToString(v *structpb.Value) (string, error) {
 	}
 }
 
-func ObjectToProtoValue(object interface{}) (*structpb.Value, error) {
+func ObjectToProtoValue(object any) (*structpb.Value, error) {
 	switch v := object.(type) {
 	case structpb.Value:
 		return &v, nil
@@ -30,7 +30,7 @@ func ObjectToProtoValue(object interface{}) (*structpb.Value, error) {
 	}
 }
 
-func digStruct(value reflect.Value, key string) (interface{}, error) {
+func digStruct(value reflect.Value, key string) (any, error) {
 	for i := 0; i < value.Type().NumField(); i += 1 {
 		structField := value.Type().Field(i)
 		if !structField.IsExported() {
@@ -63,7 +63,7 @@ func digStruct(value reflect.Value, key string) (interface{}, error) {
 	return nil, fmt.Errorf("the %q was not found", key)
 }
 
-func digMap(value reflect.Value, key string) (interface{}, error) {
+func digMap(value reflect.Value, key string) (any, error) {
 	switch value.Type().Key().Kind() {
 	case reflect.String:
 		mapValue := value.MapIndex(reflect.ValueOf(key))
@@ -78,7 +78,7 @@ func digMap(value reflect.Value, key string) (interface{}, error) {
 	}
 }
 
-func digProtoValue(value *structpb.Value, key string) (interface{}, error) {
+func digProtoValue(value *structpb.Value, key string) (any, error) {
 	switch value.Kind.(type) {
 	case *structpb.Value_StructValue:
 		structValue := value.GetStructValue()
@@ -92,7 +92,7 @@ func digProtoValue(value *structpb.Value, key string) (interface{}, error) {
 	}
 }
 
-func DigObject(object interface{}, key string) (interface{}, error) {
+func DigObject(object any, key string) (any, error) {
 	if v, ok := object.(*structpb.Value); ok {
 		return digProtoValue(v, key)
 	}
@@ -112,7 +112,7 @@ func DigObject(object interface{}, key string) (interface{}, error) {
 	}
 }
 
-func DigProtoValue(object interface{}, key string) (*structpb.Value, error) {
+func DigProtoValue(object any, key string) (*structpb.Value, error) {
 	res, err := DigObject(object, key)
 	if err != nil {
 		return nil, err

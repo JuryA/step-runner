@@ -14,9 +14,9 @@ type TestFoo struct {
 
 func TestDigObject(t *testing.T) {
 	cases := []struct {
-		object  interface{}
+		object  any
 		key     string
-		want    interface{}
+		want    any
 		wantErr error
 	}{{
 		object:  "string",
