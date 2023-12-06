@@ -141,7 +141,6 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 
 			defs, err := cache.New()
 			require.NoError(t, err)
-			defer defs.Cleanup()
 			runner, err := New(defs)
 			require.NoError(t, err)
 

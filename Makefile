@@ -17,9 +17,8 @@ generate: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
 	go generate ./proto
 
 .PHONY: test
-test: compile_proto
+test: generate
 	go test ./...
-	@$(MAKE) mock
 	@git --no-pager diff --compact-summary --exit-code -- go.mod go.sum && echo 'Go modules are tidy and complete!'
 	@git --no-pager diff --compact-summary --exit-code -- ./internal/plugin/proto && echo 'proto code is up-to-date!'
 
@@ -32,7 +31,7 @@ $(PROTOC):
 	# Installing $(DOWNLOAD_URL) as $(PROTOC)
 	@mkdir -p "$(localBin)"
 	@curl -sL "$(DOWNLOAD_URL)" -o "$(local)/protoc.zip"
-	@unzip "$(local)/protoc.zip" -d "$(local)/"
+	@unzip -u "$(local)/protoc.zip" -d "$(local)/"
 	@chmod +x "$(PROTOC)"
 	@rm "$(local)/protoc.zip"
 

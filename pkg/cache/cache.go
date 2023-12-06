@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,84 +14,85 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-type Definitions struct {
+type Cache interface {
+	Get(ctx context.Context, step string) (*proto.Spec, *proto.Definition, string, error)
+}
+
+var _ Cache = &cache{}
+
+type cache struct {
 	mux      sync.Mutex
 	cacheDir string
-	entries  map[string]*entry
 }
 
-type entry struct {
-	spec *proto.Spec
-	def  *proto.Definition
-	dir  string
-}
-
-func New() (*Definitions, error) {
-	cacheDir, err := os.MkdirTemp("", "step-runner-cache-*")
+func New() (Cache, error) {
+	cacheDir := filepath.Join(os.TempDir(), "step-runner-cache")
+	err := os.MkdirAll(cacheDir, 0750)
 	if err != nil {
 		return nil, fmt.Errorf("making cache dir %q: %w", cacheDir, err)
 	}
-	return &Definitions{
+	return &cache{
 		cacheDir: cacheDir,
-		entries:  map[string]*entry{},
 	}, nil
 }
 
-func (d *Definitions) Cleanup() {
-	os.RemoveAll(d.cacheDir)
-}
-
-func (d *Definitions) Get(ctx context.Context, step string) (*proto.Spec, *proto.Definition, string, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, nil, "", fmt.Errorf("get cancelled: %w", err)
-	}
-	d.mux.Lock()
-	defer d.mux.Unlock()
-	var err error
-	e, ok := d.entries[step]
-	if !ok {
-		e, err = d.cacheMiss(step)
+func (c *cache) Get(ctx context.Context, stepRef string) (*proto.Spec, *proto.Definition, string, error) {
+	load := func(dir string) (*proto.Spec, *proto.Definition, string, error) {
+		filename := filepath.Join(dir, "step.yml")
+		spec, def, err := step.LoadSpecDef(filename)
 		if err != nil {
-			return nil, nil, "", fmt.Errorf("fetching step %q: %w", step, err)
+			return nil, nil, "", fmt.Errorf("loading file %q: %w", dir, err)
 		}
+		return spec, def, dir, nil
 	}
-	return e.spec, e.def, e.dir, nil
-}
-
-func (d *Definitions) cacheMiss(s string) (*entry, error) {
 	switch {
-	case strings.HasPrefix(s, "."):
-		return d.fetchLocal(s)
-	case strings.HasPrefix(s, "https+git"):
-		return d.fetchGit(s)
+	case strings.HasPrefix(stepRef, "."):
+		return load(stepRef)
+	case strings.HasPrefix(stepRef, "https+git"):
+		dir, err := c.getCacheDir(ctx, stepRef)
+		if err != nil {
+			return nil, nil, "", fmt.Errorf("fetching step %q: %w", stepRef, err)
+		}
+		return load(dir)
 	default:
-		return nil, fmt.Errorf("invalid step reference: %v", s)
+		return nil, nil, "", fmt.Errorf("invalid step reference: %v", stepRef)
 	}
 }
 
-func (d *Definitions) fetchLocal(s string) (*entry, error) {
-	path, err := filepath.Abs(s)
-	if err != nil {
-		return nil, fmt.Errorf("resolving path %q: %w", s, err)
+func (c *cache) getCacheDir(ctx context.Context, step string) (string, error) {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	var err error
+	k := cacheKey(step)
+	dir := filepath.Join(c.cacheDir, string(k))
+	fileInfo, err := os.Stat(dir)
+	if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("reading cache for step %q (%v): %w", step, k, err)
 	}
-	return load(path)
+	if err == nil && !fileInfo.IsDir() {
+		return "", fmt.Errorf("cache for step %q (%v) is not dir: %w", step, k, err)
+	}
+	if os.IsNotExist(err) {
+		return c.cacheMiss(ctx, step, k)
+	}
+	return dir, nil
 }
 
-func (d *Definitions) fetchGit(s string) (*entry, error) {
-	dir, err := os.MkdirTemp(d.cacheDir, "step-*")
-	if err != nil {
-		return nil, fmt.Errorf("making dir for cloning: %w", err)
+func (c *cache) cacheMiss(ctx context.Context, step string, k key) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", fmt.Errorf("context cancelled: %w", err)
 	}
-	s = strings.Replace(s, "https+git", "https", 1)
-	err = execIn(dir, "git", "clone", s)
+	dir := filepath.Join(c.cacheDir, string(k))
+	err := os.MkdirAll(dir, 0750)
 	if err != nil {
-		return nil, fmt.Errorf("cloning %q: %w", s, err)
+		return "", fmt.Errorf("making dir for cloning: %w", err)
 	}
-	folder, err := probablyFolder(s)
+	url := strings.Replace(step, "https+git", "https", 1)
+	err = execIn(dir, "git", "clone", url, ".")
 	if err != nil {
-		return nil, fmt.Errorf("couldn't figure out the folder in %q: %w", s, err)
+		return "", fmt.Errorf("cloning %q: %w", url, err)
 	}
-	return load(filepath.Join(dir, folder))
+	return dir, nil
 }
 
 func execIn(dir string, c string, args ...string) error {
@@ -106,25 +108,9 @@ func execIn(dir string, c string, args ...string) error {
 	return nil
 }
 
-func load(dir string) (*entry, error) {
-	filename := filepath.Join(dir, "step.yml")
-	spec, def, err := step.LoadSpecDef(filename)
-	if err != nil {
-		return nil, fmt.Errorf("loading file %q: %w", dir, err)
-	}
-	return &entry{
-		spec: spec,
-		def:  def,
-		dir:  dir,
-	}, nil
-}
+type key string
 
-func probablyFolder(s string) (string, error) {
-	// TODO implement `go get` protocol to support steps in subfolders
-	fields := strings.Split(s, "//")
-	if len(fields) != 2 {
-		return "", fmt.Errorf("need exactly protocol//host/folder")
-	}
-	fields = strings.Split(fields[1], "/")
-	return fields[len(fields)-1], nil
+func cacheKey(uri string) key {
+	sum := sha256.Sum256([]byte(uri))
+	return key(fmt.Sprintf("%x", sum)[:8])
 }
