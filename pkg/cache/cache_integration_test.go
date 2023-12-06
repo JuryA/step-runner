@@ -53,10 +53,8 @@ func runEchoSteps(t *testing.T) {
 }
 
 const echoSteps = `
-type: steps
-steps:
-  - name: hello-world
-    step: "https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step"
-    inputs:
-       echo: hello world
+- name: hello-world
+  step: "https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step"
+  inputs:
+    echo: hello world
 `

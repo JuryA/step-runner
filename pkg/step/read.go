@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
@@ -15,64 +16,34 @@ import (
 
 const defaultStorePerm = 0o640
 
-func LoadSpecDef(filename string) (*proto.Spec, *proto.Definition, error) {
-	buf, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading file: %w", err)
-	}
-
-	return ReadSpecDef(string(buf))
-}
-
-func ReadSpecDef(stepDefinitionYAML string) (*proto.Spec, *proto.Definition, error) {
-	var (
-		spec proto.Spec
-		def  proto.Definition
-	)
-
-	if err := unmarshal(stepDefinitionYAML, &spec, &def); err != nil {
-		return nil, nil, err
-	}
-
-	return &spec, &def, nil
-}
-
-func StoreSpecDef(spec *proto.Spec, def *proto.Definition, filename string) error {
-	encoded, err := WriteSpecDef(spec, def)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(filename, []byte(encoded), defaultStorePerm)
-}
-
-func WriteSpecDef(spec *proto.Spec, def *proto.Definition) (string, error) {
-	return marshal(spec, def)
-}
-
-func LoadSteps(filename string) (*proto.Definition, error) {
+func Read(filename string) (*proto.StepDefinition, error) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
 	}
 
-	return ReadSteps(string(buf))
+	return Deserialize(string(buf), filepath.Dir(filename))
 }
 
-func ReadSteps(stepsYAML string) (*proto.Definition, error) {
+func Deserialize(content, dir string) (*proto.StepDefinition, error) {
 	var (
-		def proto.Definition
+		spec       proto.Spec
+		definition proto.Definition
 	)
 
-	if err := unmarshal(stepsYAML, &def); err != nil {
+	if err := unmarshal(content, &spec, &definition); err != nil {
 		return nil, err
 	}
 
-	return &def, nil
+	return &proto.StepDefinition{
+		Spec:       &spec,
+		Definition: &definition,
+		Dir:        dir,
+	}, nil
 }
 
-func StoreSteps(def *proto.Definition, filename string) error {
-	encoded, err := WriteSteps(def)
+func Write(stepDef *proto.StepDefinition, filename string) error {
+	encoded, err := Serialize(stepDef)
 	if err != nil {
 		return err
 	}
@@ -80,12 +51,8 @@ func StoreSteps(def *proto.Definition, filename string) error {
 	return os.WriteFile(filename, []byte(encoded), defaultStorePerm)
 }
 
-func WriteSteps(def *proto.Definition) (string, error) {
-	if def.Type != proto.DefinitionType_steps {
-		return "", fmt.Errorf("want a definition of type steps. got %v", def.Type)
-	}
-
-	return marshal(def)
+func Serialize(stepDef *proto.StepDefinition) (string, error) {
+	return marshal(stepDef.Spec, stepDef.Definition)
 }
 
 func unmarshal(input string, subjects ...protoreflect.ProtoMessage) error {

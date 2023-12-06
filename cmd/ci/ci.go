@@ -21,9 +21,16 @@ var Cmd = &cobra.Command{
 	RunE:  run,
 }
 
+const stepsTemplate = `
+spec: {}
+---
+type: steps
+steps:
+`
+
 func run(cmd *cobra.Command, args []string) error {
 	steps := os.Getenv("STEPS")
-	def, err := step.ReadSteps(steps)
+	stepDefinition, err := step.Deserialize(stepsTemplate+steps, "")
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", steps, err)
 	}
@@ -40,15 +47,9 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("creating execution: %w", err)
 	}
 
-	specDefinition := &proto.StepDefinition{
-		Spec: &proto.Spec{
-			Spec: &proto.Spec_Content{},
-		},
-		Definition: def,
-	}
 	stepCall := &proto.StepCall{}
 
-	result, err := execution.Run(ctx.Background(), specDefinition, stepCall, globalCtx)
+	result, err := execution.Run(ctx.Background(), stepDefinition, stepCall, globalCtx)
 	if err != nil {
 		return fmt.Errorf("running execution: %w", err)
 	}
