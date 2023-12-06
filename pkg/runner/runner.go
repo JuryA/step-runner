@@ -15,10 +15,10 @@ import (
 )
 
 type Execution struct {
-	defs *cache.Definitions
+	defs cache.Cache
 }
 
-func New(defs *cache.Definitions) (*Execution, error) {
+func New(defs cache.Cache) (*Execution, error) {
 	return &Execution{
 		defs: defs,
 	}, nil

@@ -13,6 +13,12 @@ go-test:
   script:
     - go test ./...
 
+go-integration:
+  stage: test
+  image: golang:1.21
+  script:
+    - go test -tags integration ./...
+
 docker-build:
   stage: build
   image: docker:20.10.16
