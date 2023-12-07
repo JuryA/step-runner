@@ -79,3 +79,26 @@ message StepResult {
     int32 exit_code = 7;
     repeated StepResult children_step_results = 8;
 }
+
+// TODO: This is not good place for this
+message ExtendedDefinition {
+    DefinitionType type = 1;
+    Exec exec = 2;
+    repeated Step steps = 3;
+    map<string,string> outputs = 4;
+
+    message Step {
+        string name = 1;
+        oneof step_or_script {
+            string step = 2;
+            string script = 5;
+        };
+        map<string,string> env = 3;
+        map<string,google.protobuf.Value> inputs = 4;
+    }
+
+    message Exec {
+        repeated string command = 1;
+        string work_dir = 2;
+    }
+}

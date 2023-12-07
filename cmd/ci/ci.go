@@ -10,7 +10,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
+	"gitlab.com/gitlab-org/step-runner/pkg/step/gitlab"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -30,7 +30,7 @@ steps:
 
 func run(cmd *cobra.Command, args []string) error {
 	steps := os.Getenv("STEPS")
-	stepDefinition, err := step.Deserialize(stepsTemplate+steps, "")
+	stepDefinition, err := gitlab_step.Parse(stepsTemplate+steps, "")
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", steps, err)
 	}

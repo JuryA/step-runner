@@ -31,7 +31,7 @@ func Deserialize(content, dir string) (*proto.StepDefinition, error) {
 		definition proto.Definition
 	)
 
-	if err := unmarshal(content, &spec, &definition); err != nil {
+	if err := Unmarshal(content, &spec, &definition); err != nil {
 		return nil, err
 	}
 
@@ -52,10 +52,10 @@ func Write(stepDef *proto.StepDefinition, filename string) error {
 }
 
 func Serialize(stepDef *proto.StepDefinition) (string, error) {
-	return marshal(stepDef.Spec, stepDef.Definition)
+	return Marshal(stepDef.Spec, stepDef.Definition)
 }
 
-func unmarshal(input string, subjects ...protoreflect.ProtoMessage) error {
+func Unmarshal(input string, subjects ...protoreflect.ProtoMessage) error {
 	d := yaml.NewDecoder(strings.NewReader(input))
 	d.KnownFields(true)
 
@@ -81,7 +81,7 @@ func unmarshal(input string, subjects ...protoreflect.ProtoMessage) error {
 	return nil
 }
 
-func marshal(subjects ...protoreflect.ProtoMessage) (string, error) {
+func Marshal(subjects ...protoreflect.ProtoMessage) (string, error) {
 	var sb strings.Builder
 	d := yaml.NewEncoder(&sb)
 

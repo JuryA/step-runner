@@ -582,6 +582,77 @@ func (x *StepResult) GetChildrenStepResults() []*StepResult {
 	return nil
 }
 
+type ExtendedDefinition struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Type    DefinitionType             `protobuf:"varint,1,opt,name=type,proto3,enum=proto.DefinitionType" json:"type,omitempty"`
+	Exec    *ExtendedDefinition_Exec   `protobuf:"bytes,2,opt,name=exec,proto3" json:"exec,omitempty"`
+	Steps   []*ExtendedDefinition_Step `protobuf:"bytes,3,rep,name=steps,proto3" json:"steps,omitempty"`
+	Outputs map[string]string          `protobuf:"bytes,4,rep,name=outputs,proto3" json:"outputs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+}
+
+func (x *ExtendedDefinition) Reset() {
+	*x = ExtendedDefinition{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_step_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExtendedDefinition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtendedDefinition) ProtoMessage() {}
+
+func (x *ExtendedDefinition) ProtoReflect() protoreflect.Message {
+	mi := &file_step_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExtendedDefinition.ProtoReflect.Descriptor instead.
+func (*ExtendedDefinition) Descriptor() ([]byte, []int) {
+	return file_step_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ExtendedDefinition) GetType() DefinitionType {
+	if x != nil {
+		return x.Type
+	}
+	return DefinitionType_definition_type_unspecified
+}
+
+func (x *ExtendedDefinition) GetExec() *ExtendedDefinition_Exec {
+	if x != nil {
+		return x.Exec
+	}
+	return nil
+}
+
+func (x *ExtendedDefinition) GetSteps() []*ExtendedDefinition_Step {
+	if x != nil {
+		return x.Steps
+	}
+	return nil
+}
+
+func (x *ExtendedDefinition) GetOutputs() map[string]string {
+	if x != nil {
+		return x.Outputs
+	}
+	return nil
+}
+
 type Definition_Exec struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -594,7 +665,7 @@ type Definition_Exec struct {
 func (x *Definition_Exec) Reset() {
 	*x = Definition_Exec{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_step_proto_msgTypes[8]
+		mi := &file_step_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -607,7 +678,7 @@ func (x *Definition_Exec) String() string {
 func (*Definition_Exec) ProtoMessage() {}
 
 func (x *Definition_Exec) ProtoReflect() protoreflect.Message {
-	mi := &file_step_proto_msgTypes[8]
+	mi := &file_step_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -649,7 +720,7 @@ type Spec_Content struct {
 func (x *Spec_Content) Reset() {
 	*x = Spec_Content{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_step_proto_msgTypes[10]
+		mi := &file_step_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -662,7 +733,7 @@ func (x *Spec_Content) String() string {
 func (*Spec_Content) ProtoMessage() {}
 
 func (x *Spec_Content) ProtoReflect() protoreflect.Message {
-	mi := &file_step_proto_msgTypes[10]
+	mi := &file_step_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -704,7 +775,7 @@ type Spec_Content_Input struct {
 func (x *Spec_Content_Input) Reset() {
 	*x = Spec_Content_Input{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_step_proto_msgTypes[12]
+		mi := &file_step_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -717,7 +788,7 @@ func (x *Spec_Content_Input) String() string {
 func (*Spec_Content_Input) ProtoMessage() {}
 
 func (x *Spec_Content_Input) ProtoReflect() protoreflect.Message {
-	mi := &file_step_proto_msgTypes[12]
+	mi := &file_step_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -758,7 +829,7 @@ type Spec_Content_Output struct {
 func (x *Spec_Content_Output) Reset() {
 	*x = Spec_Content_Output{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_step_proto_msgTypes[14]
+		mi := &file_step_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -771,7 +842,7 @@ func (x *Spec_Content_Output) String() string {
 func (*Spec_Content_Output) ProtoMessage() {}
 
 func (x *Spec_Content_Output) ProtoReflect() protoreflect.Message {
-	mi := &file_step_proto_msgTypes[14]
+	mi := &file_step_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -790,6 +861,166 @@ func (*Spec_Content_Output) Descriptor() ([]byte, []int) {
 func (x *Spec_Content_Output) GetDefault() string {
 	if x != nil {
 		return x.Default
+	}
+	return ""
+}
+
+type ExtendedDefinition_Step struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Types that are assignable to StepOrScript:
+	//
+	//	*ExtendedDefinition_Step_Step
+	//	*ExtendedDefinition_Step_Script
+	StepOrScript isExtendedDefinition_Step_StepOrScript `protobuf_oneof:"step_or_script"`
+	Env          map[string]string                      `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Inputs       map[string]*structpb.Value             `protobuf:"bytes,4,rep,name=inputs,proto3" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+}
+
+func (x *ExtendedDefinition_Step) Reset() {
+	*x = ExtendedDefinition_Step{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_step_proto_msgTypes[21]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExtendedDefinition_Step) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtendedDefinition_Step) ProtoMessage() {}
+
+func (x *ExtendedDefinition_Step) ProtoReflect() protoreflect.Message {
+	mi := &file_step_proto_msgTypes[21]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExtendedDefinition_Step.ProtoReflect.Descriptor instead.
+func (*ExtendedDefinition_Step) Descriptor() ([]byte, []int) {
+	return file_step_proto_rawDescGZIP(), []int{6, 1}
+}
+
+func (x *ExtendedDefinition_Step) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (m *ExtendedDefinition_Step) GetStepOrScript() isExtendedDefinition_Step_StepOrScript {
+	if m != nil {
+		return m.StepOrScript
+	}
+	return nil
+}
+
+func (x *ExtendedDefinition_Step) GetStep() string {
+	if x, ok := x.GetStepOrScript().(*ExtendedDefinition_Step_Step); ok {
+		return x.Step
+	}
+	return ""
+}
+
+func (x *ExtendedDefinition_Step) GetScript() string {
+	if x, ok := x.GetStepOrScript().(*ExtendedDefinition_Step_Script); ok {
+		return x.Script
+	}
+	return ""
+}
+
+func (x *ExtendedDefinition_Step) GetEnv() map[string]string {
+	if x != nil {
+		return x.Env
+	}
+	return nil
+}
+
+func (x *ExtendedDefinition_Step) GetInputs() map[string]*structpb.Value {
+	if x != nil {
+		return x.Inputs
+	}
+	return nil
+}
+
+type isExtendedDefinition_Step_StepOrScript interface {
+	isExtendedDefinition_Step_StepOrScript()
+}
+
+type ExtendedDefinition_Step_Step struct {
+	Step string `protobuf:"bytes,2,opt,name=step,proto3,oneof"`
+}
+
+type ExtendedDefinition_Step_Script struct {
+	Script string `protobuf:"bytes,5,opt,name=script,proto3,oneof"`
+}
+
+func (*ExtendedDefinition_Step_Step) isExtendedDefinition_Step_StepOrScript() {}
+
+func (*ExtendedDefinition_Step_Script) isExtendedDefinition_Step_StepOrScript() {}
+
+type ExtendedDefinition_Exec struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Command []string `protobuf:"bytes,1,rep,name=command,proto3" json:"command,omitempty"`
+	WorkDir string   `protobuf:"bytes,2,opt,name=work_dir,json=workDir,proto3" json:"work_dir,omitempty"`
+}
+
+func (x *ExtendedDefinition_Exec) Reset() {
+	*x = ExtendedDefinition_Exec{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_step_proto_msgTypes[22]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExtendedDefinition_Exec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtendedDefinition_Exec) ProtoMessage() {}
+
+func (x *ExtendedDefinition_Exec) ProtoReflect() protoreflect.Message {
+	mi := &file_step_proto_msgTypes[22]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExtendedDefinition_Exec.ProtoReflect.Descriptor instead.
+func (*ExtendedDefinition_Exec) Descriptor() ([]byte, []int) {
+	return file_step_proto_rawDescGZIP(), []int{6, 2}
+}
+
+func (x *ExtendedDefinition_Exec) GetCommand() []string {
+	if x != nil {
+		return x.Command
+	}
+	return nil
+}
+
+func (x *ExtendedDefinition_Exec) GetWorkDir() string {
+	if x != nil {
+		return x.WorkDir
 	}
 	return ""
 }
@@ -925,7 +1156,52 @@ var file_step_proto_rawDesc = []byte{
 	0x61, 0x74, 0x75, 0x73, 0x12, 0x0f, 0x0a, 0x0b, 0x75, 0x6e, 0x73, 0x70, 0x65, 0x63, 0x69, 0x66,
 	0x69, 0x65, 0x64, 0x10, 0x00, 0x12, 0x0b, 0x0a, 0x07, 0x72, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67,
 	0x10, 0x01, 0x12, 0x0b, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x10, 0x02, 0x12,
-	0x0b, 0x0a, 0x07, 0x66, 0x61, 0x69, 0x6c, 0x75, 0x72, 0x65, 0x10, 0x03, 0x2a, 0x46, 0x0a, 0x0e,
+	0x0b, 0x0a, 0x07, 0x66, 0x61, 0x69, 0x6c, 0x75, 0x72, 0x65, 0x10, 0x03, 0x22, 0xcd, 0x05, 0x0a,
+	0x12, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x65, 0x64, 0x44, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74,
+	0x69, 0x6f, 0x6e, 0x12, 0x29, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x0e, 0x32, 0x15, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x44, 0x65, 0x66, 0x69, 0x6e, 0x69,
+	0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12, 0x32,
+	0x0a, 0x04, 0x65, 0x78, 0x65, 0x63, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1e, 0x2e, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x65, 0x64, 0x44, 0x65, 0x66,
+	0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x45, 0x78, 0x65, 0x63, 0x52, 0x04, 0x65, 0x78,
+	0x65, 0x63, 0x12, 0x34, 0x0a, 0x05, 0x73, 0x74, 0x65, 0x70, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28,
+	0x0b, 0x32, 0x1e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64,
+	0x65, 0x64, 0x44, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x53, 0x74, 0x65,
+	0x70, 0x52, 0x05, 0x73, 0x74, 0x65, 0x70, 0x73, 0x12, 0x40, 0x0a, 0x07, 0x6f, 0x75, 0x74, 0x70,
+	0x75, 0x74, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x2e, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x65, 0x64, 0x44, 0x65, 0x66, 0x69, 0x6e, 0x69,
+	0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x45, 0x6e, 0x74, 0x72,
+	0x79, 0x52, 0x07, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x1a, 0x3a, 0x0a, 0x0c, 0x4f, 0x75,
+	0x74, 0x70, 0x75, 0x74, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65,
+	0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c,
+	0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x1a, 0xe6, 0x02, 0x0a, 0x04, 0x53, 0x74, 0x65, 0x70, 0x12,
+	0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e,
+	0x61, 0x6d, 0x65, 0x12, 0x14, 0x0a, 0x04, 0x73, 0x74, 0x65, 0x70, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x09, 0x48, 0x00, 0x52, 0x04, 0x73, 0x74, 0x65, 0x70, 0x12, 0x18, 0x0a, 0x06, 0x73, 0x63, 0x72,
+	0x69, 0x70, 0x74, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x06, 0x73, 0x63, 0x72,
+	0x69, 0x70, 0x74, 0x12, 0x39, 0x0a, 0x03, 0x65, 0x6e, 0x76, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x27, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x65,
+	0x64, 0x44, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x53, 0x74, 0x65, 0x70,
+	0x2e, 0x45, 0x6e, 0x76, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x03, 0x65, 0x6e, 0x76, 0x12, 0x42,
+	0x0a, 0x06, 0x69, 0x6e, 0x70, 0x75, 0x74, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2a,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x65, 0x64, 0x44,
+	0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x53, 0x74, 0x65, 0x70, 0x2e, 0x49,
+	0x6e, 0x70, 0x75, 0x74, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x06, 0x69, 0x6e, 0x70, 0x75,
+	0x74, 0x73, 0x1a, 0x36, 0x0a, 0x08, 0x45, 0x6e, 0x76, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10,
+	0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79,
+	0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x1a, 0x51, 0x0a, 0x0b, 0x49, 0x6e,
+	0x70, 0x75, 0x74, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x2c, 0x0a, 0x05, 0x76,
+	0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f,
+	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x56, 0x61, 0x6c,
+	0x75, 0x65, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x42, 0x10, 0x0a,
+	0x0e, 0x73, 0x74, 0x65, 0x70, 0x5f, 0x6f, 0x72, 0x5f, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x1a,
+	0x3b, 0x0a, 0x04, 0x45, 0x78, 0x65, 0x63, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6d, 0x6d, 0x61,
+	0x6e, 0x64, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e,
+	0x64, 0x12, 0x19, 0x0a, 0x08, 0x77, 0x6f, 0x72, 0x6b, 0x5f, 0x64, 0x69, 0x72, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x07, 0x77, 0x6f, 0x72, 0x6b, 0x44, 0x69, 0x72, 0x2a, 0x46, 0x0a, 0x0e,
 	0x44, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x1f,
 	0x0a, 0x1b, 0x64, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x74, 0x79, 0x70,
 	0x65, 0x5f, 0x75, 0x6e, 0x73, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x65, 0x64, 0x10, 0x00, 0x12,
@@ -953,63 +1229,76 @@ func file_step_proto_rawDescGZIP() []byte {
 }
 
 var file_step_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_step_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_step_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_step_proto_goTypes = []interface{}{
-	(DefinitionType)(0),         // 0: proto.DefinitionType
-	(InputType)(0),              // 1: proto.InputType
-	(StepResult_Status)(0),      // 2: proto.StepResult.Status
-	(*Step)(nil),                // 3: proto.Step
-	(*Definition)(nil),          // 4: proto.Definition
-	(*Spec)(nil),                // 5: proto.Spec
-	(*StepDefinition)(nil),      // 6: proto.StepDefinition
-	(*StepCall)(nil),            // 7: proto.StepCall
-	(*StepResult)(nil),          // 8: proto.StepResult
-	nil,                         // 9: proto.Step.EnvEntry
-	nil,                         // 10: proto.Step.InputsEntry
-	(*Definition_Exec)(nil),     // 11: proto.Definition.Exec
-	nil,                         // 12: proto.Definition.OutputsEntry
-	(*Spec_Content)(nil),        // 13: proto.Spec.Content
-	nil,                         // 14: proto.Spec.Content.InputsEntry
-	(*Spec_Content_Input)(nil),  // 15: proto.Spec.Content.Input
-	nil,                         // 16: proto.Spec.Content.OutputsEntry
-	(*Spec_Content_Output)(nil), // 17: proto.Spec.Content.Output
-	nil,                         // 18: proto.StepCall.InputsEntry
-	nil,                         // 19: proto.StepCall.EnvEntry
-	nil,                         // 20: proto.StepResult.OutputsEntry
-	nil,                         // 21: proto.StepResult.ExportsEntry
-	(*structpb.Value)(nil),      // 22: google.protobuf.Value
+	(DefinitionType)(0),             // 0: proto.DefinitionType
+	(InputType)(0),                  // 1: proto.InputType
+	(StepResult_Status)(0),          // 2: proto.StepResult.Status
+	(*Step)(nil),                    // 3: proto.Step
+	(*Definition)(nil),              // 4: proto.Definition
+	(*Spec)(nil),                    // 5: proto.Spec
+	(*StepDefinition)(nil),          // 6: proto.StepDefinition
+	(*StepCall)(nil),                // 7: proto.StepCall
+	(*StepResult)(nil),              // 8: proto.StepResult
+	(*ExtendedDefinition)(nil),      // 9: proto.ExtendedDefinition
+	nil,                             // 10: proto.Step.EnvEntry
+	nil,                             // 11: proto.Step.InputsEntry
+	(*Definition_Exec)(nil),         // 12: proto.Definition.Exec
+	nil,                             // 13: proto.Definition.OutputsEntry
+	(*Spec_Content)(nil),            // 14: proto.Spec.Content
+	nil,                             // 15: proto.Spec.Content.InputsEntry
+	(*Spec_Content_Input)(nil),      // 16: proto.Spec.Content.Input
+	nil,                             // 17: proto.Spec.Content.OutputsEntry
+	(*Spec_Content_Output)(nil),     // 18: proto.Spec.Content.Output
+	nil,                             // 19: proto.StepCall.InputsEntry
+	nil,                             // 20: proto.StepCall.EnvEntry
+	nil,                             // 21: proto.StepResult.OutputsEntry
+	nil,                             // 22: proto.StepResult.ExportsEntry
+	nil,                             // 23: proto.ExtendedDefinition.OutputsEntry
+	(*ExtendedDefinition_Step)(nil), // 24: proto.ExtendedDefinition.Step
+	(*ExtendedDefinition_Exec)(nil), // 25: proto.ExtendedDefinition.Exec
+	nil,                             // 26: proto.ExtendedDefinition.Step.EnvEntry
+	nil,                             // 27: proto.ExtendedDefinition.Step.InputsEntry
+	(*structpb.Value)(nil),          // 28: google.protobuf.Value
 }
 var file_step_proto_depIdxs = []int32{
-	9,  // 0: proto.Step.env:type_name -> proto.Step.EnvEntry
-	10, // 1: proto.Step.inputs:type_name -> proto.Step.InputsEntry
+	10, // 0: proto.Step.env:type_name -> proto.Step.EnvEntry
+	11, // 1: proto.Step.inputs:type_name -> proto.Step.InputsEntry
 	0,  // 2: proto.Definition.type:type_name -> proto.DefinitionType
-	11, // 3: proto.Definition.exec:type_name -> proto.Definition.Exec
+	12, // 3: proto.Definition.exec:type_name -> proto.Definition.Exec
 	3,  // 4: proto.Definition.steps:type_name -> proto.Step
-	12, // 5: proto.Definition.outputs:type_name -> proto.Definition.OutputsEntry
-	13, // 6: proto.Spec.spec:type_name -> proto.Spec.Content
+	13, // 5: proto.Definition.outputs:type_name -> proto.Definition.OutputsEntry
+	14, // 6: proto.Spec.spec:type_name -> proto.Spec.Content
 	5,  // 7: proto.StepDefinition.spec:type_name -> proto.Spec
 	4,  // 8: proto.StepDefinition.definition:type_name -> proto.Definition
-	18, // 9: proto.StepCall.inputs:type_name -> proto.StepCall.InputsEntry
-	19, // 10: proto.StepCall.env:type_name -> proto.StepCall.EnvEntry
+	19, // 9: proto.StepCall.inputs:type_name -> proto.StepCall.InputsEntry
+	20, // 10: proto.StepCall.env:type_name -> proto.StepCall.EnvEntry
 	3,  // 11: proto.StepResult.step:type_name -> proto.Step
 	6,  // 12: proto.StepResult.stepDefinition:type_name -> proto.StepDefinition
 	2,  // 13: proto.StepResult.status:type_name -> proto.StepResult.Status
-	20, // 14: proto.StepResult.outputs:type_name -> proto.StepResult.OutputsEntry
-	21, // 15: proto.StepResult.exports:type_name -> proto.StepResult.ExportsEntry
+	21, // 14: proto.StepResult.outputs:type_name -> proto.StepResult.OutputsEntry
+	22, // 15: proto.StepResult.exports:type_name -> proto.StepResult.ExportsEntry
 	8,  // 16: proto.StepResult.children_step_results:type_name -> proto.StepResult
-	22, // 17: proto.Step.InputsEntry.value:type_name -> google.protobuf.Value
-	14, // 18: proto.Spec.Content.inputs:type_name -> proto.Spec.Content.InputsEntry
-	16, // 19: proto.Spec.Content.outputs:type_name -> proto.Spec.Content.OutputsEntry
-	15, // 20: proto.Spec.Content.InputsEntry.value:type_name -> proto.Spec.Content.Input
-	1,  // 21: proto.Spec.Content.Input.type:type_name -> proto.InputType
-	22, // 22: proto.Spec.Content.Input.default:type_name -> google.protobuf.Value
-	17, // 23: proto.Spec.Content.OutputsEntry.value:type_name -> proto.Spec.Content.Output
-	22, // 24: proto.StepCall.InputsEntry.value:type_name -> google.protobuf.Value
-	25, // [25:25] is the sub-list for method output_type
-	25, // [25:25] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	0,  // 17: proto.ExtendedDefinition.type:type_name -> proto.DefinitionType
+	25, // 18: proto.ExtendedDefinition.exec:type_name -> proto.ExtendedDefinition.Exec
+	24, // 19: proto.ExtendedDefinition.steps:type_name -> proto.ExtendedDefinition.Step
+	23, // 20: proto.ExtendedDefinition.outputs:type_name -> proto.ExtendedDefinition.OutputsEntry
+	28, // 21: proto.Step.InputsEntry.value:type_name -> google.protobuf.Value
+	15, // 22: proto.Spec.Content.inputs:type_name -> proto.Spec.Content.InputsEntry
+	17, // 23: proto.Spec.Content.outputs:type_name -> proto.Spec.Content.OutputsEntry
+	16, // 24: proto.Spec.Content.InputsEntry.value:type_name -> proto.Spec.Content.Input
+	1,  // 25: proto.Spec.Content.Input.type:type_name -> proto.InputType
+	28, // 26: proto.Spec.Content.Input.default:type_name -> google.protobuf.Value
+	18, // 27: proto.Spec.Content.OutputsEntry.value:type_name -> proto.Spec.Content.Output
+	28, // 28: proto.StepCall.InputsEntry.value:type_name -> google.protobuf.Value
+	26, // 29: proto.ExtendedDefinition.Step.env:type_name -> proto.ExtendedDefinition.Step.EnvEntry
+	27, // 30: proto.ExtendedDefinition.Step.inputs:type_name -> proto.ExtendedDefinition.Step.InputsEntry
+	28, // 31: proto.ExtendedDefinition.Step.InputsEntry.value:type_name -> google.protobuf.Value
+	32, // [32:32] is the sub-list for method output_type
+	32, // [32:32] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_step_proto_init() }
@@ -1090,7 +1379,19 @@ func file_step_proto_init() {
 				return nil
 			}
 		}
-		file_step_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_step_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ExtendedDefinition); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_step_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Definition_Exec); i {
 			case 0:
 				return &v.state
@@ -1102,7 +1403,7 @@ func file_step_proto_init() {
 				return nil
 			}
 		}
-		file_step_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_step_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Spec_Content); i {
 			case 0:
 				return &v.state
@@ -1114,7 +1415,7 @@ func file_step_proto_init() {
 				return nil
 			}
 		}
-		file_step_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+		file_step_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Spec_Content_Input); i {
 			case 0:
 				return &v.state
@@ -1126,7 +1427,7 @@ func file_step_proto_init() {
 				return nil
 			}
 		}
-		file_step_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+		file_step_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Spec_Content_Output); i {
 			case 0:
 				return &v.state
@@ -1138,6 +1439,34 @@ func file_step_proto_init() {
 				return nil
 			}
 		}
+		file_step_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ExtendedDefinition_Step); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_step_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ExtendedDefinition_Exec); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+	}
+	file_step_proto_msgTypes[21].OneofWrappers = []interface{}{
+		(*ExtendedDefinition_Step_Step)(nil),
+		(*ExtendedDefinition_Step_Script)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1145,7 +1474,7 @@ func file_step_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_step_proto_rawDesc,
 			NumEnums:      3,
-			NumMessages:   19,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
