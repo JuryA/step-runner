@@ -24,7 +24,7 @@ test: generate
 
 .PHONY: $(PROTOC)
 $(PROTOC): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')
-$(PROTOC): ARCH ?= $(shell uname -m | sed 's/arm64/aarch64/')
+$(PROTOC): ARCH ?= $(shell uname -m | sed 's/aarch64/aarch_64/')
 $(PROTOC): DOWNLOAD_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(OS_TYPE)-$(ARCH).zip
 $(PROTOC): OUT_DIR = $(shell dirname $(PROTOC))
 $(PROTOC):
