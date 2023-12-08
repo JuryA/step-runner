@@ -18,20 +18,25 @@ type Execution struct {
 	defs cache.Cache
 }
 
+type Params struct {
+	Inputs map[string]*structpb.Value
+	Env    map[string]string
+}
+
 func New(defs cache.Cache) (*Execution, error) {
 	return &Execution{
 		defs: defs,
 	}, nil
 }
 
-func (e *Execution) createContext(specDefinition *proto.StepDefinition, stepCall *proto.StepCall, globalCtx *context.Global) (*context.Steps, error) {
+func (e *Execution) createContext(specDefinition *proto.StepDefinition, params *Params, globalCtx *context.Global) (*context.Steps, error) {
 	stepsCtx := context.NewSteps(globalCtx)
-	stepsCtx.Env = stepCall.Env
+	stepsCtx.Env = params.Env
 	stepsCtx.Dir = specDefinition.Dir
 
 	// Match inputs with definition
 	for key, value := range specDefinition.Spec.Spec.Inputs {
-		callValue := stepCall.Inputs[key]
+		callValue := params.Inputs[key]
 		if callValue != nil {
 			stepsCtx.Inputs[key] = callValue
 		} else if value.Default != nil {
@@ -42,7 +47,7 @@ func (e *Execution) createContext(specDefinition *proto.StepDefinition, stepCall
 	}
 
 	// Reject invalid inputs
-	for key, _ := range stepCall.Inputs {
+	for key, _ := range params.Inputs {
 		defValue := specDefinition.Spec.Spec.Inputs[key]
 		if defValue == nil {
 			return nil, fmt.Errorf("input %q not found", key)
@@ -52,8 +57,8 @@ func (e *Execution) createContext(specDefinition *proto.StepDefinition, stepCall
 	return stepsCtx, nil
 }
 
-func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, stepCall *proto.StepCall, globalCtx *context.Global) (*proto.StepResult, error) {
-	stepsCtx, err := e.createContext(specDefinition, stepCall, globalCtx)
+func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, params *Params, globalCtx *context.Global) (*proto.StepResult, error) {
+	stepsCtx, err := e.createContext(specDefinition, params, globalCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -168,29 +173,29 @@ func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDef
 }
 
 func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx *context.Steps) (*proto.StepResult, error) {
-	stepCall := &proto.StepCall{}
+	params := &Params{}
 
 	// Expand inputs
-	stepCall.Inputs = make(map[string]*structpb.Value)
+	params.Inputs = make(map[string]*structpb.Value)
 	for k, v := range stepReference.Inputs {
 		res, resErr := expression.Expand(stepsCtx, v)
 		if resErr != nil {
 			return nil, fmt.Errorf("Cannot assign input %q due to error: %s", k, resErr.Error())
 		}
-		stepCall.Inputs[k] = res
+		params.Inputs[k] = res
 	}
 
 	// Clone and expand env
-	stepCall.Env = make(map[string]string)
+	params.Env = make(map[string]string)
 	for k, v := range stepsCtx.Env {
-		stepCall.Env[k] = v
+		params.Env[k] = v
 	}
 	for k, v := range stepReference.Env {
 		res, resErr := expression.ExpandString(stepsCtx, v)
 		if resErr != nil {
 			return nil, fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
 		}
-		stepCall.Env[k] = res
+		params.Env[k] = res
 	}
 
 	stepDefinition, err := e.defs.Get(ctx, stepReference.Step)
@@ -198,7 +203,7 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
 	}
 
-	result, err := e.Run(ctx, stepDefinition, stepCall, stepsCtx.Global)
+	result, err := e.Run(ctx, stepDefinition, params, stepsCtx.Global)
 	if err != nil {
 		return nil, err
 	}
