@@ -47,7 +47,7 @@ func (e *Execution) createContext(specDefinition *proto.StepDefinition, params *
 	}
 
 	// Reject invalid inputs
-	for key, _ := range params.Inputs {
+	for key := range params.Inputs {
 		defValue := specDefinition.Spec.Spec.Inputs[key]
 		if defValue == nil {
 			return nil, fmt.Errorf("input %q not found", key)
@@ -81,16 +81,14 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
 	}
 
-	if result != nil {
-		result.StepDefinition = specDefinition
+	result.StepDefinition = specDefinition
 
-		for k, v := range specDefinition.Definition.Outputs {
-			res, resErr := expression.ExpandString(stepsCtx, v)
-			if resErr == nil {
-				result.Outputs[k] = res
-			} else {
-				fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
-			}
+	for k, v := range specDefinition.Definition.Outputs {
+		res, resErr := expression.ExpandString(stepsCtx, v)
+		if resErr == nil {
+			result.Outputs[k] = res
+		} else {
+			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
 		}
 	}
 	return result, err

@@ -7,6 +7,21 @@ stages:
   - e2e
   - deploy
 
+go-fmt:
+  stage: test
+  image: golang:1.21
+  script: |
+    if [[ -n $(gofmt -l .) ]]; then
+        gofmt -d .
+        exit 1
+    fi
+
+go-lint:
+  stage: test
+  image: golangci/golangci-lint:v1.55.2
+  script:
+    - golangci-lint run -v
+
 go-test:
   stage: test
   image: golang:1.21
