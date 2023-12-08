@@ -163,9 +163,9 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 			globalCtx.Stdout = &log
 			globalCtx.Stderr = &log
 
-			stepCall := &proto.StepCall{}
+			params := &Params{}
 
-			result, err := runner.Run(ctx.Background(), stepDef, stepCall, globalCtx)
+			result, err := runner.Run(ctx.Background(), stepDef, params, globalCtx)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {

@@ -50,11 +50,6 @@ message StepDefinition {
     string dir = 3;
 }
 
-message StepCall {
-    map<string,google.protobuf.Value> inputs = 1;
-    map<string,string> env = 2;
-}
-
 enum InputType {
     spec_type_unspecified = 0;
     string = 1;

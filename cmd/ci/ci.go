@@ -11,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
-	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 var Cmd = &cobra.Command{
@@ -47,9 +46,9 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("creating execution: %w", err)
 	}
 
-	stepCall := &proto.StepCall{}
+	params := &runner.Params{}
 
-	result, err := execution.Run(ctx.Background(), stepDefinition, stepCall, globalCtx)
+	result, err := execution.Run(ctx.Background(), stepDefinition, params, globalCtx)
 	if err != nil {
 		return fmt.Errorf("running execution: %w", err)
 	}
