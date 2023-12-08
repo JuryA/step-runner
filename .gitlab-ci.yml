@@ -51,7 +51,7 @@ run-e2e:
     - /step-runner ci
   variables:
     STEPS: |
-      - name: hello-world
+      - name: hello_world
         step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step
         inputs:
           echo: ${CI_PIPELINE_ID}
