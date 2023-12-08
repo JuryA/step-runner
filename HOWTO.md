@@ -67,3 +67,34 @@ hello-world-job:
     paths:
       - step-results.json
 ```
+
+## Data structures
+
+The structure of steps and their definitions are defined in the [`step.proto`](https://gitlab.com/gitlab-org/step-runner/-/blob/main/proto/step.proto) Protocol Buffer file.
+Additionaly syntatic sugar will be added to the syntax but it will always be folded down to the baseline proto structures.
+The [Iteration 2 epic](https://gitlab.com/groups/gitlab-org/-/epics/12167) creates a keyword `script` as syntatic sugar and the underlying data models.
+
+## Expression syntax
+
+Expressions are a language for accessing and processing the context and step outputs.
+The [Iteration 3 epic](https://gitlab.com/groups/gitlab-org/-/epics/12168) adds expression support for `if` statements and more complex parsing of expressions.
+
+Valid locations for expressions:
+
+1. Input values (but not defaults)
+1. Environment variable values
+1. Exec commands
+1. Exec working directory
+1. Steps output values
+
+Environment variable value and outputs values are always of type `string`.
+Inputs can be of type `string`, `number`, `bool` or `struct`.
+Nested fields of an input struct can be accessed with a `.` syntax path (e.g. `foo.bar`).
+
+Example valid expressions:
+
+- `${{ inputs.echo }}`
+- `${{ inputs.foo.bar }}`
+- `${{ env.BAZ }}`
+- `${{ steps.hello-world-step.outputs.echo }}`
+- `${{ steps.hello-world-step.exports.BAM }}`

@@ -6,3 +6,10 @@ See [HOWTO.md](./HOWTO.md) for usage.
 ## Project status
 
 Step Runner is currently in an experimental state.
+It can be used in GitLab CI jobs but should not be used for production workloads yet.
+
+## Release
+
+During the experimental phase all changes to `main` are automatically built and tagged in the container repository as `v0`.
+So all workflows referencing the image will get continuous updates.
+See [HOWTO.md](./HOWTO.md) for an example of how to use the Step Runner container in a job.
