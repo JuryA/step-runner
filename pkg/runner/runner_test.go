@@ -109,7 +109,7 @@ steps:
     step: ./test_steps/greeting
     inputs:
       name: ${{steps.greet-sponge-bob.outputs.name}}`,
-		wantErr: errors.New(`Cannot assign input "name" due to error: "steps.greet-sponge-bob.outputs.name" cannot be evaluated`),
+		wantErr: errors.New(`Cannot assign input "name" due to error: steps.greet-sponge-bob.outputs.name: the "greet-sponge-bob" was not found`),
 	}, {
 		name: "complex steps",
 		yaml: `

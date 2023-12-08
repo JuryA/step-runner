@@ -5,17 +5,17 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
-
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 )
 
-func Evaluate(stepsCtx *context.Steps, s string) (*structpb.Value, error) {
+func Evaluate(obj any, s string) (*structpb.Value, error) {
 	s = strings.TrimSpace(s)
-	matches := stepsCtx.GetMatches()
-	match, ok := matches[s]
-
-	if !ok {
-		return nil, fmt.Errorf("%q cannot be evaluated", s)
+	for _, key := range strings.Split(s, ".") {
+		res, err := DigObject(obj, key)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %s", s, err)
+		}
+		obj = res
 	}
-	return match, nil
+
+	return ObjectToProtoValue(obj)
 }

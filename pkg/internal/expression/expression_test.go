@@ -21,7 +21,7 @@ func TestEvaluate(t *testing.T) {
 		want:  structpb.NewStringValue("1982"),
 	}, {
 		value:   "job.undefined_key",
-		wantErr: errors.New(`"job.undefined_key" cannot be evaluated`),
+		wantErr: errors.New(`job.undefined_key: the "undefined_key" was not found`),
 	}}
 	for _, c := range cases {
 		t.Run(c.value, func(t *testing.T) {
