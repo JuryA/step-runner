@@ -1,0 +1,12 @@
+spec:
+  inputs: {}
+  outputs: {}
+---
+type: steps
+steps:
+  - name: rand_1
+    step: "./test_steps/rand"
+  - name: rand_2
+    step: "./test_steps/rand"
+  - name: rand_3
+    step: "./test_steps/rand"

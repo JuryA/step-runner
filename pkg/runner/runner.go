@@ -99,7 +99,7 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 		err = e.runExec(result, ctx, specDefinition.Definition.Exec, stepsCtx)
 
 	case proto.DefinitionType_steps:
-		err = e.runSteps(result, ctx, specDefinition.Definition.Steps, stepsCtx)
+		err = e.runSteps(result, ctx, specDefinition.Definition.Steps, params, stepsCtx)
 
 	default:
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
@@ -175,9 +175,9 @@ func (e *Execution) runExec(result *proto.StepResult, ctx ctx.Context, execDefin
 	return nil
 }
 
-func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDefinition []*proto.Step, stepsCtx *context.Steps) error {
+func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDefinition []*proto.Step, params *Params, stepsCtx *context.Steps) error {
 	for _, step := range stepsDefinition {
-		stepResult, err := e.runStep(ctx, step, stepsCtx)
+		stepResult, err := e.runStep(ctx, step, params, stepsCtx)
 		if err != nil {
 			return err
 		}
@@ -194,8 +194,11 @@ func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDef
 	return nil
 }
 
-func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx *context.Steps) (*proto.StepResult, error) {
+func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, parentParams *Params, stepsCtx *context.Steps) (*proto.StepResult, error) {
 	params := &Params{}
+	if parentParams.ReplayOutputs != nil {
+		params.ReplayOutputs = parentParams.ReplayOutputs.ChildrenOutputs[stepReference.Name]
+	}
 
 	// Expand inputs
 	params.Inputs = make(map[string]*structpb.Value)

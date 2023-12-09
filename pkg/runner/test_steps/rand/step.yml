@@ -1,8 +1,7 @@
 spec:
   inputs: {}
   outputs:
-    rand:
-      default:
+    rand: {}
 ---
 type: exec
 exec:
@@ -10,7 +9,7 @@ exec:
     - bash
     - -c
     - |
-      if [[ -z "${{ outputs.rand }}" ]]; then
+      if [[ -n "${{ outputs.rand }}" ]]; then
           echo rand=${{ outputs.rand }} | tee ${STEP_RUNNER_OUTPUT}
       else
           echo rand=$((RANDOM)) | tee ${STEP_RUNNER_OUTPUT}

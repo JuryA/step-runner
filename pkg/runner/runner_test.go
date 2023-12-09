@@ -182,8 +182,10 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 
 func TestReplay(t *testing.T) {
 	steps := `
-- name: replay_me
+- name: replay_exec
   step: "./test_steps/rand"
+- name: replay_steps
+  step: "./test_steps/multiple_rand"
 `
 
 	// Run steps
