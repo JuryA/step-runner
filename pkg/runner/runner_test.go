@@ -5,6 +5,7 @@ import (
 	ctx "context"
 	"errors"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -177,4 +178,24 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 			}
 		})
 	}
+}
+
+func TestReplay(t *testing.T) {
+	steps := `
+- name: replay_me
+  step: "./test_steps/rand"
+`
+
+	// Run steps
+	cmd := exec.Command("go", "run", "../..", "ci")
+	cmd.Env = append(os.Environ(), "STEPS="+steps)
+	out, err := cmd.CombinedOutput()
+	require.Equal(t, 0, cmd.ProcessState.ExitCode(), string(out))
+	require.NoError(t, err, string(out))
+
+	// Replay steps
+	cmd = exec.Command("go", "run", "../..", "replay", "step-results.json")
+	out, err = cmd.CombinedOutput()
+	require.Equal(t, 0, cmd.ProcessState.ExitCode(), string(out))
+	require.NoError(t, err, string(out))
 }

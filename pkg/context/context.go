@@ -39,18 +39,20 @@ func (g *Global) InheritEnv(envs ...string) {
 type Steps struct {
 	*Global
 
-	Dir    string                       `json:"-"`
-	Env    map[string]string            `json:"env"`
-	Inputs map[string]*structpb.Value   `json:"inputs"`
-	Steps  map[string]*proto.StepResult `json:"steps"`
+	Dir     string                       `json:"-"`
+	Env     map[string]string            `json:"env"`
+	Inputs  map[string]*structpb.Value   `json:"inputs"`
+	Steps   map[string]*proto.StepResult `json:"steps"`
+	Outputs map[string]string            `json:"outputs"`
 }
 
 func NewSteps(global *Global) *Steps {
 	return &Steps{
-		Global: global,
-		Env:    maps.Clone(global.Env),
-		Inputs: map[string]*structpb.Value{},
-		Steps:  map[string]*proto.StepResult{},
+		Global:  global,
+		Env:     maps.Clone(global.Env),
+		Inputs:  map[string]*structpb.Value{},
+		Steps:   map[string]*proto.StepResult{},
+		Outputs: map[string]string{},
 	}
 }
 

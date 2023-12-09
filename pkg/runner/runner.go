@@ -18,9 +18,22 @@ type Execution struct {
 	defs cache.Cache
 }
 
+type ReplayOutputs struct {
+	Outputs         map[string]string
+	ChildrenOutputs map[string]*ReplayOutputs
+}
+
+func NewReplayOutputs() *ReplayOutputs {
+	return &ReplayOutputs{
+		Outputs:         map[string]string{},
+		ChildrenOutputs: map[string]*ReplayOutputs{},
+	}
+}
+
 type Params struct {
-	Inputs map[string]*structpb.Value
-	Env    map[string]string
+	Inputs        map[string]*structpb.Value
+	Env           map[string]string
+	ReplayOutputs *ReplayOutputs
 }
 
 func New(defs cache.Cache) (*Execution, error) {
@@ -51,6 +64,17 @@ func (e *Execution) createContext(specDefinition *proto.StepDefinition, params *
 		defValue := specDefinition.Spec.Spec.Inputs[key]
 		if defValue == nil {
 			return nil, fmt.Errorf("input %q not found", key)
+		}
+	}
+
+	// Provide previous outputs for an empty string
+	if params.ReplayOutputs != nil {
+		for k, v := range params.ReplayOutputs.Outputs {
+			stepsCtx.Outputs[k] = v
+		}
+	} else {
+		for k := range specDefinition.Spec.Spec.Outputs {
+			stepsCtx.Outputs[k] = ""
 		}
 	}
 
