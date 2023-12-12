@@ -3,6 +3,7 @@ package runner
 import (
 	ctx "context"
 	"fmt"
+	"maps"
 	"os/exec"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -31,7 +32,7 @@ func New(defs cache.Cache) (*Execution, error) {
 
 func (e *Execution) createContext(specDefinition *proto.StepDefinition, params *Params, globalCtx *context.Global) (*context.Steps, error) {
 	stepsCtx := context.NewSteps(globalCtx)
-	stepsCtx.Env = params.Env
+	maps.Copy(stepsCtx.Env, params.Env)
 	stepsCtx.Dir = specDefinition.Dir
 
 	// Match inputs with definition
@@ -72,10 +73,10 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 
 	switch specDefinition.Definition.Type {
 	case proto.DefinitionType_exec:
-		err = e.runExec(result, ctx, specDefinition.Definition.Exec, stepsCtx)
+		err = e.runExec(result, ctx, specDefinition.Definition.Exec, specDefinition.Definition.Env, stepsCtx)
 
 	case proto.DefinitionType_steps:
-		err = e.runSteps(result, ctx, specDefinition.Definition.Steps, stepsCtx)
+		err = e.runSteps(result, ctx, specDefinition.Definition.Steps, specDefinition.Definition.Env, stepsCtx)
 
 	default:
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
@@ -94,7 +95,7 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 	return result, err
 }
 
-func (e *Execution) runExec(result *proto.StepResult, ctx ctx.Context, execDefinition *proto.Definition_Exec, stepsCtx *context.Steps) error {
+func (e *Execution) runExec(result *proto.StepResult, ctx ctx.Context, execDefinition *proto.Definition_Exec, defEnv map[string]string, stepsCtx *context.Steps) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("exec cancelled: %w", err)
 	}
@@ -126,6 +127,17 @@ func (e *Execution) runExec(result *proto.StepResult, ctx ctx.Context, execDefin
 	}
 	// Only explicitly provided environment variables
 	cmd.Env = stepsCtx.GetEnvList()
+
+	for k, v := range defEnv {
+		res, resErr := expression.ExpandString(stepsCtx, v)
+		if resErr != nil {
+			return fmt.Errorf("cannot interpolate definition environment %q: %w", k, resErr)
+		}
+		cmd.Env = append(cmd.Env, k+"="+res)
+	}
+
+	//fmt.Printf("DO NOT SUBMIT: %v\n", cmd.Env)
+
 	// TODO: Use multi-writer
 	cmd.Stdout = stepsCtx.Global.Stdout
 	cmd.Stderr = stepsCtx.Global.Stderr
@@ -151,7 +163,7 @@ func (e *Execution) runExec(result *proto.StepResult, ctx ctx.Context, execDefin
 	return nil
 }
 
-func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDefinition []*proto.Step, stepsCtx *context.Steps) error {
+func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDefinition []*proto.Step, defEnv map[string]string, stepsCtx *context.Steps) error {
 	for _, step := range stepsDefinition {
 		stepResult, err := e.runStep(ctx, step, stepsCtx)
 		if err != nil {

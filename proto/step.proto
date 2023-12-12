@@ -21,6 +21,7 @@ message Definition {
         string work_dir = 2;
     }
     map<string,string> outputs = 4;
+    map<string,string> env = 5;
 }
 
 enum DefinitionType {
