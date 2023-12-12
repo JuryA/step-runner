@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
+	"gopkg.in/yaml.v3"
 )
 
 var Cmd = &cobra.Command{
@@ -29,6 +30,11 @@ steps:
 
 func run(cmd *cobra.Command, args []string) error {
 	steps := os.Getenv("STEPS")
+	var err error
+	steps, err = smashIntoYaml(steps)
+	if err != nil {
+		return err
+	}
 	stepDefinition, err := step.Deserialize(stepsTemplate+steps, "")
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", steps, err)
@@ -64,4 +70,17 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("trace written to %v", outputFile)
 	return nil
+}
+
+func smashIntoYaml(yamlOrJson string) (string, error) {
+	var a any
+	err := yaml.Unmarshal([]byte(yamlOrJson), &a)
+	if err != nil {
+		return "", fmt.Errorf("smashing into any: %w", err)
+	}
+	yaml, err := yaml.Marshal(a)
+	if err != nil {
+		return "", fmt.Errorf("smashing back into yaml: %w", err)
+	}
+	return string(yaml), nil
 }
