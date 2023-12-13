@@ -4,6 +4,7 @@ import (
 	"bytes"
 	ctx "context"
 	"errors"
+	"maps"
 	"os"
 	"testing"
 
@@ -18,6 +19,7 @@ func TestRun(t *testing.T) {
 	cases := []struct {
 		name        string
 		yaml        string
+		globalEnv   map[string]string
 		wantLog     string
 		wantResults func(*testing.T, []*proto.StepResult)
 		wantErr     error
@@ -145,6 +147,26 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 3)
 		},
+	}, {
+		name: "retain global environment",
+		yaml: `
+spec: {}
+---
+type: steps
+steps:
+  - name: greet-steppy
+    step: ./test_steps/greeting
+    inputs:
+      name: ${{ env.name }}
+`,
+		globalEnv: map[string]string{
+			"name": "global",
+		},
+		wantResults: func(t *testing.T, results []*proto.StepResult) {
+			require.Len(t, results, 1)
+			require.Equal(t, "global", results[0].Outputs["name"])
+			require.Equal(t, "global", results[0].Exports["NAME"])
+		},
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -160,6 +182,7 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 
 			globalCtx := context.NewGlobal()
 			globalCtx.Env["HOME"] = os.Getenv("HOME") // for `go run` steps
+			maps.Copy(globalCtx.Env, c.globalEnv)
 			globalCtx.Stdout = &log
 			globalCtx.Stderr = &log
 

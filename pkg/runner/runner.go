@@ -3,6 +3,7 @@ package runner
 import (
 	ctx "context"
 	"fmt"
+	"maps"
 	"os/exec"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -31,7 +32,7 @@ func New(defs cache.Cache) (*Execution, error) {
 
 func (e *Execution) createContext(specDefinition *proto.StepDefinition, params *Params, globalCtx *context.Global) (*context.Steps, error) {
 	stepsCtx := context.NewSteps(globalCtx)
-	stepsCtx.Env = params.Env
+	maps.Copy(stepsCtx.Env, params.Env)
 	stepsCtx.Dir = specDefinition.Dir
 
 	// Match inputs with definition
