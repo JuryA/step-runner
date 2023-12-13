@@ -1,3 +1,10 @@
+# Experiment
+
+- Demo: https://youtu.be/TU_53vWVKeE
+- Code: https://gitlab.com/josephburnett/hello-step-runner
+- Feedback: https://gitlab.com/gitlab-org/step-runner/-/issues/10
+- Blueprint: https://docs.gitlab.com/ee/architecture/blueprints/gitlab_steps/
+
 # How to use Step Runner
 
 Step Runner reads `steps` and executes them one at a time.

@@ -8,6 +8,13 @@ See [HOWTO.md](./HOWTO.md) for usage.
 Step Runner is currently in an experimental state.
 It can be used in GitLab CI jobs but should not be used for production workloads yet.
 
+### Experiment
+
+- Demo: https://youtu.be/TU_53vWVKeE
+- Code: https://gitlab.com/josephburnett/hello-step-runner
+- Feedback: https://gitlab.com/gitlab-org/step-runner/-/issues/10
+- Blueprint: https://docs.gitlab.com/ee/architecture/blueprints/gitlab_steps/
+
 ## Release
 
 During the experimental phase all changes to `main` are automatically built and tagged in the container repository as `v0`.
