@@ -7,10 +7,10 @@
 
 ## How Step Runner works
 
-Step Runner reads `steps` and executes them one at a time.
-Each step can take `inputs` and environment variables (`env`), and can produce `outputs` and additional environment variables (`exports`).
-Steps have access to previous step outputs and exports, and also job-level parameters through `context`.
-Context is accessed with `expressions`.
+- Step Runner reads `steps` and executes them one at a time.
+- Each step can take `inputs` and environment variables (`env`), and can produce `outputs` and additional environment variables (`exports`).
+- Steps have access to previous step outputs and exports, and also job-level parameters through `context`.
+- Context is accessed with `expressions`.
 
 For example, using a step with one input:
 
@@ -21,11 +21,11 @@ For example, using a step with one input:
     echo: hello world
 ```
 
-Steps are defined in a `step.yml` file.
-Step definitions consist of a `spec` which lists inputs and outputs, and an implementation of either a single `exec` or a list of `steps`.
-Inputs can have a `type` and a `default`.
-An `exec` consists of a `command` to run and a directory in which to run it (`workDir`).
-A `steps` implementation is just another list of step invocations.
+- Steps are defined in a `step.yml` file.
+- Step definitions consist of a `spec` which lists inputs and outputs, and an implementation of either a single `exec` or a list of `steps`.
+- Inputs can have a `type` and a `default`.
+- An `exec` consists of a `command` to run and a directory in which to run it (`workDir`).
+- A `steps` implementation is just another list of step invocations.
 
 Example step definition:
 
@@ -46,9 +46,9 @@ exec:
     - echo echo=${{inputs.echo}} | tee ${STEP_RUNNER_OUTPUT}
 ```
 
-Inputs and other context values are provided to the command through expressions within `${{ }}` delimiters.
-Outputs are written in a `key=value` format a file at `$STEP_RUNNER_OUTPUT`.
-And exports are written in the same format to `$STEP_RUNNER_ENV`.
+- Inputs and other context values are provided to the command through expressions within `${{ }}` delimiters.
+- Outputs are written in a `key=value` format a file at `$STEP_RUNNER_OUTPUT`.
+- Exports are written in the same format to `$STEP_RUNNER_ENV`.
 
 ## Use in GitLab CI/CD
 
@@ -78,14 +78,15 @@ hello-world-job:
 
 ## Data structures
 
-The structure of steps and their definitions are defined in the [`step.proto`](https://gitlab.com/gitlab-org/step-runner/-/blob/main/proto/step.proto) Protocol Buffer file.
-Additional [syntactic sugar](https://docs.gitlab.com/ee/architecture/blueprints/gitlab_steps/steps-syntactic-sugar.html) will be added to the syntax but it will always be folded down to the baseline proto structures.
+- The structure of steps and their definitions are defined in the [`step.proto`](https://gitlab.com/gitlab-org/step-runner/-/blob/main/proto/step.proto) Protocol Buffer file.
+- Additional [syntactic sugar](https://docs.gitlab.com/ee/architecture/blueprints/gitlab_steps/steps-syntactic-sugar.html) will be added to the syntax but it will always be folded down to the baseline proto structures.
 
 The [Iteration 2 epic](https://gitlab.com/groups/gitlab-org/-/epics/12167) proposes a `script` keyword as syntactic sugar and the underlying data models.
 
 ## Expression syntax
 
-Expressions are a language for accessing and processing the context and step outputs.
+- Expressions are a language for accessing and processing the context and step outputs.
+
 The [Iteration 3 epic](https://gitlab.com/groups/gitlab-org/-/epics/12168) proposes expression support for `if` statements and more complex parsing of expressions.
 
 Additionally:
