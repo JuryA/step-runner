@@ -528,6 +528,312 @@ func (x *StepResult) GetChildrenStepResults() []*StepResult {
 	return nil
 }
 
+type RunRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Types that are assignable to JobOneof:
+	//
+	//	*RunRequest_CiJob
+	//	*RunRequest_Step
+	JobOneof isRunRequest_JobOneof `protobuf_oneof:"job_oneof"`
+}
+
+func (x *RunRequest) Reset() {
+	*x = RunRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_step_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RunRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunRequest) ProtoMessage() {}
+
+func (x *RunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_step_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunRequest.ProtoReflect.Descriptor instead.
+func (*RunRequest) Descriptor() ([]byte, []int) {
+	return file_step_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *RunRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (m *RunRequest) GetJobOneof() isRunRequest_JobOneof {
+	if m != nil {
+		return m.JobOneof
+	}
+	return nil
+}
+
+func (x *RunRequest) GetCiJob() string {
+	if x, ok := x.GetJobOneof().(*RunRequest_CiJob); ok {
+		return x.CiJob
+	}
+	return ""
+}
+
+func (x *RunRequest) GetStep() *StepDefinition {
+	if x, ok := x.GetJobOneof().(*RunRequest_Step); ok {
+		return x.Step
+	}
+	return nil
+}
+
+type isRunRequest_JobOneof interface {
+	isRunRequest_JobOneof()
+}
+
+type RunRequest_CiJob struct {
+	CiJob string `protobuf:"bytes,2,opt,name=ci_job,json=ciJob,proto3,oneof"`
+}
+
+type RunRequest_Step struct {
+	Step *StepDefinition `protobuf:"bytes,3,opt,name=step,proto3,oneof"`
+}
+
+func (*RunRequest_CiJob) isRunRequest_JobOneof() {}
+
+func (*RunRequest_Step) isRunRequest_JobOneof() {}
+
+type RunResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *RunResponse) Reset() {
+	*x = RunResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_step_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RunResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunResponse) ProtoMessage() {}
+
+func (x *RunResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_step_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunResponse.ProtoReflect.Descriptor instead.
+func (*RunResponse) Descriptor() ([]byte, []int) {
+	return file_step_proto_rawDescGZIP(), []int{6}
+}
+
+type FollowRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (x *FollowRequest) Reset() {
+	*x = FollowRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_step_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FollowRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FollowRequest) ProtoMessage() {}
+
+func (x *FollowRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_step_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FollowRequest.ProtoReflect.Descriptor instead.
+func (*FollowRequest) Descriptor() ([]byte, []int) {
+	return file_step_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FollowRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type FollowResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Result *StepResult `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
+}
+
+func (x *FollowResponse) Reset() {
+	*x = FollowResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_step_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FollowResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FollowResponse) ProtoMessage() {}
+
+func (x *FollowResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_step_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FollowResponse.ProtoReflect.Descriptor instead.
+func (*FollowResponse) Descriptor() ([]byte, []int) {
+	return file_step_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *FollowResponse) GetResult() *StepResult {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+type CancelRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (x *CancelRequest) Reset() {
+	*x = CancelRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_step_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CancelRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelRequest) ProtoMessage() {}
+
+func (x *CancelRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_step_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelRequest.ProtoReflect.Descriptor instead.
+func (*CancelRequest) Descriptor() ([]byte, []int) {
+	return file_step_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *CancelRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type CancelResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *CancelResponse) Reset() {
+	*x = CancelResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_step_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CancelResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelResponse) ProtoMessage() {}
+
+func (x *CancelResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_step_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelResponse.ProtoReflect.Descriptor instead.
+func (*CancelResponse) Descriptor() ([]byte, []int) {
+	return file_step_proto_rawDescGZIP(), []int{10}
+}
+
 type Definition_Exec struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -540,7 +846,7 @@ type Definition_Exec struct {
 func (x *Definition_Exec) Reset() {
 	*x = Definition_Exec{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_step_proto_msgTypes[7]
+		mi := &file_step_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -553,7 +859,7 @@ func (x *Definition_Exec) String() string {
 func (*Definition_Exec) ProtoMessage() {}
 
 func (x *Definition_Exec) ProtoReflect() protoreflect.Message {
-	mi := &file_step_proto_msgTypes[7]
+	mi := &file_step_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +901,7 @@ type Spec_Content struct {
 func (x *Spec_Content) Reset() {
 	*x = Spec_Content{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_step_proto_msgTypes[9]
+		mi := &file_step_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -608,7 +914,7 @@ func (x *Spec_Content) String() string {
 func (*Spec_Content) ProtoMessage() {}
 
 func (x *Spec_Content) ProtoReflect() protoreflect.Message {
-	mi := &file_step_proto_msgTypes[9]
+	mi := &file_step_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -650,7 +956,7 @@ type Spec_Content_Input struct {
 func (x *Spec_Content_Input) Reset() {
 	*x = Spec_Content_Input{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_step_proto_msgTypes[11]
+		mi := &file_step_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -663,7 +969,7 @@ func (x *Spec_Content_Input) String() string {
 func (*Spec_Content_Input) ProtoMessage() {}
 
 func (x *Spec_Content_Input) ProtoReflect() protoreflect.Message {
-	mi := &file_step_proto_msgTypes[11]
+	mi := &file_step_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -704,7 +1010,7 @@ type Spec_Content_Output struct {
 func (x *Spec_Content_Output) Reset() {
 	*x = Spec_Content_Output{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_step_proto_msgTypes[13]
+		mi := &file_step_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -717,7 +1023,7 @@ func (x *Spec_Content_Output) String() string {
 func (*Spec_Content_Output) ProtoMessage() {}
 
 func (x *Spec_Content_Output) ProtoReflect() protoreflect.Message {
-	mi := &file_step_proto_msgTypes[13]
+	mi := &file_step_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -911,19 +1217,47 @@ var file_step_proto_rawDesc = []byte{
 	0x74, 0x68, 0x69, 0x73, 0x2e, 0x65, 0x78, 0x70, 0x6f, 0x72, 0x74, 0x73, 0x2e, 0x61, 0x6c, 0x6c,
 	0x28, 0x6b, 0x65, 0x79, 0x2c, 0x20, 0x6b, 0x65, 0x79, 0x2e, 0x6d, 0x61, 0x74, 0x63, 0x68, 0x65,
 	0x73, 0x28, 0x27, 0x5e, 0x5b, 0x61, 0x2d, 0x7a, 0x41, 0x2d, 0x5a, 0x5f, 0x5d, 0x5b, 0x61, 0x2d,
-	0x7a, 0x41, 0x2d, 0x5a, 0x30, 0x2d, 0x39, 0x5f, 0x5d, 0x2a, 0x24, 0x27, 0x29, 0x29, 0x2a, 0x46,
-	0x0a, 0x0e, 0x44, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65,
-	0x12, 0x1f, 0x0a, 0x1b, 0x64, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x74,
-	0x79, 0x70, 0x65, 0x5f, 0x75, 0x6e, 0x73, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x65, 0x64, 0x10,
-	0x00, 0x12, 0x08, 0x0a, 0x04, 0x65, 0x78, 0x65, 0x63, 0x10, 0x01, 0x12, 0x09, 0x0a, 0x05, 0x73,
-	0x74, 0x65, 0x70, 0x73, 0x10, 0x02, 0x2a, 0x5e, 0x0a, 0x09, 0x49, 0x6e, 0x70, 0x75, 0x74, 0x54,
-	0x79, 0x70, 0x65, 0x12, 0x19, 0x0a, 0x15, 0x73, 0x70, 0x65, 0x63, 0x5f, 0x74, 0x79, 0x70, 0x65,
-	0x5f, 0x75, 0x6e, 0x73, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x65, 0x64, 0x10, 0x00, 0x12, 0x0a,
-	0x0a, 0x06, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x10, 0x01, 0x12, 0x0a, 0x0a, 0x06, 0x6e, 0x75,
-	0x6d, 0x62, 0x65, 0x72, 0x10, 0x02, 0x12, 0x08, 0x0a, 0x04, 0x62, 0x6f, 0x6f, 0x6c, 0x10, 0x03,
-	0x12, 0x0a, 0x0a, 0x06, 0x73, 0x74, 0x72, 0x75, 0x63, 0x74, 0x10, 0x04, 0x12, 0x08, 0x0a, 0x04,
-	0x6c, 0x69, 0x73, 0x74, 0x10, 0x05, 0x42, 0x0a, 0x5a, 0x08, 0x2e, 0x2e, 0x2f, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x7a, 0x41, 0x2d, 0x5a, 0x30, 0x2d, 0x39, 0x5f, 0x5d, 0x2a, 0x24, 0x27, 0x29, 0x29, 0x22, 0x6f,
+	0x0a, 0x0a, 0x52, 0x75, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02,
+	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x17, 0x0a, 0x06,
+	0x63, 0x69, 0x5f, 0x6a, 0x6f, 0x62, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x05,
+	0x63, 0x69, 0x4a, 0x6f, 0x62, 0x12, 0x2b, 0x0a, 0x04, 0x73, 0x74, 0x65, 0x70, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x53, 0x74, 0x65, 0x70,
+	0x44, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x00, 0x52, 0x04, 0x73, 0x74,
+	0x65, 0x70, 0x42, 0x0b, 0x0a, 0x09, 0x6a, 0x6f, 0x62, 0x5f, 0x6f, 0x6e, 0x65, 0x6f, 0x66, 0x22,
+	0x0d, 0x0a, 0x0b, 0x52, 0x75, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1f,
+	0x0a, 0x0d, 0x46, 0x6f, 0x6c, 0x6c, 0x6f, 0x77, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x22,
+	0x3b, 0x0a, 0x0e, 0x46, 0x6f, 0x6c, 0x6c, 0x6f, 0x77, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x29, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x11, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x53, 0x74, 0x65, 0x70, 0x52, 0x65,
+	0x73, 0x75, 0x6c, 0x74, 0x52, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x1f, 0x0a, 0x0d,
+	0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a,
+	0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x22, 0x10, 0x0a,
+	0x0e, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2a,
+	0x46, 0x0a, 0x0e, 0x44, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70,
+	0x65, 0x12, 0x1f, 0x0a, 0x1b, 0x64, 0x65, 0x66, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x5f,
+	0x74, 0x79, 0x70, 0x65, 0x5f, 0x75, 0x6e, 0x73, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x65, 0x64,
+	0x10, 0x00, 0x12, 0x08, 0x0a, 0x04, 0x65, 0x78, 0x65, 0x63, 0x10, 0x01, 0x12, 0x09, 0x0a, 0x05,
+	0x73, 0x74, 0x65, 0x70, 0x73, 0x10, 0x02, 0x2a, 0x5e, 0x0a, 0x09, 0x49, 0x6e, 0x70, 0x75, 0x74,
+	0x54, 0x79, 0x70, 0x65, 0x12, 0x19, 0x0a, 0x15, 0x73, 0x70, 0x65, 0x63, 0x5f, 0x74, 0x79, 0x70,
+	0x65, 0x5f, 0x75, 0x6e, 0x73, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x65, 0x64, 0x10, 0x00, 0x12,
+	0x0a, 0x0a, 0x06, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x10, 0x01, 0x12, 0x0a, 0x0a, 0x06, 0x6e,
+	0x75, 0x6d, 0x62, 0x65, 0x72, 0x10, 0x02, 0x12, 0x08, 0x0a, 0x04, 0x62, 0x6f, 0x6f, 0x6c, 0x10,
+	0x03, 0x12, 0x0a, 0x0a, 0x06, 0x73, 0x74, 0x72, 0x75, 0x63, 0x74, 0x10, 0x04, 0x12, 0x08, 0x0a,
+	0x04, 0x6c, 0x69, 0x73, 0x74, 0x10, 0x05, 0x32, 0xaa, 0x01, 0x0a, 0x0a, 0x53, 0x74, 0x65, 0x70,
+	0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x12, 0x2c, 0x0a, 0x03, 0x52, 0x75, 0x6e, 0x12, 0x11, 0x2e,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x52, 0x75, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x12, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x52, 0x75, 0x6e, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x37, 0x0a, 0x06, 0x46, 0x6f, 0x6c, 0x6c, 0x6f, 0x77, 0x12, 0x14,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x46, 0x6f, 0x6c, 0x6c, 0x6f, 0x77, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x46, 0x6f, 0x6c,
+	0x6c, 0x6f, 0x77, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x35, 0x0a,
+	0x06, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x12, 0x14, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e,
+	0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x42, 0x0a, 0x5a, 0x08, 0x2e, 0x2e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -939,7 +1273,7 @@ func file_step_proto_rawDescGZIP() []byte {
 }
 
 var file_step_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_step_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_step_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_step_proto_goTypes = []interface{}{
 	(DefinitionType)(0),         // 0: proto.DefinitionType
 	(InputType)(0),              // 1: proto.InputType
@@ -949,47 +1283,61 @@ var file_step_proto_goTypes = []interface{}{
 	(*Spec)(nil),                // 5: proto.Spec
 	(*StepDefinition)(nil),      // 6: proto.StepDefinition
 	(*StepResult)(nil),          // 7: proto.StepResult
-	nil,                         // 8: proto.Step.EnvEntry
-	nil,                         // 9: proto.Step.InputsEntry
-	(*Definition_Exec)(nil),     // 10: proto.Definition.Exec
-	nil,                         // 11: proto.Definition.OutputsEntry
-	(*Spec_Content)(nil),        // 12: proto.Spec.Content
-	nil,                         // 13: proto.Spec.Content.InputsEntry
-	(*Spec_Content_Input)(nil),  // 14: proto.Spec.Content.Input
-	nil,                         // 15: proto.Spec.Content.OutputsEntry
-	(*Spec_Content_Output)(nil), // 16: proto.Spec.Content.Output
-	nil,                         // 17: proto.StepResult.OutputsEntry
-	nil,                         // 18: proto.StepResult.ExportsEntry
-	(*structpb.Value)(nil),      // 19: google.protobuf.Value
+	(*RunRequest)(nil),          // 8: proto.RunRequest
+	(*RunResponse)(nil),         // 9: proto.RunResponse
+	(*FollowRequest)(nil),       // 10: proto.FollowRequest
+	(*FollowResponse)(nil),      // 11: proto.FollowResponse
+	(*CancelRequest)(nil),       // 12: proto.CancelRequest
+	(*CancelResponse)(nil),      // 13: proto.CancelResponse
+	nil,                         // 14: proto.Step.EnvEntry
+	nil,                         // 15: proto.Step.InputsEntry
+	(*Definition_Exec)(nil),     // 16: proto.Definition.Exec
+	nil,                         // 17: proto.Definition.OutputsEntry
+	(*Spec_Content)(nil),        // 18: proto.Spec.Content
+	nil,                         // 19: proto.Spec.Content.InputsEntry
+	(*Spec_Content_Input)(nil),  // 20: proto.Spec.Content.Input
+	nil,                         // 21: proto.Spec.Content.OutputsEntry
+	(*Spec_Content_Output)(nil), // 22: proto.Spec.Content.Output
+	nil,                         // 23: proto.StepResult.OutputsEntry
+	nil,                         // 24: proto.StepResult.ExportsEntry
+	(*structpb.Value)(nil),      // 25: google.protobuf.Value
 }
 var file_step_proto_depIdxs = []int32{
-	8,  // 0: proto.Step.env:type_name -> proto.Step.EnvEntry
-	9,  // 1: proto.Step.inputs:type_name -> proto.Step.InputsEntry
+	14, // 0: proto.Step.env:type_name -> proto.Step.EnvEntry
+	15, // 1: proto.Step.inputs:type_name -> proto.Step.InputsEntry
 	0,  // 2: proto.Definition.type:type_name -> proto.DefinitionType
-	10, // 3: proto.Definition.exec:type_name -> proto.Definition.Exec
+	16, // 3: proto.Definition.exec:type_name -> proto.Definition.Exec
 	3,  // 4: proto.Definition.steps:type_name -> proto.Step
-	11, // 5: proto.Definition.outputs:type_name -> proto.Definition.OutputsEntry
-	12, // 6: proto.Spec.spec:type_name -> proto.Spec.Content
+	17, // 5: proto.Definition.outputs:type_name -> proto.Definition.OutputsEntry
+	18, // 6: proto.Spec.spec:type_name -> proto.Spec.Content
 	5,  // 7: proto.StepDefinition.spec:type_name -> proto.Spec
 	4,  // 8: proto.StepDefinition.definition:type_name -> proto.Definition
 	3,  // 9: proto.StepResult.step:type_name -> proto.Step
 	6,  // 10: proto.StepResult.stepDefinition:type_name -> proto.StepDefinition
 	2,  // 11: proto.StepResult.status:type_name -> proto.StepResult.Status
-	17, // 12: proto.StepResult.outputs:type_name -> proto.StepResult.OutputsEntry
-	18, // 13: proto.StepResult.exports:type_name -> proto.StepResult.ExportsEntry
+	23, // 12: proto.StepResult.outputs:type_name -> proto.StepResult.OutputsEntry
+	24, // 13: proto.StepResult.exports:type_name -> proto.StepResult.ExportsEntry
 	7,  // 14: proto.StepResult.children_step_results:type_name -> proto.StepResult
-	19, // 15: proto.Step.InputsEntry.value:type_name -> google.protobuf.Value
-	13, // 16: proto.Spec.Content.inputs:type_name -> proto.Spec.Content.InputsEntry
-	15, // 17: proto.Spec.Content.outputs:type_name -> proto.Spec.Content.OutputsEntry
-	14, // 18: proto.Spec.Content.InputsEntry.value:type_name -> proto.Spec.Content.Input
-	1,  // 19: proto.Spec.Content.Input.type:type_name -> proto.InputType
-	19, // 20: proto.Spec.Content.Input.default:type_name -> google.protobuf.Value
-	16, // 21: proto.Spec.Content.OutputsEntry.value:type_name -> proto.Spec.Content.Output
-	22, // [22:22] is the sub-list for method output_type
-	22, // [22:22] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	6,  // 15: proto.RunRequest.step:type_name -> proto.StepDefinition
+	7,  // 16: proto.FollowResponse.result:type_name -> proto.StepResult
+	25, // 17: proto.Step.InputsEntry.value:type_name -> google.protobuf.Value
+	19, // 18: proto.Spec.Content.inputs:type_name -> proto.Spec.Content.InputsEntry
+	21, // 19: proto.Spec.Content.outputs:type_name -> proto.Spec.Content.OutputsEntry
+	20, // 20: proto.Spec.Content.InputsEntry.value:type_name -> proto.Spec.Content.Input
+	1,  // 21: proto.Spec.Content.Input.type:type_name -> proto.InputType
+	25, // 22: proto.Spec.Content.Input.default:type_name -> google.protobuf.Value
+	22, // 23: proto.Spec.Content.OutputsEntry.value:type_name -> proto.Spec.Content.Output
+	8,  // 24: proto.StepRunner.Run:input_type -> proto.RunRequest
+	10, // 25: proto.StepRunner.Follow:input_type -> proto.FollowRequest
+	12, // 26: proto.StepRunner.Cancel:input_type -> proto.CancelRequest
+	9,  // 27: proto.StepRunner.Run:output_type -> proto.RunResponse
+	11, // 28: proto.StepRunner.Follow:output_type -> proto.FollowResponse
+	13, // 29: proto.StepRunner.Cancel:output_type -> proto.CancelResponse
+	27, // [27:30] is the sub-list for method output_type
+	24, // [24:27] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_step_proto_init() }
@@ -1058,8 +1406,44 @@ func file_step_proto_init() {
 				return nil
 			}
 		}
+		file_step_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RunRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_step_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RunResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 		file_step_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Definition_Exec); i {
+			switch v := v.(*FollowRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_step_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*FollowResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1071,7 +1455,7 @@ func file_step_proto_init() {
 			}
 		}
 		file_step_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Spec_Content); i {
+			switch v := v.(*CancelRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1082,8 +1466,8 @@ func file_step_proto_init() {
 				return nil
 			}
 		}
-		file_step_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Spec_Content_Input); i {
+		file_step_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CancelResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1095,6 +1479,42 @@ func file_step_proto_init() {
 			}
 		}
 		file_step_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Definition_Exec); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_step_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Spec_Content); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_step_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Spec_Content_Input); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_step_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Spec_Content_Output); i {
 			case 0:
 				return &v.state
@@ -1107,15 +1527,19 @@ func file_step_proto_init() {
 			}
 		}
 	}
+	file_step_proto_msgTypes[5].OneofWrappers = []interface{}{
+		(*RunRequest_CiJob)(nil),
+		(*RunRequest_Step)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_step_proto_rawDesc,
 			NumEnums:      3,
-			NumMessages:   16,
+			NumMessages:   22,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_step_proto_goTypes,
 		DependencyIndexes: file_step_proto_depIdxs,

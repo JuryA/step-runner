@@ -110,3 +110,35 @@ message StepResult {
     int32 exit_code = 7;
     repeated StepResult children_step_results = 8;
 }
+
+message RunRequest {
+    string id = 1;
+    oneof job_oneof {
+        string ci_job = 2;
+        StepDefinition step = 3;
+    }
+}
+
+message RunResponse {
+}
+
+message FollowRequest {
+    string id = 1;
+}
+
+message FollowResponse {
+    StepResult result = 1;
+}
+
+message CancelRequest {
+    string id = 1;
+}
+
+message CancelResponse {
+}
+
+service StepRunner {
+    rpc Run(RunRequest) returns (RunResponse);
+    rpc Follow(FollowRequest) returns (stream FollowResponse);
+    rpc Cancel(CancelRequest) returns (CancelResponse);
+}
