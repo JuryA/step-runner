@@ -14,6 +14,16 @@ PROTOC_GEN_GO_GRPC_VERSION := v1.3.0
 
 PROTOVALIDATE_VERSION := 0.5.4
 
+PROTO_SRC := $(wildcard proto/*.proto)
+PROTO_GEN := $(wildcard proto/*.pb.go)
+
+.PHONY: build
+build: $(PROTO_GEN)
+	go build .
+
+$(PROTO_GEN): $(PROTO_SRC)
+	$(MAKE) generate
+
 .PHONY: generate
 generate: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) protovalidate
 	go generate ./proto
