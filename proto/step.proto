@@ -125,6 +125,8 @@ message FollowRequest {
 
 message FollowResponse {
     StepResult result = 1;
+    bytes output = 2;
+
 }
 
 message CancelRequest {

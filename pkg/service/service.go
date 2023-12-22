@@ -22,6 +22,7 @@ type Request struct {
 	err           error                  // capture error when running steps
 	cancel        func()                 // cancel the context
 	chanCloseOnce sync.Once
+	stdout        bytes.Buffer
 }
 
 func (r *Request) closeChan() {
@@ -53,7 +54,6 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 		return nil, fmt.Errorf("creating execution: %w", err)
 	}
 
-	out := bytes.Buffer{}
 	ctx2, cancel := stdctx.WithCancel(stdctx.Background())
 	req := Request{
 		id:      request.Id,
@@ -63,8 +63,8 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 		cancel:  cancel,
 	}
 	req.ctx.InheritEnv(os.Environ()...)
-	req.ctx.Stdout = &out
-	req.ctx.Stderr = &out
+	req.ctx.Stdout = &req.stdout
+	req.ctx.Stderr = &req.stdout
 
 	s.requests[request.Id] = &req
 
@@ -117,7 +117,13 @@ func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.Ste
 			log.Printf("follow: error reading results for job %s: %v", request.Id, req.ctx2.Err().Error())
 			return fmt.Errorf("error reading results for job %s: %w", request.Id, req.ctx2.Err())
 		}
-		if err := writer.Send(&proto.FollowResponse{Result: res}); err != nil {
+
+		resp := proto.FollowResponse{
+			Result: res,
+			Output: req.stdout.Bytes(),
+		}
+
+		if err := writer.Send(&resp); err != nil {
 			log.Printf("follow: send error for job %s: %s", request.Id, err.Error())
 			return fmt.Errorf("send error for job %s: %w", request.Id, err)
 		}
