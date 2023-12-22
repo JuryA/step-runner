@@ -73,8 +73,10 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 		// this needs to change to truly stream results back to the caller.
 		result, err := execution.Run(ctx2, getOrMakeStep(request), &runner.Params{}, req.ctx)
 		if err != nil {
+			log.Printf("an error occurred executing the job: %s", err)
 			req.err = fmt.Errorf("execution failed: %w", err)
-		} else if req.ctx2.Err() != nil {
+			// } else if req.ctx2.Err() != nil {
+		} else {
 			req.results <- result
 		}
 	}()
@@ -83,10 +85,18 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 }
 
 func getOrMakeStep(request *proto.RunRequest) *proto.StepDefinition {
-	// if the request was a cijob, create a StepDefinition for it to execute in a shell???
-	// request.GetCiJob()
-
-	return request.GetStep()
+	return &proto.StepDefinition{
+		Spec: &proto.Spec{
+			Spec: &proto.Spec_Content{
+				Inputs:  map[string]*proto.Spec_Content_Input{},
+				Outputs: map[string]*proto.Spec_Content_Output{},
+			},
+		},
+		Definition: &proto.Definition{
+			Type:  proto.DefinitionType_steps,
+			Steps: request.Steps,
+		},
+	}
 }
 
 // NOTE: Errors returned from this function will only appear on the client side on the first call to
@@ -100,13 +110,6 @@ func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.Ste
 		return fmt.Errorf("follow: no such job %s", request.Id)
 	}
 
-	if req.err != nil {
-		// do we really want to remove the job from the list of jobs here? doing so precludes being able to call follow
-		// again.
-		s.cancel(req)
-		return req.err
-	}
-
 	for res := range req.results {
 		// the context was cancelled. exit.
 		if req.ctx2.Err() != nil {
@@ -118,6 +121,13 @@ func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.Ste
 			log.Printf("follow: send error for job %s: %s", request.Id, err.Error())
 			return fmt.Errorf("send error for job %s: %w", request.Id, err)
 		}
+	}
+
+	if req.err != nil {
+		// do we really want to remove the job from the list of jobs here? doing so precludes being able to call follow
+		// again.
+		s.cancel(req)
+		return req.err
 	}
 
 	return nil

@@ -32,22 +32,20 @@ func NewClient(serverAddr string) (*StepRunnerClient, error) {
 	}, nil
 }
 
-func (c *StepRunnerClient) RunCIJob(ctx context.Context, jobID, script string) error {
-	_, err := c.client.Run(ctx, &proto.RunRequest{
-		Id: jobID,
-		JobOneof: &proto.RunRequest_CiJob{
-			CiJob: script,
-		},
-	})
-	return err
-}
+// func (c *StepRunnerClient) RunCIJob(ctx context.Context, jobID, script string) error {
+// 	_, err := c.client.Run(ctx, &proto.RunRequest{
+// 		Id: jobID,
+// 		JobOneof: &proto.RunRequest_CiJob{
+// 			CiJob: script,
+// 		},
+// 	})
+// 	return err
+// }
 
-func (c *StepRunnerClient) RunStep(ctx context.Context, jobID string, stepDef *proto.StepDefinition) error {
+func (c *StepRunnerClient) RunStep(ctx context.Context, jobID string, steps []*proto.Step) error {
 	_, err := c.client.Run(ctx, &proto.RunRequest{
-		Id: jobID,
-		JobOneof: &proto.RunRequest_Step{
-			Step: stepDef,
-		},
+		Id:    jobID,
+		Steps: steps,
 	})
 	return err
 }

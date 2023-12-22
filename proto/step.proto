@@ -113,10 +113,7 @@ message StepResult {
 
 message RunRequest {
     string id = 1;
-    oneof job_oneof {
-        string ci_job = 2;
-        StepDefinition step = 3;
-    }
+    repeated Step steps = 2;
 }
 
 message RunResponse {
