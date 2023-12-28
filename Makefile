@@ -64,3 +64,11 @@ protovalidate:
 	@rm -fr "$(local)/protovalidate"
 	@mv -f "$(local)/protovalidate-$(PROTOVALIDATE_VERSION)" "$(local)/protovalidate"
 	@rm "$(local)/protovalidate.zip"
+
+.PHONY: clean
+clean:
+	rm  step-runner
+
+.PHONY: image
+image:
+	docker build -t step-runner .
