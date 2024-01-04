@@ -51,5 +51,6 @@ protovalidate:
 	# Downloading protovalidate import from $(DOWNLOAD_URL)
 	@curl -sL "$(DOWNLOAD_URL)" -o "$(local)/protovalidate.zip"
 	@unzip -q -u "$(local)/protovalidate.zip" -d "$(local)/"
+	@rm -fr "$(local)/protovalidate"
 	@mv -f "$(local)/protovalidate-$(PROTOVALIDATE_VERSION)" "$(local)/protovalidate"
 	@rm "$(local)/protovalidate.zip"
