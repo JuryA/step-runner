@@ -1,0 +1,20 @@
+package step
+
+import (
+	"fmt"
+
+	"github.com/bufbuild/protovalidate-go"
+
+	"gitlab.com/gitlab-org/step-runner/proto"
+)
+
+func ValidateStepDefinition(stepDef *proto.StepDefinition) error {
+	v, err := protovalidate.New()
+	if err != nil {
+		return fmt.Errorf("failed to initialize validator: %w", err)
+	}
+	if err = v.Validate(stepDef); err != nil {
+		return fmt.Errorf("error validating step definition: %w", err)
+	}
+	return nil
+}

@@ -2,6 +2,7 @@ syntax = "proto3";
 package proto;
 
 import "google/protobuf/struct.proto";
+import "buf/validate/validate.proto";
 
 option go_package = "../proto";
 
@@ -9,7 +10,17 @@ message Step {
     string name = 1; 
     string step = 2;
     map<string,string> env = 3;
+    option (buf.validate.message).cel = {
+        id: "env",
+        message: "env must be alphanumeric with underscores",
+        expression: "this.env.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+    };
     map<string,google.protobuf.Value> inputs = 4;
+    option (buf.validate.message).cel = {
+        id: "inputs",
+        message: "inputs must be alphanumeric with underscores",
+        expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+    };
 }
 
 message Definition {
@@ -21,6 +32,11 @@ message Definition {
         string work_dir = 2;
     }
     map<string,string> outputs = 4;
+    option (buf.validate.message).cel = {
+        id: "outputs",
+        message: "outputs must be alphanumeric with underscores",
+        expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+    };
 }
 
 enum DefinitionType {
@@ -33,11 +49,21 @@ message Spec {
     Content spec = 1;
     message Content {
         map<string,Input> inputs = 1;
+        option (buf.validate.message).cel = {
+            id: "inputs",
+            message: "inputs must be alphanumeric with underscores",
+            expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+        };
         message Input {
             InputType type = 1;
             google.protobuf.Value default = 2;
         }
         map<string,Output> outputs = 2;
+        option (buf.validate.message).cel = {
+            id: "outputs",
+            message: "outputs must be alphanumeric with underscores",
+            expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+        };
         message Output {
             string default = 1;
         }
@@ -70,7 +96,17 @@ message StepResult {
     }
     Status status = 4;
     map<string,string> outputs = 5;
+    option (buf.validate.message).cel = {
+        id: "outputs",
+        message: "outputs must be alphanumeric with underscores",
+        expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+    };
     map<string,string> exports = 6;
+    option (buf.validate.message).cel = {
+        id: "exports",
+        message: "exports must be alphanumeric with underscores",
+        expression: "this.exports.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+    };
     int32 exit_code = 7;
     repeated StepResult children_step_results = 8;
 }
