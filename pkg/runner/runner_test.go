@@ -30,7 +30,7 @@ spec: {}
 ---
 type: steps
 steps:
-  - name: greet-steppy
+  - name: greet_steppy
     step: ./test_steps/greeting
     inputs: {}
 `,
@@ -46,7 +46,7 @@ spec: {}
 ---
 type: steps
 steps:
-  - name: greet-foo
+  - name: greet_foo
     step: ./test_steps/greeting
     inputs:
       name: foo
@@ -63,14 +63,14 @@ spec: {}
 ---
 type: steps
 steps:
-  - name: greet-foo
+  - name: greet_foo
     step: ./test_steps/greeting
     inputs:
       name: foo
-  - name: greet-previous
+  - name: greet_previous
     step: ./test_steps/greeting
     inputs:
-      name: ${{steps.greet-foo.outputs.name}}
+      name: ${{steps.greet_foo.outputs.name}}
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 2)
@@ -84,17 +84,17 @@ spec: {}
 ---
 type: steps
 steps:
-  - name: greet-the-crew
+  - name: greet_the_crew
     step: ./test_steps/crew
     inputs: {}
-  - name: greet-previous
+  - name: greet_previous
     step: ./test_steps/greeting
     inputs:
-      name: ${{steps.greet-the-crew.outputs.crew-name-1}}
+      name: ${{steps.greet_the_crew.outputs.crew_name_1}}
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 2)
-			require.Equal(t, "sponge bob", results[0].Outputs["crew-name-1"])
+			require.Equal(t, "sponge bob", results[0].Outputs["crew_name_1"])
 			require.Equal(t, "sponge bob", results[1].Outputs["name"])
 		},
 	}, {
@@ -104,14 +104,14 @@ spec: {}
 ---
 type: steps
 steps:
-  - name: greet-the-crew
+  - name: greet_the_crew
     step: ./test_steps/crew
     inputs: {}
-  - name: greet-previous
+  - name: greet_previous
     step: ./test_steps/greeting
     inputs:
-      name: ${{steps.greet-sponge-bob.outputs.name}}`,
-		wantErr: errors.New(`Cannot assign input "name" due to error: steps.greet-sponge-bob.outputs.name: the "greet-sponge-bob" was not found`),
+      name: ${{steps.greet_sponge_bob.outputs.name}}`,
+		wantErr: errors.New(`Cannot assign input "name" due to error: steps.greet_sponge_bob.outputs.name: the "greet_sponge_bob" was not found`),
 	}, {
 		name: "complex steps",
 		yaml: `
@@ -119,25 +119,25 @@ spec: {}
 ---
 type: steps
 steps:
-  - name: greet-steppy
+  - name: greet_steppy
     step: ./test_steps/greeting
     inputs:
       name: steppy
       hungry: true
       favorites:
         foods: [hamburger]
-  - name: greet-the-crew
+  - name: greet_the_crew
     step: ./test_steps/crew
     inputs: {}
-  - name: greet-joe
+  - name: greet_joe
     step: ./test_steps/greeting
     inputs:
       name: joe
       age: 42
       favorites:
         characters: 
-          - ${{steps.greet-the-crew.outputs.crew-name-1}}
-          - ${{steps.greet-the-crew.outputs.crew-name-2}}
+          - ${{steps.greet_the_crew.outputs.crew_name_1}}
+          - ${{steps.greet_the_crew.outputs.crew_name_2}}
 `,
 		wantLog: `meet steppy who is 1 likes {"foods":["hamburger"]} and is hungry true
 meet sponge bob who is 5 likes {"pants":"square"} and is hungry false
@@ -154,7 +154,7 @@ spec: {}
 ---
 type: steps
 steps:
-  - name: greet-steppy
+  - name: greet_steppy
     step: ./test_steps/greeting
     inputs:
       name: ${{ env.name }}

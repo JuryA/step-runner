@@ -12,8 +12,10 @@ PROTOC_GEN_GO_VERSION := v1.29.1
 PROTOC_GEN_GO_GRPC := protoc-gen-go-grpc
 PROTOC_GEN_GO_GRPC_VERSION := v1.3.0
 
+PROTOVALIDATE_VERSION := 0.5.4
+
 .PHONY: generate
-generate: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
+generate: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) protovalidate
 	go generate ./proto
 
 .PHONY: test
@@ -42,3 +44,12 @@ $(PROTOC_GEN_GO):
 .PHONY: $(PROTOC_GEN_GO_GRPC)
 $(PROTOC_GEN_GO_GRPC):
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
+
+.PHONY: protovalidate
+protovalidate: DOWNLOAD_URL = https://github.com/bufbuild/protovalidate/archive/refs/tags/v$(PROTOVALIDATE_VERSION).zip
+protovalidate:
+	# Downloading protovalidate import from $(DOWNLOAD_URL)
+	@curl -sL "$(DOWNLOAD_URL)" -o "$(local)/protovalidate.zip"
+	@unzip -q -u "$(local)/protovalidate.zip" -d "$(local)/"
+	@mv -f "$(local)/protovalidate-$(PROTOVALIDATE_VERSION)" "$(local)/protovalidate"
+	@rm "$(local)/protovalidate.zip"

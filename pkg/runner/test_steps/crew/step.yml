@@ -1,26 +1,26 @@
 spec:
   inputs: {}
   outputs:
-    crew-name-1:
+    crew_name_1:
       default: nobody
-    crew-name-2:
+    crew_name_2:
       default: nobody
 ---
 type: steps
 steps:
-  - name: greet-sponge-bob
+  - name: greet_sponge_bob
     step: ./test_steps/greeting
     inputs:
       name: sponge bob
       age: 5
       favorites:
         pants: square
-  - name: greet-patrick-star
+  - name: greet_patrick_star
     step: ./test_steps/greeting
     inputs:
       name: patrick star
       age: 7
       hungry: true
 outputs:
-  crew-name-1: ${{steps.greet-sponge-bob.outputs.name}}
-  crew-name-2: ${{steps.greet-patrick-star.outputs.name}}
+  crew_name_1: ${{steps.greet_sponge_bob.outputs.name}}
+  crew_name_2: ${{steps.greet_patrick_star.outputs.name}}

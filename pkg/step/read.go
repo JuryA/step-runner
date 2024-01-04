@@ -35,11 +35,15 @@ func Deserialize(content, dir string) (*proto.StepDefinition, error) {
 		return nil, err
 	}
 
-	return &proto.StepDefinition{
+	stepDef := &proto.StepDefinition{
 		Spec:       &spec,
 		Definition: &definition,
 		Dir:        dir,
-	}, nil
+	}
+	if err := ValidateStepDefinition(stepDef); err != nil {
+		return nil, err
+	}
+	return stepDef, nil
 }
 
 func Write(stepDef *proto.StepDefinition, filename string) error {

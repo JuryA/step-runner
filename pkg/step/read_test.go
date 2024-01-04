@@ -139,11 +139,11 @@ steps:
                 - sausage
         hungry: false
         name: steppy
-      name: foo to the max
+      name: foo_to_the_max
       step: git+https://gitlab.com/gitlab-org/foo@v1
     - inputs:
         greeting: ${{steps.foo to the max.outputs.greeting}}
-      name: foo redux
+      name: foo_redux
       step: ../steps/redux
 type: steps
 `,
@@ -151,7 +151,7 @@ type: steps
 		wantDef: &proto.Definition{
 			Type: proto.DefinitionType_steps,
 			Steps: []*proto.Step{{
-				Name: "foo to the max",
+				Name: "foo_to_the_max",
 				Step: "git+https://gitlab.com/gitlab-org/foo@v1",
 				Env: map[string]string{
 					"USER":   "srunner",
@@ -173,7 +173,7 @@ type: steps
 					"name":   structpb.NewStringValue("steppy"),
 				},
 			}, {
-				Name: "foo redux",
+				Name: "foo_redux",
 				Step: "../steps/redux",
 				Inputs: map[string]*structpb.Value{
 					"greeting": structpb.NewStringValue("${{steps.foo to the max.outputs.greeting}}"),
