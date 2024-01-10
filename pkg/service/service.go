@@ -3,9 +3,11 @@ package service
 import (
 	"bytes"
 	stdctx "context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"sync"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
@@ -79,10 +81,25 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 			// } else if req.ctx2.Err() != nil {
 		} else {
 			req.results <- result
+			writeStepResult(req.ctx.Dir, result)
 		}
 	}()
 
 	return &proto.RunResponse{}, nil
+}
+
+func writeStepResult(destDir string, result *proto.StepResult) error {
+	bytes, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshaling step results: %w", err)
+	}
+	outputFile := path.Join(destDir, "step-results.json")
+	err = os.WriteFile(outputFile, bytes, 0640)
+	if err != nil {
+		return fmt.Errorf("writing step results to %v: %w", outputFile, err)
+	}
+	log.Printf("trace written to %v\n", outputFile)
+	return nil
 }
 
 func getOrMakeStep(request *proto.RunRequest) *proto.StepDefinition {
