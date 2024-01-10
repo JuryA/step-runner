@@ -116,15 +116,21 @@ func (e *Execution) runExec(result *proto.StepResult, ctx ctx.Context, execDefin
 	}
 
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	if execDefinition.WorkDir != "" {
+	cmd.Dir = stepsCtx.Dir
+	if stepsCtx.Global.Dir != "" {
+		res, resErr := expression.ExpandString(stepsCtx, stepsCtx.Global.Dir)
+		if resErr != nil {
+			return fmt.Errorf("cannot interpolate global context workdir %q due to err: %s", stepsCtx.Global.Dir, resErr.Error())
+		}
+		cmd.Dir = res
+	} else if execDefinition.WorkDir != "" {
 		res, resErr := expression.ExpandString(stepsCtx, execDefinition.WorkDir)
 		if resErr != nil {
 			return fmt.Errorf("Cannot interpolate command workdir %q due to err: %s", execDefinition.WorkDir, resErr.Error())
 		}
 		cmd.Dir = res
-	} else {
-		cmd.Dir = stepsCtx.Dir
 	}
+
 	// Only explicitly provided environment variables
 	cmd.Env = stepsCtx.GetEnvList()
 	// TODO: Use multi-writer

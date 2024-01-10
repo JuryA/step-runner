@@ -12,6 +12,7 @@ import (
 )
 
 type Global struct {
+	Dir    string            `json:"-"`
 	Job    map[string]string `json:"job"`
 	Env    map[string]string `json:"-"`
 	Stdout io.Writer         `json:"-"`

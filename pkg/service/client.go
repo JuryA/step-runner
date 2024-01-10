@@ -42,10 +42,11 @@ func NewClient(serverAddr string) (*StepRunnerClient, error) {
 // 	return err
 // }
 
-func (c *StepRunnerClient) RunStep(ctx context.Context, jobID string, steps []*proto.Step) error {
+func (c *StepRunnerClient) RunStep(ctx context.Context, jobID, workDir string, steps []*proto.Step) error {
 	_, err := c.client.Run(ctx, &proto.RunRequest{
-		Id:    jobID,
-		Steps: steps,
+		Id:      jobID,
+		Steps:   steps,
+		WorkDir: workDir,
 	})
 	return err
 }

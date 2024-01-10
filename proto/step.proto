@@ -113,7 +113,8 @@ message StepResult {
 
 message RunRequest {
     string id = 1;
-    repeated Step steps = 2;
+    string work_dir = 2;
+    repeated Step steps = 3;
 }
 
 message RunResponse {

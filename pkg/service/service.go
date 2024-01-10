@@ -65,6 +65,7 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 	req.ctx.InheritEnv(os.Environ()...)
 	req.ctx.Stdout = &req.stdout
 	req.ctx.Stderr = &req.stdout
+	req.ctx.Dir = request.WorkDir
 
 	s.requests[request.Id] = &req
 
