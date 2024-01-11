@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	stdctx "context"
 	"encoding/json"
 	"fmt"
@@ -63,7 +62,8 @@ type Job struct {
 	err           error                  // capture error when running steps
 	cancel        func()                 // cancel the context
 	chanCloseOnce sync.Once
-	stdout        bytes.Buffer
+	stdout        Buf
+	stderr        Buf
 }
 
 func (j *Job) closeChan() {
@@ -102,6 +102,8 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 		results: make(chan *proto.StepResult, 1),
 		ctx2:    ctx2,
 		cancel:  cancel,
+		stdout:  newBuf(),
+		stderr:  newBuf(),
 	}
 	job.ctx.InheritEnv(os.Environ()...)
 	job.ctx.Stdout = &job.stdout
@@ -112,6 +114,8 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 
 	go func() {
 		defer job.closeChan()
+		defer job.stdout.Close()
+		defer job.stderr.Close()
 		// this needs to change to truly stream results back to the caller.
 		result, err := execution.Run(ctx2, getOrMakeStep(request), &runner.Params{}, job.ctx)
 		if err != nil {
@@ -203,6 +207,87 @@ stop:
 		return job.err
 	}
 
+	return nil
+}
+
+func (s *StepRunnerServer) FollowIO(request *proto.FollowIORequest, writer proto.StepRunner_FollowIOServer) error {
+	log.Println("request to follow IO for job", request.Id, s.jobs)
+
+	job, err := s.getJob(request.Id)
+	if err != nil {
+		return err
+	}
+
+	// TODO: do we want/need to do this with step results too???
+	if err := s.sendOutputSoFar(job, request, writer); err != nil {
+		return err
+	}
+
+stop:
+	for {
+		select {
+		case <-job.ctx2.Done():
+			// TODO: maybe just break here and handle the error below?
+			// context was cancelled
+			defer s.cancel(job)
+			return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.ctx2.Err())
+
+		case bytes, ok := <-job.stdout.c:
+			if !ok {
+				// channel was closed
+				break stop
+			}
+			if err := s.writeStream(bytes, proto.FollowIOResponse_stdout, writer); err != nil {
+				return fmt.Errorf("stdout error for job %s: %w", request.Id, err)
+			}
+
+		case bytes, ok := <-job.stderr.c:
+			if !ok {
+				// channel was closed
+				break stop
+			}
+			if err := s.writeStream(bytes, proto.FollowIOResponse_stderr, writer); err != nil {
+				return fmt.Errorf("stdout error for job %s: %w", request.Id, err)
+			}
+		}
+	}
+
+	if job.err != nil {
+		// do we really want to remove the job from the list of jobs here? doing so precludes being able to call follow
+		// again.
+		s.cancel(job)
+		return job.err
+	}
+
+	return nil
+}
+
+// When a client requests to follow IO, send them the IO buffered so far FROM the requested offset.
+func (s *StepRunnerServer) sendOutputSoFar(job *Job, request *proto.FollowIORequest, writer proto.StepRunner_FollowIOServer) error {
+	if err := s.writeStream(job.stdout.Read(request.ReadStdout), proto.FollowIOResponse_stdout, writer); err != nil {
+		return fmt.Errorf("failed to write stdout stream for job %s: %w", request.Id, err)
+	}
+
+	if err := s.writeStream(job.stderr.Read(request.ReadStderr), proto.FollowIOResponse_stderr, writer); err != nil {
+		return fmt.Errorf("failed to write stderr stream for job %s: %w", request.Id, err)
+	}
+
+	return nil
+}
+
+// TODO: chunk up the stream writes so we don't blow past grpc's max message size
+func (s *StepRunnerServer) writeStream(stream []byte, streamType proto.FollowIOResponse_StreamType, w proto.StepRunner_FollowIOServer) error {
+	if len(stream) == 0 {
+		return nil
+	}
+	resp := proto.FollowIOResponse{
+		StreamType: streamType,
+		Stream:     stream,
+	}
+
+	if err := w.Send(&resp); err != nil {
+		return err
+	}
 	return nil
 }
 
