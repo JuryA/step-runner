@@ -16,7 +16,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-type Request struct {
+type Job struct {
 	id            string
 	ctx           *context.Global        // to capture procs stdout/err
 	ctx2          stdctx.Context         // the context used in Run. choose a better name
@@ -27,16 +27,16 @@ type Request struct {
 	stdout        bytes.Buffer
 }
 
-func (r *Request) closeChan() {
-	r.chanCloseOnce.Do(func() {
-		close(r.results)
+func (j *Job) closeChan() {
+	j.chanCloseOnce.Do(func() {
+		close(j.results)
 	})
 }
 
 type StepRunnerServer struct {
 	proto.StepRunnerServer
-	cache    cache.Cache
-	requests map[string]*Request // probably synchronize this
+	cache cache.Cache
+	jobs  map[string]*Job // probably synchronize this
 }
 
 func NewServer() (*StepRunnerServer, error) {
@@ -45,8 +45,8 @@ func NewServer() (*StepRunnerServer, error) {
 		return nil, fmt.Errorf("creating cache: %w", err)
 	}
 	return &StepRunnerServer{
-		cache:    c,
-		requests: map[string]*Request{},
+		cache: c,
+		jobs:  map[string]*Job{},
 	}, nil
 }
 
@@ -57,31 +57,31 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 	}
 
 	ctx2, cancel := stdctx.WithCancel(stdctx.Background())
-	req := Request{
+	job := Job{
 		id:      request.Id,
 		ctx:     context.NewGlobal(),
 		results: make(chan *proto.StepResult, 1),
 		ctx2:    ctx2,
 		cancel:  cancel,
 	}
-	req.ctx.InheritEnv(os.Environ()...)
-	req.ctx.Stdout = &req.stdout
-	req.ctx.Stderr = &req.stdout
-	req.ctx.Dir = request.WorkDir
+	job.ctx.InheritEnv(os.Environ()...)
+	job.ctx.Stdout = &job.stdout
+	job.ctx.Stderr = &job.stdout
+	job.ctx.Dir = request.WorkDir
 
-	s.requests[request.Id] = &req
+	s.jobs[request.Id] = &job
 
 	go func() {
-		defer req.closeChan()
+		defer job.closeChan()
 		// this needs to change to truly stream results back to the caller.
-		result, err := execution.Run(ctx2, getOrMakeStep(request), &runner.Params{}, req.ctx)
+		result, err := execution.Run(ctx2, getOrMakeStep(request), &runner.Params{}, job.ctx)
 		if err != nil {
 			log.Printf("an error occurred executing the job: %s", err)
-			req.err = fmt.Errorf("execution failed: %w", err)
+			job.err = fmt.Errorf("execution failed: %w", err)
 			// } else if req.ctx2.Err() != nil {
 		} else {
-			req.results <- result
-			writeStepResult(req.ctx.Dir, result)
+			job.results <- result
+			writeStepResult(job.globCtx.Dir, result)
 		}
 	}()
 
@@ -120,20 +120,20 @@ func getOrMakeStep(request *proto.RunRequest) *proto.StepDefinition {
 // NOTE: Errors returned from this function will only appear on the client side on the first call to
 // StepRunner_FollowClient.Recv(), NOT in the error returned from calling this API directly.
 func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.StepRunner_FollowServer) error {
-	log.Println("request to follow job", request.Id, s.requests)
+	log.Println("request to follow job", request.Id, s.jobs)
 
-	req, ok := s.requests[request.Id]
+	job, ok := s.jobs[request.Id]
 	if !ok {
 		log.Printf("follow: no such job %s", request.Id)
 		return fmt.Errorf("follow: no such job %s", request.Id)
 	}
 
-	for res := range req.results {
+	for res := range job.results {
 		// the context was cancelled. exit.
-		if req.ctx2.Err() != nil {
-			defer s.cancel(req)
-			log.Printf("follow: error reading results for job %s: %v", request.Id, req.ctx2.Err().Error())
-			return fmt.Errorf("error reading results for job %s: %w", request.Id, req.ctx2.Err())
+		if job.ctx2.Err() != nil {
+			defer s.cancel(job)
+			log.Printf("follow: error reading results for job %s: %v", request.Id, job.ctx2.Err().Error())
+			return fmt.Errorf("error reading results for job %s: %w", request.Id, job.ctx2.Err())
 		}
 
 		resp := proto.FollowResponse{
@@ -146,28 +146,28 @@ func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.Ste
 		}
 	}
 
-	if req.err != nil {
+	if job.err != nil {
 		// do we really want to remove the job from the list of jobs here? doing so precludes being able to call follow
 		// again.
-		s.cancel(req)
-		return req.err
+		s.cancel(job)
+		return job.err
 	}
 
 	return nil
 }
 
 func (s *StepRunnerServer) Cancel(_ stdctx.Context, request *proto.CancelRequest) (*proto.CancelResponse, error) {
-	req, ok := s.requests[request.Id]
+	job, ok := s.jobs[request.Id]
 	if !ok {
 		log.Printf("cancel: no such job %s", request.Id)
 		return nil, fmt.Errorf("cancel: no such job %s", request.Id)
 	}
-	s.cancel(req)
+	s.cancel(job)
 	return &proto.CancelResponse{}, nil
 }
 
-func (s *StepRunnerServer) cancel(req *Request) {
-	req.cancel()
-	req.closeChan()
-	delete(s.requests, req.id)
+func (s *StepRunnerServer) cancel(job *Job) {
+	job.cancel()
+	job.closeChan()
+	delete(s.jobs, job.id)
 }
