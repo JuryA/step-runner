@@ -2,6 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
+	"io"
+	"log"
+	"sync"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"google.golang.org/grpc"
@@ -12,10 +16,13 @@ type StepRunnerClient struct {
 	proto.StepRunnerClient
 	conn   *grpc.ClientConn
 	client proto.StepRunnerClient
+	// number of bytes already read from stdout/err.
+	readStdout, readStderr int32
 }
 
-type StepResultStream interface {
-	Recv() (*proto.FollowResponse, error)
+type Output struct {
+	Stdout, Stderr chan<- []byte
+	StepResult     chan<- *proto.StepResult
 }
 
 func NewClient(serverAddr string) (*StepRunnerClient, error) {
@@ -42,28 +49,96 @@ func NewClient(serverAddr string) (*StepRunnerClient, error) {
 // 	return err
 // }
 
-func (c *StepRunnerClient) RunStep(ctx context.Context, jobID, workDir string, steps []*proto.Step) error {
+func (c *StepRunnerClient) RunAndFollow(ctx context.Context, jobID, workDir string, steps []*proto.Step, out *Output) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	_, err := c.client.Run(ctx, &proto.RunRequest{
 		Id:      jobID,
 		Steps:   steps,
 		WorkDir: workDir,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer c.conn.Close()
+	//nolint:errcheck
+	defer c.client.Cancel(ctx, &proto.CancelRequest{Id: jobID})
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	var stepResultErr, ioStreamError error
+	go func() {
+		defer wg.Done()
+		stepResultErr = c.startFollow(ctx, jobID, out.StepResult)
+		if stepResultErr != nil {
+			cancel() // force startFollowIO to exit
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		ioStreamError = c.startFollowIO(ctx, jobID, out.Stdout, out.Stderr)
+		if ioStreamError != nil {
+			cancel() // force startFollow to exit
+		}
+	}()
+
+	wg.Wait()
+	return errors.Join(stepResultErr, ioStreamError)
 }
 
-// maybe could return a channel of FollowResponse or StepResult here instead, but it makes error handling more
-// complicated
-func (c *StepRunnerClient) Follow(ctx context.Context, jobID string) (StepResultStream, error) {
-	return c.client.Follow(ctx, &proto.FollowRequest{
-		Id: jobID,
-	})
+func (c *StepRunnerClient) startFollow(ctx context.Context, jobID string, resultC chan<- *proto.StepResult) error {
+	stepResultStream, err := c.client.Follow(ctx, &proto.FollowRequest{Id: jobID})
+	if err != nil {
+		return err
+	}
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		res, err := stepResultStream.Recv()
+		if err == io.EOF {
+			log.Println("step-result stream done")
+			return nil
+		}
+		// TODO: reconnect here if the error was io.ErrClosedPipe or io.ErrUnexpectedEOF
+		if err != nil {
+			log.Println(err.Error())
+			return err
+		}
+
+		resultC <- res.GetResult()
+	}
 }
 
-func (c *StepRunnerClient) Cancel(ctx context.Context, jobID string) error {
-	_, err := c.client.Cancel(ctx, &proto.CancelRequest{Id: jobID})
-	return err
-}
+func (c *StepRunnerClient) startFollowIO(ctx context.Context, jobID string, stdoutC, stderrC chan<- []byte) error {
+	ioStream, err := c.client.FollowIO(ctx, &proto.FollowIORequest{Id: jobID})
+	if err != nil {
+		return err
+	}
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		res, err := ioStream.Recv()
+		if err == io.EOF {
+			log.Println("io-stream done")
+			return nil
+		}
+		// TODO: reconnect here if the error was io.ErrClosedPipe or io.ErrUnexpectedEOF
+		if err != nil {
+			log.Println(err.Error())
+			return err
+		}
 
-func (c *StepRunnerClient) Close() error {
-	return c.conn.Close()
+		switch res.StreamType {
+		case proto.FollowIOResponse_stdout:
+			c.readStdout += int32(len(res.Stream))
+			stdoutC <- res.Stream
+		case proto.FollowIOResponse_stderr:
+			c.readStderr += int32(len(res.Stream))
+			stderrC <- res.Stream
+		}
+	}
 }
