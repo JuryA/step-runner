@@ -117,15 +117,23 @@ func getOrMakeStep(request *proto.RunRequest) *proto.StepDefinition {
 	}
 }
 
+func (s *StepRunnerServer) getJob(jid string) (*Job, error) {
+	req, ok := s.jobs[jid]
+	if !ok {
+		log.Printf("follow: no such job %s", jid)
+		return nil, fmt.Errorf("follow: no such job %s", jid)
+	}
+	return req, nil
+}
+
 // NOTE: Errors returned from this function will only appear on the client side on the first call to
 // StepRunner_FollowClient.Recv(), NOT in the error returned from calling this API directly.
 func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.StepRunner_FollowServer) error {
 	log.Println("request to follow job", request.Id, s.jobs)
 
-	job, ok := s.jobs[request.Id]
-	if !ok {
-		log.Printf("follow: no such job %s", request.Id)
-		return fmt.Errorf("follow: no such job %s", request.Id)
+	job, err := s.getJob(request.Id)
+	if err != nil {
+		return err
 	}
 
 	for res := range job.results {
@@ -157,10 +165,11 @@ func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.Ste
 }
 
 func (s *StepRunnerServer) Cancel(_ stdctx.Context, request *proto.CancelRequest) (*proto.CancelResponse, error) {
-	job, ok := s.jobs[request.Id]
-	if !ok {
-		log.Printf("cancel: no such job %s", request.Id)
-		return nil, fmt.Errorf("cancel: no such job %s", request.Id)
+	log.Println("request to cancel job", request.Id, s.jobs)
+
+	job, err := s.getJob(request.Id)
+	if err != nil {
+		return &proto.CancelResponse{}, nil
 	}
 	s.cancel(job)
 	return &proto.CancelResponse{}, nil
