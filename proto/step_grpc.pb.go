@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	StepRunner_Run_FullMethodName    = "/proto.StepRunner/Run"
-	StepRunner_Follow_FullMethodName = "/proto.StepRunner/Follow"
-	StepRunner_Cancel_FullMethodName = "/proto.StepRunner/Cancel"
+	StepRunner_Run_FullMethodName      = "/proto.StepRunner/Run"
+	StepRunner_Follow_FullMethodName   = "/proto.StepRunner/Follow"
+	StepRunner_FollowIO_FullMethodName = "/proto.StepRunner/FollowIO"
+	StepRunner_Cancel_FullMethodName   = "/proto.StepRunner/Cancel"
 )
 
 // StepRunnerClient is the client API for StepRunner service.
@@ -30,6 +31,7 @@ const (
 type StepRunnerClient interface {
 	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	Follow(ctx context.Context, in *FollowRequest, opts ...grpc.CallOption) (StepRunner_FollowClient, error)
+	FollowIO(ctx context.Context, in *FollowIORequest, opts ...grpc.CallOption) (StepRunner_FollowIOClient, error)
 	Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error)
 }
 
@@ -82,6 +84,38 @@ func (x *stepRunnerFollowClient) Recv() (*FollowResponse, error) {
 	return m, nil
 }
 
+func (c *stepRunnerClient) FollowIO(ctx context.Context, in *FollowIORequest, opts ...grpc.CallOption) (StepRunner_FollowIOClient, error) {
+	stream, err := c.cc.NewStream(ctx, &StepRunner_ServiceDesc.Streams[1], StepRunner_FollowIO_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &stepRunnerFollowIOClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type StepRunner_FollowIOClient interface {
+	Recv() (*FollowIOResponse, error)
+	grpc.ClientStream
+}
+
+type stepRunnerFollowIOClient struct {
+	grpc.ClientStream
+}
+
+func (x *stepRunnerFollowIOClient) Recv() (*FollowIOResponse, error) {
+	m := new(FollowIOResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *stepRunnerClient) Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error) {
 	out := new(CancelResponse)
 	err := c.cc.Invoke(ctx, StepRunner_Cancel_FullMethodName, in, out, opts...)
@@ -97,6 +131,7 @@ func (c *stepRunnerClient) Cancel(ctx context.Context, in *CancelRequest, opts .
 type StepRunnerServer interface {
 	Run(context.Context, *RunRequest) (*RunResponse, error)
 	Follow(*FollowRequest, StepRunner_FollowServer) error
+	FollowIO(*FollowIORequest, StepRunner_FollowIOServer) error
 	Cancel(context.Context, *CancelRequest) (*CancelResponse, error)
 	mustEmbedUnimplementedStepRunnerServer()
 }
@@ -110,6 +145,9 @@ func (UnimplementedStepRunnerServer) Run(context.Context, *RunRequest) (*RunResp
 }
 func (UnimplementedStepRunnerServer) Follow(*FollowRequest, StepRunner_FollowServer) error {
 	return status.Errorf(codes.Unimplemented, "method Follow not implemented")
+}
+func (UnimplementedStepRunnerServer) FollowIO(*FollowIORequest, StepRunner_FollowIOServer) error {
+	return status.Errorf(codes.Unimplemented, "method FollowIO not implemented")
 }
 func (UnimplementedStepRunnerServer) Cancel(context.Context, *CancelRequest) (*CancelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Cancel not implemented")
@@ -166,6 +204,27 @@ func (x *stepRunnerFollowServer) Send(m *FollowResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _StepRunner_FollowIO_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(FollowIORequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(StepRunnerServer).FollowIO(m, &stepRunnerFollowIOServer{stream})
+}
+
+type StepRunner_FollowIOServer interface {
+	Send(*FollowIOResponse) error
+	grpc.ServerStream
+}
+
+type stepRunnerFollowIOServer struct {
+	grpc.ServerStream
+}
+
+func (x *stepRunnerFollowIOServer) Send(m *FollowIOResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 func _StepRunner_Cancel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CancelRequest)
 	if err := dec(in); err != nil {
@@ -204,6 +263,11 @@ var StepRunner_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Follow",
 			Handler:       _StepRunner_Follow_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "FollowIO",
+			Handler:       _StepRunner_FollowIO_Handler,
 			ServerStreams: true,
 		},
 	},

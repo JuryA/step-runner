@@ -138,7 +138,6 @@ func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.Ste
 
 		resp := proto.FollowResponse{
 			Result: res,
-			Output: req.stdout.Bytes(),
 		}
 
 		if err := writer.Send(&resp); err != nil {
