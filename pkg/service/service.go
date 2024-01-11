@@ -16,6 +16,45 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
+type Buf struct {
+	buffer []byte
+	c      chan []byte
+	lock   sync.RWMutex
+	once   sync.Once
+}
+
+func newBuf() Buf { return Buf{c: make(chan []byte)} }
+
+func (b *Buf) Write(p []byte) (int, error) {
+	b.lock.Lock()
+	b.buffer = append(b.buffer, p...)
+	b.lock.Unlock()
+
+	// TODO: this won't always work. if no client has called FollowIO this will block, and if more that one client has
+	// called FollowIO, which once receives each write to the channel is non-deterministic. We need one channel per
+	// client that called FollowIO (including 0).
+	b.c <- p
+	return len(p), nil
+}
+
+func (b *Buf) Read(offset int32) []byte {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	// if the offset is out of range, just return a nil slice.
+	if int(offset) >= len(b.buffer) {
+		return nil
+	}
+
+	return b.buffer[offset:]
+}
+
+func (b *Buf) Close() {
+	b.once.Do(func() {
+		close(b.c)
+	})
+}
+
 type Job struct {
 	id            string
 	ctx           *context.Global        // to capture procs stdout/err
