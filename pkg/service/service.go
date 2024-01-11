@@ -136,21 +136,24 @@ func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.Ste
 		return err
 	}
 
-	for res := range job.results {
-		// the context was cancelled. exit.
-		if job.ctx2.Err() != nil {
+stop:
+	for {
+		select {
+		case <-job.ctx2.Done():
+			// TODO: maybe just break here and handle the error below?
+			// context was cancelled
 			defer s.cancel(job)
-			log.Printf("follow: error reading results for job %s: %v", request.Id, job.ctx2.Err().Error())
-			return fmt.Errorf("error reading results for job %s: %w", request.Id, job.ctx2.Err())
-		}
+			return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.ctx2.Err())
+		case res, ok := <-job.results:
+			if !ok {
+				// channel was closed
+				break stop
+			}
 
-		resp := proto.FollowResponse{
-			Result: res,
-		}
-
-		if err := writer.Send(&resp); err != nil {
-			log.Printf("follow: send error for job %s: %s", request.Id, err.Error())
-			return fmt.Errorf("send error for job %s: %w", request.Id, err)
+			if err := writer.Send(&proto.FollowResponse{Result: res}); err != nil {
+				log.Printf("follow: send error for job %s: %s", request.Id, err.Error())
+				return fmt.Errorf("send error for job %s: %w", request.Id, err)
+			}
 		}
 	}
 
