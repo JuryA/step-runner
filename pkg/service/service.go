@@ -62,8 +62,10 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 			log.Printf("an error occurred executing the job: %s", err)
 			job.err = fmt.Errorf("execution failed: %w", err)
 		} else {
+			if err := writeStepResult(job.globCtx.Dir, result); err != nil {
+				log.Printf("failed to write step-results: %s", err.Error())
+			}
 			job.results <- result
-			writeStepResult(job.globCtx.Dir, result)
 		}
 	}()
 
@@ -234,11 +236,11 @@ func (s *StepRunnerServer) Cancel(_ stdctx.Context, request *proto.CancelRequest
 		return &proto.CancelResponse{}, nil
 	}
 	s.cancel(job)
+	delete(s.jobs, job.id)
 	return &proto.CancelResponse{}, nil
 }
 
 func (s *StepRunnerServer) cancel(job *Job) {
 	job.finish()
 	job.cancel()
-	delete(s.jobs, job.id)
 }
