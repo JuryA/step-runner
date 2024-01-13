@@ -74,6 +74,37 @@ func (j *Job) finish() {
 		j.stderr.Close()
 	})
 }
+
+// DevNullChan is a channel that discards everything written to it and never blocks. Use this in places where a
+// write-channel is expected but you don't care about the data written to the channel.
+type DevNullChan[T any] struct {
+	sink chan T
+	once sync.Once
+}
+
+func NewDevNullChan[T any]() *DevNullChan[T] {
+	dnc := DevNullChan[T]{
+		sink: make(chan T),
+	}
+	go dnc.discard()
+	return &dnc
+}
+
+func (dnc *DevNullChan[T]) Sink() chan<- T {
+	return dnc.sink
+}
+
+func (dnc *DevNullChan[T]) Close() {
+	dnc.once.Do(func() {
+		close(dnc.sink)
+	})
+}
+
+func (dnc *DevNullChan[T]) discard() {
+	for range dnc.sink {
+	}
+}
+
 type Output struct {
 	Stdout, Stderr chan<- []byte
 	StepResult     chan<- *proto.StepResult
