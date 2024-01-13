@@ -7,70 +7,12 @@ import (
 	"log"
 	"os"
 	"path"
-	"sync"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
-
-type Buf struct {
-	buffer []byte
-	c      chan []byte
-	lock   sync.RWMutex
-	once   sync.Once
-}
-
-func newBuf() Buf { return Buf{c: make(chan []byte)} }
-
-func (b *Buf) Write(p []byte) (int, error) {
-	b.lock.Lock()
-	b.buffer = append(b.buffer, p...)
-	b.lock.Unlock()
-
-	// TODO: this won't always work. if no client has called FollowIO this will block, and if more that one client has
-	// called FollowIO, which once receives each write to the channel is non-deterministic. We need one channel per
-	// client that called FollowIO (including 0).
-	b.c <- p
-	return len(p), nil
-}
-
-func (b *Buf) Read(offset int32) []byte {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	// if the offset is out of range, just return a nil slice.
-	if int(offset) >= len(b.buffer) {
-		return nil
-	}
-
-	return b.buffer[offset:]
-}
-
-func (b *Buf) Close() {
-	b.once.Do(func() {
-		close(b.c)
-	})
-}
-
-type Job struct {
-	id            string
-	ctx           *context.Global        // to capture procs stdout/err
-	ctx2          stdctx.Context         // the context used in Run. choose a better name
-	results       chan *proto.StepResult // to stream the results so Follow can get at them
-	err           error                  // capture error when running steps
-	cancel        func()                 // cancel the context
-	chanCloseOnce sync.Once
-	stdout        Buf
-	stderr        Buf
-}
-
-func (j *Job) closeChan() {
-	j.chanCloseOnce.Do(func() {
-		close(j.results)
-	})
-}
 
 type StepRunnerServer struct {
 	proto.StepRunnerServer
@@ -95,33 +37,30 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 		return nil, fmt.Errorf("creating execution: %w", err)
 	}
 
-	ctx2, cancel := stdctx.WithCancel(stdctx.Background())
+	ctx, cancel := stdctx.WithCancel(stdctx.Background())
 	job := Job{
 		id:      request.Id,
-		ctx:     context.NewGlobal(),
-		results: make(chan *proto.StepResult, 1),
-		ctx2:    ctx2,
+		globCtx: context.NewGlobal(),
+		ctx:     ctx,
 		cancel:  cancel,
+		results: make(chan *proto.StepResult, 1),
 		stdout:  newBuf(),
 		stderr:  newBuf(),
 	}
-	job.ctx.InheritEnv(os.Environ()...)
-	job.ctx.Stdout = &job.stdout
-	job.ctx.Stderr = &job.stdout
-	job.ctx.Dir = request.WorkDir
+	job.globCtx.InheritEnv(os.Environ()...)
+	job.globCtx.Stdout = &job.stdout
+	job.globCtx.Stderr = &job.stdout
+	job.globCtx.Dir = request.WorkDir
 
 	s.jobs[request.Id] = &job
 
 	go func() {
-		defer job.closeChan()
-		defer job.stdout.Close()
-		defer job.stderr.Close()
+		defer job.finish() // TODO: or cancel()? So we want to cancel the context here?
 		// this needs to change to truly stream results back to the caller.
-		result, err := execution.Run(ctx2, getOrMakeStep(request), &runner.Params{}, job.ctx)
+		result, err := execution.Run(ctx, getOrMakeStep(request), &runner.Params{}, job.globCtx)
 		if err != nil {
 			log.Printf("an error occurred executing the job: %s", err)
 			job.err = fmt.Errorf("execution failed: %w", err)
-			// } else if req.ctx2.Err() != nil {
 		} else {
 			job.results <- result
 			writeStepResult(job.globCtx.Dir, result)
@@ -182,11 +121,11 @@ func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.Ste
 stop:
 	for {
 		select {
-		case <-job.ctx2.Done():
+		case <-job.ctx.Done():
 			// TODO: maybe just break here and handle the error below?
 			// context was cancelled
 			defer s.cancel(job)
-			return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.ctx2.Err())
+			return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.ctx.Err())
 		case res, ok := <-job.results:
 			if !ok {
 				// channel was closed
@@ -201,8 +140,6 @@ stop:
 	}
 
 	if job.err != nil {
-		// do we really want to remove the job from the list of jobs here? doing so precludes being able to call follow
-		// again.
 		s.cancel(job)
 		return job.err
 	}
@@ -226,11 +163,11 @@ func (s *StepRunnerServer) FollowIO(request *proto.FollowIORequest, writer proto
 stop:
 	for {
 		select {
-		case <-job.ctx2.Done():
+		case <-job.ctx.Done():
 			// TODO: maybe just break here and handle the error below?
 			// context was cancelled
 			defer s.cancel(job)
-			return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.ctx2.Err())
+			return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.ctx.Err())
 
 		case bytes, ok := <-job.stdout.c:
 			if !ok {
@@ -253,8 +190,6 @@ stop:
 	}
 
 	if job.err != nil {
-		// do we really want to remove the job from the list of jobs here? doing so precludes being able to call follow
-		// again.
 		s.cancel(job)
 		return job.err
 	}
@@ -303,7 +238,7 @@ func (s *StepRunnerServer) Cancel(_ stdctx.Context, request *proto.CancelRequest
 }
 
 func (s *StepRunnerServer) cancel(job *Job) {
+	job.finish()
 	job.cancel()
-	job.closeChan()
 	delete(s.jobs, job.id)
 }

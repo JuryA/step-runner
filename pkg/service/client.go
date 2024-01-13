@@ -20,11 +20,6 @@ type StepRunnerClient struct {
 	readStdout, readStderr int32
 }
 
-type Output struct {
-	Stdout, Stderr chan<- []byte
-	StepResult     chan<- *proto.StepResult
-}
-
 func NewClient(serverAddr string) (*StepRunnerClient, error) {
 	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
