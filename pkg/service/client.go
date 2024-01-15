@@ -52,6 +52,7 @@ func (c *StepRunnerClient) RunAndFollow(ctx context.Context, jobID, workDir stri
 		Id:      jobID,
 		Steps:   steps,
 		WorkDir: workDir,
+		Type:    proto.RunRequest_step,
 	})
 	if err != nil {
 		return err

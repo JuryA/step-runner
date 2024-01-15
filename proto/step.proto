@@ -114,7 +114,15 @@ message StepResult {
 message RunRequest {
     string id = 1;
     string work_dir = 2;
-    repeated Step steps = 3;
+
+    enum StepType {
+        unknown = 0;
+        step = 1;
+        script = 2;
+    }
+    StepType type = 3;
+    repeated Step steps = 4;
+    string ci_script = 5;
 }
 
 message RunResponse {

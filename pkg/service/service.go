@@ -32,6 +32,11 @@ func NewServer() (*StepRunnerServer, error) {
 }
 
 func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*proto.RunResponse, error) {
+	if request.Type != proto.RunRequest_step {
+		return nil, fmt.Errorf("unsupported script-type %q",
+			proto.RunRequest_StepType_name[int32(request.Type)])
+	}
+
 	execution, err := runner.New(s.cache)
 	if err != nil {
 		return nil, fmt.Errorf("creating execution: %w", err)
