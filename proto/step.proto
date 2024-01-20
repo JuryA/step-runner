@@ -48,25 +48,18 @@ enum DefinitionType {
 message Spec {
     Content spec = 1;
     message Content {
-        map<string,Input> inputs = 1;
+        map<string,StepArgument> inputs = 1;
         option (buf.validate.message).cel = {
             id: "inputs",
             message: "inputs must be alphanumeric with underscores",
             expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
         };
-        message Input {
-            InputType type = 1;
-            google.protobuf.Value default = 2;
-        }
-        map<string,Output> outputs = 2;
+        map<string,StepArgument> outputs = 2;
         option (buf.validate.message).cel = {
             id: "outputs",
             message: "outputs must be alphanumeric with underscores",
             expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
         };
-        message Output {
-            string default = 1;
-        }
     }
 }
 
@@ -76,13 +69,21 @@ message StepDefinition {
     string dir = 3;
 }
 
-enum InputType {
+enum StepArgumentType {
     spec_type_unspecified = 0;
     string = 1;
     number = 2;
     bool = 3;
     struct = 4;
     list = 5;
+}
+
+message StepArgument {
+    StepArgumentType type = 1;
+    google.protobuf.Value default = 2;
+    string description = 3;
+    bool required = 4;
+    repeated google.protobuf.Value options = 5;
 }
 
 message StepResult {

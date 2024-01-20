@@ -32,7 +32,7 @@ type: exec
 `,
 		wantSpec: &proto.Spec{
 			Spec: &proto.Spec_Content{
-				Inputs: map[string]*proto.Spec_Content_Input{
+				Inputs: map[string]*proto.StepArgument{
 					"name": {},
 				},
 			},
@@ -79,21 +79,21 @@ type: exec
 `,
 		wantSpec: &proto.Spec{
 			Spec: &proto.Spec_Content{
-				Inputs: map[string]*proto.Spec_Content_Input{
+				Inputs: map[string]*proto.StepArgument{
 					"name": {
-						Type:    proto.InputType_string,
+						Type:    proto.StepArgumentType_string,
 						Default: structpb.NewStringValue("steppy"),
 					},
 					"age": {
-						Type:    proto.InputType_number,
+						Type:    proto.StepArgumentType_number,
 						Default: structpb.NewNumberValue(1),
 					},
 					"hungry": {
-						Type:    proto.InputType_bool,
+						Type:    proto.StepArgumentType_bool,
 						Default: structpb.NewBoolValue(false),
 					},
 					"favorites": {
-						Type: proto.InputType_struct,
+						Type: proto.StepArgumentType_struct,
 						Default: structpb.NewStructValue(&structpb.Struct{
 							Fields: map[string]*structpb.Value{
 								"color": structpb.NewStringValue("red"),
@@ -101,9 +101,9 @@ type: exec
 						}),
 					},
 				},
-				Outputs: map[string]*proto.Spec_Content_Output{
+				Outputs: map[string]*proto.StepArgument{
 					"eye_color": {
-						Default: "brown",
+						Default: structpb.NewStringValue("brown"),
 					},
 				},
 			},
