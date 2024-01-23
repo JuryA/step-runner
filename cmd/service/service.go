@@ -39,7 +39,7 @@ func run(cmd *cobra.Command, args []string) error {
 		grpcServer.GracefulStop()
 	}()
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
