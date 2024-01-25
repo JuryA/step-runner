@@ -16,5 +16,3 @@ COPY --from=build /step-runner /step-runner
 RUN apk add git bash neofetch
 
 CMD ["/step-runner"]
-
-EXPOSE 8765
