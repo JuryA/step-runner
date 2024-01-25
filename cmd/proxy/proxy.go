@@ -49,8 +49,8 @@ func Proxy(w io.Writer, r io.Reader, network, address string) error {
 	}()
 
 	err1 := <-errChan
-	err2 := conn.Close()
-	err3 := <-errChan
+	err2 := <-errChan
+	err3 := conn.Close()
 
 	if err1 != nil {
 		return err1
