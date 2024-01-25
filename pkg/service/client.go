@@ -34,6 +34,15 @@ func NewClient(serverAddr string) (*StepRunnerClient, error) {
 	}, nil
 }
 
+func NewClientWithConn(conn *grpc.ClientConn) (*StepRunnerClient, error) {
+	client := proto.NewStepRunnerClient(conn)
+
+	return &StepRunnerClient{
+		conn:   conn,
+		client: client,
+	}, nil
+}
+
 // func (c *StepRunnerClient) RunCIJob(ctx context.Context, jobID, script string) error {
 // 	_, err := c.client.Run(ctx, &proto.RunRequest{
 // 		Id: jobID,
