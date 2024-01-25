@@ -5,25 +5,18 @@ import (
 	"io"
 	"net"
 	"os"
-
-	"github.com/spf13/cobra"
 )
 
 // Note: proxying between stdin/out/err (the client) and gRPC (the server)
 
-var Cmd = &cobra.Command{
-	Use:   "proxy",
-	Short: "proxy commands from to step-runner server",
-	Args:  cobra.ExactArgs(0),
-	RunE:  run,
+type Proxy struct{}
+
+func (p *Proxy) Run() error {
+	return proxy(os.Stdout, os.Stdin, "tcp", "localhost:8765")
 }
 
-func run(cmd *cobra.Command, args []string) error {
-	return Proxy(os.Stdout, os.Stdin, "tcp", "localhost:8765")
-}
-
-// Proxy connects the read and writer with the dialed connection.
-func Proxy(w io.Writer, r io.Reader, network, address string) error {
+// proxy connects the read and writer with the dialed connection.
+func proxy(w io.Writer, r io.Reader, network, address string) error {
 	conn, err := net.Dial(network, address)
 	if err != nil {
 		return fmt.Errorf("proxy dialing: %w", err)

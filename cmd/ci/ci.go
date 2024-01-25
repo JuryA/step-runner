@@ -6,19 +6,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 )
-
-var Cmd = &cobra.Command{
-	Use:   "ci",
-	Short: "Run steps in a CI environment variable STEPS",
-	Args:  cobra.ExactArgs(0),
-	RunE:  run,
-}
 
 const stepsTemplate = `
 spec: {}
@@ -27,7 +19,9 @@ type: steps
 steps:
 `
 
-func run(cmd *cobra.Command, args []string) error {
+type CI struct{}
+
+func (ci *CI) Run() error {
 	steps := os.Getenv("STEPS")
 	stepDefinition, err := step.Deserialize(stepsTemplate+steps, "")
 	if err != nil {

@@ -9,7 +9,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/spf13/cobra"
 	"gitlab.com/gitlab-org/step-runner/pkg/service"
 	"google.golang.org/grpc"
 
@@ -18,14 +17,10 @@ import (
 
 const port = 8765
 
-var Cmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Run StepRunner server",
-	Args:  cobra.ExactArgs(0),
-	RunE:  run,
+type Serve struct {
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func (s *Serve) Run() error {
 	var grpcServer *grpc.Server
 	sigChan := make(chan os.Signal, 1)
 	wg := sync.WaitGroup{}
@@ -48,7 +43,7 @@ func run(cmd *cobra.Command, args []string) error {
 	grpcServer = grpc.NewServer(opts...)
 	proto.RegisterStepRunnerServer(grpcServer, newServer())
 
-	log.Printf("listening on port %d", port)
+	log.Printf("listening on %v", lis.Addr())
 	return grpcServer.Serve(lis)
 }
 
