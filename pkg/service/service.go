@@ -17,7 +17,7 @@ import (
 type StepRunnerServer struct {
 	proto.StepRunnerServer
 	cache cache.Cache
-	jobs  map[string]*Job // probably synchronize this
+	jobs  *ConcurrentMap[string, *Job]
 }
 
 func NewServer() (*StepRunnerServer, error) {
@@ -27,7 +27,7 @@ func NewServer() (*StepRunnerServer, error) {
 	}
 	return &StepRunnerServer{
 		cache: c,
-		jobs:  map[string]*Job{},
+		jobs:  New[string, *Job](),
 	}, nil
 }
 
@@ -57,7 +57,7 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 	job.globCtx.Stderr = &job.stdout
 	job.globCtx.Dir = request.WorkDir
 
-	s.jobs[request.Id] = &job
+	s.jobs.Put(request.Id, &job)
 
 	go func() {
 		defer job.finish() // TODO: or cancel()? So we want to cancel the context here?
@@ -107,10 +107,10 @@ func getOrMakeStep(request *proto.RunRequest) *proto.StepDefinition {
 }
 
 func (s *StepRunnerServer) getJob(jid string) (*Job, error) {
-	req, ok := s.jobs[jid]
+	req, ok := s.jobs.Get(jid)
 	if !ok {
-		log.Printf("follow: no such job %s", jid)
-		return nil, fmt.Errorf("follow: no such job %s", jid)
+		log.Printf("no such job %s", jid)
+		return nil, fmt.Errorf("no such job %s", jid)
 	}
 	return req, nil
 }
@@ -118,7 +118,7 @@ func (s *StepRunnerServer) getJob(jid string) (*Job, error) {
 // NOTE: Errors returned from this function will only appear on the client side on the first call to
 // StepRunner_FollowClient.Recv(), NOT in the error returned from calling this API directly.
 func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.StepRunner_FollowServer) error {
-	log.Println("request to follow job", request.Id, s.jobs)
+	log.Println("request to follow job", request.Id, s.jobs.Keys())
 
 	job, err := s.getJob(request.Id)
 	if err != nil {
@@ -155,7 +155,7 @@ stop:
 }
 
 func (s *StepRunnerServer) FollowIO(request *proto.FollowIORequest, writer proto.StepRunner_FollowIOServer) error {
-	log.Println("request to follow IO for job", request.Id, s.jobs)
+	log.Println("request to follow IO for job", request.Id, s.jobs.Keys())
 
 	job, err := s.getJob(request.Id)
 	if err != nil {
@@ -234,14 +234,14 @@ func (s *StepRunnerServer) writeStream(stream []byte, streamType proto.FollowIOR
 }
 
 func (s *StepRunnerServer) Cancel(_ stdctx.Context, request *proto.CancelRequest) (*proto.CancelResponse, error) {
-	log.Println("request to cancel job", request.Id, s.jobs)
+	log.Println("request to cancel job", request.Id, s.jobs.Keys())
 
 	job, err := s.getJob(request.Id)
 	if err != nil {
 		return &proto.CancelResponse{}, nil
 	}
 	s.cancel(job)
-	delete(s.jobs, job.id)
+	s.jobs.Remove(job.id)
 	return &proto.CancelResponse{}, nil
 }
 
