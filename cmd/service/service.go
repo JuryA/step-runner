@@ -15,9 +15,17 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-const port = 8765
+type Networking string
+
+const (
+	UnixSocket Networking = "unix"
+	TCPAddress Networking = "tcp"
+)
 
 type Serve struct {
+	Address    string     `arg:"-a,--address" default:"127.0.0.1:8765" help:"tcp networking address"`
+	Socket     string     `arg:"-s,--socket" default:"/tmp/step-runner.sock" help:"unix domain socket path"`
+	Networking Networking `arg:"-n,--networking" default:"unix" help:"networking type [unix,tcp]"`
 }
 
 func (s *Serve) Run() error {
@@ -34,7 +42,7 @@ func (s *Serve) Run() error {
 		grpcServer.GracefulStop()
 	}()
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	lis, err := s.listener()
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -45,6 +53,16 @@ func (s *Serve) Run() error {
 
 	log.Printf("listening on %v", lis.Addr())
 	return grpcServer.Serve(lis)
+}
+
+func (s *Serve) listener() (net.Listener, error) {
+	switch s.Networking {
+	case TCPAddress:
+		return net.Listen("tcp", s.Address)
+	case UnixSocket:
+		return net.Listen("unix", s.Socket)
+	}
+	return nil, fmt.Errorf("invalid networking %q", s.Networking)
 }
 
 func newServer() *service.StepRunnerServer {

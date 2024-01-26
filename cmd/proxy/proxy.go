@@ -9,10 +9,36 @@ import (
 
 // Note: proxying between stdin/out/err (the client) and gRPC (the server)
 
-type Proxy struct{}
+type Networking string
+
+const (
+	UnixSocket Networking = "unix"
+	TCPAddress Networking = "tcp"
+)
+
+type Proxy struct {
+	Address    string     `arg:"-a,--address" default:"127.0.0.1:8765" help:"host tcp networking address"`
+	Socket     string     `arg:"-s,--socket" default:"/tmp/step-runner.sock" help:"unix domain socket path"`
+	Networking Networking `arg:"-n,--networking" default:"unix" help:"networking type [unix,tcp]"`
+}
 
 func (p *Proxy) Run() error {
-	return proxy(os.Stdout, os.Stdin, "tcp", "localhost:8765")
+	protocol, address, err := p.netStuff()
+	if err != nil {
+		return err
+	}
+
+	return proxy(os.Stdout, os.Stdin, protocol, address)
+}
+
+func (p *Proxy) netStuff() (protocol, address string, err error) {
+	switch p.Networking {
+	case TCPAddress:
+		return "tcp", p.Address, nil
+	case UnixSocket:
+		return "unix", p.Socket, nil
+	}
+	return "", "", fmt.Errorf("invalid networking %q", p.Networking)
 }
 
 // proxy connects the read and writer with the dialed connection.
