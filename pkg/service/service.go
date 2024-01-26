@@ -2,14 +2,10 @@ package service
 
 import (
 	stdctx "context"
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"path"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -32,6 +28,7 @@ func NewServer() (*StepRunnerServer, error) {
 }
 
 func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*proto.RunResponse, error) {
+	log.Println("request to run job", request.Id, s.jobs.Keys())
 	if request.Type != proto.RunRequest_step {
 		return nil, fmt.Errorf("unsupported script-type %q",
 			proto.RunRequest_StepType_name[int32(request.Type)])
@@ -42,53 +39,23 @@ func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*
 		return nil, fmt.Errorf("creating execution: %w", err)
 	}
 
-	ctx, cancel := stdctx.WithCancel(stdctx.Background())
-	job := Job{
-		id:      request.Id,
-		globCtx: context.NewGlobal(),
-		ctx:     ctx,
-		cancel:  cancel,
-		results: make(chan *proto.StepResult, 1),
-		stdout:  newBuf(),
-		stderr:  newBuf(),
-	}
-	job.globCtx.InheritEnv(os.Environ()...)
-	job.globCtx.Stdout = &job.stdout
-	job.globCtx.Stderr = &job.stdout
-	job.globCtx.Dir = request.WorkDir
+	job := NewJob(request.Id, request.WorkDir)
 
-	s.jobs.Put(request.Id, &job)
+	s.jobs.Put(request.Id, job)
 
 	go func() {
-		defer job.finish() // TODO: or cancel()? So we want to cancel the context here?
+		defer job.Finish(nil)
 		// this needs to change to truly stream results back to the caller.
-		result, err := execution.Run(ctx, getOrMakeStep(request), &runner.Params{}, job.globCtx)
+		result, err := execution.Run(job.Ctx(), getOrMakeStep(request), &runner.Params{}, job.globCtx)
 		if err != nil {
 			log.Printf("an error occurred executing the job: %s", err)
-			job.err = fmt.Errorf("execution failed: %w", err)
+			job.Finish(fmt.Errorf("execution failed: %w", err))
 		} else {
-			if err := writeStepResult(job.globCtx.Dir, result); err != nil {
-				log.Printf("failed to write step-results: %s", err.Error())
-			}
 			job.results <- result
 		}
 	}()
 
 	return &proto.RunResponse{}, nil
-}
-
-func writeStepResult(destDir string, result *proto.StepResult) error {
-	bytes, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return fmt.Errorf("error marshaling step results: %w", err)
-	}
-	outputFile := path.Join(destDir, "step-results.json")
-	err = os.WriteFile(outputFile, bytes, 0640)
-	if err != nil {
-		return fmt.Errorf("writing step results to %v: %w", outputFile, err)
-	}
-	log.Printf("trace written to %v\n", outputFile)
-	return nil
 }
 
 func getOrMakeStep(request *proto.RunRequest) *proto.StepDefinition {
@@ -128,11 +95,8 @@ func (s *StepRunnerServer) Follow(request *proto.FollowRequest, writer proto.Ste
 stop:
 	for {
 		select {
-		case <-job.ctx.Done():
-			// TODO: maybe just break here and handle the error below?
-			// context was cancelled
-			defer s.cancel(job)
-			return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.ctx.Err())
+		case <-job.Ctx().Done():
+			break stop
 		case res, ok := <-job.results:
 			if !ok {
 				// channel was closed
@@ -146,9 +110,14 @@ stop:
 		}
 	}
 
-	if job.err != nil {
-		s.cancel(job)
-		return job.err
+	if job.Err() != nil {
+		return job.Err()
+	}
+
+	//nolint:staticcheck
+	if job.Ctx().Err() != nil {
+		// TODO: this will always be true because we canceled the context in Job.Finish()
+		// return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.Ctx().Err())
 	}
 
 	return nil
@@ -170,12 +139,8 @@ func (s *StepRunnerServer) FollowIO(request *proto.FollowIORequest, writer proto
 stop:
 	for {
 		select {
-		case <-job.ctx.Done():
-			// TODO: maybe just break here and handle the error below?
-			// context was cancelled
-			defer s.cancel(job)
-			return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.ctx.Err())
-
+		case <-job.Ctx().Done():
+			break stop
 		case bytes, ok := <-job.stdout.c:
 			if !ok {
 				// channel was closed
@@ -191,14 +156,18 @@ stop:
 				break stop
 			}
 			if err := s.writeStream(bytes, proto.FollowIOResponse_stderr, writer); err != nil {
-				return fmt.Errorf("stdout error for job %s: %w", request.Id, err)
+				return fmt.Errorf("stderr error for job %s: %w", request.Id, err)
 			}
 		}
 	}
 
-	if job.err != nil {
-		s.cancel(job)
-		return job.err
+	if job.Err() != nil {
+		return job.Err()
+	}
+	//nolint:staticcheck
+	if job.Ctx().Err() != nil {
+		// TODO: this will always be true because we canceled the context in Job.Finish()
+		// return fmt.Errorf("error executing steps for job %s : %w", request.Id, job.Ctx().Err())
 	}
 
 	return nil
@@ -240,12 +209,7 @@ func (s *StepRunnerServer) Cancel(_ stdctx.Context, request *proto.CancelRequest
 	if err != nil {
 		return &proto.CancelResponse{}, nil
 	}
-	s.cancel(job)
+	job.Finish(nil)
 	s.jobs.Remove(job.id)
 	return &proto.CancelResponse{}, nil
-}
-
-func (s *StepRunnerServer) cancel(job *Job) {
-	job.finish()
-	job.cancel()
 }

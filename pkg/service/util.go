@@ -2,7 +2,9 @@ package service
 
 import (
 	stdctx "context"
+	"os"
 	"sync"
+	"time"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -55,24 +57,67 @@ func (b *Buf) Close() {
 
 // Job represents an active request to run (and follow and cancel) a collection of steps.
 type Job struct {
-	id      string                 // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
-	globCtx *context.Global        // To capture stdout/err from all subprocesses
-	ctx     stdctx.Context         // The context used to manage the Job's entire lifetime.
-	cancel  func()                 // Used to cancel the ctx.
-	err     error                  // Captures any error returned when executing steps.
-	once    sync.Once              // Used to ensure channels are only closed once.
-	results chan *proto.StepResult // To capture the step-results produced by Run so Follow can get at them.
-	stdout  Buf                    // To capture stdout produced by processes FollowIO can get at them.
-	stderr  Buf                    // To capture stdout produced by processes FollowIO can get at them.
+	id         string                 // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
+	globCtx    *context.Global        // To capture stdout/err from all subprocesses
+	ctx        stdctx.Context         // The context used to manage the Job's entire lifetime.
+	cancel     func()                 // Used to cancel the ctx.
+	err        error                  // Captures any error returned when executing steps.
+	results    chan *proto.StepResult // To capture the step-results produced by Run so Follow can get at them.
+	stdout     Buf                    // To capture stdout produced by processes FollowIO can get at them.
+	stderr     Buf                    // To capture stdout produced by processes FollowIO can get at them.
+	finished   bool                   // indicated whether all processing on this job has finished
+	finishTime time.Time
+	sync.RWMutex
 }
 
-// finsh() cleans up all resources associated with managing a job
-func (j *Job) finish() {
-	j.once.Do(func() {
-		close(j.results)
-		j.stdout.Close()
-		j.stderr.Close()
-	})
+func NewJob(jobID, workDir string) *Job {
+	ctx, cancel := stdctx.WithCancel(stdctx.Background())
+	job := Job{
+		id:      jobID,
+		globCtx: context.NewGlobal(),
+		ctx:     ctx,
+		cancel:  cancel,
+		results: make(chan *proto.StepResult, 1),
+		stdout:  newBuf(),
+		stderr:  newBuf(),
+	}
+	job.globCtx.InheritEnv(os.Environ()...)
+	job.globCtx.Stdout = &job.stdout
+	job.globCtx.Stderr = &job.stdout
+	job.globCtx.Dir = workDir
+	return &job
+}
+
+func (j *Job) Ctx() stdctx.Context { return j.ctx }
+func (j *Job) Err() error {
+	j.RLock()
+	defer j.RUnlock()
+	return j.err
+}
+
+// Finish() cleans up all resources associated with managing a job
+func (j *Job) Finish(err error) {
+	j.Lock()
+	defer j.Unlock()
+	if j.finished {
+		return
+	}
+	// really cancel context here???
+	j.err = err
+	j.finished = true
+	j.finishTime = time.Now()
+
+	close(j.results)
+	j.stdout.Close()
+	j.stderr.Close()
+
+	j.cancel()
+}
+
+func (j *Job) Finished() (time.Time, bool) {
+	j.RLock()
+	defer j.RUnlock()
+	return j.finishTime, j.finished
 }
 
 // DevNullChan is a channel that discards everything written to it and never blocks. Use this in places where a
