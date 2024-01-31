@@ -23,6 +23,7 @@ const (
 	StepRunner_Follow_FullMethodName   = "/proto.StepRunner/Follow"
 	StepRunner_FollowIO_FullMethodName = "/proto.StepRunner/FollowIO"
 	StepRunner_Cancel_FullMethodName   = "/proto.StepRunner/Cancel"
+	StepRunner_List_FullMethodName     = "/proto.StepRunner/List"
 )
 
 // StepRunnerClient is the client API for StepRunner service.
@@ -33,6 +34,7 @@ type StepRunnerClient interface {
 	Follow(ctx context.Context, in *FollowRequest, opts ...grpc.CallOption) (StepRunner_FollowClient, error)
 	FollowIO(ctx context.Context, in *FollowIORequest, opts ...grpc.CallOption) (StepRunner_FollowIOClient, error)
 	Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error)
+	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 }
 
 type stepRunnerClient struct {
@@ -125,6 +127,15 @@ func (c *stepRunnerClient) Cancel(ctx context.Context, in *CancelRequest, opts .
 	return out, nil
 }
 
+func (c *stepRunnerClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
+	out := new(ListResponse)
+	err := c.cc.Invoke(ctx, StepRunner_List_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StepRunnerServer is the server API for StepRunner service.
 // All implementations must embed UnimplementedStepRunnerServer
 // for forward compatibility
@@ -133,6 +144,7 @@ type StepRunnerServer interface {
 	Follow(*FollowRequest, StepRunner_FollowServer) error
 	FollowIO(*FollowIORequest, StepRunner_FollowIOServer) error
 	Cancel(context.Context, *CancelRequest) (*CancelResponse, error)
+	List(context.Context, *ListRequest) (*ListResponse, error)
 	mustEmbedUnimplementedStepRunnerServer()
 }
 
@@ -151,6 +163,9 @@ func (UnimplementedStepRunnerServer) FollowIO(*FollowIORequest, StepRunner_Follo
 }
 func (UnimplementedStepRunnerServer) Cancel(context.Context, *CancelRequest) (*CancelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Cancel not implemented")
+}
+func (UnimplementedStepRunnerServer) List(context.Context, *ListRequest) (*ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 func (UnimplementedStepRunnerServer) mustEmbedUnimplementedStepRunnerServer() {}
 
@@ -243,6 +258,24 @@ func _StepRunner_Cancel_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StepRunner_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StepRunnerServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StepRunner_List_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StepRunnerServer).List(ctx, req.(*ListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StepRunner_ServiceDesc is the grpc.ServiceDesc for StepRunner service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -257,6 +290,10 @@ var StepRunner_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Cancel",
 			Handler:    _StepRunner_Cancel_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _StepRunner_List_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

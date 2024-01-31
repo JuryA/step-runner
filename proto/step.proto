@@ -3,6 +3,7 @@ package proto;
 
 import "google/protobuf/struct.proto";
 import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "../proto";
 
@@ -158,9 +159,30 @@ message CancelRequest {
 message CancelResponse {
 }
 
+message ListRequest {
+    // nothing for now, but we could add filters here
+}
+
+message Job {
+    string id = 1;
+    enum JobStatus {
+        running = 0;
+        suceeded = 1;
+        failed = 2;
+    }
+    JobStatus status = 2;
+    google.protobuf.Timestamp finished_time = 3;
+    // maybe can add runtime here?
+}
+
+message ListResponse {
+    repeated Job jobs = 1;
+}
+
 service StepRunner {
     rpc Run(RunRequest) returns (RunResponse);
     rpc Follow(FollowRequest) returns (stream FollowResponse);
     rpc FollowIO(FollowIORequest) returns (stream FollowIOResponse);
     rpc Cancel(CancelRequest) returns (CancelResponse);
+    rpc List(ListRequest) returns (ListResponse);
 }

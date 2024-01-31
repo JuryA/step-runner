@@ -41,3 +41,11 @@ func (c *ConcurrentMap[K, V]) Keys() []K {
 	defer c.lock.RUnlock()
 	return maps.Keys(c.data)
 }
+
+func (c *ConcurrentMap[K, V]) ForEach(f func(k K, v V)) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	for k, v := range c.data {
+		f(k, v)
+	}
+}

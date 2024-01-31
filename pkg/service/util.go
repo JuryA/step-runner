@@ -114,10 +114,10 @@ func (j *Job) Finish(err error) {
 	j.cancel()
 }
 
-func (j *Job) Finished() (time.Time, bool) {
+func (j *Job) Finished() (time.Time, bool, error) {
 	j.RLock()
 	defer j.RUnlock()
-	return j.finishTime, j.finished
+	return j.finishTime, j.finished, j.err
 }
 
 // DevNullChan is a channel that discards everything written to it and never blocks. Use this in places where a

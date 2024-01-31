@@ -8,6 +8,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type StepRunnerServer struct {
@@ -29,6 +30,13 @@ func NewServer() (*StepRunnerServer, error) {
 
 func (s *StepRunnerServer) Run(ctx stdctx.Context, request *proto.RunRequest) (*proto.RunResponse, error) {
 	log.Println("request to run job", request.Id, s.jobs.Keys())
+
+	_, ok := s.jobs.Get(request.Id)
+	if ok {
+		log.Printf("job %s already exists", request.Id)
+		return &proto.RunResponse{}, nil
+	}
+
 	if request.Type != proto.RunRequest_step {
 		return nil, fmt.Errorf("unsupported script-type %q",
 			proto.RunRequest_StepType_name[int32(request.Type)])
@@ -212,4 +220,31 @@ func (s *StepRunnerServer) Cancel(_ stdctx.Context, request *proto.CancelRequest
 	job.Finish(nil)
 	s.jobs.Remove(job.id)
 	return &proto.CancelResponse{}, nil
+}
+
+func (s *StepRunnerServer) List(_ stdctx.Context, request *proto.ListRequest) (*proto.ListResponse, error) {
+	result := proto.ListResponse{}
+	s.jobs.ForEach(func(_ string, v *Job) {
+		result.Jobs = append(result.Jobs, jobToProtoJob(v))
+	})
+	return &result, nil
+}
+
+func jobToProtoJob(j *Job) *proto.Job {
+	status := proto.Job_running
+	finishedTime, finished, err := j.Finished()
+
+	if finished {
+		status = proto.Job_suceeded
+		if err != nil {
+			status = proto.Job_failed
+		}
+	}
+	pj := proto.Job{
+		Id:           j.id,
+		Status:       status,
+		FinishedTime: timestamppb.New(finishedTime),
+	}
+
+	return &pj
 }

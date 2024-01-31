@@ -66,7 +66,6 @@ func (c *StepRunnerClient) RunAndFollow(ctx context.Context, jobID, workDir stri
 	if err != nil {
 		return err
 	}
-	defer c.conn.Close()
 	//nolint:errcheck
 	defer c.client.Cancel(ctx, &proto.CancelRequest{Id: jobID})
 
@@ -146,4 +145,12 @@ func (c *StepRunnerClient) startFollowIO(ctx context.Context, jobID string, stdo
 			stderrC <- res.Stream
 		}
 	}
+}
+
+func (c *StepRunnerClient) List(ctx context.Context) (*proto.ListResponse, error) {
+	return c.client.List(ctx, &proto.ListRequest{})
+}
+
+func (c *StepRunnerClient) Close() error {
+	return c.conn.Close()
 }
