@@ -1,0 +1,98 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://gitlab.com/gitlab-org/step-runner/schema/definition",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "exec",
+                "steps"
+            ]
+        },
+        "steps": {
+            "items": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name is a unique identifier for this step."
+                    },
+                    "step": {
+                        "type": "string",
+                        "description": "Step is a reference to the step to invoke."
+                    },
+                    "env": {
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "type": "object",
+                        "description": "Env is a map of environment variable names to values."
+                    },
+                    "inputs": {
+                        "type": "object",
+                        "description": "Inputs is a map of step input names to structured values."
+                    },
+                    "script": {
+                        "type": "string",
+                        "description": "Script is a shell script to evaluate."
+                    },
+                    "container": {
+                        "type": "string",
+                        "description": "Container is a Docker container in which to run the step."
+                    }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                    "name",
+                    "step",
+                    "script",
+                    "container"
+                ],
+                "description": "Step is a single step invocation."
+            },
+            "type": "array"
+        },
+        "exec": {
+            "properties": {
+                "command": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "work_dir": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+                "command",
+                "work_dir"
+            ]
+        },
+        "outputs": {
+            "additionalProperties": {
+                "type": "string"
+            },
+            "type": "object"
+        },
+        "script": {
+            "type": "string"
+        },
+        "container": {
+            "type": "string"
+        }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+        "type",
+        "steps",
+        "exec",
+        "outputs",
+        "script",
+        "container"
+    ],
+    "description": "Definition is the implementation of a step."
+}

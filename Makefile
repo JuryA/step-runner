@@ -17,6 +17,7 @@ PROTOVALIDATE_VERSION := 0.5.4
 .PHONY: generate
 generate: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) protovalidate
 	go generate ./proto
+	go run ./schema/generate
 
 .PHONY: test
 test: generate

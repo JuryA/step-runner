@@ -1,0 +1,53 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://gitlab.com/gitlab-org/step-runner/schema/spec",
+    "properties": {
+        "spec": {
+            "properties": {
+                "inputs": {
+                    "additionalProperties": {
+                        "properties": {
+                            "type": {
+                                "type": "string"
+                            },
+                            "default": true
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                            "type",
+                            "default"
+                        ]
+                    },
+                    "type": "object"
+                },
+                "outputs": {
+                    "additionalProperties": {
+                        "properties": {
+                            "default": {
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                            "default"
+                        ]
+                    },
+                    "type": "object"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+                "inputs",
+                "outputs"
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+        "spec"
+    ]
+}
