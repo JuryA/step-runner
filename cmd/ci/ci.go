@@ -29,7 +29,7 @@ steps:
 
 func run(cmd *cobra.Command, args []string) error {
 	steps := os.Getenv("STEPS")
-	stepDefinition, err := step.Deserialize(stepsTemplate+steps, "")
+	stepDefinition, err := step.Compile(stepsTemplate+steps, "")
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", steps, err)
 	}

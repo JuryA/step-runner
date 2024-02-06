@@ -1,14 +1,20 @@
 package schema
 
+import (
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+)
+
 // Definition is the implementation of a step.
 type Definition struct {
-	Type    DefinitionType    `json:"type" jsonschema:"enum=exec,enum=steps"`
-	Steps   []*Step           `json:"steps"`
-	Exec    Exec              `json:"exec"`
-	Outputs map[string]string `json:"outputs"`
+	Type    DefinitionType    `json:"type" yaml:"type" jsonschema:"enum=exec,enum=steps"`
+	Steps   []*Step           `json:"steps" yaml:"steps"`
+	Exec    Exec              `json:"exec" yaml:"exec"`
+	Outputs map[string]string `json:"outputs" yaml:"outputs"`
 
-	Script    string `json:"script"`
-	Container string `json:"container"`
+	// Script is a shell script to evaluate.
+	Script string `json:"script" yaml:"script"`
 }
 
 type DefinitionType string
@@ -19,86 +25,128 @@ const (
 )
 
 type Exec struct {
-	Command []string `json:"command"`
-	WorkDir string   `json:"work_dir"`
+	Command []string `json:"command" yaml:"command"`
+	WorkDir string   `json:"work_dir" yaml:"work_dir"`
 }
 
 // Step is a single step invocation.
 type Step struct {
 	// Name is a unique identifier for this step.
-	Name string `json:"name"`
+	Name string `json:"name" yaml:"name"`
 	// Step is a reference to the step to invoke.
-	Step string `json:"step"`
+	Step string `json:"step" yaml:"step"`
 	// Env is a map of environment variable names to values.
-	Env map[string]string `json:"env,omitempty"`
+	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	// Inputs is a map of step input names to structured values.
-	Inputs map[string]Value `json:"inputs,omitempty"`
+	Inputs map[string]*Value `json:"inputs,omitempty" yaml:"inputs,omitempty"`
 
 	// Script is a shell script to evaluate.
-	Script string `json:"script"`
-	// Container is a Docker container in which to run the step.
-	Container string `json:"container"`
+	Script string `json:"script" yaml:"script"`
 }
-
-// Value is a valid JSON value.
-type Value interface {
-	isValue()
-}
-
-// NullValue is a JSON null.
-type NullValue struct{}
-
-func (v NullValue) isValue() {}
-
-// BoolValue is a JSON bool.
-type BoolValue bool
-
-func (v BoolValue) isValue() {}
-
-// NumberValue is a JSON number (float64).
-type NumberValue float64
-
-func (v NumberValue) isValue() {}
-
-// StringValue is a JSON string.
-type StringValue string
-
-func (v StringValue) isValue() {}
-
-// StructValue is a JSON struct.
-type StructValue map[string]Value
-
-func (v StructValue) isValue() {}
-
-// ListValue is a JSON list.
-type ListValue []Value
-
-func (v ListValue) isValue() {}
 
 type Spec struct {
-	Spec Content `json:"spec"`
+	Spec Content `json:"spec" yaml:"spec"`
 }
 
 type Content struct {
-	Inputs  map[string]Input  `json:"inputs"`
-	Outputs map[string]Output `json:"outputs"`
+	Inputs  map[string]Input  `json:"inputs" yaml:"inputs"`
+	Outputs map[string]Output `json:"outputs" yaml:"outputs"`
 }
 
 type Input struct {
-	Type    InputType `json:"type"`
-	Default Value     `json:"default"`
+	Type    ValueType `json:"type" yaml:"type"`
+	Default *Value    `json:"default" yaml:"default"`
 }
 
 type Output struct {
-	Default string `json:"default"`
+	Default string `json:"default" yaml:"default"`
 }
 
-type InputType string
+type ValueType string
 
 const (
-	InputTypeString InputType = "string"
-	InputTypeNumber InputType = "number"
-	InputTypeBool   InputType = "bool"
-	InputTypeStruct InputType = "struct"
-	InputTypeList   InputType = "list"
+	ValueTypeString ValueType = "string"
+	ValueTypeNumber ValueType = "number"
+	ValueTypeBool   ValueType = "bool"
+	ValueTypeStruct ValueType = "struct"
+	ValueTypeList   ValueType = "list"
 )
+
+// Value is a valid JSON value.
+type Value struct {
+	Type ValueType
+
+	Bool   bool
+	Number float64
+	String string
+	Struct map[string]*Value
+	List   []*Value
+}
+
+func BoolValue(b bool) *Value {
+	return &Value{
+		Type: ValueTypeBool,
+		Bool: b,
+	}
+}
+
+func NumberValue(n float64) *Value {
+	return &Value{
+		Type:   ValueTypeNumber,
+		Number: n,
+	}
+}
+
+func StringValue(s string) *Value {
+	return &Value{
+		Type:   ValueTypeString,
+		String: s,
+	}
+}
+
+func StructValue(s map[string]*Value) *Value {
+	return &Value{
+		Type:   ValueTypeStruct,
+		Struct: s,
+	}
+}
+
+func ListValue(l []*Value) *Value {
+	return &Value{
+		Type: ValueTypeList,
+		List: l,
+	}
+}
+
+const (
+	boolTag  = "!!bool"
+	strTag   = "!!str"
+	intTag   = "!!int"
+	floatTag = "!!float"
+	seqTag   = "!!seq"
+	mapTag   = "!!map"
+)
+
+func (v *Value) UnmarshalYAML(value *yaml.Node) error {
+	var err error
+	switch value.ShortTag() {
+	case boolTag:
+		v.Type = ValueTypeBool
+		err = value.Decode(&v.Bool)
+	case strTag:
+		v.Type = ValueTypeString
+		err = value.Decode(&v.String)
+	case intTag, floatTag:
+		v.Type = ValueTypeNumber
+		err = value.Decode(&v.Number)
+	case seqTag:
+		v.Type = ValueTypeList
+		err = value.Decode(&v.List)
+	case mapTag:
+		v.Type = ValueTypeString
+		err = value.Decode(&v.Struct)
+	default:
+		return fmt.Errorf("unsupported type: %v", value.ShortTag())
+	}
+	return err
+}

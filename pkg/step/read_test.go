@@ -214,7 +214,7 @@ spec:
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			stepDef, err := Deserialize(c.yaml, "")
+			stepDef, err := Compile(c.yaml, "")
 			if c.wantErr {
 				require.Error(t, err)
 				require.Nil(t, stepDef)

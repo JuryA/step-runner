@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/schema"
 )
 
 const defaultStorePerm = 0o640
@@ -22,22 +23,31 @@ func Read(filename string) (*proto.StepDefinition, error) {
 		return nil, fmt.Errorf("reading file: %w", err)
 	}
 
-	return Deserialize(string(buf), filepath.Dir(filename))
+	return Compile(string(buf), filepath.Dir(filename))
 }
 
-func Deserialize(content, dir string) (*proto.StepDefinition, error) {
+func Compile(content, dir string) (*proto.StepDefinition, error) {
 	var (
-		spec       proto.Spec
-		definition proto.Definition
+		spec       schema.Spec
+		definition schema.Definition
 	)
 
 	if err := unmarshal(content, &spec, &definition); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshaling: %w", err)
+	}
+
+	protoSpec, err := compileTo[*proto.Spec](&spec)
+	if err != nil {
+		return nil, fmt.Errorf("compiling spec: %w", err)
+	}
+	protoDef, err := compileTo[*proto.Definition](&definition)
+	if err != nil {
+		return nil, fmt.Errorf("compiling definition: %w", err)
 	}
 
 	stepDef := &proto.StepDefinition{
-		Spec:       &spec,
-		Definition: &definition,
+		Spec:       *protoSpec,
+		Definition: *protoDef,
 		Dir:        dir,
 	}
 	if err := ValidateStepDefinition(stepDef); err != nil {
@@ -59,26 +69,14 @@ func Serialize(stepDef *proto.StepDefinition) (string, error) {
 	return marshal(stepDef.Spec, stepDef.Definition)
 }
 
-func unmarshal(input string, subjects ...protoreflect.ProtoMessage) error {
+func unmarshal(input string, subjects ...any) error {
 	d := yaml.NewDecoder(strings.NewReader(input))
 	d.KnownFields(true)
 
 	for _, subject := range subjects {
-		var decoded any
-		err := d.Decode(&decoded)
+		err := d.Decode(subject)
 		if err != nil {
 			return fmt.Errorf("decoding: %w", err)
-		}
-
-		// convert to json
-		encoded, err := json.Marshal(decoded)
-		if err != nil {
-			return fmt.Errorf("converting to json: %w", err)
-		}
-
-		// convert to proto
-		if err := protojson.Unmarshal(encoded, subject); err != nil {
-			return fmt.Errorf("converting to proto: %w", err)
 		}
 	}
 

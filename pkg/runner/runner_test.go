@@ -170,7 +170,7 @@ steps:
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			stepDef, err := step.Deserialize(c.yaml, "")
+			stepDef, err := step.Compile(c.yaml, "")
 			require.NoError(t, err)
 
 			defs, err := cache.New()
