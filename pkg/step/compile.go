@@ -8,6 +8,31 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+func CompileSteps(steps *schema.StepDefinition) (*proto.StepDefinition, error) {
+	protoStepDef := &proto.StepDefinition{
+		Dir: steps.Dir,
+	}
+	if steps.Spec != nil {
+		protoSpec, err := specCompiler(*steps.Spec).compile()
+		if err != nil {
+			return nil, fmt.Errorf("compiling spec: %w", err)
+		}
+		protoStepDef.Spec = protoSpec
+	}
+	if steps.Definition != nil {
+		protoDef, err := definitionCompiler(*steps.Definition).compile()
+		if err != nil {
+			return nil, fmt.Errorf("compiling definition: %w", err)
+		}
+		protoStepDef.Definition = protoDef
+	}
+
+	if err := ValidateStepDefinition(protoStepDef); err != nil {
+		return nil, err
+	}
+	return protoStepDef, nil
+}
+
 type compileRule struct {
 	name string
 	rule func() error

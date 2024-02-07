@@ -29,9 +29,13 @@ steps:
 
 func run(cmd *cobra.Command, args []string) error {
 	steps := os.Getenv("STEPS")
-	stepDefinition, err := step.Compile(stepsTemplate+steps, "")
+	stepDef, err := step.ReadSteps(stepsTemplate+steps, "")
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", steps, err)
+	}
+	protoStepDef, err := step.CompileSteps(stepDef)
+	if err != nil {
+		return fmt.Errorf("compiling STEPS: %w", err)
 	}
 
 	defs, err := cache.New()
@@ -48,7 +52,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	params := &runner.Params{}
 
-	result, err := execution.Run(ctx.Background(), stepDefinition, params, globalCtx)
+	result, err := execution.Run(ctx.Background(), protoStepDef, params, globalCtx)
 	if err != nil {
 		return fmt.Errorf("running execution: %w", err)
 	}

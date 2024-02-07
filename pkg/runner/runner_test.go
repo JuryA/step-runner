@@ -170,7 +170,9 @@ steps:
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			stepDef, err := step.Compile(c.yaml, "")
+			stepDef, err := step.ReadSteps(c.yaml, "")
+			require.NoError(t, err)
+			protoStepDef, err := step.CompileSteps(stepDef)
 			require.NoError(t, err)
 
 			defs, err := cache.New()
@@ -188,7 +190,7 @@ steps:
 
 			params := &Params{}
 
-			result, err := runner.Run(ctx.Background(), stepDef, params, globalCtx)
+			result, err := runner.Run(ctx.Background(), protoStepDef, params, globalCtx)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {

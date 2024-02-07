@@ -17,16 +17,16 @@ import (
 
 const defaultStorePerm = 0o640
 
-func Read(filename string) (*proto.StepDefinition, error) {
+func LoadSteps(filename string) (*schema.StepDefinition, error) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
 	}
 
-	return Compile(string(buf), filepath.Dir(filename))
+	return ReadSteps(string(buf), filepath.Dir(filename))
 }
 
-func Compile(content, dir string) (*proto.StepDefinition, error) {
+func ReadSteps(content, dir string) (*schema.StepDefinition, error) {
 	var (
 		spec       schema.Spec
 		definition schema.Definition
@@ -36,37 +36,40 @@ func Compile(content, dir string) (*proto.StepDefinition, error) {
 		return nil, fmt.Errorf("unmarshaling: %w", err)
 	}
 
-	protoSpec, err := specCompiler(spec).compile()
+	return &schema.StepDefinition{
+		Spec:       &spec,
+		Definition: &definition,
+		Dir:        dir,
+	}, nil
+}
+
+func LoadProto(filename string) (*proto.StepDefinition, error) {
+	buf, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("compiling spec: %w", err)
-	}
-	protoDef, err := definitionCompiler(definition).compile()
-	if err != nil {
-		return nil, fmt.Errorf("compiling definition: %w", err)
+		return nil, fmt.Errorf("reading file: %w", err)
 	}
 
+	return ReadProto(string(buf), filepath.Dir(filename))
+}
+
+func ReadProto(content, dir string) (*proto.StepDefinition, error) {
+	var (
+		spec       proto.Spec
+		definition proto.Definition
+	)
+
+	if err := unmarshal(content, &spec, &definition); err != nil {
+		return nil, fmt.Errorf("unmarshaling proto: %w", err)
+	}
 	stepDef := &proto.StepDefinition{
-		Spec:       protoSpec,
-		Definition: protoDef,
+		Spec:       &spec,
+		Definition: &definition,
 		Dir:        dir,
 	}
 	if err := ValidateStepDefinition(stepDef); err != nil {
 		return nil, err
 	}
 	return stepDef, nil
-}
-
-func Write(stepDef *proto.StepDefinition, filename string) error {
-	encoded, err := Serialize(stepDef)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(filename, []byte(encoded), defaultStorePerm)
-}
-
-func Serialize(stepDef *proto.StepDefinition) (string, error) {
-	return marshal(stepDef.Spec, stepDef.Definition)
 }
 
 func unmarshal(input string, subjects ...any) error {
@@ -83,7 +86,7 @@ func unmarshal(input string, subjects ...any) error {
 	return nil
 }
 
-func marshal(subjects ...protoreflect.ProtoMessage) (string, error) {
+func marshalProto(subjects ...protoreflect.ProtoMessage) (string, error) {
 	var sb strings.Builder
 	d := yaml.NewEncoder(&sb)
 

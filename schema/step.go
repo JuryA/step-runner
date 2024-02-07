@@ -6,6 +6,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type StepDefinition struct {
+	Spec       *Spec
+	Definition *Definition
+	Dir        string
+}
+
 // Definition is the implementation of a step.
 type Definition struct {
 	Type    DefinitionType    `json:"type" yaml:"type" jsonschema:"enum=exec,enum=steps"`
