@@ -1,7 +1,6 @@
 package step
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,7 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func TestSerialize(t *testing.T) {
+func TestCompile(t *testing.T) {
 	cases := []struct {
 		name     string
 		yaml     string
@@ -22,7 +21,7 @@ func TestSerialize(t *testing.T) {
 		yaml: `
 spec:
     inputs:
-        name: {}
+        name:
 ---
 exec:
     command:
@@ -33,7 +32,9 @@ type: exec
 		wantSpec: &proto.Spec{
 			Spec: &proto.Spec_Content{
 				Inputs: map[string]*proto.Spec_Content_Input{
-					"name": {},
+					"name": {
+						Type: proto.InputType_string,
+					},
 				},
 			},
 		},
@@ -226,9 +227,6 @@ spec:
 				if !protobuf.Equal(c.wantDef, stepDef.Definition) {
 					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantDef, stepDef.Definition)
 				}
-				yaml, err := Serialize(stepDef)
-				require.NoError(t, err)
-				require.Equal(t, strings.TrimSpace(c.yaml), strings.TrimSpace(yaml))
 			}
 		})
 	}

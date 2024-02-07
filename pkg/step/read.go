@@ -36,18 +36,18 @@ func Compile(content, dir string) (*proto.StepDefinition, error) {
 		return nil, fmt.Errorf("unmarshaling: %w", err)
 	}
 
-	protoSpec, err := compileTo[*proto.Spec](&spec)
+	protoSpec, err := specCompiler(spec).compile()
 	if err != nil {
 		return nil, fmt.Errorf("compiling spec: %w", err)
 	}
-	protoDef, err := compileTo[*proto.Definition](&definition)
+	protoDef, err := definitionCompiler(definition).compile()
 	if err != nil {
 		return nil, fmt.Errorf("compiling definition: %w", err)
 	}
 
 	stepDef := &proto.StepDefinition{
-		Spec:       *protoSpec,
-		Definition: *protoDef,
+		Spec:       protoSpec,
+		Definition: protoDef,
 		Dir:        dir,
 	}
 	if err := ValidateStepDefinition(stepDef); err != nil {

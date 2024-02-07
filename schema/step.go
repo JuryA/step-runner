@@ -38,7 +38,7 @@ type Step struct {
 	// Env is a map of environment variable names to values.
 	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	// Inputs is a map of step input names to structured values.
-	Inputs map[string]*Value `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Inputs map[string]Value `json:"inputs,omitempty" yaml:"inputs,omitempty"`
 
 	// Script is a shell script to evaluate.
 	Script string `json:"script" yaml:"script"`
@@ -76,43 +76,49 @@ const (
 type Value struct {
 	Type ValueType
 
-	Bool   bool
-	Number float64
-	String string
-	Struct map[string]*Value
-	List   []*Value
+	Bool   *bool
+	Number *float64
+	String *string
+	Struct map[string]Value
+	List   []Value
 }
 
-func BoolValue(b bool) *Value {
-	return &Value{
+func BoolValue(b bool) Value {
+	return Value{
 		Type: ValueTypeBool,
-		Bool: b,
+		Bool: &b,
 	}
 }
 
-func NumberValue(n float64) *Value {
-	return &Value{
+func NumberValue(n float64) Value {
+	return Value{
 		Type:   ValueTypeNumber,
-		Number: n,
+		Number: &n,
 	}
 }
 
-func StringValue(s string) *Value {
-	return &Value{
+func StringValue(s string) Value {
+	return Value{
 		Type:   ValueTypeString,
-		String: s,
+		String: &s,
 	}
 }
 
-func StructValue(s map[string]*Value) *Value {
-	return &Value{
+func StructValue(s map[string]Value) Value {
+	if s == nil {
+		s = map[string]Value{}
+	}
+	return Value{
 		Type:   ValueTypeStruct,
 		Struct: s,
 	}
 }
 
-func ListValue(l []*Value) *Value {
-	return &Value{
+func ListValue(l []Value) Value {
+	if l == nil {
+		l = []Value{}
+	}
+	return Value{
 		Type: ValueTypeList,
 		List: l,
 	}
@@ -143,7 +149,7 @@ func (v *Value) UnmarshalYAML(value *yaml.Node) error {
 		v.Type = ValueTypeList
 		err = value.Decode(&v.List)
 	case mapTag:
-		v.Type = ValueTypeString
+		v.Type = ValueTypeStruct
 		err = value.Decode(&v.Struct)
 	default:
 		return fmt.Errorf("unsupported type: %v", value.ShortTag())
