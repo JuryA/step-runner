@@ -4,74 +4,61 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/step-runner/proto"
 	protobuf "google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestCompile(t *testing.T) {
 	cases := []struct {
-		name     string
-		yaml     string
-		wantSpec *proto.Spec
-		wantDef  *proto.Definition
-		wantErr  bool
+		name         string
+		steps        string
+		wantCompiled string
+		wantErr      bool
 	}{{
 		name: "simple case",
-		yaml: `
+		steps: `
 spec:
     inputs:
         name:
 ---
+type: exec
 exec:
     command:
         - echo
         - ${{inputs.name}}
-type: exec
 `,
-		wantSpec: &proto.Spec{
-			Spec: &proto.Spec_Content{
-				Inputs: map[string]*proto.Spec_Content_Input{
-					"name": {
-						Type: proto.InputType_string,
-					},
-				},
-			},
-		},
-		wantDef: &proto.Definition{
-			Type: proto.DefinitionType_exec,
-			Exec: &proto.Definition_Exec{
-				Command: []string{
-					"echo",
-					"${{inputs.name}}",
-				},
-			},
-		},
+		wantCompiled: `
+spec:
+    inputs:
+        name:
+            type: string
+---
+type: exec
+exec:
+    command:
+        - echo
+        - ${{inputs.name}}
+`,
 	}, {
 		name: "top level script compiles to a single step",
-		yaml: `
+		steps: `
 spec:
 ---
 script: echo hello world
 `,
-		wantSpec: &proto.Spec{
-			Spec: &proto.Spec_Content{
-				Inputs: map[string]*proto.Spec_Content_Input{},
-			},
-		},
-		wantDef: &proto.Definition{
-			Type: proto.DefinitionType_steps,
-			Steps: []*proto.Step{{
-				Name: "run a script", // default name
-				Step: "https://gitlab.com/gitlab-org/components/script@v1",
-				Inputs: map[string]*structpb.Value{
-					"script": structpb.NewStringValue("echo hello world"),
-				},
-			}},
-		},
+		wantCompiled: `
+spec:
+    inputs: {}
+---
+type: steps
+steps:
+    - name: "run a script"
+      step: "https://gitlab.com/gitlab-org/components/script@v1"
+      inputs:
+          script: echo hello world
+`,
 	}, {
 		name: "step script keyword compiles to a single step",
-		yaml: `
+		steps: `
 spec:
 ---
 type: steps
@@ -79,24 +66,20 @@ steps:
   - name: "my special script name"
     script: echo hello world
 `,
-		wantSpec: &proto.Spec{
-			Spec: &proto.Spec_Content{
-				Inputs: map[string]*proto.Spec_Content_Input{},
-			},
-		},
-		wantDef: &proto.Definition{
-			Type: proto.DefinitionType_steps,
-			Steps: []*proto.Step{{
-				Name: "my special script name",
-				Step: "https://gitlab.com/gitlab-org/components/script@v1",
-				Inputs: map[string]*structpb.Value{
-					"script": structpb.NewStringValue("echo hello world"),
-				},
-			}},
-		},
+		wantCompiled: `
+spec:
+    inputs: {}
+---
+type: steps
+steps:
+    - name: "my special script name"
+      step: "https://gitlab.com/gitlab-org/components/script@v1"
+      inputs:
+          script: echo hello world
+`,
 	}, {
 		name: "complex type: exec",
-		yaml: `
+		steps: `
 spec:
     inputs:
         age:
@@ -125,52 +108,38 @@ exec:
         - and is hungry (${{inputs.hungry}}).
 type: exec
 `,
-		wantSpec: &proto.Spec{
-			Spec: &proto.Spec_Content{
-				Inputs: map[string]*proto.Spec_Content_Input{
-					"name": {
-						Type:    proto.InputType_string,
-						Default: structpb.NewStringValue("steppy"),
-					},
-					"age": {
-						Type:    proto.InputType_number,
-						Default: structpb.NewNumberValue(1),
-					},
-					"hungry": {
-						Type:    proto.InputType_bool,
-						Default: structpb.NewBoolValue(false),
-					},
-					"favorites": {
-						Type: proto.InputType_struct,
-						Default: structpb.NewStructValue(&structpb.Struct{
-							Fields: map[string]*structpb.Value{
-								"color": structpb.NewStringValue("red"),
-							},
-						}),
-					},
-				},
-				Outputs: map[string]*proto.Spec_Content_Output{
-					"eye_color": {
-						Default: "brown",
-					},
-				},
-			},
-		},
-		wantDef: &proto.Definition{
-			Type: proto.DefinitionType_exec,
-			Exec: &proto.Definition_Exec{
-				Command: []string{
-					"echo",
-					"meet ${{inputs.name}}",
-					"who is ${{inputs.age}}",
-					"likes ${{inputs.favorites}}",
-					"and is hungry (${{inputs.hungry}}).",
-				},
-			},
-		},
+		wantCompiled: `
+spec:
+    inputs:
+        age:
+            default: 1
+            type: number
+        favorites:
+            default:
+                color: red
+            type: struct
+        hungry:
+            default: false
+            type: bool
+        name:
+            default: steppy
+            type: string
+    outputs:
+        eye_color:
+            default: brown
+---
+exec:
+    command:
+        - echo
+        - meet ${{inputs.name}}
+        - who is ${{inputs.age}}
+        - likes ${{inputs.favorites}}
+        - and is hungry (${{inputs.hungry}}).
+type: exec
+`,
 	}, {
 		name: "complex type: steps",
-		yaml: `
+		steps: `
 spec: {}
 ---
 outputs:
@@ -195,46 +164,35 @@ steps:
       step: ../steps/redux
 type: steps
 `,
-		wantSpec: &proto.Spec{Spec: &proto.Spec_Content{}},
-		wantDef: &proto.Definition{
-			Type: proto.DefinitionType_steps,
-			Steps: []*proto.Step{{
-				Name: "foo_to_the_max",
-				Step: "git+https://gitlab.com/gitlab-org/foo@v1",
-				Env: map[string]string{
-					"USER":   "srunner",
-					"JOB_ID": "${{job.id}}",
-				},
-				Inputs: map[string]*structpb.Value{
-					"age": structpb.NewNumberValue(1),
-					"favorites": structpb.NewStructValue(&structpb.Struct{
-						Fields: map[string]*structpb.Value{
-							"food": structpb.NewListValue(&structpb.ListValue{
-								Values: []*structpb.Value{
-									structpb.NewStringValue("hamburger"),
-									structpb.NewStringValue("sausage"),
-								},
-							}),
-						},
-					}),
-					"hungry": structpb.NewBoolValue(false),
-					"name":   structpb.NewStringValue("steppy"),
-				},
-			}, {
-				Name: "foo_redux",
-				Step: "../steps/redux",
-				Inputs: map[string]*structpb.Value{
-					"greeting": structpb.NewStringValue("${{steps.foo to the max.outputs.greeting}}"),
-				},
-			}},
-			Outputs: map[string]string{
-				"eye_color": "brown",
-			},
-		},
+		wantCompiled: `
+spec: {}
+---
+type: steps
+steps:
+    - name: foo_to_the_max
+      step: git+https://gitlab.com/gitlab-org/foo@v1
+      env:
+        JOB_ID: ${{job.id}}
+        USER: srunner
+      inputs:
+        age: 1
+        favorites:
+            food:
+                - hamburger
+                - sausage
+        hungry: false
+        name: steppy
+    - name: foo_redux
+      step: ../steps/redux
+      inputs:
+        greeting: ${{steps.foo to the max.outputs.greeting}}
+outputs:
+    eye_color: brown
+`,
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			stepDef, err := ReadSteps(c.yaml, "")
+			stepDef, err := ReadSteps(c.steps, "")
 			require.NoError(t, err)
 			protoStepDef, err := CompileSteps(stepDef)
 			if c.wantErr {
@@ -242,11 +200,10 @@ type: steps
 				require.Nil(t, stepDef)
 			} else {
 				require.NoError(t, err)
-				if !protobuf.Equal(c.wantSpec, protoStepDef.Spec) {
-					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantSpec, protoStepDef.Spec)
-				}
-				if !protobuf.Equal(c.wantDef, protoStepDef.Definition) {
-					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantDef, protoStepDef.Definition)
+				wantSpecDef, err := ReadProto(c.wantCompiled, "")
+				require.NoError(t, err)
+				if !protobuf.Equal(wantSpecDef, protoStepDef) {
+					t.Errorf("wanted:\n%+v\ngot:\n%+v", wantSpecDef, protoStepDef)
 				}
 			}
 		})

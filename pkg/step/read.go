@@ -32,7 +32,7 @@ func ReadSteps(content, dir string) (*schema.StepDefinition, error) {
 		definition schema.Definition
 	)
 
-	if err := unmarshal(content, &spec, &definition); err != nil {
+	if err := unmarshalSchema(content, &spec, &definition); err != nil {
 		return nil, fmt.Errorf("unmarshaling: %w", err)
 	}
 
@@ -58,7 +58,7 @@ func ReadProto(content, dir string) (*proto.StepDefinition, error) {
 		definition proto.Definition
 	)
 
-	if err := unmarshal(content, &spec, &definition); err != nil {
+	if err := unmarshalProto(content, &spec, &definition); err != nil {
 		return nil, fmt.Errorf("unmarshaling proto: %w", err)
 	}
 	stepDef := &proto.StepDefinition{
@@ -72,7 +72,7 @@ func ReadProto(content, dir string) (*proto.StepDefinition, error) {
 	return stepDef, nil
 }
 
-func unmarshal(input string, subjects ...any) error {
+func unmarshalSchema(input string, subjects ...any) error {
 	d := yaml.NewDecoder(strings.NewReader(input))
 	d.KnownFields(true)
 
@@ -84,6 +84,33 @@ func unmarshal(input string, subjects ...any) error {
 	}
 
 	return nil
+}
+
+func unmarshalProto(input string, subjects ...protoreflect.ProtoMessage) error {
+	d := yaml.NewDecoder(strings.NewReader(input))
+	d.KnownFields(true)
+
+	for _, subject := range subjects {
+		var decoded any
+		err := d.Decode(&decoded)
+		if err != nil {
+			return fmt.Errorf("decoding: %w", err)
+		}
+
+		// convert to json
+		encoded, err := json.Marshal(decoded)
+		if err != nil {
+			return fmt.Errorf("converting to json: %w", err)
+		}
+
+		// convert to proto
+		if err := protojson.Unmarshal(encoded, subject); err != nil {
+			return fmt.Errorf("converting to proto: %w", err)
+		}
+	}
+
+	return nil
+
 }
 
 func marshalProto(subjects ...protoreflect.ProtoMessage) (string, error) {
