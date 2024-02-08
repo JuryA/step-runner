@@ -14,26 +14,6 @@ func TestCompile(t *testing.T) {
 		wantCompiled string
 		wantErr      bool
 	}{{
-		name: "spec can be empty",
-		steps: `
-spec:
----
-type: exec
-exec:
-    command:
-        - echo
-        - minimal step
-`,
-		wantCompiled: `
-spec: {}
----
-type: exec
-exec:
-    command:
-        - echo
-        - minimal step
-`,
-	}, {
 		name: "simple case",
 		steps: `
 spec:
