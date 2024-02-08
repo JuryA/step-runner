@@ -143,7 +143,7 @@ func (def definitionCompiler) compile() (*proto.Definition, error) {
 			if def.Type != "" {
 				return fmt.Errorf("definition `script` keyword doesn't need a `type`")
 			}
-			if len(def.Script) > 0 && len(def.Steps) > 0 {
+			if len(def.Script) > 0 && def.Steps != nil {
 				return fmt.Errorf("definition `script` keyword cannot be used with the `steps` keyword")
 			}
 			def.Type = schema.DefinitionTypeSteps

@@ -14,6 +14,26 @@ func TestCompile(t *testing.T) {
 		wantCompiled string
 		wantErr      bool
 	}{{
+		name: "spec can be empty",
+		steps: `
+spec:
+---
+type: exec
+exec:
+    command:
+        - echo
+        - minimal step
+`,
+		wantCompiled: `
+spec: {}
+---
+type: exec
+exec:
+    command:
+        - echo
+        - minimal step
+`,
+	}, {
 		name: "simple case",
 		steps: `
 spec:
@@ -56,6 +76,24 @@ steps:
       inputs:
           script: echo hello world
 `,
+	}, {
+		name: "cannot set definition type with top level script",
+		steps: `
+spec:
+---
+script: echo hello world
+type: steps
+`,
+		wantErr: true,
+	}, {
+		name: "cannot set definition steps with top level script",
+		steps: `
+spec:
+---
+script: echo hello world
+steps: []
+`,
+		wantErr: true,
 	}, {
 		name: "step script keyword compiles to a single step",
 		steps: `
@@ -197,7 +235,7 @@ outputs:
 			protoStepDef, err := CompileSteps(stepDef)
 			if c.wantErr {
 				require.Error(t, err)
-				require.Nil(t, stepDef)
+				require.Nil(t, protoStepDef)
 			} else {
 				require.NoError(t, err)
 				wantSpecDef, err := ReadProto(c.wantCompiled, "")
