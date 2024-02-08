@@ -42,24 +42,35 @@ type specCompiler schema.Spec
 
 func (spec specCompiler) compile() (*proto.Spec, error) {
 	protoSpec := &proto.Spec{Spec: &proto.Spec_Content{}}
-	inputs := map[string]*proto.Spec_Content_Input{}
-	for k, v := range spec.Spec.Inputs {
-		protoV, err := inputCompiler(v).compile()
+	for _, r := range []compileRule{{
+		name: "compiling schema spec into proto spec",
+		rule: func() error {
+			inputs := map[string]*proto.Spec_Content_Input{}
+			for k, v := range spec.Spec.Inputs {
+				protoV, err := inputCompiler(v).compile()
+				if err != nil {
+					return fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
+				}
+				inputs[k] = protoV
+			}
+			outputs := map[string]*proto.Spec_Content_Output{}
+			for k, v := range spec.Spec.Outputs {
+				protoV, err := outputCompiler(v).compile()
+				if err != nil {
+					return fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
+				}
+				outputs[k] = protoV
+			}
+			protoSpec.Spec.Inputs = inputs
+			protoSpec.Spec.Outputs = outputs
+			return nil
+		},
+	}} {
+		err := r.rule()
 		if err != nil {
-			return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
+			return nil, fmt.Errorf("%v: %w", r.name, err)
 		}
-		inputs[k] = protoV
 	}
-	outputs := map[string]*proto.Spec_Content_Output{}
-	for k, v := range spec.Spec.Outputs {
-		protoV, err := outputCompiler(v).compile()
-		if err != nil {
-			return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
-		}
-		outputs[k] = protoV
-	}
-	protoSpec.Spec.Inputs = inputs
-	protoSpec.Spec.Outputs = outputs
 	return protoSpec, nil
 }
 
@@ -74,17 +85,6 @@ func (input inputCompiler) compile() (*proto.Spec_Content_Input, error) {
 				return nil
 			}
 			input.Type = schema.ValueTypeString
-			return nil
-		},
-	}, {
-		name: "checking default value type",
-		rule: func() error {
-			if input.Default == nil {
-				return nil
-			}
-			if input.Type != input.Default.Type {
-				return fmt.Errorf("default type must match input type of %v. but default is type %v", input.Type, input.Default.Type)
-			}
 			return nil
 		},
 	}, {
@@ -105,11 +105,51 @@ func (input inputCompiler) compile() (*proto.Spec_Content_Input, error) {
 				return fmt.Errorf("unsupported input type: %v", input.Type)
 			}
 			if input.Default != nil {
-				protoV, err := valueCompiler(*input.Default).compile()
+				protoV, err := valueCompiler{input.Default}.compile()
 				if err != nil {
 					return fmt.Errorf("compiling default %v: %w", input.Default, err)
 				}
 				protoInput.Default = protoV
+			}
+			return nil
+		},
+	}, {
+		name: "making sure default value matches the type",
+		rule: func() error {
+			if input.Default == nil || protoInput.Default == nil {
+				return nil
+			}
+			var defaultType schema.ValueType
+			switch input.Type {
+			case schema.ValueTypeBool:
+				if _, ok := protoInput.Default.Kind.(*structpb.Value_BoolValue); ok {
+					defaultType = schema.ValueTypeBool
+				}
+			case schema.ValueTypeList:
+				if _, ok := protoInput.Default.Kind.(*structpb.Value_ListValue); ok {
+					defaultType = schema.ValueTypeList
+				}
+			case schema.ValueTypeNull:
+				if _, ok := protoInput.Default.Kind.(*structpb.Value_NullValue); ok {
+					defaultType = schema.ValueTypeNull
+				}
+			case schema.ValueTypeNumber:
+				if _, ok := protoInput.Default.Kind.(*structpb.Value_NumberValue); ok {
+					defaultType = schema.ValueTypeNumber
+				}
+			case schema.ValueTypeString:
+				if _, ok := protoInput.Default.Kind.(*structpb.Value_StringValue); ok {
+					defaultType = schema.ValueTypeString
+				}
+			case schema.ValueTypeStruct:
+				if _, ok := protoInput.Default.Kind.(*structpb.Value_StructValue); ok {
+					defaultType = schema.ValueTypeStruct
+				}
+			default:
+				return fmt.Errorf("unsupported type: %v", input.Type)
+			}
+			if defaultType != input.Type {
+				return fmt.Errorf("input type %v and default value type %v must match", input.Type, defaultType)
 			}
 			return nil
 		},
@@ -206,8 +246,8 @@ func (step stepCompiler) compile() (*proto.Step, error) {
 				return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 			}
 			step.Step = "https://gitlab.com/gitlab-org/components/script@v1"
-			step.Inputs = map[string]schema.Value{
-				"script": schema.StringValue(step.Script),
+			step.Inputs = map[string]any{
+				"script": step.Script,
 			}
 			step.Script = ""
 			return nil
@@ -217,7 +257,7 @@ func (step stepCompiler) compile() (*proto.Step, error) {
 		rule: func() error {
 			protoInputs := map[string]*structpb.Value{}
 			for k, v := range step.Inputs {
-				protoValue, err := valueCompiler(v).compile()
+				protoValue, err := valueCompiler{v}.compile()
 				if err != nil {
 					return err
 				}
@@ -238,46 +278,21 @@ func (step stepCompiler) compile() (*proto.Step, error) {
 	return protoStep, nil
 }
 
-type valueCompiler schema.Value
+type valueCompiler struct {
+	v any
+}
 
 func (value valueCompiler) compile() (*structpb.Value, error) {
 	var protoValue *structpb.Value
 	for _, r := range []compileRule{{
-		name: "compiling schema value to proto value",
+		name: "compiling generic data into proto value",
 		rule: func() error {
-			switch value.Type {
-			case schema.ValueTypeBool:
-				protoValue = structpb.NewBoolValue(*value.Bool)
-			case schema.ValueTypeNumber:
-				protoValue = structpb.NewNumberValue(*value.Number)
-			case schema.ValueTypeString:
-				protoValue = structpb.NewStringValue(*value.String)
-			case schema.ValueTypeStruct:
-				structValue := &structpb.Struct{
-					Fields: map[string]*structpb.Value{},
-				}
-				for k, v := range value.Struct {
-					protoV, err := valueCompiler(v).compile()
-					if err != nil {
-						return fmt.Errorf("compiling struct value[%q]: %v: %w", k, v, err)
-					}
-					structValue.Fields[k] = protoV
-				}
-				protoValue = structpb.NewStructValue(structValue)
-			case schema.ValueTypeList:
-				listValue := &structpb.ListValue{
-					Values: make([]*structpb.Value, len(value.List)),
-				}
-				for i, v := range value.List {
-					protoV, err := valueCompiler(v).compile()
-					if err != nil {
-						return fmt.Errorf("compiling list value[%v]: %v: %w", i, v, err)
-					}
-					listValue.Values[i] = protoV
-				}
-				protoValue = structpb.NewListValue(listValue)
-			}
-			return nil
+			var err error
+			// We let structpb do all the heavy lifting
+			// and verify the type matches our
+			// expectations later.
+			protoValue, err = structpb.NewValue(value.v)
+			return err
 		},
 	}} {
 		err := r.rule()

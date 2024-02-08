@@ -1,12 +1,5 @@
 package schema
 
-import (
-	"fmt"
-
-	"github.com/invopop/jsonschema"
-	"gopkg.in/yaml.v3"
-)
-
 type StepDefinition struct {
 	Spec       *Spec
 	Definition *Definition
@@ -45,18 +38,10 @@ type Step struct {
 	// Env is a map of environment variable names to values.
 	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	// Inputs is a map of step input names to structured values.
-	Inputs Inputs `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Inputs map[string]any `json:"inputs,omitempty" yaml:"inputs,omitempty"`
 
 	// Script is a shell script to evaluate.
 	Script string `json:"script" yaml:"script"`
-}
-
-type Inputs map[string]Value
-
-func (i Inputs) JSONSchema() *jsonschema.Schema {
-	return &jsonschema.Schema{
-		Type: "object",
-	}
 }
 
 type Spec struct {
@@ -70,7 +55,7 @@ type Content struct {
 
 type Input struct {
 	Type    ValueType `json:"type" yaml:"type"`
-	Default *Value    `json:"default" yaml:"default"`
+	Default any       `json:"default" yaml:"default"`
 }
 
 type Output struct {
@@ -80,94 +65,10 @@ type Output struct {
 type ValueType string
 
 const (
+	ValueTypeNull   ValueType = "null"
 	ValueTypeString ValueType = "string"
 	ValueTypeNumber ValueType = "number"
 	ValueTypeBool   ValueType = "bool"
 	ValueTypeStruct ValueType = "struct"
 	ValueTypeList   ValueType = "list"
 )
-
-// Value is a valid JSON value.
-type Value struct {
-	Type ValueType
-
-	Bool   *bool
-	Number *float64
-	String *string
-	Struct map[string]*Value
-	List   []*Value
-}
-
-func BoolValue(b bool) Value {
-	return Value{
-		Type: ValueTypeBool,
-		Bool: &b,
-	}
-}
-
-func NumberValue(n float64) Value {
-	return Value{
-		Type:   ValueTypeNumber,
-		Number: &n,
-	}
-}
-
-func StringValue(s string) Value {
-	return Value{
-		Type:   ValueTypeString,
-		String: &s,
-	}
-}
-
-func StructValue(s map[string]*Value) Value {
-	if s == nil {
-		s = map[string]*Value{}
-	}
-	return Value{
-		Type:   ValueTypeStruct,
-		Struct: s,
-	}
-}
-
-func ListValue(l []*Value) Value {
-	if l == nil {
-		l = []*Value{}
-	}
-	return Value{
-		Type: ValueTypeList,
-		List: l,
-	}
-}
-
-const (
-	boolTag  = "!!bool"
-	strTag   = "!!str"
-	intTag   = "!!int"
-	floatTag = "!!float"
-	seqTag   = "!!seq"
-	mapTag   = "!!map"
-)
-
-func (v *Value) UnmarshalYAML(value *yaml.Node) error {
-	var err error
-	switch value.ShortTag() {
-	case boolTag:
-		v.Type = ValueTypeBool
-		err = value.Decode(&v.Bool)
-	case strTag:
-		v.Type = ValueTypeString
-		err = value.Decode(&v.String)
-	case intTag, floatTag:
-		v.Type = ValueTypeNumber
-		err = value.Decode(&v.Number)
-	case seqTag:
-		v.Type = ValueTypeList
-		err = value.Decode(&v.List)
-	case mapTag:
-		v.Type = ValueTypeStruct
-		err = value.Decode(&v.Struct)
-	default:
-		return fmt.Errorf("unsupported type: %v", value.ShortTag())
-	}
-	return err
-}

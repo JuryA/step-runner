@@ -78,11 +78,12 @@ message StepDefinition {
 
 enum InputType {
     spec_type_unspecified = 0;
-    string = 1;
-    number = 2;
-    bool = 3;
-    struct = 4;
-    list = 5;
+    bool = 1;
+    list = 2;
+    null = 3;
+    number = 4;
+    string = 5;
+    struct = 6;
 }
 
 message StepResult {
