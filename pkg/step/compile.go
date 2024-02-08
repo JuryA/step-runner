@@ -245,7 +245,7 @@ func (step stepCompiler) compile() (*proto.Step, error) {
 			if len(step.Inputs) != 0 {
 				return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 			}
-			step.Step = "https://gitlab.com/gitlab-org/components/script@v1"
+			step.Step = scriptStep
 			step.Inputs = map[string]any{
 				"script": step.Script,
 			}

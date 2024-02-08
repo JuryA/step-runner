@@ -52,7 +52,7 @@ spec:
 type: steps
 steps:
     - name: "run a script"
-      step: "https://gitlab.com/gitlab-org/components/script@v1"
+      step: "https://gitlab.com/josephburnett/script@v1" # until we create the canonical step repository
       inputs:
           script: echo hello world
 `,
@@ -91,7 +91,7 @@ spec:
 type: steps
 steps:
     - name: "my special script name"
-      step: "https://gitlab.com/gitlab-org/components/script@v1"
+      step: "https://gitlab.com/josephburnett/script@v1" # until we create the canonical steps repository
       inputs:
           script: echo hello world
 `,
