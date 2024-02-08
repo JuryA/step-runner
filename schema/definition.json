@@ -34,10 +34,6 @@
                     "script": {
                         "type": "string",
                         "description": "Script is a shell script to evaluate."
-                    },
-                    "container": {
-                        "type": "string",
-                        "description": "Container is a Docker container in which to run the step."
                     }
                 },
                 "additionalProperties": false,
@@ -45,8 +41,7 @@
                 "required": [
                     "name",
                     "step",
-                    "script",
-                    "container"
+                    "script"
                 ],
                 "description": "Step is a single step invocation."
             },
@@ -78,10 +73,8 @@
             "type": "object"
         },
         "script": {
-            "type": "string"
-        },
-        "container": {
-            "type": "string"
+            "type": "string",
+            "description": "Script is a shell script to evaluate."
         }
     },
     "additionalProperties": false,
@@ -91,8 +84,7 @@
         "steps",
         "exec",
         "outputs",
-        "script",
-        "container"
+        "script"
     ],
     "description": "Definition is the implementation of a step."
 }

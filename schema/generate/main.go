@@ -21,9 +21,10 @@ func main() {
 		name  string
 		value any
 	}{{
-		name:  "spec",
-		value: &schema.Spec{},
-	}, {
+		// Need to avoid letting jsonschema handle Value
+		// 	name:  "spec",
+		// 	value: &schema.Spec{},
+		// }, {
 		name:  "definition",
 		value: &schema.Definition{},
 	}} {

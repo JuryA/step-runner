@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 
+	"github.com/invopop/jsonschema"
 	"gopkg.in/yaml.v3"
 )
 
@@ -44,10 +45,18 @@ type Step struct {
 	// Env is a map of environment variable names to values.
 	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	// Inputs is a map of step input names to structured values.
-	Inputs map[string]Value `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Inputs Inputs `json:"inputs,omitempty" yaml:"inputs,omitempty"`
 
 	// Script is a shell script to evaluate.
 	Script string `json:"script" yaml:"script"`
+}
+
+type Inputs map[string]Value
+
+func (i Inputs) JSONSchema() *jsonschema.Schema {
+	return &jsonschema.Schema{
+		Type: "object",
+	}
 }
 
 type Spec struct {
@@ -85,8 +94,8 @@ type Value struct {
 	Bool   *bool
 	Number *float64
 	String *string
-	Struct map[string]Value
-	List   []Value
+	Struct map[string]*Value
+	List   []*Value
 }
 
 func BoolValue(b bool) Value {
@@ -110,9 +119,9 @@ func StringValue(s string) Value {
 	}
 }
 
-func StructValue(s map[string]Value) Value {
+func StructValue(s map[string]*Value) Value {
 	if s == nil {
-		s = map[string]Value{}
+		s = map[string]*Value{}
 	}
 	return Value{
 		Type:   ValueTypeStruct,
@@ -120,9 +129,9 @@ func StructValue(s map[string]Value) Value {
 	}
 }
 
-func ListValue(l []Value) Value {
+func ListValue(l []*Value) Value {
 	if l == nil {
-		l = []Value{}
+		l = []*Value{}
 	}
 	return Value{
 		Type: ValueTypeList,
