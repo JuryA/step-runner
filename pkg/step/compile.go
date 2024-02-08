@@ -140,10 +140,15 @@ func (def definitionCompiler) compile() (*proto.Definition, error) {
 			if def.Script == "" {
 				return nil
 			}
+			if def.Type != "" {
+				return fmt.Errorf("definition `script` keyword doesn't need a `type`")
+			}
 			if len(def.Script) > 0 && len(def.Steps) > 0 {
 				return fmt.Errorf("definition `script` keyword cannot be used with the `steps` keyword")
 			}
+			def.Type = schema.DefinitionTypeSteps
 			def.Steps = []*schema.Step{{
+				Name:   "run a script",
 				Script: def.Script,
 			}}
 			def.Script = ""
@@ -170,6 +175,8 @@ func (def definitionCompiler) compile() (*proto.Definition, error) {
 					protoDef.Steps[i] = protoStep
 				}
 				protoDef.Outputs = def.Outputs
+			default:
+				return fmt.Errorf("type not specified. must be `exec` or `steps`")
 			}
 			return nil
 		},
@@ -198,7 +205,7 @@ func (step stepCompiler) compile() (*proto.Step, error) {
 			if len(step.Inputs) != 0 {
 				return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 			}
-			step.Step = "gitlab.com/gitlab-org/components/script@1.0"
+			step.Step = "https://gitlab.com/gitlab-org/components/script@v1"
 			step.Inputs = map[string]schema.Value{
 				"script": schema.StringValue(step.Script),
 			}

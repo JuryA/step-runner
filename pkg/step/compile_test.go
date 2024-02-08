@@ -48,6 +48,53 @@ type: exec
 			},
 		},
 	}, {
+		name: "top level script compiles to a single step",
+		yaml: `
+spec:
+---
+script: echo hello world
+`,
+		wantSpec: &proto.Spec{
+			Spec: &proto.Spec_Content{
+				Inputs: map[string]*proto.Spec_Content_Input{},
+			},
+		},
+		wantDef: &proto.Definition{
+			Type: proto.DefinitionType_steps,
+			Steps: []*proto.Step{{
+				Name: "run a script", // default name
+				Step: "https://gitlab.com/gitlab-org/components/script@v1",
+				Inputs: map[string]*structpb.Value{
+					"script": structpb.NewStringValue("echo hello world"),
+				},
+			}},
+		},
+	}, {
+		name: "step script keyword compiles to a single step",
+		yaml: `
+spec:
+---
+type: steps
+steps:
+  - name: "my special script name"
+    script: echo hello world
+`,
+		wantSpec: &proto.Spec{
+			Spec: &proto.Spec_Content{
+				Inputs: map[string]*proto.Spec_Content_Input{},
+			},
+		},
+		wantDef: &proto.Definition{
+			Type: proto.DefinitionType_steps,
+			Steps: []*proto.Step{{
+				Name: "my special script name",
+				Step: "https://gitlab.com/gitlab-org/components/script@v1",
+				Inputs: map[string]*structpb.Value{
+					"script": structpb.NewStringValue("echo hello world"),
+				},
+			}},
+		},
+	}, {
 		name: "complex type: exec",
 		yaml: `
 spec:
@@ -196,10 +243,10 @@ type: steps
 			} else {
 				require.NoError(t, err)
 				if !protobuf.Equal(c.wantSpec, protoStepDef.Spec) {
-					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantSpec, stepDef.Spec)
+					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantSpec, protoStepDef.Spec)
 				}
 				if !protobuf.Equal(c.wantDef, protoStepDef.Definition) {
-					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantDef, stepDef.Definition)
+					t.Errorf("wanted:\n%+v\ngot:\n%+v", c.wantDef, protoStepDef.Definition)
 				}
 			}
 		})
