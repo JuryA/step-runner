@@ -1,0 +1,48 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://gitlab.com/gitlab-org/step-runner/schema/spec",
+    "properties": {
+        "spec": {
+            "properties": {
+                "inputs": {
+                    "additionalProperties": {
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "description": "Type is the value type of the input."
+                            },
+                            "default": {
+                                "description": "Default is the default input value. Its type must match `type`."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "description": "Input describes a single step input."
+                    },
+                    "type": "object",
+                    "description": "Inputs is a map of input names to their parameters."
+                },
+                "outputs": {
+                    "additionalProperties": {
+                        "properties": {
+                            "default": {
+                                "type": "string",
+                                "description": "Default is the default output value."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "description": "Output describes a single step output."
+                    },
+                    "type": "object",
+                    "description": "Outputs is a map of output names to their parameters."
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "description": "Spec is a document describing the interface of the step."
+}

@@ -28,7 +28,6 @@ func TestRun(t *testing.T) {
 		yaml: `
 spec: {}
 ---
-type: steps
 steps:
   - name: greet_steppy
     step: ./test_steps/greeting
@@ -44,7 +43,6 @@ steps:
 		yaml: `
 spec: {}
 ---
-type: steps
 steps:
   - name: greet_foo
     step: ./test_steps/greeting
@@ -61,7 +59,6 @@ steps:
 		yaml: `
 spec: {}
 ---
-type: steps
 steps:
   - name: greet_foo
     step: ./test_steps/greeting
@@ -82,7 +79,6 @@ steps:
 		yaml: `
 spec: {}
 ---
-type: steps
 steps:
   - name: greet_the_crew
     step: ./test_steps/crew
@@ -102,7 +98,6 @@ steps:
 		yaml: `
 spec: {}
 ---
-type: steps
 steps:
   - name: greet_the_crew
     step: ./test_steps/crew
@@ -117,7 +112,6 @@ steps:
 		yaml: `
 spec: {}
 ---
-type: steps
 steps:
   - name: greet_steppy
     step: ./test_steps/greeting
@@ -152,7 +146,6 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 		yaml: `
 spec: {}
 ---
-type: steps
 steps:
   - name: greet_steppy
     step: ./test_steps/greeting
@@ -170,7 +163,9 @@ steps:
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			stepDef, err := step.Deserialize(c.yaml, "")
+			stepDef, err := step.ReadSteps(c.yaml, "")
+			require.NoError(t, err)
+			protoStepDef, err := step.CompileSteps(stepDef)
 			require.NoError(t, err)
 
 			defs, err := cache.New()
@@ -188,7 +183,7 @@ steps:
 
 			params := &Params{}
 
-			result, err := runner.Run(ctx.Background(), stepDef, params, globalCtx)
+			result, err := runner.Run(ctx.Background(), protoStepDef, params, globalCtx)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {

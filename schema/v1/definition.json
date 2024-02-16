@@ -1,0 +1,102 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://gitlab.com/gitlab-org/step-runner/schema/definition",
+    "oneOf": [
+        {
+            "required": [
+                "steps"
+            ],
+            "title": "steps"
+        },
+        {
+            "required": [
+                "exec"
+            ],
+            "title": "exec"
+        }
+    ],
+    "properties": {
+        "steps": {
+            "items": {
+                "oneOf": [
+                    {
+                        "required": [
+                            "step"
+                        ],
+                        "title": "step"
+                    },
+                    {
+                        "required": [
+                            "script"
+                        ],
+                        "title": "script"
+                    }
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name is a unique identifier for this step."
+                    },
+                    "step": {
+                        "type": "string",
+                        "description": "Step is a reference to the step to invoke."
+                    },
+                    "env": {
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "type": "object",
+                        "description": "Env is a map of environment variable names to string values."
+                    },
+                    "inputs": {
+                        "type": "object",
+                        "description": "Inputs is a map of step input names to structured values."
+                    },
+                    "script": {
+                        "type": "string",
+                        "description": "Script is a shell script to evaluate."
+                    }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                    "name"
+                ],
+                "description": "Step is a single step invocation."
+            },
+            "type": "array",
+            "description": "Steps is a list of sub-steps to run for the `steps` type."
+        },
+        "exec": {
+            "properties": {
+                "command": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "description": "Command are the parameters to the system exec API. It does not invoke a shell."
+                },
+                "work_dir": {
+                    "type": "string",
+                    "description": "WorkDir is the working directly in which `command` will be exec'ed."
+                }
+            },
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+                "command"
+            ],
+            "description": "Exec is a command to run for the `exec` type."
+        },
+        "outputs": {
+            "additionalProperties": {
+                "type": "string"
+            },
+            "type": "object",
+            "description": "Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps."
+        }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "description": "Definition is the implementation of a step."
+}

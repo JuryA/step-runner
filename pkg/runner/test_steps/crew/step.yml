@@ -6,7 +6,6 @@ spec:
     crew_name_2:
       default: nobody
 ---
-type: steps
 steps:
   - name: greet_sponge_bob
     step: ./test_steps/greeting

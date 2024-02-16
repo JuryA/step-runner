@@ -1,6 +1,7 @@
 package step
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,29 +13,74 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
+	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
-const defaultStorePerm = 0o640
-
-func Read(filename string) (*proto.StepDefinition, error) {
+func LoadSteps(filename string) (*schema.StepDefinition, error) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
 	}
 
-	return Deserialize(string(buf), filepath.Dir(filename))
+	return ReadSteps(string(buf), filepath.Dir(filename))
 }
 
-func Deserialize(content, dir string) (*proto.StepDefinition, error) {
+func ReadSteps(content, dir string) (*schema.StepDefinition, error) {
+	var (
+		spec       schema.Spec
+		definition schema.Definition
+	)
+
+	if err := unmarshalSchema(content, &spec, &definition); err != nil {
+		return nil, fmt.Errorf("unmarshaling: %w", err)
+	}
+
+	return &schema.StepDefinition{
+		Spec:       &spec,
+		Definition: &definition,
+		Dir:        dir,
+	}, nil
+}
+
+func WriteSteps(stepDef *schema.StepDefinition) (string, error) {
+	var buf bytes.Buffer
+	e := yaml.NewEncoder(&buf)
+
+	err := e.Encode(stepDef.Spec)
+	if err != nil {
+		return "", fmt.Errorf("encoding spec: %w", err)
+	}
+
+	err = e.Encode(stepDef.Definition)
+	if err != nil {
+		return "", fmt.Errorf("encoding definition: %w", err)
+	}
+
+	err = e.Close()
+	if err != nil {
+		return "", fmt.Errorf("closing: %w", err)
+	}
+	return buf.String(), nil
+}
+
+func LoadProto(filename string) (*proto.StepDefinition, error) {
+	buf, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("reading file: %w", err)
+	}
+
+	return ReadProto(string(buf), filepath.Dir(filename))
+}
+
+func ReadProto(content, dir string) (*proto.StepDefinition, error) {
 	var (
 		spec       proto.Spec
 		definition proto.Definition
 	)
 
-	if err := unmarshal(content, &spec, &definition); err != nil {
-		return nil, err
+	if err := unmarshalProto(content, &spec, &definition); err != nil {
+		return nil, fmt.Errorf("unmarshaling proto: %w", err)
 	}
-
 	stepDef := &proto.StepDefinition{
 		Spec:       &spec,
 		Definition: &definition,
@@ -46,20 +92,21 @@ func Deserialize(content, dir string) (*proto.StepDefinition, error) {
 	return stepDef, nil
 }
 
-func Write(stepDef *proto.StepDefinition, filename string) error {
-	encoded, err := Serialize(stepDef)
-	if err != nil {
-		return err
+func unmarshalSchema(input string, subjects ...any) error {
+	d := yaml.NewDecoder(strings.NewReader(input))
+	d.KnownFields(true)
+
+	for _, subject := range subjects {
+		err := d.Decode(subject)
+		if err != nil {
+			return fmt.Errorf("decoding: %w", err)
+		}
 	}
 
-	return os.WriteFile(filename, []byte(encoded), defaultStorePerm)
+	return nil
 }
 
-func Serialize(stepDef *proto.StepDefinition) (string, error) {
-	return marshal(stepDef.Spec, stepDef.Definition)
-}
-
-func unmarshal(input string, subjects ...protoreflect.ProtoMessage) error {
+func unmarshalProto(input string, subjects ...protoreflect.ProtoMessage) error {
 	d := yaml.NewDecoder(strings.NewReader(input))
 	d.KnownFields(true)
 
@@ -83,27 +130,5 @@ func unmarshal(input string, subjects ...protoreflect.ProtoMessage) error {
 	}
 
 	return nil
-}
 
-func marshal(subjects ...protoreflect.ProtoMessage) (string, error) {
-	var sb strings.Builder
-	d := yaml.NewEncoder(&sb)
-
-	for _, subject := range subjects {
-		encoded, err := protojson.Marshal(subject)
-		if err != nil {
-			return "", fmt.Errorf("converting to json: %w", err)
-		}
-
-		var val any
-		if err := json.Unmarshal(encoded, &val); err != nil {
-			return "", fmt.Errorf("unmarshaling: %w", err)
-		}
-
-		if err := d.Encode(val); err != nil {
-			return "", fmt.Errorf("marshal: %w", err)
-		}
-	}
-
-	return sb.String(), nil
 }
