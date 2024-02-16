@@ -39,11 +39,15 @@ func New() (Cache, error) {
 func (c *cache) Get(ctx context.Context, stepRef string) (*proto.StepDefinition, error) {
 	load := func(dir string) (*proto.StepDefinition, error) {
 		filename := filepath.Join(dir, "step.yml")
-		stepDefinition, err := step.Read(filename)
+		stepDef, err := step.LoadSteps(filename)
 		if err != nil {
 			return nil, fmt.Errorf("loading file %q: %w", dir, err)
 		}
-		return stepDefinition, nil
+		protoStepDef, err := step.CompileSteps(stepDef)
+		if err != nil {
+			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
+		}
+		return protoStepDef, nil
 	}
 	switch {
 	case strings.HasPrefix(stepRef, "."):

@@ -83,6 +83,7 @@ enum InputType {
     bool = 3;
     struct = 4;
     list = 5;
+    null = 6;
 }
 
 message StepResult {
