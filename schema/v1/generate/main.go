@@ -26,13 +26,16 @@ func main() {
 	}, {
 		name:  "definition",
 		value: &schema.Definition{},
+	}, {
+		name:  "steps",
+		value: schema.Steps{},
 	}} {
 		s := r.Reflect(t.value)
 		out, err := json.MarshalIndent(s, "", "    ")
 		if err != nil {
 			panic(err)
 		}
-		err = os.WriteFile(fmt.Sprintf("schema/%v.json", t.name), out, 0640)
+		err = os.WriteFile(fmt.Sprintf("schema/v1/%v.json", t.name), out, 0640)
 		if err != nil {
 			panic(err)
 		}

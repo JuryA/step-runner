@@ -6,10 +6,12 @@ type StepDefinition struct {
 	Dir        string
 }
 
+type Steps []*Step
+
 // Definition is the implementation of a step.
 type Definition struct {
 	// Steps is a list of sub-steps to run for the `steps` type.
-	Steps []*Step `json:"steps,omitempty" yaml:"steps,omitempty" jsonschema:"oneof_required=steps"`
+	Steps Steps `json:"steps,omitempty" yaml:"steps,omitempty" jsonschema:"oneof_required=steps"`
 	// Exec is a command to run for the `exec` type.
 	Exec Exec `json:"exec,omitempty" yaml:"exec,omitempty" jsonschema:"oneof_required=exec"`
 	// Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps.
