@@ -2,6 +2,7 @@ package step
 
 import (
 	"fmt"
+	"strings"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
@@ -36,10 +37,6 @@ func CompileSteps(steps *schema.StepDefinition) (*proto.StepDefinition, error) {
 type specCompiler schema.Spec
 
 func (spec *specCompiler) compile() (*proto.Spec, error) {
-	return spec.compileIntoProto()
-}
-
-func (spec *specCompiler) compileIntoProto() (*proto.Spec, error) {
 	protoSpec := &proto.Spec{Spec: &proto.Spec_Content{}}
 	inputs := map[string]*proto.Spec_Content_Input{}
 	for k, v := range spec.Spec.Inputs {
@@ -66,7 +63,7 @@ type inputCompiler schema.Input
 
 func (input *inputCompiler) compile() (*proto.Spec_Content_Input, error) {
 	input.defaultTypeToString()
-	protoInput, err := input.compileIntoProto()
+	protoInput, err := input.compileToProto()
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +81,7 @@ func (input *inputCompiler) defaultTypeToString() {
 	input.Type = schema.ValueTypeString
 }
 
-func (input *inputCompiler) compileIntoProto() (*proto.Spec_Content_Input, error) {
+func (input *inputCompiler) compileToProto() (*proto.Spec_Content_Input, error) {
 	protoInput := &proto.Spec_Content_Input{}
 	switch input.Type {
 	case schema.ValueTypeBool:
@@ -252,11 +249,46 @@ func (step *stepCompiler) compileToProto() (*proto.Step, error) {
 		}
 		protoInputs[k] = protoValue
 	}
+	ref, err := (*referenceCompiler)(&step.Step).compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling reference: %w", err)
+	}
 	protoStep.Name = step.Name
 	protoStep.Env = step.Env
-	protoStep.Step = step.Step
+	protoStep.Step = ref
 	protoStep.Inputs = protoInputs
 	return protoStep, nil
+}
+
+type referenceCompiler string
+
+func (reference *referenceCompiler) compile() (*proto.Step_Reference, error) {
+	refStr := string(*reference)
+	url := strings.Replace(refStr, "https+git://", "https://", 1)
+	switch {
+	case strings.HasPrefix(refStr, "."):
+		return &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_local,
+			// Step references always use '/' as a path
+			// separator, regardless of operating system.
+			Path:     strings.Split(refStr, "/"),
+			Filename: "step.yml",
+		}, nil
+	case strings.HasPrefix(url, "https://"):
+		url, versionPlusPath, _ := strings.Cut(url, "@")
+		version, path, _ := strings.Cut(versionPlusPath, ":")
+		if path != "" {
+			return nil, fmt.Errorf("nested steps are not yet supported")
+		}
+		return &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      url,
+			Version:  version,
+			Filename: "step.yml",
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported step reference: %q", refStr)
+	}
 }
 
 type valueCompiler struct {

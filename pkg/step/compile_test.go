@@ -27,7 +27,11 @@ spec:
 ---
 type: steps
 steps:
-    - step: "https://gitlab.com/josephburnett/script@v1" # until we create the canonical step repository
+    - step:
+          protocol: git
+          url: "https://gitlab.com/josephburnett/script" # until we create the canonical step repository
+          version: v1
+          filename: step.yml
       inputs:
           script: echo hello world
 `,
@@ -71,7 +75,11 @@ spec:
 type: steps
 steps:
     - name: "my special script name"
-      step: "https://gitlab.com/josephburnett/script@v1" # until we create the canonical steps repository
+      step:
+          protocol: git
+          url: "https://gitlab.com/josephburnett/script" # until we create the canonical step repository
+          version: v1
+          filename: step.yml
       inputs:
           script: echo hello world
 `,
@@ -143,20 +151,20 @@ outputs:
     eye_color: brown
 steps:
     - env:
-        JOB_ID: ${{job.id}}
-        USER: srunner
+          JOB_ID: ${{job.id}}
+          USER: srunner
       inputs:
-        age: 1
-        favorites:
-            food:
-                - hamburger
-                - sausage
-        hungry: false
-        name: steppy
+          age: 1
+          favorites:
+              food:
+                  - hamburger
+                  - sausage
+          hungry: false
+          name: steppy
       name: foo_to_the_max
-      step: git+https://gitlab.com/gitlab-org/foo@v1
+      step: https+git://gitlab.com/gitlab-org/foo@v1
     - inputs:
-        greeting: ${{steps.foo to the max.outputs.greeting}}
+          greeting: ${{steps.foo to the max.outputs.greeting}}
       name: foo_redux
       step: ../steps/redux
 `,
@@ -166,22 +174,29 @@ spec: {}
 type: steps
 steps:
     - name: foo_to_the_max
-      step: git+https://gitlab.com/gitlab-org/foo@v1
+      step:
+          protocol: git
+          url: "https://gitlab.com/gitlab-org/foo" # until we create the canonical step repository
+          version: v1
+          filename: step.yml
       env:
-        JOB_ID: ${{job.id}}
-        USER: srunner
+          JOB_ID: ${{job.id}}
+          USER: srunner
       inputs:
-        age: 1
-        favorites:
-            food:
-                - hamburger
-                - sausage
-        hungry: false
-        name: steppy
+          age: 1
+          favorites:
+              food:
+                  - hamburger
+                  - sausage
+          hungry: false
+          name: steppy
     - name: foo_redux
-      step: ../steps/redux
+      step:
+          protocol: local
+          path: [ '..', steps, redux ]
+          filename: step.yml
       inputs:
-        greeting: ${{steps.foo to the max.outputs.greeting}}
+          greeting: ${{steps.foo to the max.outputs.greeting}}
 outputs:
     eye_color: brown
 `,
