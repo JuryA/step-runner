@@ -12,7 +12,7 @@ import (
 )
 
 func TestCacheRemote(t *testing.T) {
-	key := "c6521ff4"
+	repoParentDir := filepath.Join("gitlab.com", "gitlab-org", "ci-cd", "runner-tools")
 
 	// Test cache in temporary directory
 	oldTempDir := os.Getenv("TMPDIR")
@@ -26,27 +26,40 @@ func TestCacheRemote(t *testing.T) {
 	_, err = os.Stat(filepath.Join(tempDir, "step-runner-cache"))
 	require.True(t, os.IsNotExist(err))
 
-	// Cache fetches exactly one step
-	runEchoSteps(t)
-	entries, err := os.ReadDir(filepath.Join(tempDir, "step-runner-cache"))
+	// Cache fetches the step
+	runSteps(t, echoSteps)
+	entries, err := os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
-	require.Equal(t, entries[0].Name(), key)
-	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", key, "step.yml"))
+	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step", "step.yml"))
+
+	// Cache separates by tag
+	runSteps(t, echoStepsV1)
+	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@v1", "step.yml"))
+
+	// Cache separates by hash
+	runSteps(t, echoSteps91141a6e)
+	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@91141a6e", "step.yml"))
 
 	// Cache is reused
-	runEchoSteps(t)
-	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache"))
+	runSteps(t, echoSteps)
+	runSteps(t, echoStepsV1)
+	runSteps(t, echoSteps91141a6e)
+	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
 	require.NoError(t, err)
-	require.Len(t, entries, 1)
-	require.Equal(t, entries[0].Name(), key)
-	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", key, "step.yml"))
+	require.Len(t, entries, 3)
 }
 
-func runEchoSteps(t *testing.T) {
+func runSteps(t *testing.T, steps string) {
 	t.Helper()
 	cmd := exec.Command("go", "run", "../..", "ci")
-	cmd.Env = append(os.Environ(), "STEPS="+echoSteps)
+	cmd.Env = append(os.Environ(), "STEPS="+steps)
 	out, err := cmd.CombinedOutput()
 	require.Equal(t, 0, cmd.ProcessState.ExitCode(), string(out))
 	require.NoError(t, err, string(out))
@@ -55,6 +68,20 @@ func runEchoSteps(t *testing.T) {
 const echoSteps = `
 - name: hello_world
   step: "https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step"
+  inputs:
+    echo: hello world
+`
+
+const echoStepsV1 = `
+- name: hello_world
+  step: "https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v1"
+  inputs:
+    echo: hello world
+`
+
+const echoSteps91141a6e = `
+- name: hello_world
+  step: "https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@91141a6e"
   inputs:
     echo: hello world
 `

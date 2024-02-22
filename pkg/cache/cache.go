@@ -2,13 +2,13 @@ package cache
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -66,27 +66,45 @@ func (c *cache) Get(ctx context.Context, stepRef *proto.Step_Reference) (*proto.
 func (c *cache) getCacheDir(ctx context.Context, step *proto.Step_Reference) (string, error) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-	var err error
-	k := cacheKey(step)
-	dir := filepath.Join(c.cacheDir, string(k))
+	_, after, found := strings.Cut(step.Url, "//")
+	if !found {
+		return "", fmt.Errorf("invalid step url. expected '//': %q", step.Url)
+	}
+	repoPath := strings.Split(after, "/")
+	if len(repoPath) == 0 {
+		return "", fmt.Errorf("missing repo path after '//'")
+	}
+	if step.Version != "" {
+		// Append version to differentiate versions of the same repo
+		last := repoPath[len(repoPath)-1]
+		last += "@" + step.Version
+		repoPath[len(repoPath)-1] = last
+	}
+	for i, d := range repoPath {
+		e, err := escapeString(d)
+		if err != nil {
+			return "", fmt.Errorf("escaping path: %w", err)
+		}
+		repoPath[i] = e
+	}
+	dir := filepath.Join(c.cacheDir, filepath.Join(repoPath...))
 	fileInfo, err := os.Stat(dir)
 	if err != nil && !os.IsNotExist(err) {
-		return "", fmt.Errorf("reading cache for step %q (%v): %w", step, k, err)
+		return "", fmt.Errorf("reading cache for step %q (%v): %w", step, step, err)
 	}
 	if err == nil && !fileInfo.IsDir() {
-		return "", fmt.Errorf("cache for step %q (%v) is not dir: %w", step, k, err)
+		return "", fmt.Errorf("cache for step %q (%v) is not dir: %w", step, step, err)
 	}
 	if os.IsNotExist(err) {
-		return c.cacheMiss(ctx, step, k)
+		return c.cacheMiss(ctx, step, dir)
 	}
 	return dir, nil
 }
 
-func (c *cache) cacheMiss(ctx context.Context, step *proto.Step_Reference, k key) (string, error) {
+func (c *cache) cacheMiss(ctx context.Context, step *proto.Step_Reference, dir string) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", fmt.Errorf("context cancelled: %w", err)
 	}
-	dir := filepath.Join(c.cacheDir, string(k))
 	err := os.MkdirAll(dir, 0750)
 	if err != nil {
 		return "", fmt.Errorf("making dir for cloning: %w", err)
@@ -111,19 +129,31 @@ func execIn(dir string, c string, args ...string) error {
 	return nil
 }
 
-type key string
-
-func cacheKey(step *proto.Step_Reference) key {
-	k := step.Url
-	// Temporarily reconstructing the original cache key. We are
-	// going store steps in a directory structure:
-	// https://gitlab.com/gitlab-org/step-runner/-/issues/5. But
-	// that will be another MR so I'm just patching this back
-	// together here to make the integration test pass.
-	k = strings.Replace(k, "https://", "https+git://", 1)
-	if step.Version != "" {
-		k = k + "@" + step.Version
+// Forked from https://cs.opensource.google/go/x/mod/+/refs/tags/v0.15.0:module/module.go
+func escapeString(s string) (escaped string, err error) {
+	haveUpper := false
+	for _, r := range s {
+		if r == '!' || r >= utf8.RuneSelf {
+			// This should be disallowed by CheckPath, but diagnose anyway.
+			// The correctness of the escaping loop below depends on it.
+			return "", fmt.Errorf("internal error: inconsistency in EscapePath")
+		}
+		if 'A' <= r && r <= 'Z' {
+			haveUpper = true
+		}
 	}
-	sum := sha256.Sum256([]byte(k))
-	return key(fmt.Sprintf("%x", sum)[:8])
+
+	if !haveUpper {
+		return s, nil
+	}
+
+	var buf []byte
+	for _, r := range s {
+		if 'A' <= r && r <= 'Z' {
+			buf = append(buf, '!', byte(r+'a'-'A'))
+		} else {
+			buf = append(buf, byte(r))
+		}
+	}
+	return string(buf), nil
 }
