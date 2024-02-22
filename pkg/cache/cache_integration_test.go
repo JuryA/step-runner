@@ -48,7 +48,7 @@ func runEchoSteps(t *testing.T) {
 	cmd := exec.Command("go", "run", "../..", "ci")
 	cmd.Env = append(os.Environ(), "STEPS="+echoSteps)
 	out, err := cmd.CombinedOutput()
-	require.Equal(t, 0, cmd.ProcessState.ExitCode())
+	require.Equal(t, 0, cmd.ProcessState.ExitCode(), string(out))
 	require.NoError(t, err, string(out))
 }
 

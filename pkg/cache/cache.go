@@ -15,7 +15,7 @@ import (
 )
 
 type Cache interface {
-	Get(ctx context.Context, step string) (*proto.StepDefinition, error)
+	Get(ctx context.Context, step *proto.Step_Reference) (*proto.StepDefinition, error)
 }
 
 var _ Cache = &cache{}
@@ -36,7 +36,7 @@ func New() (Cache, error) {
 	}, nil
 }
 
-func (c *cache) Get(ctx context.Context, stepRef string) (*proto.StepDefinition, error) {
+func (c *cache) Get(ctx context.Context, stepRef *proto.Step_Reference) (*proto.StepDefinition, error) {
 	load := func(dir string) (*proto.StepDefinition, error) {
 		filename := filepath.Join(dir, "step.yml")
 		stepDef, err := step.LoadSteps(filename)
@@ -50,9 +50,9 @@ func (c *cache) Get(ctx context.Context, stepRef string) (*proto.StepDefinition,
 		return protoStepDef, nil
 	}
 	switch {
-	case strings.HasPrefix(stepRef, "."):
-		return load(stepRef)
-	case strings.HasPrefix(stepRef, "https+git"):
+	case stepRef.Protocol == proto.StepReferenceProtocol_local:
+		return load(filepath.Join(stepRef.Path...))
+	case stepRef.Protocol == proto.StepReferenceProtocol_git:
 		dir, err := c.getCacheDir(ctx, stepRef)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
@@ -63,7 +63,7 @@ func (c *cache) Get(ctx context.Context, stepRef string) (*proto.StepDefinition,
 	}
 }
 
-func (c *cache) getCacheDir(ctx context.Context, step string) (string, error) {
+func (c *cache) getCacheDir(ctx context.Context, step *proto.Step_Reference) (string, error) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	var err error
@@ -82,7 +82,7 @@ func (c *cache) getCacheDir(ctx context.Context, step string) (string, error) {
 	return dir, nil
 }
 
-func (c *cache) cacheMiss(ctx context.Context, step string, k key) (string, error) {
+func (c *cache) cacheMiss(ctx context.Context, step *proto.Step_Reference, k key) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", fmt.Errorf("context cancelled: %w", err)
 	}
@@ -91,10 +91,9 @@ func (c *cache) cacheMiss(ctx context.Context, step string, k key) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("making dir for cloning: %w", err)
 	}
-	url := strings.Replace(step, "https+git", "https", 1)
-	err = execIn(dir, "git", "clone", url, ".")
+	err = execIn(dir, "git", "clone", step.Url, ".")
 	if err != nil {
-		return "", fmt.Errorf("cloning %q: %w", url, err)
+		return "", fmt.Errorf("cloning %q: %w", step.Url, err)
 	}
 	return dir, nil
 }
@@ -114,7 +113,17 @@ func execIn(dir string, c string, args ...string) error {
 
 type key string
 
-func cacheKey(uri string) key {
-	sum := sha256.Sum256([]byte(uri))
+func cacheKey(step *proto.Step_Reference) key {
+	k := step.Url
+	// Temporarily reconstructing the original cache key. We are
+	// going store steps in a directory structure:
+	// https://gitlab.com/gitlab-org/step-runner/-/issues/5. But
+	// that will be another MR so I'm just patching this back
+	// together here to make the integration test pass.
+	k = strings.Replace(k, "https://", "https+git://", 1)
+	if step.Version != "" {
+		k = k + "@" + step.Version
+	}
+	sum := sha256.Sum256([]byte(k))
 	return key(fmt.Sprintf("%x", sum)[:8])
 }

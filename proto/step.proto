@@ -8,7 +8,7 @@ option go_package = "../proto";
 
 message Step {
     string name = 1; 
-    string step = 2;
+    Reference step = 2;
     map<string,string> env = 3;
     option (buf.validate.message).cel = {
         id: "env",
@@ -21,6 +21,21 @@ message Step {
         message: "inputs must be alphanumeric with underscores",
         expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
     };
+    message Reference {
+        StepReferenceProtocol protocol = 1;
+        string url = 2;
+        repeated string path = 3;
+        string filename = 4;
+        string version = 5;
+    }
+}
+
+enum StepReferenceProtocol {
+    step_reference_protocol_unspecified = 0;
+    local = 1;
+    git = 2;
+    zip = 3;
+    oci = 4;
 }
 
 message Definition {
