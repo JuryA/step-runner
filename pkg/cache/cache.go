@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 	"unicode/utf8"
 
+	"github.com/go-git/go-git/v5"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -109,24 +109,16 @@ func (c *cache) cacheMiss(ctx context.Context, step *proto.Step_Reference, dir s
 	if err != nil {
 		return "", fmt.Errorf("making dir for cloning: %w", err)
 	}
-	err = execIn(dir, "git", "clone", step.Url, ".")
+	_, err = git.PlainClone(dir, false, &git.CloneOptions{
+		Depth:             1,
+		SingleBranch:      true,
+		RecurseSubmodules: git.SubmoduleRescursivity(1),
+		URL:               step.Url,
+	})
 	if err != nil {
 		return "", fmt.Errorf("cloning %q: %w", step.Url, err)
 	}
 	return dir, nil
-}
-
-func execIn(dir string, c string, args ...string) error {
-	cmd := exec.Command(c, args...)
-	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%w: %v", err, string(out))
-	}
-	if cmd.ProcessState.ExitCode() != 0 {
-		return fmt.Errorf("exit code %v: %v", cmd.ProcessState.ExitCode(), string(out))
-	}
-	return nil
 }
 
 // Forked from https://cs.opensource.google/go/x/mod/+/refs/tags/v0.15.0:module/module.go
