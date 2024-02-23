@@ -32,7 +32,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		err = os.WriteFile(fmt.Sprintf("schema/%v.json", t.name), out, 0640)
+		err = os.WriteFile(fmt.Sprintf("schema/v1/%v.json", t.name), out, 0640)
 		if err != nil {
 			panic(err)
 		}
