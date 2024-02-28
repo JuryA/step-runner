@@ -26,6 +26,9 @@ func main() {
 	}, {
 		name:  "definition",
 		value: &schema.Definition{},
+	}, {
+		name:  "steps",
+		value: schema.Steps{},
 	}} {
 		s := r.Reflect(t.value)
 		out, err := json.MarshalIndent(s, "", "    ")
