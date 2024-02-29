@@ -177,12 +177,12 @@ func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDef
 	return nil
 }
 
-func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx *context.Steps) (*proto.StepResult, error) {
+func (e *Execution) runStep(ctx ctx.Context, step *proto.Step, stepsCtx *context.Steps) (*proto.StepResult, error) {
 	params := &Params{}
 
 	// Expand inputs
 	params.Inputs = make(map[string]*structpb.Value)
-	for k, v := range stepReference.Inputs {
+	for k, v := range step.Inputs {
 		res, resErr := expression.Expand(stepsCtx, v)
 		if resErr != nil {
 			return nil, fmt.Errorf("Cannot assign input %q due to error: %s", k, resErr.Error())
@@ -195,7 +195,7 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 	for k, v := range stepsCtx.Env {
 		params.Env[k] = v
 	}
-	for k, v := range stepReference.Env {
+	for k, v := range step.Env {
 		res, resErr := expression.ExpandString(stepsCtx, v)
 		if resErr != nil {
 			return nil, fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
@@ -203,9 +203,9 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 		params.Env[k] = res
 	}
 
-	stepDefinition, err := e.defs.Get(ctx, stepReference.Step)
+	stepDefinition, cacheStepRef, err := e.defs.Get(ctx, step.Step)
 	if err != nil {
-		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
+		return nil, fmt.Errorf("getting step %q definition: %w", step.Name, err)
 	}
 
 	result, err := e.Run(ctx, stepDefinition, params, stepsCtx.Global)
@@ -213,7 +213,12 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 		return nil, err
 	}
 
-	result.Step = stepReference
-	stepsCtx.Steps[stepReference.Name] = result
+	result.Step = &proto.Step{
+		Name:   step.Name,
+		Step:   cacheStepRef,
+		Env:    step.Env,
+		Inputs: step.Inputs,
+	}
+	stepsCtx.Steps[step.Name] = result
 	return result, nil
 }

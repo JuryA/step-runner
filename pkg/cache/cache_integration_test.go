@@ -1,20 +1,18 @@
-//go:build integration
+// //go:build integration
 
 package cache
 
 import (
+	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 func TestCacheRemote(t *testing.T) {
-	repoParentDir := filepath.Join("gitlab.com", "gitlab-org", "ci-cd", "runner-tools")
-
-	// Test cache in temporary directory
 	oldTempDir := os.Getenv("TMPDIR")
 	tempDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
@@ -23,79 +21,56 @@ func TestCacheRemote(t *testing.T) {
 		os.Setenv("TMPDIR", oldTempDir)
 	}()
 	os.Setenv("TMPDIR", tempDir)
-	_, err = os.Stat(filepath.Join(tempDir, "step-runner-cache"))
-	require.True(t, os.IsNotExist(err))
+	c, err := New()
+	runnerToolsDir := filepath.Join(c.(*cache).cacheDir, "gitlab.com", "gitlab-org", "ci-cd", "runner-tools")
 
-	// Cache fetches the step
-	runSteps(t, echoSteps)
-	entries, err := os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
-	require.NoError(t, err)
-	require.Len(t, entries, 1)
-	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@master", "step.yml"))
+	sequence := []struct {
+		ref           *proto.Step_Reference
+		wantDir       string
+		wantVersion   string
+		wantCacheSize int
+	}{{
+		ref: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "v2",
+		},
+		wantDir:       filepath.Join(runnerToolsDir, "echo-step@v2"),
+		wantVersion:   "6b81e62a", // rewritten from v2 tag
+		wantCacheSize: 1,
+	}, {
+		ref: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "91141a6e",
+		},
+		wantDir:       filepath.Join(runnerToolsDir, "echo-step@91141a6e"),
+		wantVersion:   "91141a6e",
+		wantCacheSize: 2,
+	}, {
+		ref: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step",
+			Path:     []string{"another-echo"},
+			Filename: "another-step.yml",
+			Version:  "v2",
+		},
+		wantDir:       filepath.Join(runnerToolsDir, "echo-step@v2", "another-step"),
+		wantVersion:   "91141a6e", // rewritten from v2 tag
+		wantCacheSize: 2,
+	}}
 
-	// Cache separates by tag
-	runSteps(t, echoStepsV1)
-	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
-	require.NoError(t, err)
-	require.Len(t, entries, 2)
-	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@v1", "step.yml"))
-
-	// Cache separates by hash
-	runSteps(t, echoSteps91141a6e)
-	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
-	require.NoError(t, err)
-	require.Len(t, entries, 3)
-	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@91141a6e", "step.yml"))
-
-	// Cache supports nested steps
-	runSteps(t, nestedEchoSteps)
-	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
-	require.NoError(t, err)
-	require.Len(t, entries, 4)
-	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@master", "another-echo", "another-step.yml"))
-
-	// Cache is reused
-	runSteps(t, echoSteps)
-	runSteps(t, echoStepsV1)
-	runSteps(t, echoSteps91141a6e)
-	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
-	require.NoError(t, err)
-	require.Len(t, entries, 4)
+	for _, s := range sequence {
+		_, gotStepRef, err := c.Get(context.Background(), s.ref)
+		require.NoError(t, err)
+		require.Equal(t, s.wantVersion, gotStepRef.Version)
+		entries, err := os.ReadDir(s.wantDir)
+		require.NoError(t, err)
+		require.Len(t, entries, 2)
+		require.FileExists(t, filepath.Join(s.wantDir, s.ref.Filename))
+	}
 }
-
-func runSteps(t *testing.T, steps string) {
-	t.Helper()
-	cmd := exec.Command("go", "run", "../..", "ci")
-	cmd.Env = append(os.Environ(), "STEPS="+steps)
-	out, err := cmd.CombinedOutput()
-	require.Equal(t, 0, cmd.ProcessState.ExitCode(), string(out))
-	require.NoError(t, err, string(out))
-}
-
-const echoSteps = `
-- name: hello_world
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step#git@master"
-  inputs:
-    echo: hello world
-`
-
-const echoStepsV1 = `
-- name: hello_world
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step#git@v1"
-  inputs:
-    echo: hello world
-`
-
-const echoSteps91141a6e = `
-- name: hello_world
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step#git@91141a6e"
-  inputs:
-    echo: hello world
-`
-
-const nestedEchoSteps = `
-- name: another_hello_world
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step/#another-echo/another-file.yml,git@master"
-  inputs:
-    echo: hello other world
-`

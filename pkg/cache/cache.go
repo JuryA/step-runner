@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"unicode/utf8"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type Cache interface {
-	Get(ctx context.Context, step *proto.Step_Reference) (*proto.StepDefinition, error)
+	Get(ctx context.Context, step *proto.Step_Reference) (*proto.StepDefinition, *proto.Step_Reference, error)
 }
 
 var _ Cache = &cache{}
@@ -36,7 +38,7 @@ func New() (Cache, error) {
 	}, nil
 }
 
-func (c *cache) Get(ctx context.Context, stepRef *proto.Step_Reference) (*proto.StepDefinition, error) {
+func (c *cache) Get(ctx context.Context, stepRef *proto.Step_Reference) (*proto.StepDefinition, *proto.Step_Reference, error) {
 	load := func(dir string) (*proto.StepDefinition, error) {
 		filename := filepath.Join(dir, "step.yml")
 		stepDef, err := step.LoadSteps(filename)
@@ -51,28 +53,31 @@ func (c *cache) Get(ctx context.Context, stepRef *proto.Step_Reference) (*proto.
 	}
 	switch {
 	case stepRef.Protocol == proto.StepReferenceProtocol_local:
-		return load(filepath.Join(stepRef.Path...))
+		stepDef, err := load(filepath.Join(stepRef.Path...))
+		// We don't rewrite local references
+		return stepDef, stepRef, err
 	case stepRef.Protocol == proto.StepReferenceProtocol_git:
-		dir, err := c.getCacheDir(ctx, stepRef)
+		dir, cacheStepRef, err := c.getCacheDir(ctx, stepRef)
 		if err != nil {
-			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
+			return nil, nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}
-		return load(dir)
+		stepDef, err := load(dir)
+		return stepDef, cacheStepRef, err
 	default:
-		return nil, fmt.Errorf("invalid step reference: %v", stepRef)
+		return nil, nil, fmt.Errorf("invalid step reference: %v", stepRef)
 	}
 }
 
-func (c *cache) getCacheDir(ctx context.Context, step *proto.Step_Reference) (string, error) {
+func (c *cache) getCacheDir(ctx context.Context, step *proto.Step_Reference) (string, *proto.Step_Reference, error) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	_, after, found := strings.Cut(step.Url, "//")
 	if !found {
-		return "", fmt.Errorf("invalid step url. expected '//': %q", step.Url)
+		return "", nil, fmt.Errorf("invalid step url. expected '//': %q", step.Url)
 	}
 	repoPath := strings.Split(after, "/")
 	if len(repoPath) == 0 {
-		return "", fmt.Errorf("missing repo path after '//'")
+		return "", nil, fmt.Errorf("missing repo path after '//'")
 	}
 	if step.Version != "" {
 		// Append version to differentiate versions of the same repo
@@ -83,42 +88,93 @@ func (c *cache) getCacheDir(ctx context.Context, step *proto.Step_Reference) (st
 	for i, d := range repoPath {
 		e, err := escapeString(d)
 		if err != nil {
-			return "", fmt.Errorf("escaping path: %w", err)
+			return "", nil, fmt.Errorf("escaping path: %w", err)
 		}
 		repoPath[i] = e
 	}
 	dir := filepath.Join(c.cacheDir, filepath.Join(repoPath...))
 	fileInfo, err := os.Stat(dir)
 	if err != nil && !os.IsNotExist(err) {
-		return "", fmt.Errorf("reading cache for step %q (%v): %w", step, step, err)
+		return "", nil, fmt.Errorf("reading cache for step %q (%v): %w", step, step, err)
 	}
 	if err == nil && !fileInfo.IsDir() {
-		return "", fmt.Errorf("cache for step %q (%v) is not dir: %w", step, step, err)
+		return "", nil, fmt.Errorf("cache for step %q (%v) is not dir: %w", step, step, err)
 	}
 	if os.IsNotExist(err) {
-		return c.cacheMiss(ctx, step, dir)
+		if err := c.cacheMiss(ctx, step, dir); err != nil {
+			return "", nil, err
+		}
 	}
-	return dir, nil
+	repo, err := git.PlainOpen(dir)
+	if err != nil {
+		return "", nil, fmt.Errorf("opening repo: %w", err)
+	}
+	head, err := repo.Head()
+	if err != nil {
+		return "", nil, fmt.Errorf("reading head: %w", err)
+	}
+	hash := head.Hash().String()
+	if len(hash) < 8 {
+		return "", nil, fmt.Errorf("invalid hash %q", hash)
+	}
+	hash = hash[:8]
+	cacheStepRef := &proto.Step_Reference{
+		Protocol: step.Protocol,
+		Url:      step.Url,
+		Path:     step.Path,
+		Filename: step.Filename,
+		Version:  hash,
+	}
+	return dir, cacheStepRef, nil
 }
 
-func (c *cache) cacheMiss(ctx context.Context, step *proto.Step_Reference, dir string) (string, error) {
+func (c *cache) cacheMiss(ctx context.Context, step *proto.Step_Reference, dir string) error {
 	if err := ctx.Err(); err != nil {
-		return "", fmt.Errorf("context cancelled: %w", err)
+		return fmt.Errorf("context cancelled: %w", err)
 	}
 	err := os.MkdirAll(dir, 0750)
 	if err != nil {
-		return "", fmt.Errorf("making dir for cloning: %w", err)
+		return fmt.Errorf("making dir for cloning: %w", err)
 	}
-	_, err = git.PlainClone(dir, false, &git.CloneOptions{
+	if regexp.MustCompile("[A-Fa-f0-9]{8}").Match([]byte(step.Version)) {
+		return cloneHash(step.Url, step.Version, dir)
+	} else {
+		return cloneTag(step.Url, step.Version, dir)
+	}
+}
+
+func cloneTag(url, tag, dir string) error {
+	_, err := git.PlainClone(dir, false, &git.CloneOptions{
 		Depth:             1,
-		SingleBranch:      true,
 		RecurseSubmodules: git.SubmoduleRescursivity(1),
-		URL:               step.Url,
+		ReferenceName:     plumbing.ReferenceName("refs/tags/" + tag),
+		SingleBranch:      true,
+		URL:               url,
 	})
 	if err != nil {
-		return "", fmt.Errorf("cloning %q: %w", step.Url, err)
+		return fmt.Errorf("cloning %q: %w", url, err)
 	}
-	return dir, nil
+	return nil
+}
+
+func cloneHash(url, hash, dir string) error {
+	repo, err := git.PlainClone(dir, false, &git.CloneOptions{
+		Depth:             1,
+		RecurseSubmodules: git.SubmoduleRescursivity(1),
+		SingleBranch:      true,
+		URL:               url,
+	})
+	if err != nil {
+		return fmt.Errorf("cloning %q: %w", url, err)
+	}
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("getting workgree: %w", err)
+	}
+	if err := worktree.Checkout(&git.CheckoutOptions{}); err != nil {
+		return fmt.Errorf("checking out %q: %w", hash, err)
+	}
+	return nil
 }
 
 // Forked from https://cs.opensource.google/go/x/mod/+/refs/tags/v0.15.0:module/module.go
@@ -126,9 +182,7 @@ func escapeString(s string) (escaped string, err error) {
 	haveUpper := false
 	for _, r := range s {
 		if r == '!' || r >= utf8.RuneSelf {
-			// This should be disallowed by CheckPath, but diagnose anyway.
-			// The correctness of the escaping loop below depends on it.
-			return "", fmt.Errorf("internal error: inconsistency in EscapePath")
+			return "", fmt.Errorf("internal error: inconsistency in escapeString")
 		}
 		if 'A' <= r && r <= 'Z' {
 			haveUpper = true
