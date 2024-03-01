@@ -2,6 +2,7 @@ package step
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -263,32 +264,84 @@ func (step *stepCompiler) compileToProto() (*proto.Step, error) {
 type referenceCompiler string
 
 func (reference *referenceCompiler) compile() (*proto.Step_Reference, error) {
-	refStr := string(*reference)
-	url := strings.Replace(refStr, "https+git://", "https://", 1)
-	switch {
-	case strings.HasPrefix(refStr, "."):
+	ref := string(*reference)
+	// Local file
+	if strings.HasPrefix(ref, ".") {
+		path, filename := pathFilename(ref)
 		return &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_local,
 			// Step references always use '/' as a path
 			// separator, regardless of operating system.
-			Path:     strings.Split(refStr, "/"),
-			Filename: "step.yml",
+			Path:     path,
+			Filename: filename,
 		}, nil
-	case strings.HasPrefix(url, "https://"):
-		url, versionPlusPath, _ := strings.Cut(url, "@")
-		version, path, _ := strings.Cut(versionPlusPath, ":")
-		if path != "" {
-			return nil, fmt.Errorf("nested steps are not yet supported")
-		}
-		return &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_git,
-			Url:      url,
-			Version:  version,
-			Filename: "step.yml",
-		}, nil
-	default:
-		return nil, fmt.Errorf("unsupported step reference: %q", refStr)
 	}
+	// A non-local step reference is a valid URL
+	parsedURL, err := url.Parse(ref)
+	if err != nil {
+		return nil, fmt.Errorf("invalid step reference %q: %w", ref, err)
+	}
+	// Parse fragment
+	if parsedURL.Fragment == "" {
+		return nil, fmt.Errorf("invalid step reference %q. must have fragment specifying protocol and version", ref)
+	}
+	var nestedPathStr, protocolVersion string
+	before, after, haveNestedPath := strings.Cut(parsedURL.Fragment, ",")
+	if haveNestedPath {
+		nestedPathStr = before
+		protocolVersion = after
+	} else {
+		protocolVersion = before
+	}
+	protocol, version, ok := strings.Cut(protocolVersion, "@")
+	if !ok {
+		return nil, fmt.Errorf("invalid protocol and version %q", protocolVersion)
+	}
+	nestedPath, filename := pathFilename(nestedPathStr)
+	// Reassemble the URL sans fragment
+	parsedURL.Fragment = ""
+	switch parsedURL.Scheme {
+	case "http", "https":
+		// Valid
+	case "":
+		// Default
+		parsedURL.Scheme = "https"
+	default:
+		return nil, fmt.Errorf("unsupported scheme %q in reference %q", parsedURL.Scheme, ref)
+	}
+	url := parsedURL.String()
+
+	protoRef := &proto.Step_Reference{
+		Url:      url,
+		Path:     nestedPath,
+		Filename: filename,
+		Version:  version,
+	}
+	switch protocol {
+	case "git":
+		protoRef.Protocol = proto.StepReferenceProtocol_git
+	case "oci":
+		protoRef.Protocol = proto.StepReferenceProtocol_oci
+	default:
+		return nil, fmt.Errorf("unsupported protocol %q", protocol)
+	}
+	return protoRef, nil
+}
+
+func pathFilename(pathStr string) (path []string, filename string) {
+	filename = "step.yml"
+	if pathStr == "" {
+		return nil, filename
+	}
+	path = strings.Split(pathStr, "/")
+	if len(path) > 1 {
+		lastElement := path[len(path)-1]
+		if strings.HasSuffix(lastElement, ".yml") || strings.HasSuffix(lastElement, ".yaml") {
+			path = path[:len(path)-1]
+			filename = lastElement
+		}
+	}
+	return path, filename
 }
 
 type valueCompiler struct {
