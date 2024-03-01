@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/step-runner/proto"
 	protobuf "google.golang.org/protobuf/proto"
 )
 
@@ -29,7 +30,7 @@ type: steps
 steps:
     - step:
           protocol: git
-          url: "https://gitlab.com/josephburnett/script" # until we create the canonical step repository
+          url: "https://gitlab.com/components/script" # until we create the canonical step repository
           version: v1
           filename: step.yml
       inputs:
@@ -77,7 +78,7 @@ steps:
     - name: "my special script name"
       step:
           protocol: git
-          url: "https://gitlab.com/josephburnett/script" # until we create the canonical step repository
+          url: "https://gitlab.com/components/script" # until we create the canonical step repository
           version: v1
           filename: step.yml
       inputs:
@@ -162,7 +163,7 @@ steps:
           hungry: false
           name: steppy
       name: foo_to_the_max
-      step: https+git://gitlab.com/gitlab-org/foo@v1
+      step: https://gitlab.com/components/foo#git@v1
     - inputs:
           greeting: ${{steps.foo to the max.outputs.greeting}}
       name: foo_redux
@@ -176,7 +177,7 @@ steps:
     - name: foo_to_the_max
       step:
           protocol: git
-          url: "https://gitlab.com/gitlab-org/foo" # until we create the canonical step repository
+          url: "https://gitlab.com/components/foo" # until we create the canonical step repository
           version: v1
           filename: step.yml
       env:
@@ -220,4 +221,163 @@ outputs:
 		})
 	}
 
+}
+
+func TestReferenceCompiler(t *testing.T) {
+	cases := []struct {
+		ref     string
+		want    *proto.Step_Reference
+		wantErr bool
+	}{{
+		ref:     "invalid",
+		wantErr: true,
+	}, {
+		ref:     "",
+		wantErr: true,
+	}, {
+		ref: ".",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_local,
+			Url:      "",
+			Path:     []string{"."},
+			Filename: "step.yml",
+			Version:  "",
+		},
+	}, {
+		ref: "./path/to/my/file",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_local,
+			Url:      "",
+			Path:     []string{".", "path", "to", "my", "file"},
+			Filename: "step.yml",
+			Version:  "",
+		},
+	}, {
+		ref: "gitlab.com/components/script/#git@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script/",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "v1",
+		},
+	}, {
+		ref: "https://gitlab.com/components/script/#git@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script/",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "v1",
+		},
+	}, {
+
+		ref: "gitlab.com/components/script/#bash,git@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script/",
+			Path:     []string{"bash"},
+			Filename: "step.yml",
+			Version:  "v1",
+		},
+	}, {
+		ref: "gitlab.com/components/script/#bash/my-step.yml,git@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script/",
+			Path:     []string{"bash"},
+			Filename: "my-step.yml",
+			Version:  "v1",
+		},
+	}, {
+		ref: "http://bad.idea.com/my-step/#git@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "http://bad.idea.com/my-step/",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "v1",
+		},
+	}, {
+		ref: "gitlab.com/components/script/#git@v2.1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script/",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "v2.1",
+		},
+	}, {
+		ref: "gitlab.com/components/script/#git@20e9c40c",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script/",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "20e9c40c",
+		},
+	}, {
+		ref: "gitlab.com/components/script/#git@20e9c40c9213f2a044e4a81906956a779af3da4b",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script/",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "20e9c40c9213f2a044e4a81906956a779af3da4b",
+		},
+	}, {
+		ref: "registry.gitlab.com/components/script/#oci@latest",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_oci,
+			Url:      "https://registry.gitlab.com/components/script/",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "latest",
+		},
+	}, {
+		ref: "registry.gitlab.com/components/script/#oci@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_oci,
+			Url:      "https://registry.gitlab.com/components/script/",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "v1",
+		},
+	}, {
+		ref: "registry.gitlab.com/components/script/#oci@sha256:83c876be7b35b6c5c892b1347ee894f23b26e00a686e3cbb51b004263c014f8c",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_oci,
+			Url:      "https://registry.gitlab.com/components/script/",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "sha256:83c876be7b35b6c5c892b1347ee894f23b26e00a686e3cbb51b004263c014f8c",
+		},
+	}, {
+		ref: "registry.gitlab.com/components/script/#bash,oci@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_oci,
+			Url:      "https://registry.gitlab.com/components/script/",
+			Path:     []string{"bash"},
+			Filename: "step.yml",
+			Version:  "v1",
+		},
+	}, {
+		ref:     "ftp://gitlab.com/components/script/#git@v1", // unsupported
+		wantErr: true,
+	}, {
+		ref:     "notavalidscheme://gitlab.com/components/script/#git@v1",
+		wantErr: true,
+	}}
+
+	for _, c := range cases {
+		t.Run(c.ref, func(t *testing.T) {
+			got, err := (*referenceCompiler)(&c.ref).compile()
+			if c.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.True(t, protobuf.Equal(c.want, got), "want %v. got %v", c.want, got)
+			}
+		})
+	}
 }

@@ -31,7 +31,7 @@ func TestCacheRemote(t *testing.T) {
 	entries, err := os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
-	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step", "step.yml"))
+	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@master", "step.yml"))
 
 	// Cache separates by tag
 	runSteps(t, echoStepsV1)
@@ -47,13 +47,20 @@ func TestCacheRemote(t *testing.T) {
 	require.Len(t, entries, 3)
 	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@91141a6e", "step.yml"))
 
+	// Cache supports nested steps
+	runSteps(t, nestedEchoSteps)
+	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
+	require.NoError(t, err)
+	require.Len(t, entries, 4)
+	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@master", "another-echo", "another-step.yml"))
+
 	// Cache is reused
 	runSteps(t, echoSteps)
 	runSteps(t, echoStepsV1)
 	runSteps(t, echoSteps91141a6e)
 	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
 	require.NoError(t, err)
-	require.Len(t, entries, 3)
+	require.Len(t, entries, 4)
 }
 
 func runSteps(t *testing.T, steps string) {
@@ -67,21 +74,28 @@ func runSteps(t *testing.T, steps string) {
 
 const echoSteps = `
 - name: hello_world
-  step: "https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step"
+  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step#git@master"
   inputs:
     echo: hello world
 `
 
 const echoStepsV1 = `
 - name: hello_world
-  step: "https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v1"
+  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step#git@v1"
   inputs:
     echo: hello world
 `
 
 const echoSteps91141a6e = `
 - name: hello_world
-  step: "https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@91141a6e"
+  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step#git@91141a6e"
   inputs:
     echo: hello world
+`
+
+const nestedEchoSteps = `
+- name: another_hello_world
+  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step/#another-echo/another-file.yml,git@master"
+  inputs:
+    echo: hello other world
 `
