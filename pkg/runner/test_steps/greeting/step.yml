@@ -13,6 +13,8 @@ spec:
       type: struct
       default:
         color: red
+  outputs:
+    name:
 ---
 exec:
   command:

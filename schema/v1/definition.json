@@ -89,9 +89,6 @@
             "description": "Exec is a command to run for the `exec` type."
         },
         "outputs": {
-            "additionalProperties": {
-                "type": "string"
-            },
             "type": "object",
             "description": "Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps."
         }

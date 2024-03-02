@@ -46,7 +46,7 @@ message Definition {
         repeated string command = 1;
         string work_dir = 2;
     }
-    map<string,string> outputs = 4;
+    map<string,google.protobuf.Value> outputs = 4;
     option (buf.validate.message).cel = {
         id: "outputs",
         message: "outputs must be alphanumeric with underscores",
@@ -70,7 +70,7 @@ message Spec {
             expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
         };
         message Input {
-            InputType type = 1;
+            ValueType type = 1;
             google.protobuf.Value default = 2;
         }
         map<string,Output> outputs = 2;
@@ -79,8 +79,9 @@ message Spec {
             message: "outputs must be alphanumeric with underscores",
             expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
         };
-        message Output {
-            string default = 1;
+        message Output {  
+            ValueType type = 1;
+            google.protobuf.Value default = 2;
         }
     }
 }
@@ -91,14 +92,14 @@ message StepDefinition {
     string dir = 3;
 }
 
-enum InputType {
-    spec_type_unspecified = 0;
-    string = 1;
-    number = 2;
-    bool = 3;
-    struct = 4;
-    list = 5;
-    null = 6;
+enum ValueType {
+    value_type_unspecified = 0;
+    raw_string = 1;
+    string = 2;
+    number = 3;
+    bool = 4;
+    struct = 5;
+    list = 6;
 }
 
 message StepResult {
@@ -111,7 +112,7 @@ message StepResult {
         failure = 3;
     }
     Status status = 4;
-    map<string,string> outputs = 5;
+    map<string,google.protobuf.Value> outputs = 5;
     option (buf.validate.message).cel = {
         id: "outputs",
         message: "outputs must be alphanumeric with underscores",

@@ -15,7 +15,7 @@ type Definition struct {
 	// Exec is a command to run for the `exec` type.
 	Exec Exec `json:"exec,omitempty" yaml:"exec,omitempty" jsonschema:"oneof_required=exec"`
 	// Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps.
-	Outputs map[string]string `json:"outputs,omitempty" yaml:"outputs,omitempty"`
+	Outputs map[string]any `json:"outputs,omitempty" yaml:"outputs,omitempty"`
 }
 
 type Exec struct {
@@ -63,17 +63,19 @@ type Input struct {
 
 // Output describes a single step output.
 type Output struct {
+	// Type is the value type of the output.
+	Type ValueType `json:"type,omitempty" yaml:"type,omitempty"`
 	// Default is the default output value.
-	Default string `json:"default,omitempty" yaml:"default,omitempty"`
+	Default any `json:"default,omitempty" yaml:"default,omitempty"`
 }
 
 type ValueType string
 
 const (
-	ValueTypeNull   ValueType = "null"
-	ValueTypeString ValueType = "string"
-	ValueTypeNumber ValueType = "number"
-	ValueTypeBool   ValueType = "bool"
-	ValueTypeStruct ValueType = "struct"
-	ValueTypeList   ValueType = "list"
+	ValueTypeRawString ValueType = "raw_string"
+	ValueTypeString    ValueType = "string"
+	ValueTypeNumber    ValueType = "number"
+	ValueTypeBool      ValueType = "bool"
+	ValueTypeStruct    ValueType = "struct"
+	ValueTypeList      ValueType = "list"
 )

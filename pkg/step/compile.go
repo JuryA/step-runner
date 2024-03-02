@@ -86,15 +86,15 @@ func (input *inputCompiler) compileToProto() (*proto.Spec_Content_Input, error) 
 	protoInput := &proto.Spec_Content_Input{}
 	switch input.Type {
 	case schema.ValueTypeBool:
-		protoInput.Type = proto.InputType_bool
+		protoInput.Type = proto.ValueType_bool
 	case schema.ValueTypeList:
-		protoInput.Type = proto.InputType_list
+		protoInput.Type = proto.ValueType_list
 	case schema.ValueTypeNumber:
-		protoInput.Type = proto.InputType_number
+		protoInput.Type = proto.ValueType_number
 	case schema.ValueTypeString:
-		protoInput.Type = proto.InputType_string
+		protoInput.Type = proto.ValueType_string
 	case schema.ValueTypeStruct:
-		protoInput.Type = proto.InputType_struct
+		protoInput.Type = proto.ValueType_struct
 	default:
 		return nil, fmt.Errorf("unsupported input type: %v", input.Type)
 	}
@@ -108,7 +108,7 @@ func (input *inputCompiler) compileToProto() (*proto.Spec_Content_Input, error) 
 	return protoInput, nil
 }
 
-func (input inputCompiler) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Input) error {
+func (input *inputCompiler) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Input) error {
 	if input.Default == nil || protoInput.Default == nil {
 		return nil
 	}
@@ -121,10 +121,6 @@ func (input inputCompiler) verifyDefaultValueMatchesType(protoInput *proto.Spec_
 	case schema.ValueTypeList:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_ListValue); ok {
 			defaultType = schema.ValueTypeList
-		}
-	case schema.ValueTypeNull:
-		if _, ok := protoInput.Default.Kind.(*structpb.Value_NullValue); ok {
-			defaultType = schema.ValueTypeNull
 		}
 	case schema.ValueTypeNumber:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_NumberValue); ok {
@@ -150,9 +146,90 @@ func (input inputCompiler) verifyDefaultValueMatchesType(protoInput *proto.Spec_
 type outputCompiler schema.Output
 
 func (output *outputCompiler) compile() (*proto.Spec_Content_Output, error) {
-	protoOutput := &proto.Spec_Content_Output{}
-	protoOutput.Default = output.Default
+	output.defaultTypeToRawString()
+	protoOutput, err := output.compileToProto()
+	if err != nil {
+		return nil, err
+	}
+	err = output.verifyDefaultValueMatchesType(protoOutput)
+	if err != nil {
+		return nil, err
+	}
 	return protoOutput, nil
+}
+
+func (output *outputCompiler) defaultTypeToRawString() {
+	if output.Type != "" {
+		return
+	}
+	output.Type = schema.ValueTypeRawString
+}
+
+func (output *outputCompiler) compileToProto() (*proto.Spec_Content_Output, error) {
+	protoOutput := &proto.Spec_Content_Output{}
+	switch output.Type {
+	case schema.ValueTypeBool:
+		protoOutput.Type = proto.ValueType_bool
+	case schema.ValueTypeList:
+		protoOutput.Type = proto.ValueType_list
+	case schema.ValueTypeNumber:
+		protoOutput.Type = proto.ValueType_number
+	case schema.ValueTypeRawString:
+		protoOutput.Type = proto.ValueType_raw_string
+	case schema.ValueTypeString:
+		protoOutput.Type = proto.ValueType_string
+	case schema.ValueTypeStruct:
+		protoOutput.Type = proto.ValueType_struct
+	default:
+		return nil, fmt.Errorf("unsupported output type: %v", output.Type)
+	}
+	if output.Default != nil {
+		protoV, err := (&valueCompiler{output.Default}).compile()
+		if err != nil {
+			return nil, fmt.Errorf("compiling default %v: %w", output.Default, err)
+		}
+		protoOutput.Default = protoV
+	}
+	return protoOutput, nil
+}
+
+func (output *outputCompiler) verifyDefaultValueMatchesType(protoOutput *proto.Spec_Content_Output) error {
+	if output.Default == nil || protoOutput.Default == nil {
+		return nil
+	}
+	var defaultType schema.ValueType
+	switch output.Type {
+	case schema.ValueTypeBool:
+		if _, ok := protoOutput.Default.Kind.(*structpb.Value_BoolValue); ok {
+			defaultType = schema.ValueTypeBool
+		}
+	case schema.ValueTypeList:
+		if _, ok := protoOutput.Default.Kind.(*structpb.Value_ListValue); ok {
+			defaultType = schema.ValueTypeList
+		}
+	case schema.ValueTypeNumber:
+		if _, ok := protoOutput.Default.Kind.(*structpb.Value_NumberValue); ok {
+			defaultType = schema.ValueTypeNumber
+		}
+	case schema.ValueTypeString:
+		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
+			defaultType = schema.ValueTypeString
+		}
+	case schema.ValueTypeRawString:
+		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
+			defaultType = schema.ValueTypeRawString
+		}
+	case schema.ValueTypeStruct:
+		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StructValue); ok {
+			defaultType = schema.ValueTypeStruct
+		}
+	default:
+		return fmt.Errorf("unsupported type: %v", output.Type)
+	}
+	if defaultType != output.Type {
+		return fmt.Errorf("output type %v and default value type %v must match", output.Type, defaultType)
+	}
+	return nil
 }
 
 type definitionCompiler schema.Definition
@@ -205,7 +282,14 @@ func (def *definitionCompiler) compileToProto() (*proto.Definition, error) {
 			}
 			protoDef.Steps[i] = protoStep
 		}
-		protoDef.Outputs = def.Outputs
+		protoDef.Outputs = map[string]*structpb.Value{}
+		for k, v := range def.Outputs {
+			protoV, err := (&valueCompiler{v}).compile()
+			if err != nil {
+				return nil, fmt.Errorf("compiling output[%q]: %v: %w", k, v, err)
+			}
+			protoDef.Outputs[k] = protoV
+		}
 	default:
 		return nil, fmt.Errorf("could not determine step type")
 	}

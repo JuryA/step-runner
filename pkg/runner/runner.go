@@ -67,13 +67,13 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 	result := &proto.StepResult{
 		StepDefinition: specDefinition,
 		Status:         proto.StepResult_success,
-		Outputs:        make(map[string]string),
+		Outputs:        make(map[string]*structpb.Value),
 		Exports:        make(map[string]string),
 	}
 
 	switch specDefinition.Definition.Type {
 	case proto.DefinitionType_exec:
-		err = e.runExec(result, ctx, specDefinition.Definition.Exec, stepsCtx)
+		err = e.runExec(ctx, result, specDefinition.Definition.Exec, specDefinition.Spec.Spec.Outputs, stepsCtx)
 
 	case proto.DefinitionType_steps:
 		err = e.runSteps(result, ctx, specDefinition.Definition.Steps, stepsCtx)
@@ -85,7 +85,7 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 	result.StepDefinition = specDefinition
 
 	for k, v := range specDefinition.Definition.Outputs {
-		res, resErr := expression.ExpandString(stepsCtx, v)
+		res, resErr := expression.Expand(stepsCtx, v)
 		if resErr == nil {
 			result.Outputs[k] = res
 		} else {
@@ -95,12 +95,18 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 	return result, err
 }
 
-func (e *Execution) runExec(result *proto.StepResult, ctx ctx.Context, execDefinition *proto.Definition_Exec, stepsCtx *context.Steps) error {
+func (e *Execution) runExec(
+	ctx ctx.Context,
+	result *proto.StepResult,
+	execDefinition *proto.Definition_Exec,
+	outputs map[string]*proto.Spec_Content_Output,
+	stepsCtx *context.Steps,
+) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("exec cancelled: %w", err)
 	}
 
-	files, err := output.New(stepsCtx)
+	files, err := output.New(stepsCtx, outputs)
 	if err != nil {
 		return err
 	}

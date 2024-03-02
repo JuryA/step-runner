@@ -13,9 +13,15 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	protobuf "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestRun(t *testing.T) {
+	requireStringEqualValue := func(str string, got *structpb.Value) {
+		want := structpb.NewStringValue(str)
+		require.True(t, protobuf.Equal(want, got))
+	}
 	cases := []struct {
 		name        string
 		yaml        string
@@ -35,7 +41,7 @@ steps:
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
-			require.Equal(t, "steppy", results[0].Outputs["name"])
+			requireStringEqualValue("steppy", results[0].Outputs["name"])
 			require.Equal(t, "steppy", results[0].Exports["NAME"])
 		},
 	}, {
@@ -51,7 +57,7 @@ steps:
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
-			require.Equal(t, "foo", results[0].Outputs["name"])
+			requireStringEqualValue("foo", results[0].Outputs["name"])
 			require.Equal(t, "foo", results[0].Exports["NAME"])
 		},
 	}, {
@@ -71,8 +77,8 @@ steps:
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 2)
-			require.Equal(t, "foo", results[0].Outputs["name"])
-			require.Equal(t, "foo", results[1].Outputs["name"])
+			requireStringEqualValue("foo", results[0].Outputs["name"])
+			requireStringEqualValue("foo", results[1].Outputs["name"])
 		},
 	}, {
 		name: "can access outputs of a composite step",
@@ -90,8 +96,8 @@ steps:
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 2)
-			require.Equal(t, "sponge bob", results[0].Outputs["crew_name_1"])
-			require.Equal(t, "sponge bob", results[1].Outputs["name"])
+			requireStringEqualValue("sponge bob", results[0].Outputs["crew_name_1"])
+			requireStringEqualValue("sponge bob", results[1].Outputs["name"])
 		},
 	}, {
 		name: "cannot access outputs of composite children",
@@ -157,7 +163,7 @@ steps:
 		},
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
-			require.Equal(t, "global", results[0].Outputs["name"])
+			requireStringEqualValue("global", results[0].Outputs["name"])
 			require.Equal(t, "global", results[0].Exports["NAME"])
 		},
 	}}
