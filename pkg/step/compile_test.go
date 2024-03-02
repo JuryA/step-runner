@@ -132,6 +132,7 @@ spec:
             type: string
     outputs:
         eye_color:
+            type: raw_string
             default: brown
 ---
 exec:
