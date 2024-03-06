@@ -8,14 +8,14 @@ spec:
 ---
 steps:
   - name: greet_sponge_bob
-    step: ./test_steps/greeting
+    step: ../greeting
     inputs:
       name: sponge bob
       age: 5
       favorites:
         pants: square
   - name: greet_patrick_star
-    step: ./test_steps/greeting
+    step: ../greeting
     inputs:
       name: patrick star
       age: 7

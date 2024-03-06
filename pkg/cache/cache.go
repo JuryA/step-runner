@@ -15,7 +15,7 @@ import (
 )
 
 type Cache interface {
-	Get(ctx context.Context, step *proto.Step_Reference) (*proto.StepDefinition, error)
+	Get(ctx context.Context, parentDir string, step *proto.Step_Reference) (*proto.StepDefinition, error)
 }
 
 var _ Cache = &cache{}
@@ -36,7 +36,7 @@ func New() (Cache, error) {
 	}, nil
 }
 
-func (c *cache) Get(ctx context.Context, stepRef *proto.Step_Reference) (*proto.StepDefinition, error) {
+func (c *cache) Get(ctx context.Context, parentDir string, stepRef *proto.Step_Reference) (*proto.StepDefinition, error) {
 	load := func(dir string) (*proto.StepDefinition, error) {
 		filename := filepath.Join(dir, "step.yml")
 		stepDef, err := step.LoadSteps(filename)
@@ -47,11 +47,12 @@ func (c *cache) Get(ctx context.Context, stepRef *proto.Step_Reference) (*proto.
 		if err != nil {
 			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
 		}
+		protoStepDef.Dir = dir
 		return protoStepDef, nil
 	}
 	switch {
 	case stepRef.Protocol == proto.StepReferenceProtocol_local:
-		return load(filepath.Join(stepRef.Path...))
+		return load(filepath.Join(parentDir, filepath.Join(stepRef.Path...)))
 	case stepRef.Protocol == proto.StepReferenceProtocol_git:
 		dir, err := c.getCacheDir(ctx, stepRef)
 		if err != nil {
