@@ -76,7 +76,7 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 		err = e.runExec(ctx, result, specDefinition.Definition.Exec, specDefinition.Spec.Spec.Outputs, stepsCtx)
 
 	case proto.DefinitionType_steps:
-		err = e.runSteps(result, ctx, specDefinition.Definition.Steps, stepsCtx)
+		err = e.runSteps(result, ctx, specDefinition.Definition.Steps, specDefinition.Dir, stepsCtx)
 
 	default:
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
@@ -158,9 +158,9 @@ func (e *Execution) runExec(
 	return nil
 }
 
-func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDefinition []*proto.Step, stepsCtx *context.Steps) error {
+func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDefinition []*proto.Step, parentDir string, stepsCtx *context.Steps) error {
 	for _, step := range stepsDefinition {
-		stepResult, err := e.runStep(ctx, step, stepsCtx)
+		stepResult, err := e.runStep(ctx, step, parentDir, stepsCtx)
 		if err != nil {
 			return err
 		}
@@ -177,7 +177,7 @@ func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDef
 	return nil
 }
 
-func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx *context.Steps) (*proto.StepResult, error) {
+func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, parentDir string, stepsCtx *context.Steps) (*proto.StepResult, error) {
 	params := &Params{}
 
 	// Expand inputs
@@ -203,7 +203,7 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, stepsCtx
 		params.Env[k] = res
 	}
 
-	stepDefinition, err := e.defs.Get(ctx, stepReference.Step)
+	stepDefinition, err := e.defs.Get(ctx, parentDir, stepReference.Step)
 	if err != nil {
 		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
 	}
