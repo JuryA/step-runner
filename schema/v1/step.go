@@ -16,6 +16,8 @@ type Definition struct {
 	Exec Exec `json:"exec,omitempty" yaml:"exec,omitempty" jsonschema:"oneof_required=exec"`
 	// Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps.
 	Outputs map[string]any `json:"outputs,omitempty" yaml:"outputs,omitempty"`
+	// Env is a map of environment variable names to values for all steps
+	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 }
 
 type Exec struct {

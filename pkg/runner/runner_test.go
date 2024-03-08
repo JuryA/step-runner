@@ -18,7 +18,7 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	requireStringEqualValue := func(str string, got *structpb.Value) {
+	requireStringEqualValue := func(t *testing.T, str string, got *structpb.Value) {
 		want := structpb.NewStringValue(str)
 		require.True(t, protobuf.Equal(want, got))
 	}
@@ -41,7 +41,7 @@ steps:
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
-			requireStringEqualValue("steppy", results[0].Outputs["name"])
+			requireStringEqualValue(t, "steppy", results[0].Outputs["name"])
 			require.Equal(t, "steppy", results[0].Exports["NAME"])
 		},
 	}, {
@@ -57,7 +57,7 @@ steps:
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
-			requireStringEqualValue("foo", results[0].Outputs["name"])
+			requireStringEqualValue(t, "foo", results[0].Outputs["name"])
 			require.Equal(t, "foo", results[0].Exports["NAME"])
 		},
 	}, {
@@ -77,8 +77,8 @@ steps:
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 2)
-			requireStringEqualValue("foo", results[0].Outputs["name"])
-			requireStringEqualValue("foo", results[1].Outputs["name"])
+			requireStringEqualValue(t, "foo", results[0].Outputs["name"])
+			requireStringEqualValue(t, "foo", results[1].Outputs["name"])
 		},
 	}, {
 		name: "can access outputs of a composite step",
@@ -96,8 +96,8 @@ steps:
 `,
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 2)
-			requireStringEqualValue("sponge bob", results[0].Outputs["crew_name_1"])
-			requireStringEqualValue("sponge bob", results[1].Outputs["name"])
+			requireStringEqualValue(t, "sponge bob", results[0].Outputs["crew_name_1"])
+			requireStringEqualValue(t, "sponge bob", results[1].Outputs["name"])
 		},
 	}, {
 		name: "cannot access outputs of composite children",
@@ -148,7 +148,7 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 			require.Len(t, results, 3)
 		},
 	}, {
-		name: "retain global environment",
+		name: "inherited environment can be referenced",
 		yaml: `
 spec: {}
 ---
@@ -156,15 +156,115 @@ steps:
   - name: greet_steppy
     step: ./test_steps/greeting
     inputs:
-      name: ${{ env.name }}
+      name: ${{ env.NAME }}
 `,
 		globalEnv: map[string]string{
-			"name": "global",
+			"NAME": "from-inherited",
 		},
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
-			requireStringEqualValue("global", results[0].Outputs["name"])
-			require.Equal(t, "global", results[0].Exports["NAME"])
+			requireStringEqualValue(t, "from-inherited", results[0].Outputs["name"])
+		},
+	}, {
+		name: "steps environment can be referenced",
+		yaml: `
+spec: {}
+---
+env:
+  NAME: from-steps
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting
+    inputs:
+      name: ${{ env.NAME }}
+`,
+		wantResults: func(t *testing.T, results []*proto.StepResult) {
+			require.Len(t, results, 1)
+			requireStringEqualValue(t, "from-steps", results[0].Outputs["name"])
+		},
+	}, {
+		name: "individual step invocation environment cannot be referenced during invokation",
+		yaml: `
+spec: {}
+---
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting
+    env:
+      NAME: from-step-invocation
+    inputs:
+      name: ${{ env.NAME }}
+`,
+		wantErr: errors.New("Cannot assign input \"name\" due to error: env.NAME: the \"NAME\" was not found"),
+	}, {
+		name: "individual step invocation environment can be referenced by step",
+		yaml: `
+spec: {}
+---
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting_name_from_env
+    env:
+      NAME: from-step-invocation
+`,
+		wantResults: func(t *testing.T, results []*proto.StepResult) {
+			require.Len(t, results, 1)
+			requireStringEqualValue(t, "from-step-invocation", results[0].Outputs["name"])
+		},
+	}, {
+		name: "steps environment takes precedence over inherited environment",
+		yaml: `
+spec: {}
+---
+env:
+  NAME: from-steps
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting
+    inputs:
+      name: ${{ env.NAME }}
+`,
+		globalEnv: map[string]string{
+			"NAME": "from-inherited",
+		},
+		wantResults: func(t *testing.T, results []*proto.StepResult) {
+			require.Len(t, results, 1)
+			requireStringEqualValue(t, "from-steps", results[0].Outputs["name"])
+		},
+	}, {
+		name: "individual step invocation environment takes precedence over inherited environment",
+		yaml: `
+spec: {}
+---
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting_name_from_env
+    env:
+      NAME: from-step-invocation
+`,
+		globalEnv: map[string]string{
+			"NAME": "from-inherited",
+		},
+		wantResults: func(t *testing.T, results []*proto.StepResult) {
+			require.Len(t, results, 1)
+			requireStringEqualValue(t, "from-step-invocation", results[0].Outputs["name"])
+		},
+	}, {
+		name: "individual step invocation environment takes precedence over steps environment",
+		yaml: `
+spec: {}
+---
+env:
+  NAME: from-steps
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting_name_from_env
+    env:
+      NAME: from-step-invocation
+`,
+		wantResults: func(t *testing.T, results []*proto.StepResult) {
+			require.Len(t, results, 1)
+			requireStringEqualValue(t, "from-step-invocation", results[0].Outputs["name"])
 		},
 	}}
 	for _, c := range cases {

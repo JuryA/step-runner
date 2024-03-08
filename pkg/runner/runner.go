@@ -32,6 +32,7 @@ func New(defs cache.Cache) (*Execution, error) {
 
 func (e *Execution) createContext(specDefinition *proto.StepDefinition, params *Params, globalCtx *context.Global) (*context.Steps, error) {
 	stepsCtx := context.NewSteps(globalCtx)
+	maps.Copy(stepsCtx.Env, specDefinition.Definition.Env)
 	maps.Copy(stepsCtx.Env, params.Env)
 	stepsCtx.Dir = specDefinition.Dir
 

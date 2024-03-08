@@ -293,6 +293,7 @@ func (def *definitionCompiler) compileToProto() (*proto.Definition, error) {
 	default:
 		return nil, fmt.Errorf("could not determine step type")
 	}
+	protoDef.Env = def.Env
 	return protoDef, nil
 }
 
