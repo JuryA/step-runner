@@ -149,6 +149,8 @@ type: exec
 		steps: `
 spec: {}
 ---
+env:
+    NAME: foo
 outputs:
     eye_color: brown
 steps:
@@ -173,6 +175,8 @@ steps:
 		wantCompiled: `
 spec: {}
 ---
+env:
+    NAME: foo
 type: steps
 steps:
     - name: foo_to_the_max

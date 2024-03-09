@@ -1,0 +1,11 @@
+spec:
+  outputs:
+    name:
+---
+steps:
+  - name: name_from_env
+    step: ../greeting
+    inputs:
+      name: ${{ env.NAME }}
+outputs:
+  name: ${{ steps.name_from_env.outputs.name }}
