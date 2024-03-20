@@ -51,7 +51,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	params := &runner.Params{}
 
-	result, err := execution.Run(ctx.Background(), protoStepDef, params, globalCtx)
+	result, err := execution.Run(ctx.Background(), globalCtx, params, protoStepDef)
 	if err != nil {
 		return fmt.Errorf("running execution: %w", err)
 	}

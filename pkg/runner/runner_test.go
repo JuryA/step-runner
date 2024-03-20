@@ -20,7 +20,7 @@ import (
 func TestRun(t *testing.T) {
 	requireStringEqualValue := func(t *testing.T, str string, got *structpb.Value) {
 		want := structpb.NewStringValue(str)
-		require.True(t, protobuf.Equal(want, got))
+		require.True(t, protobuf.Equal(want, got), "want %+v. got %+v", want, got)
 	}
 	cases := []struct {
 		name        string
@@ -148,7 +148,7 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 			require.Len(t, results, 3)
 		},
 	}, {
-		name: "inherited environment can be referenced",
+		name: "global environment can be referenced",
 		yaml: `
 spec: {}
 ---
@@ -159,11 +159,11 @@ steps:
       name: ${{ env.NAME }}
 `,
 		globalEnv: map[string]string{
-			"NAME": "from-inherited",
+			"NAME": "from-global",
 		},
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-inherited", results[0].Outputs["name"])
+			requireStringEqualValue(t, "from-global", results[0].Outputs["name"])
 		},
 	}, {
 		name: "steps environment can be referenced",
@@ -212,7 +212,7 @@ steps:
 			requireStringEqualValue(t, "from-step-invocation", results[0].Outputs["name"])
 		},
 	}, {
-		name: "steps environment takes precedence over inherited environment",
+		name: "steps environment takes precedence over global environment",
 		yaml: `
 spec: {}
 ---
@@ -225,14 +225,14 @@ steps:
       name: ${{ env.NAME }}
 `,
 		globalEnv: map[string]string{
-			"NAME": "from-inherited",
+			"NAME": "from-global",
 		},
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
 			requireStringEqualValue(t, "from-steps", results[0].Outputs["name"])
 		},
 	}, {
-		name: "individual step invocation environment takes precedence over inherited environment",
+		name: "individual step invocation environment takes precedence over global environment",
 		yaml: `
 spec: {}
 ---
@@ -243,7 +243,7 @@ steps:
       NAME: from-step-invocation
 `,
 		globalEnv: map[string]string{
-			"NAME": "from-inherited",
+			"NAME": "from-global",
 		},
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
@@ -265,6 +265,63 @@ steps:
 		wantResults: func(t *testing.T, results []*proto.StepResult) {
 			require.Len(t, results, 1)
 			requireStringEqualValue(t, "from-step-invocation", results[0].Outputs["name"])
+		},
+	}, {
+		name: "steps environment variables are expanded",
+		yaml: `
+spec: {}
+---
+env:
+  NAME: from-${{ env.WHERE_EXACTLY }}
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting_name_from_env
+`,
+		globalEnv: map[string]string{
+			"WHERE_EXACTLY": "global",
+		},
+		wantResults: func(t *testing.T, results []*proto.StepResult) {
+			require.Len(t, results, 1)
+			requireStringEqualValue(t, "from-global", results[0].Outputs["name"])
+		},
+	}, {
+		name: "step invocation environment variables are expanded",
+		yaml: `
+spec: {}
+---
+env:
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting_name_from_env
+    env:
+      NAME: from-${{ env.WHERE_EXACTLY }}
+`,
+		globalEnv: map[string]string{
+			"WHERE_EXACTLY": "global",
+		},
+		wantResults: func(t *testing.T, results []*proto.StepResult) {
+			require.Len(t, results, 1)
+			requireStringEqualValue(t, "from-global", results[0].Outputs["name"])
+		},
+	}, {
+		name: "steps environment variables are expanded before invocation",
+		yaml: `
+spec: {}
+---
+env:
+  WHERE_EXACTLY: ${{ env.WHERE_EXACTLY }}-then-steps
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting_name_from_env
+    env:
+      NAME: from-${{ env.WHERE_EXACTLY }}-then-invocation
+`,
+		globalEnv: map[string]string{
+			"WHERE_EXACTLY": "global",
+		},
+		wantResults: func(t *testing.T, results []*proto.StepResult) {
+			require.Len(t, results, 1)
+			requireStringEqualValue(t, "from-global-then-steps-then-invocation", results[0].Outputs["name"])
 		},
 	}}
 	for _, c := range cases {
@@ -289,7 +346,7 @@ steps:
 
 			params := &Params{}
 
-			result, err := runner.Run(ctx.Background(), protoStepDef, params, globalCtx)
+			result, err := runner.Run(ctx.Background(), globalCtx, params, protoStepDef)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {
