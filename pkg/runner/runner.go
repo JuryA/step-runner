@@ -62,22 +62,17 @@ func (e *Execution) Run(
 ) (*proto.StepResult, error) {
 	stepsCtx := context.NewSteps(globalCtx)
 
-	// Add  param inputs and environment to context
+	// We tell steps where to find their cached definition so they
+	// can find their files. And so that sub-steps with relative
+	// references know where to start.
+	stepsCtx.StepDir = specDefinition.Dir
+
+	// Add param inputs and environment to context
 	err := addInputs(stepsCtx, specDefinition.Spec, params.Inputs)
 	if err != nil {
 		return nil, fmt.Errorf("adding inputs: %w", err)
 	}
 	maps.Copy(stepsCtx.Env, params.Env)
-
-	// Expand and add the definition environment to context
-	err = addDefinitionEnv(stepsCtx, specDefinition.Definition)
-	if err != nil {
-		return nil, fmt.Errorf("adding definition env: %w", err)
-	}
-
-	// Add the step definition's directory to the context so that
-	// sub-steps with relative references know where to start.
-	stepsCtx.Dir = specDefinition.Dir
 
 	result := &proto.StepResult{
 		StepDefinition: specDefinition,
@@ -175,11 +170,18 @@ func (e *Execution) runExec(
 		return fmt.Errorf("exec cancelled: %w", err)
 	}
 
+	// Create output and export files and add to context
 	files, err := output.New(stepsCtx, outputs)
 	if err != nil {
 		return err
 	}
 	defer files.Cleanup()
+
+	// Expand and add the definition environment to context
+	err = addDefinitionEnv(stepsCtx, specDefinition.Definition)
+	if err != nil {
+		return fmt.Errorf("adding definition env: %w", err)
+	}
 
 	// Expand args
 	cmdArgs := []string{}
@@ -192,7 +194,8 @@ func (e *Execution) runExec(
 	}
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 
-	// Expand working directory
+	// Expand working directory if present. Otherwise fall back to
+	// the working directory defined globally.
 	if execDefinition.WorkDir != "" {
 		res, resErr := expression.ExpandString(stepsCtx, execDefinition.WorkDir)
 		if resErr != nil {
@@ -200,7 +203,7 @@ func (e *Execution) runExec(
 		}
 		cmd.Dir = res
 	} else {
-		cmd.Dir = stepsCtx.Dir
+		cmd.Dir = stepsCtx.WorkDir
 	}
 
 	// Provide only environment variables from the steps
@@ -211,7 +214,7 @@ func (e *Execution) runExec(
 	cmd.Stderr = stepsCtx.Global.Stderr
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("exec: %w", err)
+		return fmt.Errorf("exec: %w, ", err)
 	}
 
 	if cmd.ProcessState.ExitCode() != 0 {
@@ -240,6 +243,12 @@ func (e *Execution) runSteps(
 	specDefinition *proto.StepDefinition,
 	result *proto.StepResult,
 ) error {
+	// Expand and add the definition environment to context
+	err := addDefinitionEnv(stepsCtx, specDefinition.Definition)
+	if err != nil {
+		return fmt.Errorf("adding definition env: %w", err)
+	}
+
 	for _, step := range specDefinition.Definition.Steps {
 		stepResult, err := e.runSubStep(ctx, stepsCtx, specDefinition, step)
 		if err != nil {

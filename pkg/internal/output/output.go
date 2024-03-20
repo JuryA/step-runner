@@ -16,9 +16,7 @@ import (
 
 const (
 	outputFilename = "output"
-	outputFileKey  = "STEP_RUNNER_OUTPUT"
 	exportFilename = "export"
-	exportFileKey  = "STEP_RUNNER_ENV"
 )
 
 type Files struct {
@@ -45,8 +43,8 @@ func New(stepCtx *context.Steps, specOutputs map[string]*proto.Spec_Content_Outp
 	if err != nil {
 		return nil, fmt.Errorf("creating export file: %w", err)
 	}
-	stepCtx.Env[outputFileKey] = outputFile
-	stepCtx.Env[exportFileKey] = exportFile
+	stepCtx.OutputFile = outputFile
+	stepCtx.ExportFile = exportFile
 	return &Files{
 		stepCtx:     stepCtx,
 		specOutputs: specOutputs,

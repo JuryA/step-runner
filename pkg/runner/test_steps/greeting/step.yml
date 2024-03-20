@@ -16,7 +16,11 @@ spec:
   outputs:
     name:
 ---
+env:
+  STEP_RUNNER_OUTPUT: ${{ output_file }}
+  STEP_RUNNER_ENV: ${{ export_file }}
 exec:
+  work_dir: ${{ step_dir }}
   command:
     - go
     - run

@@ -330,6 +330,7 @@ steps:
 			require.NoError(t, err)
 			protoStepDef, err := step.CompileSteps(stepDef)
 			require.NoError(t, err)
+			protoStepDef.Dir, _ = os.Getwd()
 
 			defs, err := cache.New()
 			require.NoError(t, err)
