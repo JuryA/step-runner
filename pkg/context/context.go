@@ -12,10 +12,11 @@ import (
 )
 
 type Global struct {
-	Job    map[string]string `json:"job"`
-	Env    map[string]string `json:"-"`
-	Stdout io.Writer         `json:"-"`
-	Stderr io.Writer         `json:"-"`
+	WorkDir string            `json:"work_dir"`
+	Job     map[string]string `json:"job"`
+	Env     map[string]string `json:"-"`
+	Stdout  io.Writer         `json:"-"`
+	Stderr  io.Writer         `json:"-"`
 }
 
 func NewGlobal() *Global {
@@ -39,10 +40,12 @@ func (g *Global) InheritEnv(envs ...string) {
 type Steps struct {
 	*Global
 
-	Dir    string                       `json:"-"`
-	Env    map[string]string            `json:"env"`
-	Inputs map[string]*structpb.Value   `json:"inputs"`
-	Steps  map[string]*proto.StepResult `json:"steps"`
+	StepDir    string                       `json:"step_dir"`
+	OutputFile string                       `json:"output_file"`
+	ExportFile string                       `json:"export_file"`
+	Env        map[string]string            `json:"env"`
+	Inputs     map[string]*structpb.Value   `json:"inputs"`
+	Steps      map[string]*proto.StepResult `json:"steps"`
 }
 
 func NewSteps(global *Global) *Steps {

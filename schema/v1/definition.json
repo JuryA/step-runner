@@ -91,6 +91,13 @@
         "outputs": {
             "type": "object",
             "description": "Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps."
+        },
+        "env": {
+            "additionalProperties": {
+                "type": "string"
+            },
+            "type": "object",
+            "description": "Env is a map of environment variable names to values for all steps"
         }
     },
     "additionalProperties": false,

@@ -51,6 +51,17 @@ func run(cmd *cobra.Command, args []string) error {
 
 	params := &runner.Params{}
 
+	// Step runner should have no concept of "CI_BUILDS_DIR".
+	// However entire `ci` command is a workaround hack because
+	// steps are not yet plumbed through runner. Once we receive
+	// steps from runner over gRPC we will receive "work_dir"
+	// explicitly (set to CI_BUILDS_DIR by runner). Then we can
+	// delete this whole command.
+	workDir := os.Getenv("CI_BUILDS_DIR")
+	if workDir == "" {
+		workDir, _ = os.Getwd()
+	}
+	globalCtx.WorkDir = workDir
 	result, err := execution.Run(ctx.Background(), globalCtx, params, protoStepDef)
 	if err != nil {
 		return fmt.Errorf("running execution: %w", err)
