@@ -15,55 +15,69 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
+// Execution is the execution of a single step.
 type Execution struct {
 	defs cache.Cache
 }
 
+// Params are the input and environment parameters for an execution.
 type Params struct {
 	Inputs map[string]*structpb.Value
 	Env    map[string]string
 }
 
+// New creates a new execution using a shared cache.
 func New(defs cache.Cache) (*Execution, error) {
 	return &Execution{
 		defs: defs,
 	}, nil
 }
 
-func (e *Execution) createContext(specDefinition *proto.StepDefinition, params *Params, globalCtx *context.Global) (*context.Steps, error) {
+// Run begins execution of a single step, recursively executing
+// sub-steps until completion. The step results returned will be a
+// tree structure in the shape of the step execution and its
+// sub-steps.
+//
+// The step inherits the environment variables of the global
+// context. Environment variables provided in the params will shadow
+// those from the global context. And environment variables in the
+// step's definition will shadow those provided in the params and the
+// globals. However when Run returns only those environment variables
+// exported by steps to the global context will remain.
+//
+// Step inputs are given in params. They are combined with the step
+// spec which provides defaults and constraints on the valid set and
+// type of inputs. Inputs then become available in the step context
+// for other values to reference through expressions.
+//
+// Inputs and environment variables in the params are assumed to be
+// already expanded (no expressions will be evaluated). Values in step
+// definitions (environment variables, input values, commands, etc...)
+// will be expanded before sub-steps are executed.
+func (e *Execution) Run(
+	ctx ctx.Context,
+	globalCtx *context.Global,
+	params *Params,
+	specDefinition *proto.StepDefinition,
+) (*proto.StepResult, error) {
 	stepsCtx := context.NewSteps(globalCtx)
-	maps.Copy(stepsCtx.Env, specDefinition.Definition.Env)
-	maps.Copy(stepsCtx.Env, params.Env)
-	stepsCtx.Dir = specDefinition.Dir
 
-	// Match inputs with definition
-	for key, value := range specDefinition.Spec.Spec.Inputs {
-		callValue := params.Inputs[key]
-		if callValue != nil {
-			stepsCtx.Inputs[key] = callValue
-		} else if value.Default != nil {
-			stepsCtx.Inputs[key] = value.Default
-		} else {
-			return nil, fmt.Errorf("input %q required, but not defined", key)
-		}
-	}
-
-	// Reject invalid inputs
-	for key := range params.Inputs {
-		defValue := specDefinition.Spec.Spec.Inputs[key]
-		if defValue == nil {
-			return nil, fmt.Errorf("input %q not found", key)
-		}
-	}
-
-	return stepsCtx, nil
-}
-
-func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, params *Params, globalCtx *context.Global) (*proto.StepResult, error) {
-	stepsCtx, err := e.createContext(specDefinition, params, globalCtx)
+	// Add  param inputs and environment to context
+	err := addInputs(stepsCtx, specDefinition.Spec, params.Inputs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("adding inputs: %w", err)
 	}
+	maps.Copy(stepsCtx.Env, params.Env)
+
+	// Expand and add the definition environment to context
+	err = addDefinitionEnv(stepsCtx, specDefinition.Definition)
+	if err != nil {
+		return nil, fmt.Errorf("adding definition env: %w", err)
+	}
+
+	// Add the step definition's directory to the context so that
+	// sub-steps with relative references know where to start.
+	stepsCtx.Dir = specDefinition.Dir
 
 	result := &proto.StepResult{
 		StepDefinition: specDefinition,
@@ -74,10 +88,10 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 
 	switch specDefinition.Definition.Type {
 	case proto.DefinitionType_exec:
-		err = e.runExec(ctx, result, specDefinition.Definition.Exec, specDefinition.Spec.Spec.Outputs, stepsCtx)
+		err = e.runExec(ctx, stepsCtx, specDefinition, result)
 
 	case proto.DefinitionType_steps:
-		err = e.runSteps(result, ctx, specDefinition.Definition.Steps, specDefinition.Dir, stepsCtx)
+		err = e.runSteps(ctx, stepsCtx, specDefinition, result)
 
 	default:
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
@@ -85,6 +99,10 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 
 	result.StepDefinition = specDefinition
 
+	// Expand step definition outputs which may reference outputs
+	// of sub-steps. Outputs of sub-steps will not be available
+	// for reference after returning, which would break
+	// encapsulation of the step function.
 	for k, v := range specDefinition.Definition.Outputs {
 		res, resErr := expression.Expand(stepsCtx, v)
 		if resErr == nil {
@@ -96,13 +114,63 @@ func (e *Execution) Run(ctx ctx.Context, specDefinition *proto.StepDefinition, p
 	return result, err
 }
 
+// addInputs combines the provided input parameters with the step
+// spec. Missing inputs are given defaults. Missing inputs without a
+// default produce an error. Extra inputs not declared also produce an
+// error.
+func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*structpb.Value) error {
+
+	// Match inputs with definition
+	for key, value := range spec.Spec.Inputs {
+		callValue := inputs[key]
+		if callValue != nil {
+			stepsCtx.Inputs[key] = callValue
+		} else if value.Default != nil {
+			stepsCtx.Inputs[key] = value.Default
+		} else {
+			return fmt.Errorf("input %q required, but not defined", key)
+		}
+	}
+
+	// Reject invalid inputs
+	for key := range inputs {
+		defValue := spec.Spec.Inputs[key]
+		if defValue == nil {
+			return fmt.Errorf("input %q not found", key)
+		}
+	}
+
+	return nil
+}
+
+// addDefinitionEnv expands the step definition environment variables
+// with the step context. After expansion, definition environment
+// variables are added to the step context.
+func addDefinitionEnv(stepsCtx *context.Steps, definition *proto.Definition) error {
+	defEnv := map[string]string{}
+	for k, v := range definition.Env {
+		res, resErr := expression.ExpandString(stepsCtx, v)
+		if resErr != nil {
+			return fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
+		}
+		defEnv[k] = res
+	}
+	maps.Copy(stepsCtx.Env, defEnv)
+	return nil
+}
+
+// runExec executes an exec type step. The exec command and working
+// directory are expanded with the step context and the result is
+// written to the provided step result.
 func (e *Execution) runExec(
 	ctx ctx.Context,
-	result *proto.StepResult,
-	execDefinition *proto.Definition_Exec,
-	outputs map[string]*proto.Spec_Content_Output,
 	stepsCtx *context.Steps,
+	specDefinition *proto.StepDefinition,
+	result *proto.StepResult,
 ) error {
+	execDefinition := specDefinition.Definition.Exec
+	outputs := specDefinition.Spec.Spec.Outputs
+
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("exec cancelled: %w", err)
 	}
@@ -113,6 +181,7 @@ func (e *Execution) runExec(
 	}
 	defer files.Cleanup()
 
+	// Expand args
 	cmdArgs := []string{}
 	for _, arg := range execDefinition.Command {
 		res, resErr := expression.ExpandString(stepsCtx, arg)
@@ -121,8 +190,9 @@ func (e *Execution) runExec(
 		}
 		cmdArgs = append(cmdArgs, res)
 	}
-
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+
+	// Expand working directory
 	if execDefinition.WorkDir != "" {
 		res, resErr := expression.ExpandString(stepsCtx, execDefinition.WorkDir)
 		if resErr != nil {
@@ -132,7 +202,9 @@ func (e *Execution) runExec(
 	} else {
 		cmd.Dir = stepsCtx.Dir
 	}
-	// Only explicitly provided environment variables
+
+	// Provide only environment variables from the steps
+	// context. Not from the step runner's environment.
 	cmd.Env = stepsCtx.GetEnvList()
 	// TODO: Use multi-writer
 	cmd.Stdout = stepsCtx.Global.Stdout
@@ -159,9 +231,17 @@ func (e *Execution) runExec(
 	return nil
 }
 
-func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDefinition []*proto.Step, parentDir string, stepsCtx *context.Steps) error {
-	for _, step := range stepsDefinition {
-		stepResult, err := e.runStep(ctx, step, parentDir, stepsCtx)
+// runSteps executes an steps type step. Each sub-step's environment
+// and inputs are expanded with the step context and the result is
+// written to the provided step result.
+func (e *Execution) runSteps(
+	ctx ctx.Context,
+	stepsCtx *context.Steps,
+	specDefinition *proto.StepDefinition,
+	result *proto.StepResult,
+) error {
+	for _, step := range specDefinition.Definition.Steps {
+		stepResult, err := e.runSubStep(ctx, stepsCtx, specDefinition, step)
 		if err != nil {
 			return err
 		}
@@ -178,7 +258,15 @@ func (e *Execution) runSteps(result *proto.StepResult, ctx ctx.Context, stepsDef
 	return nil
 }
 
-func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, parentDir string, stepsCtx *context.Steps) (*proto.StepResult, error) {
+// runSubStep executes a single sub-step. The step reference inputs
+// and environment are expanded. And the current environment is cloned
+// into params in preparation for a recursive call to Run.
+func (e *Execution) runSubStep(
+	ctx ctx.Context,
+	stepsCtx *context.Steps,
+	specDefinition *proto.StepDefinition,
+	stepReference *proto.Step,
+) (*proto.StepResult, error) {
 	params := &Params{}
 
 	// Expand inputs
@@ -191,11 +279,8 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, parentDi
 		params.Inputs[k] = res
 	}
 
-	// Clone and expand env
-	params.Env = make(map[string]string)
-	for k, v := range stepsCtx.Env {
-		params.Env[k] = v
-	}
+	// Clone environment and add step reference environment
+	params.Env = maps.Clone(stepsCtx.Env)
 	for k, v := range stepReference.Env {
 		res, resErr := expression.ExpandString(stepsCtx, v)
 		if resErr != nil {
@@ -204,12 +289,12 @@ func (e *Execution) runStep(ctx ctx.Context, stepReference *proto.Step, parentDi
 		params.Env[k] = res
 	}
 
-	stepDefinition, err := e.defs.Get(ctx, parentDir, stepReference.Step)
+	stepDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
 	if err != nil {
 		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
 	}
 
-	result, err := e.Run(ctx, stepDefinition, params, stepsCtx.Global)
+	result, err := e.Run(ctx, stepsCtx.Global, params, stepDefinition)
 	if err != nil {
 		return nil, err
 	}
