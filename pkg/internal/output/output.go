@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
@@ -59,6 +60,13 @@ func (f *Files) OutputTo(result *proto.StepResult) error {
 	if err != nil {
 		return fmt.Errorf("reading outputs: %w", err)
 	}
+
+	// Delegates take over step execution including reading and
+	// validating outputs.
+	if f.isDelegate() {
+		return f.mergeDelegateOutput(result, outputs)
+	}
+
 	protoOutputs := map[string]*structpb.Value{}
 	for k, v := range outputs {
 		outputSpec, ok := f.specOutputs[k]
@@ -95,6 +103,76 @@ func (f *Files) OutputTo(result *proto.StepResult) error {
 		return fmt.Errorf("output %q was declared by spec but not received from step", k)
 	}
 	result.Outputs = protoOutputs
+	return nil
+}
+
+// isDelegate detects a step which returns a single output of type
+// step_result. This is the signature of a delegate step which has
+// taken over step execution. A delegate step's results should be
+// incorporated directly into the step result tree.
+func (f *Files) isDelegate() bool {
+	if len(f.specOutputs) > 1 {
+		return false
+	}
+	for _, v := range f.specOutputs {
+		if v.Type == proto.ValueType_step_result {
+			return true
+		}
+	}
+	return false
+}
+
+// mergeDelegateOutput reifies the delegate output as a step result
+// and merges with the given step result.
+func (f *Files) mergeDelegateOutput(result *proto.StepResult, delegateOutputs map[string]string) error {
+
+	// Find and unmarshal the delegate result
+	delegateResult := &proto.StepResult{}
+	delegateResultFound := false
+	for k, v := range delegateOutputs {
+		outputSpec, ok := f.specOutputs[k]
+		if !ok {
+			return fmt.Errorf("output %q received from step is not declared in spec", k)
+		}
+		if delegateResultFound {
+			return fmt.Errorf("output %q emitted more than once. unsupported for type step_result", k)
+		}
+		if outputSpec.Type != proto.ValueType_step_result {
+			// Checked already in isDelegate but this makes it clear
+			return fmt.Errorf("output %q must be type step_result", k)
+		}
+		err := protojson.Unmarshal([]byte(v), delegateResult)
+		if err != nil {
+			return fmt.Errorf("unmarshaling output %q as step result: %w", k, err)
+		}
+		delegateResultFound = true
+	}
+	// isDelegate already verified there is only one which is of
+	// type step_result
+	for k, o := range f.specOutputs {
+		if !delegateResultFound && o.Type == proto.ValueType_step_result {
+			return fmt.Errorf("output %q (type step_result) was declared by spec but not received from step", k)
+		}
+	}
+
+	// Merge outputs only. Environment variables should be written
+	// to the environment file and will be exported by ExportTo in
+	// the usual way.
+	if result.Outputs == nil {
+		result.Outputs = map[string]*structpb.Value{}
+	}
+	for k, v := range delegateResult.Outputs {
+		// Outputs are take as-is. They will not match the
+		// outputs declared by the calling step. The delegate
+		// step has already verified the outputs when
+		// producing the step result.
+		result.Outputs[k] = v
+	}
+
+	// Merge the delegate step result as a child to give an
+	// accurate representation of the execution trace.
+	result.ChildrenStepResults = append(result.ChildrenStepResults, delegateResult)
+
 	return nil
 }
 

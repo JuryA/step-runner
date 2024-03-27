@@ -74,10 +74,11 @@ type Output struct {
 type ValueType string
 
 const (
-	ValueTypeRawString ValueType = "raw_string"
-	ValueTypeString    ValueType = "string"
-	ValueTypeNumber    ValueType = "number"
-	ValueTypeBool      ValueType = "bool"
-	ValueTypeStruct    ValueType = "struct"
-	ValueTypeList      ValueType = "list"
+	ValueTypeRawString  ValueType = "raw_string"
+	ValueTypeString     ValueType = "string"
+	ValueTypeNumber     ValueType = "number"
+	ValueTypeBool       ValueType = "bool"
+	ValueTypeStruct     ValueType = "struct"
+	ValueTypeList       ValueType = "list"
+	ValueTypeStepResult ValueType = "step_result"
 )

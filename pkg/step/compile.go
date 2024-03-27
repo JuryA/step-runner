@@ -180,6 +180,8 @@ func (output *outputCompiler) compileToProto() (*proto.Spec_Content_Output, erro
 		protoOutput.Type = proto.ValueType_string
 	case schema.ValueTypeStruct:
 		protoOutput.Type = proto.ValueType_struct
+	case schema.ValueTypeStepResult:
+		protoOutput.Type = proto.ValueType_step_result
 	default:
 		return nil, fmt.Errorf("unsupported output type: %v", output.Type)
 	}
