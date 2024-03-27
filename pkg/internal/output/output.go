@@ -44,6 +44,7 @@ func New(stepCtx *context.Steps, specOutputs map[string]*proto.Spec_Content_Outp
 	if err != nil {
 		return nil, fmt.Errorf("creating export file: %w", err)
 	}
+	fmt.Printf("DO NOT SUBMIT created output file %q\n", outputFile)
 	stepCtx.OutputFile = outputFile
 	stepCtx.ExportFile = exportFile
 	return &Files{
