@@ -14,6 +14,12 @@
                     "script"
                 ],
                 "title": "script"
+            },
+            {
+                "required": [
+                    "action"
+                ],
+                "title": "action"
             }
         ],
         "properties": {
@@ -39,6 +45,10 @@
             "script": {
                 "type": "string",
                 "description": "Script is a shell script to evaluate."
+            },
+            "action": {
+                "type": "string",
+                "description": "Action is a GitHub action to run."
             }
         },
         "additionalProperties": false,

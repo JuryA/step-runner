@@ -40,6 +40,8 @@ type Step struct {
 
 	// Script is a shell script to evaluate.
 	Script string `json:"script,omitempty" yaml:"script,omitempty" jsonschema:"oneof_required=script"`
+	// Action is a GitHub action to run.
+	Action string `json:"action,omitempty" yaml:"action,omitempty" jsonschema:"oneof_required=action"`
 }
 
 // Spec is a document describing the interface of the step.

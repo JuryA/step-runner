@@ -30,7 +30,7 @@ type: steps
 steps:
     - step:
           protocol: git
-          url: "https://gitlab.com/components/script" # until we create the canonical step repository
+          url: "https://gitlab.com/components/script"
           version: v1
           filename: step.yml
       inputs:
@@ -78,7 +78,7 @@ steps:
     - name: "my special script name"
       step:
           protocol: git
-          url: "https://gitlab.com/components/script" # until we create the canonical step repository
+          url: "https://gitlab.com/components/script"
           version: v1
           filename: step.yml
       inputs:
@@ -205,6 +205,33 @@ steps:
           greeting: ${{steps.foo to the max.outputs.greeting}}
 outputs:
     eye_color: brown
+`,
+	}, {
+		name: "compile action keyword to step",
+		steps: `
+spec: {}
+---
+steps:
+    - name: find_something
+      action: mikefarah/yq@master
+      inputs:
+          cmd: yq .name some.yaml
+`,
+		wantCompiled: `
+spec: {}
+---
+type: steps
+steps:
+    - name: find_something
+      step:
+          protocol: git
+          url: "https://gitlab.com/components/action-runner"
+          version: v0
+          filename: step.yml
+      inputs:
+          action: mikefarah/yq@master
+          inputs:
+              cmd: yq .name some.yaml
 `,
 	}}
 	for _, c := range cases {
