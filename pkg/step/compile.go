@@ -306,6 +306,10 @@ func (step *stepCompiler) compile() (*proto.Step, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = step.compileActionKeywordToStep()
+	if err != nil {
+		return nil, err
+	}
 	return step.compileToProto()
 }
 
@@ -313,8 +317,12 @@ func (step *stepCompiler) compileScriptKeywordToStep() error {
 	if step.Script == "" {
 		return nil
 	}
+	// TODO replace these checks with JSON schema validation
 	if step.Step != "" {
 		return fmt.Errorf("the `script` keyword cannot be used with the `step` keyword")
+	}
+	if step.Action != "" {
+		return fmt.Errorf("the `script` keyword cannot be used with the `action` keyword")
 	}
 	if len(step.Inputs) != 0 {
 		return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
@@ -324,6 +332,26 @@ func (step *stepCompiler) compileScriptKeywordToStep() error {
 		"script": step.Script,
 	}
 	step.Script = ""
+	return nil
+}
+
+func (step *stepCompiler) compileActionKeywordToStep() error {
+	if step.Action == "" {
+		return nil
+	}
+	// TODO replace these checks with JSON schema validation
+	if step.Step != "" {
+		return fmt.Errorf("the `action` keyword cannot be used with the `step` keyword")
+	}
+	if step.Script != "" {
+		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
+	}
+	step.Step = actionStep
+	step.Inputs = map[string]any{
+		"action": step.Action,
+		"inputs": step.Inputs,
+	}
+	step.Action = ""
 	return nil
 }
 
