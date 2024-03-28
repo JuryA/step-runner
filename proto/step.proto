@@ -101,6 +101,7 @@ enum ValueType {
     bool = 4;
     struct = 5;
     list = 6;
+    step_result = 7;
 }
 
 message StepResult {
