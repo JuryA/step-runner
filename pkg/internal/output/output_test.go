@@ -204,6 +204,42 @@ food=apple
 		},
 		writeToOutput: `value=12.34`,
 		wantErr:       true,
+	}, {
+		name: "delegate output string",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_step_result},
+		},
+		writeToOutput: `value={"outputs":{"name":"steppy"}}`,
+		want: &proto.StepResult{
+			Outputs: map[string]*structpb.Value{
+				"name": structpb.NewStringValue("steppy"),
+			},
+			ChildrenStepResults: []*proto.StepResult{{
+				Outputs: map[string]*structpb.Value{
+					"name": structpb.NewStringValue("steppy"),
+				},
+			}},
+		},
+	}, {
+		name: "delegate output struct",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_step_result},
+		},
+		writeToOutput: `value={"outputs":{"favorites":{"food":"hamburger"}}}`,
+		want: &proto.StepResult{
+			Outputs: map[string]*structpb.Value{
+				"favorites": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
+					"food": structpb.NewStringValue("hamburger"),
+				}}),
+			},
+			ChildrenStepResults: []*proto.StepResult{{
+				Outputs: map[string]*structpb.Value{
+					"favorites": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
+						"food": structpb.NewStringValue("hamburger"),
+					}}),
+				},
+			}},
+		},
 	}}
 
 	for _, tc := range cases {
