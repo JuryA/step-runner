@@ -7,7 +7,7 @@ spec:
       type: number
       default: 1
     hungry:
-      type: bool
+      type: boolean
       default: false
     favorites:
       type: struct

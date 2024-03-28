@@ -98,9 +98,9 @@ enum ValueType {
     raw_string = 1;
     string = 2;
     number = 3;
-    bool = 4;
+    boolean = 4;
     struct = 5;
-    list = 6;
+    array = 6;
     step_result = 7;
 }
 

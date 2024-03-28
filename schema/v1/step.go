@@ -79,8 +79,8 @@ const (
 	ValueTypeRawString  ValueType = "raw_string"
 	ValueTypeString     ValueType = "string"
 	ValueTypeNumber     ValueType = "number"
-	ValueTypeBool       ValueType = "bool"
+	ValueTypeBool       ValueType = "boolean"
 	ValueTypeStruct     ValueType = "struct"
-	ValueTypeList       ValueType = "list"
+	ValueTypeList       ValueType = "array"
 	ValueTypeStepResult ValueType = "step_result"
 )

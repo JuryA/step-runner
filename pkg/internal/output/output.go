@@ -169,11 +169,11 @@ func (f *Files) mergeDelegateOutput(result *proto.StepResult, delegateOutputs ma
 
 func checkOutputType(want proto.ValueType, have *structpb.Value) error {
 	switch want {
-	case proto.ValueType_bool:
+	case proto.ValueType_boolean:
 		if _, ok := have.Kind.(*structpb.Value_BoolValue); ok {
 			return nil
 		}
-	case proto.ValueType_list:
+	case proto.ValueType_array:
 		if _, ok := have.Kind.(*structpb.Value_ListValue); ok {
 			return nil
 		}

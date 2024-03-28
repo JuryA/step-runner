@@ -91,7 +91,7 @@ food=apple
 	}, {
 		name: "json bool output",
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_bool},
+			"value": {Type: proto.ValueType_boolean},
 		},
 		writeToOutput: `value=true`,
 		want: &proto.StepResult{
@@ -129,7 +129,7 @@ food=apple
 	}, {
 		name: "json empty list output",
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_list},
+			"value": {Type: proto.ValueType_array},
 		},
 		writeToOutput: `value=[]`,
 		want: &proto.StepResult{
@@ -140,7 +140,7 @@ food=apple
 	}, {
 		name: "json full list output",
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_list},
+			"value": {Type: proto.ValueType_array},
 		},
 		writeToOutput: `value=["bar",12.34,true,null]`,
 		want: &proto.StepResult{
