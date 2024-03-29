@@ -98,7 +98,7 @@ spec:
             type: struct
         hungry:
             default: false
-            type: bool
+            type: boolean
         name:
             default: steppy
             type: string
@@ -126,7 +126,7 @@ spec:
             type: struct
         hungry:
             default: false
-            type: bool
+            type: boolean
         name:
             default: steppy
             type: string

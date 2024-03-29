@@ -86,9 +86,9 @@ func (input *inputCompiler) compileToProto() (*proto.Spec_Content_Input, error) 
 	protoInput := &proto.Spec_Content_Input{}
 	switch input.Type {
 	case schema.ValueTypeBool:
-		protoInput.Type = proto.ValueType_bool
+		protoInput.Type = proto.ValueType_boolean
 	case schema.ValueTypeList:
-		protoInput.Type = proto.ValueType_list
+		protoInput.Type = proto.ValueType_array
 	case schema.ValueTypeNumber:
 		protoInput.Type = proto.ValueType_number
 	case schema.ValueTypeString:
@@ -169,9 +169,9 @@ func (output *outputCompiler) compileToProto() (*proto.Spec_Content_Output, erro
 	protoOutput := &proto.Spec_Content_Output{}
 	switch output.Type {
 	case schema.ValueTypeBool:
-		protoOutput.Type = proto.ValueType_bool
+		protoOutput.Type = proto.ValueType_boolean
 	case schema.ValueTypeList:
-		protoOutput.Type = proto.ValueType_list
+		protoOutput.Type = proto.ValueType_array
 	case schema.ValueTypeNumber:
 		protoOutput.Type = proto.ValueType_number
 	case schema.ValueTypeRawString:
