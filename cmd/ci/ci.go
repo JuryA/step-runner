@@ -2,7 +2,6 @@ package ci
 
 import (
 	ctx "context"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -11,6 +10,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var Cmd = &cobra.Command{
@@ -67,7 +67,7 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("running execution: %w", err)
 	}
 
-	bytes, err := json.MarshalIndent(result, "", "  ")
+	bytes, err := protojson.Marshal(result)
 	if err != nil {
 		return fmt.Errorf("error marshaling step results: %w", err)
 	}
@@ -76,6 +76,6 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("writing step results to %v: %w", outputFile, err)
 	}
-	fmt.Printf("trace written to %v", outputFile)
+	fmt.Printf("trace written to %v\n", outputFile)
 	return nil
 }
