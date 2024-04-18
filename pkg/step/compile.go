@@ -318,7 +318,7 @@ func (step *stepCompiler) compileScriptKeywordToStep() error {
 		return nil
 	}
 	// TODO replace these checks with JSON schema validation
-	if step.Step != "" {
+	if !step.Step.IsEmpty() {
 		return fmt.Errorf("the `script` keyword cannot be used with the `step` keyword")
 	}
 	if step.Action != "" {
@@ -327,7 +327,9 @@ func (step *stepCompiler) compileScriptKeywordToStep() error {
 	if len(step.Inputs) != 0 {
 		return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 	}
-	step.Step = scriptStep
+	step.Step = schema.Reference{
+		Short: scriptStep,
+	}
 	step.Inputs = map[string]any{
 		"script": step.Script,
 	}
@@ -340,13 +342,15 @@ func (step *stepCompiler) compileActionKeywordToStep() error {
 		return nil
 	}
 	// TODO replace these checks with JSON schema validation
-	if step.Step != "" {
+	if !step.Step.IsEmpty() {
 		return fmt.Errorf("the `action` keyword cannot be used with the `step` keyword")
 	}
 	if step.Script != "" {
 		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
 	}
-	step.Step = actionStep
+	step.Step = schema.Reference{
+		Short: actionStep,
+	}
 	step.Inputs = map[string]any{
 		"action": step.Action,
 		"inputs": step.Inputs,
@@ -376,71 +380,77 @@ func (step *stepCompiler) compileToProto() (*proto.Step, error) {
 	return protoStep, nil
 }
 
-type referenceCompiler string
+type referenceCompiler schema.Reference
 
 func (reference *referenceCompiler) compile() (*proto.Step_Reference, error) {
-	ref := string(*reference)
-	// Local file
-	if strings.HasPrefix(ref, ".") {
-		path, filename := pathFilename(ref)
+	if strings.HasPrefix(reference.Short, ".") {
+		return reference.compileLocal()
+	}
+	err := reference.expandShortReference()
+	if err != nil {
+		return nil, fmt.Errorf("expanding short reference %q: %w", reference.Short, err)
+	}
+	return reference.compileToProto()
+}
+
+func (reference *referenceCompiler) compileLocal() (*proto.Step_Reference, error) {
+	dir, filename := pathFilename(reference.Short)
+	return &proto.Step_Reference{
+		Protocol: proto.StepReferenceProtocol_local,
+		Path:     dir,
+		Filename: filename,
+	}, nil
+}
+
+func (reference *referenceCompiler) expandShortReference() error {
+	if reference.Short == "" {
+		return nil
+	}
+	url, rev, ok := strings.Cut(reference.Short, "@")
+	if !ok {
+		return fmt.Errorf("expecting url@rev. got %q", reference.Short)
+	}
+	reference.Git.Url = url
+	reference.Git.Rev = rev
+	reference.Git.Dir = ""
+	reference.Short = ""
+	return nil
+}
+
+func (reference *referenceCompiler) compileToProto() (*proto.Step_Reference, error) {
+	switch {
+	case !reference.Git.IsEmpty():
+		url, err := defaultHTTPS(reference.Git.Url)
+		if err != nil {
+			return nil, fmt.Errorf("parsing url as url: %w", err)
+		}
+		path, filename := pathFilename(reference.Git.Dir)
 		return &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_local,
-			// Step references always use '/' as a path
-			// separator, regardless of operating system.
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      url,
 			Path:     path,
 			Filename: filename,
+			Version:  reference.Git.Rev,
 		}, nil
+	default:
+		return nil, fmt.Errorf("unhandled step reference type: %+v", reference)
 	}
-	// A non-local step reference is a valid URL
-	parsedURL, err := url.Parse(ref)
+}
+
+func defaultHTTPS(stepUrl string) (string, error) {
+	parsedURL, err := url.Parse(stepUrl)
 	if err != nil {
-		return nil, fmt.Errorf("invalid step reference %q: %w", ref, err)
+		return "", fmt.Errorf("invalid step reference url %q: %w", stepUrl, err)
 	}
-	// Parse fragment
-	if parsedURL.Fragment == "" {
-		return nil, fmt.Errorf("invalid step reference %q. must have fragment specifying protocol and version", ref)
-	}
-	var nestedPathStr, protocolVersion string
-	before, after, haveNestedPath := strings.Cut(parsedURL.Fragment, ",")
-	if haveNestedPath {
-		nestedPathStr = before
-		protocolVersion = after
-	} else {
-		protocolVersion = before
-	}
-	protocol, version, ok := strings.Cut(protocolVersion, "@")
-	if !ok {
-		return nil, fmt.Errorf("invalid protocol and version %q", protocolVersion)
-	}
-	nestedPath, filename := pathFilename(nestedPathStr)
-	// Reassemble the URL sans fragment
-	parsedURL.Fragment = ""
 	switch parsedURL.Scheme {
 	case "http", "https":
 		// Valid
 	case "":
-		// Default
 		parsedURL.Scheme = "https"
 	default:
-		return nil, fmt.Errorf("unsupported scheme %q in reference %q", parsedURL.Scheme, ref)
+		return "", fmt.Errorf("unsupported scheme %q in reference %q", parsedURL.Scheme, stepUrl)
 	}
-	url := parsedURL.String()
-
-	protoRef := &proto.Step_Reference{
-		Url:      url,
-		Path:     nestedPath,
-		Filename: filename,
-		Version:  version,
-	}
-	switch protocol {
-	case "git":
-		protoRef.Protocol = proto.StepReferenceProtocol_git
-	case "oci":
-		protoRef.Protocol = proto.StepReferenceProtocol_oci
-	default:
-		return nil, fmt.Errorf("unsupported protocol %q", protocol)
-	}
-	return protoRef, nil
+	return parsedURL.String(), nil
 }
 
 func pathFilename(pathStr string) (path []string, filename string) {

@@ -28,7 +28,42 @@
                 "description": "Name is a unique identifier for this step."
             },
             "step": {
-                "type": "string",
+                "oneOf": [
+                    {
+                        "type": "string"
+                    },
+                    {
+                        "properties": {
+                            "git": {
+                                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                                "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v1/git-reference",
+                                "properties": {
+                                    "url": {
+                                        "type": "string",
+                                        "description": "Url is the location of the Git repo containing the step\ndefinition."
+                                    },
+                                    "dir": {
+                                        "type": "string",
+                                        "description": "Dir is the relative path to the step definition within the\nGit repo."
+                                    },
+                                    "rev": {
+                                        "type": "string",
+                                        "description": "Rev is the step version to use."
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                    "url",
+                                    "dir",
+                                    "rev"
+                                ],
+                                "description": "GitReference is a reference to a step in a Git repository containing the full set of configuration options."
+                            }
+                        },
+                        "type": "object"
+                    }
+                ],
                 "description": "Step is a reference to the step to invoke."
             },
             "env": {

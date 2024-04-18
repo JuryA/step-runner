@@ -32,7 +32,7 @@ type Step struct {
 	// Name is a unique identifier for this step.
 	Name string `json:"name" yaml:"name"`
 	// Step is a reference to the step to invoke.
-	Step string `json:"step,omitempty" yaml:"step,omitempty" jsonschema:"oneof_required=step"`
+	Step Reference `json:"step,omitempty" yaml:"step,omitempty" jsonschema:"oneof_required=step"`
 	// Env is a map of environment variable names to string values.
 	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	// Inputs is a map of step input names to structured values.
