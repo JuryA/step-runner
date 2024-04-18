@@ -86,3 +86,8 @@ clean:
 .PHONY: image
 image:
 	docker build -t step-runner .
+
+.PHONY: check-generated
+check-generated: generate
+	@git --no-pager diff --compact-summary --exit-code && \
+		git --no-pager diff --compact-summary --cached --exit-code
