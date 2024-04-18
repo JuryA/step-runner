@@ -27,7 +27,7 @@ func TestCacheRemote(t *testing.T) {
 	require.True(t, os.IsNotExist(err))
 
 	// Cache fetches the step
-	runSteps(t, echoSteps)
+	runSteps(t, echoStepsMaster)
 	entries, err := os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
@@ -51,16 +51,17 @@ func TestCacheRemote(t *testing.T) {
 	runSteps(t, nestedEchoSteps)
 	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
 	require.NoError(t, err)
-	require.Len(t, entries, 4)
+	require.Len(t, entries, 3) // will reuse cached echo-step@master
 	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@master", "another-echo", "another-step.yml"))
 
 	// Cache is reused
-	runSteps(t, echoSteps)
+	runSteps(t, echoStepsMaster)
 	runSteps(t, echoStepsV1)
 	runSteps(t, echoSteps91141a6e)
+	runSteps(t, nestedEchoSteps)
 	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
 	require.NoError(t, err)
-	require.Len(t, entries, 4)
+	require.Len(t, entries, 3)
 }
 
 func runSteps(t *testing.T, steps string) {
@@ -72,30 +73,34 @@ func runSteps(t *testing.T, steps string) {
 	require.NoError(t, err, string(out))
 }
 
-const echoSteps = `
+const echoStepsMaster = `
 - name: hello_world
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step#git@master"
+  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@master"
   inputs:
     echo: hello world
 `
 
 const echoStepsV1 = `
 - name: hello_world
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step#git@v1"
+  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v1"
   inputs:
     echo: hello world
 `
 
 const echoSteps91141a6e = `
 - name: hello_world
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step#git@91141a6e"
+  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@91141a6e"
   inputs:
     echo: hello world
 `
 
 const nestedEchoSteps = `
 - name: another_hello_world
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step/#another-echo/another-file.yml,git@master"
+  step:
+    git:
+      url: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step"
+      dir: another-echo/another-file.yml
+      rev: master
   inputs:
     echo: hello other world
 `

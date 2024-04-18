@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
 	protobuf "google.golang.org/protobuf/proto"
 )
 
@@ -166,7 +167,7 @@ steps:
           hungry: false
           name: steppy
       name: foo_to_the_max
-      step: https://gitlab.com/components/foo#git@v1
+      step: https://gitlab.com/components/foo@v1
     - inputs:
           greeting: ${{steps.foo to the max.outputs.greeting}}
       name: foo_redux
@@ -264,9 +265,6 @@ func TestReferenceCompiler(t *testing.T) {
 		ref:     "invalid",
 		wantErr: true,
 	}, {
-		ref:     "",
-		wantErr: true,
-	}, {
 		ref: ".",
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_local,
@@ -285,125 +283,117 @@ func TestReferenceCompiler(t *testing.T) {
 			Version:  "",
 		},
 	}, {
-		ref: "gitlab.com/components/script/#git@v1",
+		ref: "gitlab.com/components/script@v1",
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "https://gitlab.com/components/script/",
+			Url:      "https://gitlab.com/components/script",
 			Path:     nil,
 			Filename: "step.yml",
 			Version:  "v1",
 		},
 	}, {
-		ref: "https://gitlab.com/components/script/#git@v1",
+		ref: "https://gitlab.com/components/script@v1",
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "https://gitlab.com/components/script/",
+			Url:      "https://gitlab.com/components/script",
 			Path:     nil,
 			Filename: "step.yml",
 			Version:  "v1",
 		},
 	}, {
-
-		ref: "gitlab.com/components/script/#bash,git@v1",
+		ref: `
+git:
+    url:     gitlab.com/components/script
+    dir:     bash
+    rev:  v1
+`,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "https://gitlab.com/components/script/",
+			Url:      "https://gitlab.com/components/script",
 			Path:     []string{"bash"},
 			Filename: "step.yml",
 			Version:  "v1",
 		},
 	}, {
-		ref: "gitlab.com/components/script/#bash/my-step.yml,git@v1",
+		ref: `
+git:
+    url:    gitlab.com/components/script
+    dir:    bash/my-step.yml
+    rev: v1
+`,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "https://gitlab.com/components/script/",
+			Url:      "https://gitlab.com/components/script",
 			Path:     []string{"bash"},
 			Filename: "my-step.yml",
 			Version:  "v1",
 		},
 	}, {
-		ref: "http://bad.idea.com/my-step/#git@v1",
+		ref: `
+git:
+    url:    http://bad.idea.com/my-step
+    rev: v1
+`,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "http://bad.idea.com/my-step/",
+			Url:      "http://bad.idea.com/my-step",
 			Path:     nil,
 			Filename: "step.yml",
 			Version:  "v1",
 		},
 	}, {
-		ref: "gitlab.com/components/script/#git@v2.1",
+		ref: `
+git:
+    url:    gitlab.com/components/script
+    rev: v2.1
+`,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "https://gitlab.com/components/script/",
+			Url:      "https://gitlab.com/components/script",
 			Path:     nil,
 			Filename: "step.yml",
 			Version:  "v2.1",
 		},
 	}, {
-		ref: "gitlab.com/components/script/#git@20e9c40c",
+		ref: `
+git:
+    url:    gitlab.com/components/script
+    rev: 20e9c40c
+`,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "https://gitlab.com/components/script/",
+			Url:      "https://gitlab.com/components/script",
 			Path:     nil,
 			Filename: "step.yml",
 			Version:  "20e9c40c",
 		},
 	}, {
-		ref: "gitlab.com/components/script/#git@20e9c40c9213f2a044e4a81906956a779af3da4b",
+		ref: `
+git:
+    url:    gitlab.com/components/script
+    rev: 20e9c40c9213f2a044e4a81906956a779af3da4b
+`,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "https://gitlab.com/components/script/",
+			Url:      "https://gitlab.com/components/script",
 			Path:     nil,
 			Filename: "step.yml",
 			Version:  "20e9c40c9213f2a044e4a81906956a779af3da4b",
 		},
 	}, {
-		ref: "registry.gitlab.com/components/script/#oci@latest",
-		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_oci,
-			Url:      "https://registry.gitlab.com/components/script/",
-			Path:     nil,
-			Filename: "step.yml",
-			Version:  "latest",
-		},
-	}, {
-		ref: "registry.gitlab.com/components/script/#oci@v1",
-		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_oci,
-			Url:      "https://registry.gitlab.com/components/script/",
-			Path:     nil,
-			Filename: "step.yml",
-			Version:  "v1",
-		},
-	}, {
-		ref: "registry.gitlab.com/components/script/#oci@sha256:83c876be7b35b6c5c892b1347ee894f23b26e00a686e3cbb51b004263c014f8c",
-		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_oci,
-			Url:      "https://registry.gitlab.com/components/script/",
-			Path:     nil,
-			Filename: "step.yml",
-			Version:  "sha256:83c876be7b35b6c5c892b1347ee894f23b26e00a686e3cbb51b004263c014f8c",
-		},
-	}, {
-		ref: "registry.gitlab.com/components/script/#bash,oci@v1",
-		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_oci,
-			Url:      "https://registry.gitlab.com/components/script/",
-			Path:     []string{"bash"},
-			Filename: "step.yml",
-			Version:  "v1",
-		},
-	}, {
-		ref:     "ftp://gitlab.com/components/script/#git@v1", // unsupported
+		ref:     "ftp://gitlab.com/components/script@v1", // unsupported
 		wantErr: true,
 	}, {
-		ref:     "notavalidscheme://gitlab.com/components/script/#git@v1",
+		ref:     "notavalidscheme://gitlab.com/components/script@v1",
 		wantErr: true,
 	}}
 
 	for _, c := range cases {
 		t.Run(c.ref, func(t *testing.T) {
-			got, err := (*referenceCompiler)(&c.ref).compile()
+			ref := schema.Reference{}
+			err := unmarshalSchema(c.ref, &ref)
+			require.NoError(t, err)
+			got, err := (*referenceCompiler)(&ref).compile()
 			if c.wantErr {
 				require.Error(t, err)
 			} else {
