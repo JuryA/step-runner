@@ -129,3 +129,29 @@ message StepResult {
     int32 exit_code = 7;
     repeated StepResult children_step_results = 8;
 }
+service StepRunner {
+    rpc Run(RunRequest) returns (RunResponse);
+}
+
+message Variable {
+    string key = 1;
+    string value = 2;
+    bool file = 3;
+    bool masked = 4;
+}
+
+message Job {
+    repeated Variable variables = 1;
+    string build_dir = 4;
+}
+
+message RunRequest {
+    string id = 1;
+    string work_dir = 2;
+    map<string,string> env = 3;
+    Job job = 5;
+    string steps = 6;
+}
+
+message RunResponse {
+}
