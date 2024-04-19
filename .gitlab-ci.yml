@@ -50,11 +50,17 @@ run-e2e:
   script:
     - /step-runner ci
   variables:
-    STEPS: |
-      - name: hello_world
-        step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@master
-        inputs:
-          echo: ${CI_PIPELINE_ID}
+    STEPS:
+      expand: false
+      value: |
+        - name: hello_world
+          step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@master
+          inputs:
+            echo: ${CI_PIPELINE_ID}
+        - name: ci_variables
+          step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@master
+          inputs:
+            echo: "${{ job.CI_PIPELINE_ID }}"
   artifacts:
     paths:
       - step-results.json
@@ -65,6 +71,7 @@ verify-e2e:
   script:
     - apt update && apt install -y jq
     - if [[ $(jq -r '.childrenStepResults[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
+    - if [[ $(jq -r '.childrenStepResults[1].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
 
 docker-push:
   stage: deploy

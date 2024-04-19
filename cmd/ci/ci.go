@@ -4,6 +4,7 @@ import (
 	ctx "context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
@@ -62,6 +63,21 @@ func run(cmd *cobra.Command, args []string) error {
 		workDir, _ = os.Getwd()
 	}
 	globalCtx.WorkDir = workDir
+
+	// Add all CI_ and GITLAB_ environment variables as a
+	// workaround until we get an explicit list in the Run gRPC
+	// call.
+	globalCtx.Job = map[string]string{}
+	for _, e := range os.Environ() {
+		k, v, ok := strings.Cut(e, "=")
+		if !ok {
+			continue
+		}
+		if strings.HasPrefix(k, "CI_") || strings.HasPrefix(k, "GITLAB_") {
+			globalCtx.Job[k] = v
+		}
+	}
+
 	result, err := execution.Run(ctx.Background(), globalCtx, params, protoStepDef)
 	if err != nil {
 		return fmt.Errorf("running execution: %w", err)
