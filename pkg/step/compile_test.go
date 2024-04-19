@@ -227,7 +227,7 @@ steps:
       step:
           protocol: git
           url: "https://gitlab.com/components/action-runner"
-          version: v0
+          version: main
           filename: step.yml
       inputs:
           action: mikefarah/yq@master
