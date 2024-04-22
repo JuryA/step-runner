@@ -13,21 +13,36 @@ PROTOC_GEN_GO_GRPC := protoc-gen-go-grpc
 PROTOC_GEN_GO_GRPC_VERSION := v1.3.0
 
 PROTOVALIDATE_VERSION := 0.5.4
+PROTOVALIDATE_DIST := $(local)/protovalidate
 
 PROTO_SRC := proto/step.proto
-PROTO_GEN := proto/step.pb.go
+PROTO_GEN := $(wildcard proto/*.pb.go)
+
+SCHEMA_SRC := $(shell find schema/v1 -name "*.go")
+SCHEMA_GEN := $(wildcard schema/v1/*.json)
 
 .PHONY: build
-build: $(PROTO_GEN)
+build: $(PROTO_GEN) $(SCHEMA_GEN)
 	go build .
 
 $(PROTO_GEN): $(PROTO_SRC)
 	$(MAKE) generate
 
-.PHONY: generate
-generate: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) protovalidate
-	go generate ./proto
+$(SCHEMA_GEN): $(SCHEMA_SRC)
+	$(MAKE) .generate-schema
+
+.PHONY: .generate-schema
+.generate-schema:
 	go run ./schema/v1/generate
+
+.PHONY: .generate-proto
+.generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
+	go generate ./proto
+
+.PHONY: generate
+generate:
+	$(MAKE) .generate-schema
+	$(MAKE) .generate-proto
 
 .PHONY: test
 test: generate
@@ -35,7 +50,6 @@ test: generate
 	@git --no-pager diff --compact-summary --exit-code -- go.mod go.sum && echo 'Go modules are tidy and complete!'
 	@git --no-pager diff --compact-summary --exit-code -- ./internal/plugin/proto && echo 'proto code is up-to-date!'
 
-.PHONY: $(PROTOC)
 $(PROTOC): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')
 $(PROTOC): ARCH ?= $(shell uname -m | sed 's/aarch64/aarch_64/')
 $(PROTOC): DOWNLOAD_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(OS_TYPE)-$(ARCH).zip
@@ -56,9 +70,8 @@ $(PROTOC_GEN_GO):
 $(PROTOC_GEN_GO_GRPC):
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
 
-.PHONY: protovalidate
-protovalidate: DOWNLOAD_URL = https://github.com/bufbuild/protovalidate/archive/refs/tags/v$(PROTOVALIDATE_VERSION).zip
-protovalidate:
+$(PROTOVALIDATE_DIST): DOWNLOAD_URL = https://github.com/bufbuild/protovalidate/archive/refs/tags/v$(PROTOVALIDATE_VERSION).zip
+$(PROTOVALIDATE_DIST):
 	# Downloading protovalidate import from $(DOWNLOAD_URL)
 	@curl -sL "$(DOWNLOAD_URL)" -o "$(local)/protovalidate.zip"
 	@unzip -q -u "$(local)/protovalidate.zip" -d "$(local)/"
@@ -73,3 +86,8 @@ clean:
 .PHONY: image
 image:
 	docker build -t step-runner .
+
+.PHONY: check-generated
+check-generated: generate
+	@git --no-pager diff --compact-summary --exit-code && \
+		git --no-pager diff --compact-summary --cached --exit-code
