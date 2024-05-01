@@ -96,12 +96,13 @@ func startService(t *testing.T) (*StepRunnerService, proto.StepRunnerClient, fun
 }
 
 func Test_StepRunnerService_Run_Success(t *testing.T) {
-	srs, err := New()
-	require.NoError(t, err)
+	bg := context.Background()
+	srs, client, cleanup := startService(t)
+	defer cleanup()
 
 	rr := makeRunRequest(t, helloStep, false)
 
-	_, err = srs.Run(context.Background(), rr)
+	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
 
 	job, ok := srs.jobs.Get(id)
@@ -109,7 +110,6 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	defer os.RemoveAll(job.WorkDir)
 
 	assert.Eventually(t, job.Finished, time.Second*10, time.Millisecond*50)
-
 	assert.NoError(t, job.Ctx.Err())
 
 	res, err := job.Result()
@@ -175,13 +175,14 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			srs, err := New()
-			require.NoError(t, err)
+			bg := context.Background()
+			srs, client, cleanup := startService(t)
+			defer cleanup()
 
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 
-			_, err = srs.Run(context.Background(), makeRunRequest(t, makeBashStep(tt.script), false))
+			_, err := client.Run(bg, makeRunRequest(t, makeBashStep(tt.script), false))
 			require.NoError(t, err)
 
 			job, ok := srs.jobs.Get(id)
@@ -249,13 +250,14 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			srs, err := New()
-			require.NoError(t, err)
+			bg := context.Background()
+			srs, client, cleanup := startService(t)
+			defer cleanup()
 
 			rr := makeRunRequest(t, makeBashStep(tt.script), tt.jobWorkDir)
 			tt.setup(rr)
 
-			_, err = srs.Run(context.Background(), rr)
+			_, err := client.Run(bg, rr)
 			require.NoError(t, err)
 
 			job, ok := srs.jobs.Get(tt.id)
