@@ -29,6 +29,9 @@ func NewGlobal() *Global {
 }
 
 func (g *Global) InheritEnv(envs ...string) {
+	if g.Env == nil {
+		g.Env = make(map[string]string, len(envs))
+	}
 	for _, e := range envs {
 		k, v, ok := strings.Cut(e, "=")
 		if ok {

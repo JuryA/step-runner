@@ -19,6 +19,7 @@ spec:
 env:
   STEP_RUNNER_OUTPUT: ${{ output_file }}
   STEP_RUNNER_ENV: ${{ export_file }}
+  HOME: ${{ work_dir }}
 exec:
   work_dir: ${{ step_dir }}
   command:
