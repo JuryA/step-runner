@@ -114,7 +114,6 @@ func (e *Execution) Run(
 // default produce an error. Extra inputs not declared also produce an
 // error.
 func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*structpb.Value) error {
-
 	// Match inputs with definition
 	for key, value := range spec.Spec.Inputs {
 		callValue := inputs[key]
@@ -192,7 +191,7 @@ func (e *Execution) runExec(
 		}
 		cmdArgs = append(cmdArgs, res)
 	}
-	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
 
 	// Expand working directory if present. Otherwise fall back to
 	// the working directory defined globally.
