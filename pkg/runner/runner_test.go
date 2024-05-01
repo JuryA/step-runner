@@ -340,10 +340,10 @@ steps:
 			var log bytes.Buffer
 
 			globalCtx := context.NewGlobal()
-			globalCtx.Env["HOME"] = os.Getenv("HOME") // for `go run` steps
 			maps.Copy(globalCtx.Env, c.globalEnv)
 			globalCtx.Stdout = &log
 			globalCtx.Stderr = &log
+			globalCtx.WorkDir, _ = os.UserHomeDir()
 
 			params := &Params{}
 
