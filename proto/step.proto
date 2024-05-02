@@ -131,6 +131,7 @@ message StepResult {
 }
 service StepRunner {
     rpc Run(RunRequest) returns (RunResponse);
+    rpc FollowSteps(FollowStepsRequest) returns (stream FollowStepsResponse);
 }
 
 message Variable {
@@ -154,4 +155,12 @@ message RunRequest {
 }
 
 message RunResponse {
+}
+
+message FollowStepsRequest {
+    string id = 1;
+}
+
+message FollowStepsResponse {
+    StepResult result = 1;
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/jobs"
@@ -95,4 +96,40 @@ func (s *StepRunnerService) run(execution *runner.Execution, job *jobs.Job, step
 		// TODO: better logging
 		log.Printf("an error occurred executing the job: %s", err)
 	}
+}
+
+// TODO: this is very much a temporary/throwaway implementation until we implement step-result streaming and job timeout.
+func (s *StepRunnerService) FollowSteps(request *proto.FollowStepsRequest, writer proto.StepRunner_FollowStepsServer) error {
+	job, ok := s.jobs.Get(request.Id)
+	if !ok {
+		return fmt.Errorf("no job with id %q", request.Id)
+	}
+
+	// TODO: this is temporary until we implement step-result streaming and job timeout.
+	err := waitFor(job.Finished, time.Millisecond*250, time.Hour)
+	if err != nil {
+		return fmt.Errorf("job times out: %w", err)
+	}
+
+	result, err := job.Result()
+	if err != nil {
+		return err
+	}
+	if result == nil {
+		return nil
+	}
+	return writer.Send(&proto.FollowStepsResponse{Result: result})
+}
+
+// TODO: this is temporary until we implement step-result streaming
+func waitFor(f func() bool, pollInterval, maxWait time.Duration) error {
+	start := time.Now()
+
+	for time.Since(start) < maxWait {
+		if f() {
+			return nil
+		}
+		time.Sleep(pollInterval)
+	}
+	return fmt.Errorf("timed out waiting for operation")
 }

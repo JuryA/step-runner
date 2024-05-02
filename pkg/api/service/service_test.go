@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"os"
 	"path"
 	"strings"
@@ -15,6 +17,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/step-runner/pkg/jobs"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 const (
@@ -61,13 +66,43 @@ func makeRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
 	return &runReq
 }
 
-func Test_StepRunnerService_Run_Success(t *testing.T) {
+const bufSize = 1024 * 1024
+
+func startService(t *testing.T) (*StepRunnerService, proto.StepRunnerClient, func()) {
 	srs, err := New()
 	require.NoError(t, err)
 
+	lis := bufconn.Listen(bufSize)
+	srv := grpc.NewServer()
+	proto.RegisterStepRunnerServer(srv, srs)
+
+	bufDialer := func(context.Context, string) (net.Conn, error) { return lis.Dial() }
+
+	conn, err := grpc.DialContext(
+		context.Background(),
+		"bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+
+	go func() { require.NoError(t, srv.Serve(lis)) }()
+
+	cleanup := func() {
+		srv.GracefulStop()
+		conn.Close()
+	}
+
+	return srs, proto.NewStepRunnerClient(conn), cleanup
+}
+
+func Test_StepRunnerService_Run_Success(t *testing.T) {
+	bg := context.Background()
+	srs, client, cleanup := startService(t)
+	defer cleanup()
+
 	rr := makeRunRequest(t, helloStep, false)
 
-	_, err = srs.Run(context.Background(), rr)
+	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
 
 	job, ok := srs.jobs.Get(id)
@@ -75,7 +110,6 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	defer os.RemoveAll(job.WorkDir)
 
 	assert.Eventually(t, job.Finished, time.Second*10, time.Millisecond*50)
-
 	assert.NoError(t, job.Ctx.Err())
 
 	res, err := job.Result()
@@ -141,13 +175,14 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			srs, err := New()
-			require.NoError(t, err)
+			bg := context.Background()
+			srs, client, cleanup := startService(t)
+			defer cleanup()
 
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 
-			_, err = srs.Run(context.Background(), makeRunRequest(t, makeBashStep(tt.script), false))
+			_, err := client.Run(bg, makeRunRequest(t, makeBashStep(tt.script), false))
 			require.NoError(t, err)
 
 			job, ok := srs.jobs.Get(id)
@@ -215,13 +250,14 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			srs, err := New()
-			require.NoError(t, err)
+			bg := context.Background()
+			srs, client, cleanup := startService(t)
+			defer cleanup()
 
 			rr := makeRunRequest(t, makeBashStep(tt.script), tt.jobWorkDir)
 			tt.setup(rr)
 
-			_, err = srs.Run(context.Background(), rr)
+			_, err := client.Run(bg, rr)
 			require.NoError(t, err)
 
 			job, ok := srs.jobs.Get(tt.id)
@@ -245,4 +281,33 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			assert.NoDirExists(t, job.TmpDir)
 		})
 	}
+}
+
+func Test_StepRunnerService_FollowSteps(t *testing.T) {
+	bg := context.Background()
+	srs, client, cleanup := startService(t)
+	defer cleanup()
+
+	rr := makeRunRequest(t, makeBashStep("sleep 1"), false)
+
+	_, err := client.Run(bg, rr)
+	require.NoError(t, err)
+
+	stream, err := client.FollowSteps(bg, &proto.FollowStepsRequest{Id: id})
+	require.NoError(t, err)
+
+	got, err := stream.Recv()
+	require.NoError(t, err)
+	require.NotNil(t, got)
+
+	// since there's currently only one step-result, a subsequent read should return EOF.
+	_, err = stream.Recv()
+	require.True(t, errors.Is(err, io.EOF))
+
+	job, ok := srs.jobs.Get(id)
+	require.True(t, ok)
+	defer os.RemoveAll(job.WorkDir)
+	want, _ := job.Result()
+
+	assert.Equal(t, want.String(), got.Result.String())
 }

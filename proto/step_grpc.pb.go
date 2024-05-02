@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	StepRunner_Run_FullMethodName = "/proto.StepRunner/Run"
+	StepRunner_Run_FullMethodName         = "/proto.StepRunner/Run"
+	StepRunner_FollowSteps_FullMethodName = "/proto.StepRunner/FollowSteps"
 )
 
 // StepRunnerClient is the client API for StepRunner service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StepRunnerClient interface {
 	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
+	FollowSteps(ctx context.Context, in *FollowStepsRequest, opts ...grpc.CallOption) (StepRunner_FollowStepsClient, error)
 }
 
 type stepRunnerClient struct {
@@ -46,11 +48,44 @@ func (c *stepRunnerClient) Run(ctx context.Context, in *RunRequest, opts ...grpc
 	return out, nil
 }
 
+func (c *stepRunnerClient) FollowSteps(ctx context.Context, in *FollowStepsRequest, opts ...grpc.CallOption) (StepRunner_FollowStepsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &StepRunner_ServiceDesc.Streams[0], StepRunner_FollowSteps_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &stepRunnerFollowStepsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type StepRunner_FollowStepsClient interface {
+	Recv() (*FollowStepsResponse, error)
+	grpc.ClientStream
+}
+
+type stepRunnerFollowStepsClient struct {
+	grpc.ClientStream
+}
+
+func (x *stepRunnerFollowStepsClient) Recv() (*FollowStepsResponse, error) {
+	m := new(FollowStepsResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // StepRunnerServer is the server API for StepRunner service.
 // All implementations must embed UnimplementedStepRunnerServer
 // for forward compatibility
 type StepRunnerServer interface {
 	Run(context.Context, *RunRequest) (*RunResponse, error)
+	FollowSteps(*FollowStepsRequest, StepRunner_FollowStepsServer) error
 	mustEmbedUnimplementedStepRunnerServer()
 }
 
@@ -60,6 +95,9 @@ type UnimplementedStepRunnerServer struct {
 
 func (UnimplementedStepRunnerServer) Run(context.Context, *RunRequest) (*RunResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Run not implemented")
+}
+func (UnimplementedStepRunnerServer) FollowSteps(*FollowStepsRequest, StepRunner_FollowStepsServer) error {
+	return status.Errorf(codes.Unimplemented, "method FollowSteps not implemented")
 }
 func (UnimplementedStepRunnerServer) mustEmbedUnimplementedStepRunnerServer() {}
 
@@ -92,6 +130,27 @@ func _StepRunner_Run_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StepRunner_FollowSteps_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(FollowStepsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(StepRunnerServer).FollowSteps(m, &stepRunnerFollowStepsServer{stream})
+}
+
+type StepRunner_FollowStepsServer interface {
+	Send(*FollowStepsResponse) error
+	grpc.ServerStream
+}
+
+type stepRunnerFollowStepsServer struct {
+	grpc.ServerStream
+}
+
+func (x *stepRunnerFollowStepsServer) Send(m *FollowStepsResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // StepRunner_ServiceDesc is the grpc.ServiceDesc for StepRunner service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -104,6 +163,12 @@ var StepRunner_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _StepRunner_Run_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "FollowSteps",
+			Handler:       _StepRunner_FollowSteps_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "step.proto",
 }
