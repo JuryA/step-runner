@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -15,7 +16,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-const socketPath = "/tmp/step-runner.sock"
+var socketPath = path.Join(os.TempDir(), "step-runner.sock")
 
 var Cmd = &cobra.Command{
 	Use:   "serve",
