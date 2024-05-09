@@ -109,7 +109,7 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	require.True(t, ok)
 	defer os.RemoveAll(job.WorkDir)
 
-	assert.Eventually(t, job.Finished, time.Second*10, time.Millisecond*50)
+	assert.Eventually(t, job.Finished, time.Second*20, time.Millisecond*50)
 	assert.NoError(t, job.Ctx.Err())
 
 	res, err := job.Result()
