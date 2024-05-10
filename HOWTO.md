@@ -16,7 +16,7 @@ For example, using a step with one input:
 
 ```yaml
 - name: hello-world-step
-  step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step
+  step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v1
   inputs:
     echo: hello world
 ```
@@ -68,7 +68,7 @@ hello-world-job:
   variables:
     STEPS: |
       - name: hello-world-step
-        step: https+git://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step
+        step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v1
         inputs:
           echo: hello world
   artifacts:
