@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
+	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 	"gopkg.in/yaml.v3"
@@ -21,6 +22,16 @@ var Cmd = &cobra.Command{
 	Short: "Run steps in a CI environment variable STEPS",
 	Args:  cobra.ExactArgs(0),
 	RunE:  run,
+}
+
+var (
+	stepResultOutputFile string
+	stepResultOutputName string
+)
+
+func init() {
+	Cmd.Flags().StringVar(&stepResultOutputFile, "step-result-output-file", "step-results.json", "Where to write the step result.")
+	Cmd.Flags().StringVar(&stepResultOutputName, "step-result-output-name", "", "The output key underwhich to write the step result.")
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -78,17 +89,22 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("running execution: %w", err)
 	}
+	return writeStepResult(result)
+}
 
+func writeStepResult(result *proto.StepResult) error {
 	bytes, err := protojson.Marshal(result)
 	if err != nil {
 		return fmt.Errorf("error marshaling step results: %w", err)
 	}
-	outputFile := "step-results.json"
-	err = os.WriteFile(outputFile, bytes, 0640)
-	if err != nil {
-		return fmt.Errorf("writing step results to %v: %w", outputFile, err)
+	if stepResultOutputName != "" {
+		bytes = []byte(stepResultOutputName + "=" + string(bytes))
 	}
-	fmt.Printf("trace written to %v\n", outputFile)
+	err = os.WriteFile(stepResultOutputFile, bytes, 0640)
+	if err != nil {
+		return fmt.Errorf("writing step results to %v: %w", stepResultOutputFile, err)
+	}
+	fmt.Printf("trace written to %v\n", stepResultOutputFile)
 	return nil
 }
 
