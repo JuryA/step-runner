@@ -11,7 +11,9 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/yaml.v3"
 )
 
 var Cmd = &cobra.Command{
@@ -21,15 +23,9 @@ var Cmd = &cobra.Command{
 	RunE:  run,
 }
 
-const stepsTemplate = `
-spec: {}
----
-steps:
-`
-
 func run(cmd *cobra.Command, args []string) error {
 	steps := os.Getenv("STEPS")
-	stepDef, err := step.ReadSteps(stepsTemplate+steps, "")
+	stepDef, err := wrapStepsInSpecDef(steps)
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", steps, err)
 	}
@@ -94,4 +90,18 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("trace written to %v\n", outputFile)
 	return nil
+}
+
+func wrapStepsInSpecDef(steps string) (*schema.StepDefinition, error) {
+	specDef := &schema.StepDefinition{
+		Spec:       &schema.Spec{},
+		Definition: &schema.Definition{},
+	}
+	err := yaml.Unmarshal([]byte(steps), &specDef.Definition.Steps)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshalling steps: %w", err)
+	}
+	runningSteps, _ := yaml.Marshal(specDef)
+	fmt.Printf("running steps:\n%v", string(runningSteps))
+	return specDef, nil
 }
