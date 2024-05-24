@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"slices"
+
 	"github.com/spf13/cobra"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
@@ -39,7 +41,6 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("creating cache: %w", err)
 	}
 	globalCtx := context.NewGlobal()
-	globalCtx.InheritEnv(os.Environ()...)
 
 	execution, err := runner.New(defs)
 	if err != nil {
@@ -60,18 +61,19 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	globalCtx.WorkDir = workDir
 
-	// Add all CI_ and GITLAB_ environment variables as a
+	// Add all CI_, GITLAB_ and DOCKER_ environment variables as a
 	// workaround until we get an explicit list in the Run gRPC
 	// call.
 	globalCtx.Job = map[string]string{}
+	prefixes := []string{"CI_", "GITLAB_", "DOCKER_"}
 	for _, e := range os.Environ() {
 		k, v, ok := strings.Cut(e, "=")
-		if !ok {
+		if !ok || !slices.ContainsFunc(prefixes, func(prefix string) bool {
+			return strings.HasPrefix(k, prefix)
+		}) {
 			continue
 		}
-		if strings.HasPrefix(k, "CI_") || strings.HasPrefix(k, "GITLAB_") {
-			globalCtx.Job[k] = v
-		}
+		globalCtx.Job[k] = v
 	}
 
 	result, err := execution.Run(ctx.Background(), globalCtx, params, protoStepDef)
