@@ -3,6 +3,7 @@ package output
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,6 +12,26 @@ import (
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
+
+func TestNew(t *testing.T) {
+	// New creates output and export files for each step call.  It
+	// also provides the directory as `${{ call_dir }}` so steps
+	// can write temporary files relevant to a given step
+	// invokation.  The output and export files must be in the
+	// call directory.
+	globalCtx := context.NewGlobal()
+	stepCtx := context.NewSteps(globalCtx)
+	files, err := New(stepCtx, nil)
+	require.NoError(t, err)
+	callDir := files.stepCtx.CallDir
+	require.NotEmpty(t, callDir)
+	outputFilename := files.outputFile
+	require.NotEmpty(t, outputFilename)
+	exportFilename := files.exportFile
+	require.NotEmpty(t, exportFilename)
+	require.True(t, strings.HasPrefix(outputFilename, callDir))
+	require.True(t, strings.HasPrefix(exportFilename, callDir))
+}
 
 func TestOutput(t *testing.T) {
 	cases := []struct {

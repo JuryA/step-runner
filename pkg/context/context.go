@@ -44,6 +44,7 @@ type Steps struct {
 	*Global
 
 	StepDir    string                       `json:"step_dir"`
+	CallDir    string                       `json:"call_dir"`
 	OutputFile string                       `json:"output_file"`
 	ExportFile string                       `json:"export_file"`
 	Env        map[string]string            `json:"env"`

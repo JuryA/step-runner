@@ -47,6 +47,7 @@ func New(stepCtx *context.Steps, specOutputs map[string]*proto.Spec_Content_Outp
 	}
 	stepCtx.OutputFile = outputFile
 	stepCtx.ExportFile = exportFile
+	stepCtx.CallDir = dir
 	return &Files{
 		stepCtx:     stepCtx,
 		specOutputs: specOutputs,
