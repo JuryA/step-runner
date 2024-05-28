@@ -27,11 +27,11 @@ func TestCacheRemote(t *testing.T) {
 	require.True(t, os.IsNotExist(err))
 
 	// Cache fetches the step
-	runSteps(t, echoStepsMaster)
+	runSteps(t, echoStepsMain)
 	entries, err := os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
-	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@master", "step.yml"))
+	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@main", "step.yml"))
 
 	// Cache separates by tag
 	runSteps(t, echoStepsV1)
@@ -51,11 +51,11 @@ func TestCacheRemote(t *testing.T) {
 	runSteps(t, nestedEchoSteps)
 	entries, err = os.ReadDir(filepath.Join(tempDir, "step-runner-cache", repoParentDir))
 	require.NoError(t, err)
-	require.Len(t, entries, 3) // will reuse cached echo-step@master
-	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@master", "another-echo", "another-step.yml"))
+	require.Len(t, entries, 3) // will reuse cached echo-step@main
+	require.FileExists(t, filepath.Join(tempDir, "step-runner-cache", repoParentDir, "echo-step@main", "another-echo", "another-step.yml"))
 
 	// Cache is reused
-	runSteps(t, echoStepsMaster)
+	runSteps(t, echoStepsMain)
 	runSteps(t, echoStepsV1)
 	runSteps(t, echoSteps91141a6e)
 	runSteps(t, nestedEchoSteps)
@@ -73,9 +73,9 @@ func runSteps(t *testing.T, steps string) {
 	require.NoError(t, err, string(out))
 }
 
-const echoStepsMaster = `
+const echoStepsMain = `
 - name: hello_world
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@master"
+  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@main"
   inputs:
     echo: hello world
 `
@@ -100,7 +100,7 @@ const nestedEchoSteps = `
     git:
       url: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step"
       dir: another-echo/another-file.yml
-      rev: master
+      rev: main
   inputs:
     echo: hello other world
 `
