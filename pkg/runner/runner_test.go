@@ -1,35 +1,15 @@
 package runner
 
 import (
-	"bytes"
-	ctx "context"
 	"errors"
-	"maps"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	protobuf "google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestRun(t *testing.T) {
-	requireStringEqualValue := func(t *testing.T, str string, got *structpb.Value) {
-		want := structpb.NewStringValue(str)
-		require.True(t, protobuf.Equal(want, got), "want %+v. got %+v", want, got)
-	}
-	cases := []struct {
-		name        string
-		yaml        string
-		globalEnv   map[string]string
-		wantLog     string
-		wantResults func(*testing.T, []*proto.StepResult)
-		wantErr     error
-	}{{
+	cases := []runnerTest{{
 		name: "greeting with defaults",
 		yaml: `
 spec: {}
@@ -324,39 +304,6 @@ steps:
 			requireStringEqualValue(t, "from-global-then-steps-then-invocation", results[0].Outputs["name"])
 		},
 	}}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			stepDef, err := step.ReadSteps(c.yaml, "")
-			require.NoError(t, err)
-			protoStepDef, err := step.CompileSteps(stepDef)
-			require.NoError(t, err)
-			protoStepDef.Dir, _ = os.Getwd()
 
-			defs, err := cache.New()
-			require.NoError(t, err)
-			runner, err := New(defs)
-			require.NoError(t, err)
-
-			var log bytes.Buffer
-
-			globalCtx := context.NewGlobal()
-			maps.Copy(globalCtx.Env, c.globalEnv)
-			globalCtx.Stdout = &log
-			globalCtx.Stderr = &log
-			globalCtx.WorkDir, _ = os.UserHomeDir()
-
-			params := &Params{}
-
-			result, err := runner.Run(ctx.Background(), globalCtx, params, protoStepDef)
-			if c.wantErr != nil {
-				require.Equal(t, c.wantErr, err)
-			} else {
-				require.NoError(t, err)
-				if c.wantLog != "" {
-					require.Equal(t, c.wantLog, log.String())
-				}
-				c.wantResults(t, result.ChildrenStepResults)
-			}
-		})
-	}
+	testCases(t, cases)
 }

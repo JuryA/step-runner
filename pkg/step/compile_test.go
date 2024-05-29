@@ -317,20 +317,6 @@ git:
 	}, {
 		ref: `
 git:
-    url:    gitlab.com/components/script
-    dir:    bash/my-step.yml
-    rev: v1
-`,
-		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "https://gitlab.com/components/script",
-			Path:     []string{"bash"},
-			Filename: "my-step.yml",
-			Version:  "v1",
-		},
-	}, {
-		ref: `
-git:
     url:    http://bad.idea.com/my-step
     rev: v1
 `,

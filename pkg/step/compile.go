@@ -394,10 +394,10 @@ func (reference *referenceCompiler) compile() (*proto.Step_Reference, error) {
 }
 
 func (reference *referenceCompiler) compileLocal() (*proto.Step_Reference, error) {
-	dir, filename := pathFilename(reference.Short)
+	path, filename := pathFilename(reference.Short)
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_local,
-		Path:     dir,
+		Path:     path,
 		Filename: filename,
 	}, nil
 }
@@ -459,13 +459,6 @@ func pathFilename(pathStr string) (path []string, filename string) {
 		return nil, filename
 	}
 	path = strings.Split(pathStr, "/")
-	if len(path) > 1 {
-		lastElement := path[len(path)-1]
-		if strings.HasSuffix(lastElement, ".yml") || strings.HasSuffix(lastElement, ".yaml") {
-			path = path[:len(path)-1]
-			filename = lastElement
-		}
-	}
 	return path, filename
 }
 

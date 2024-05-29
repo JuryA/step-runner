@@ -99,8 +99,8 @@ const nestedEchoSteps = `
   step:
     git:
       url: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step"
-      dir: another-echo/another-file.yml
+      dir: reverse
       rev: main
   inputs:
-    echo: hello other world
+    echo: hello world in reverse
 `
