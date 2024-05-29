@@ -38,21 +38,22 @@ func New() (Cache, error) {
 
 func (c *cache) Get(ctx context.Context, parentDir string, stepRef *proto.Step_Reference) (*proto.StepDefinition, error) {
 	load := func(dir string) (*proto.StepDefinition, error) {
-		filename := filepath.Join(dir, "step.yml")
+		path := filepath.Join(stepRef.Path...)
+		filename := filepath.Join(dir, path, stepRef.Filename)
 		stepDef, err := step.LoadSteps(filename)
 		if err != nil {
-			return nil, fmt.Errorf("loading file %q: %w", dir, err)
+			return nil, fmt.Errorf("loading file %q: %w", filename, err)
 		}
 		protoStepDef, err := step.CompileSteps(stepDef)
 		if err != nil {
 			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
 		}
-		protoStepDef.Dir = dir
+		protoStepDef.Dir = filepath.Join(dir, path)
 		return protoStepDef, nil
 	}
 	switch {
 	case stepRef.Protocol == proto.StepReferenceProtocol_local:
-		return load(filepath.Join(parentDir, filepath.Join(stepRef.Path...)))
+		return load(parentDir)
 	case stepRef.Protocol == proto.StepReferenceProtocol_git:
 		dir, err := c.getCacheDir(ctx, stepRef)
 		if err != nil {
