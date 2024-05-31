@@ -6,161 +6,219 @@ import "buf/validate/validate.proto";
 
 option go_package = "../proto";
 
+// Step is a single step invocation.
 message Step {
-    string name = 1; 
-    Reference step = 2;
-    map<string,string> env = 3;
-    option (buf.validate.message).cel = {
-        id: "env",
-        message: "env must be alphanumeric with underscores",
-        expression: "this.env.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-    };
-    map<string,google.protobuf.Value> inputs = 4;
-    option (buf.validate.message).cel = {
-        id: "inputs",
-        message: "inputs must be alphanumeric with underscores",
-        expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-    };
-    message Reference {
-        StepReferenceProtocol protocol = 1;
-        string url = 2;
-        repeated string path = 3;
-        string filename = 4;
-        string version = 5;
-    }
+  // Name is a unique identifier for this step.
+  string name = 1;
+  // Step is a reference to the step to invoke.
+  Reference step = 2;
+  // Env is a map of environment variable names to string values.
+  map<string,string> env = 3;
+  option (buf.validate.message).cel = {
+    id: "env",
+    message: "env must be alphanumeric with underscores",
+    expression: "this.env.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+  };
+  // Inputs is a map of step input names to structured values.
+  map<string,google.protobuf.Value> inputs = 4;
+  option (buf.validate.message).cel = {
+    id: "inputs",
+    message: "inputs must be alphanumeric with underscores",
+    expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+  };
+  // Reference is a reference to a step. References can contain either a short or a full form.
+  message Reference {
+    // Protocol determines which step reference protocol to use when fetching the step.
+    StepReferenceProtocol protocol = 1;
+    // Url is the location of the referenced step.
+    string url = 2;
+    // Path is the location of the step spec and definition within the URL.
+    repeated string path = 3;
+    // Filename is the name of the file which contains the step spec and definition.
+    string filename = 4;
+    // Version is which version of the step to use.
+    string version = 5;
+  }
 }
 
+// StepReferenceProtocol is the method of fetching the referenced step.
 enum StepReferenceProtocol {
-    step_reference_protocol_unspecified = 0;
-    local = 1;
-    git = 2;
-    zip = 3;
-    oci = 4;
+  step_reference_protocol_unspecified = 0;
+  local = 1;
+  git = 2;
+  zip = 3;
+  oci = 4;
 }
 
+// Definition is the implementation of a step.
 message Definition {
-    DefinitionType type = 1;
-    Exec exec = 2;
-    repeated Step steps = 3;
-    message Exec {
-        repeated string command = 1;
-        string work_dir = 2;
-    }
-    map<string,google.protobuf.Value> outputs = 4;
-    option (buf.validate.message).cel = {
-        id: "outputs",
-        message: "outputs must be alphanumeric with underscores",
-        expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-    };
-    map<string,string> env = 5;
+  // Type is the type of this step.
+  DefinitionType type = 1;
+  // Exec is a command to run for the `exec` type.
+  Exec exec = 2;
+  // Steps is a list of sub-steps to run for the `steps` type.
+  repeated Step steps = 3;
+  // Exec is the details of an exec type step.
+  message Exec {
+    // Command are the parameters to the system exec API. It does not invoke a shell.
+    repeated string command = 1;
+    // WorkDir is the working directly in which `command` will be exec'ed.
+    string work_dir = 2;
+  }
+  // Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps.
+  map<string,google.protobuf.Value> outputs = 4;
+  option (buf.validate.message).cel = {
+    id: "outputs",
+    message: "outputs must be alphanumeric with underscores",
+    expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+  };
+  // Env is a map of environment variable names to values for all steps
+  map<string,string> env = 5;
 }
 
+// Definition type is either exec or steps.
 enum DefinitionType {
-    definition_type_unspecified = 0;
-    exec = 1;
-    steps = 2;
+  definition_type_unspecified = 0;
+  exec = 1;
+  steps = 2;
 }
 
+// Spec is a document describing the interface of the step.
 message Spec {
-    Content spec = 1;
-    message Content {
-        map<string,Input> inputs = 1;
-        option (buf.validate.message).cel = {
-            id: "inputs",
-            message: "inputs must be alphanumeric with underscores",
-            expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-        };
-        message Input {
-            ValueType type = 1;
-            google.protobuf.Value default = 2;
-        }
-        map<string,Output> outputs = 2;
-        option (buf.validate.message).cel = {
-            id: "outputs",
-            message: "outputs must be alphanumeric with underscores",
-            expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-        };
-        message Output {  
-            ValueType type = 1;
-            google.protobuf.Value default = 2;
-        }
+  // Content contains the inputs and outputs of the step.
+  Content spec = 1;
+  message Content {
+    // Inputs is a map of input names to their parameters.
+    map<string,Input> inputs = 1;
+    option (buf.validate.message).cel = {
+      id: "inputs",
+      message: "inputs must be alphanumeric with underscores",
+      expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+    };
+    // Input describes a single step input.
+    message Input {
+      // Type is the value type of the input.
+      ValueType type = 1;
+      // Default is the default input value. Its type must match `type`.
+      google.protobuf.Value default = 2;
     }
+    // Outputs is a map of output names to their parameters.
+    map<string,Output> outputs = 2;
+    option (buf.validate.message).cel = {
+      id: "outputs",
+      message: "outputs must be alphanumeric with underscores",
+      expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+    };
+    // Output describes a single step output.
+    message Output {  
+      // Type is the value type of the output.
+      ValueType type = 1;
+      // Default is the default output value.
+      google.protobuf.Value default = 2;
+    }
+  }
 }
 
-message StepDefinition {
-    Spec spec = 1;
-    Definition definition = 2;
-    string dir = 3;
+// SpecDefinition is the spec and definition from an exec.yml file.
+message SpecDefinition {
+  // Spec is the first document in the file.
+  Spec spec = 1;
+  // Definition is the second document in the file.
+  Definition definition = 2;
+  // Dir is where the file was loaded from.
+  string dir = 3;
 }
 
+// ValueType is an enumerations of the possible types a value can have.
 enum ValueType {
-    value_type_unspecified = 0;
-    raw_string = 1;
-    string = 2;
-    number = 3;
-    boolean = 4;
-    struct = 5;
-    array = 6;
-    step_result = 7;
+  value_type_unspecified = 0;
+  raw_string = 1;
+  string = 2;
+  number = 3;
+  boolean = 4;
+  struct = 5;
+  array = 6;
+  step_result = 7;
 }
 
+// StepResult is the result of executing a single step.
 message StepResult {
-    Step step = 1;
-    StepDefinition stepDefinition = 2;
-    enum Status {
-        unspecified = 0;
-        running = 1;
-        success = 2;
-        failure = 3;
-    }
-    Status status = 4;
-    map<string,google.protobuf.Value> outputs = 5;
-    option (buf.validate.message).cel = {
-        id: "outputs",
-        message: "outputs must be alphanumeric with underscores",
-        expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-    };
-    map<string,string> exports = 6;
-    option (buf.validate.message).cel = {
-        id: "exports",
-        message: "exports must be alphanumeric with underscores",
-        expression: "this.exports.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-    };
-    int32 exit_code = 7;
-    repeated StepResult children_step_results = 8;
+  // Step is the invocation of this step with inputs. Expressions are expanded.
+  Step step = 1;
+  // SpecDefinition is this step's spec and definition. Expressions are not expanded.
+  SpecDefinition specDefinition = 2;
+  // Status is an enumerations of the states a step can be in during execution.
+  enum Status {
+    unspecified = 0;
+    running = 1;
+    success = 2;
+    failure = 3;
+  }
+  // Status is the state of this step.
+  Status status = 4;
+  // Outputs are the output values returned from this step.
+  map<string,google.protobuf.Value> outputs = 5;
+  option (buf.validate.message).cel = {
+    id: "outputs",
+    message: "outputs must be alphanumeric with underscores",
+    expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+  };
+  // Exports are the environment variables exported from this step.
+  map<string,string> exports = 6;
+  option (buf.validate.message).cel = {
+    id: "exports",
+    message: "exports must be alphanumeric with underscores",
+    expression: "this.exports.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
+  };
+  // Env is the environment at the step definition level. Expressions are expanded.
+  map<string,string> env = 7;
+  // ExecResult contains the details of an exec call.
+  message ExecResult {
+    // Command are the exec parameters. Expressions are expanded.
+    repeated string command = 1;
+    // WorkDir is the exec working directory. Expressions are expanded.
+    string work_dir = 2;
+    // ExitCode is the exit code of the exec process.
+    int32 exit_code = 3;
+  }
+  // ExecResult is the details of an exec type step.
+  ExecResult exec_result = 8;
+  // SubStepResults are the details of a steps type step.
+  repeated StepResult sub_step_results = 9;
 }
+
 service StepRunner {
-    rpc Run(RunRequest) returns (RunResponse);
-    rpc FollowSteps(FollowStepsRequest) returns (stream FollowStepsResponse);
+  rpc Run(RunRequest) returns (RunResponse);
+  rpc FollowSteps(FollowStepsRequest) returns (stream FollowStepsResponse);
 }
 
 message Variable {
-    string key = 1;
-    string value = 2;
-    bool file = 3;
-    bool masked = 4;
+  string key = 1;
+  string value = 2;
+  bool file = 3;
+  bool masked = 4;
 }
 
 message Job {
-    repeated Variable variables = 1;
-    string build_dir = 4;
+  repeated Variable variables = 1;
+  string build_dir = 4;
 }
 
 message RunRequest {
-    string id = 1;
-    string work_dir = 2;
-    map<string,string> env = 3;
-    Job job = 5;
-    string steps = 6;
+  string id = 1;
+  string work_dir = 2;
+  map<string,string> env = 3;
+  Job job = 5;
+  string steps = 6;
 }
 
 message RunResponse {
 }
 
 message FollowStepsRequest {
-    string id = 1;
+  string id = 1;
 }
 
 message FollowStepsResponse {
-    StepResult result = 1;
+  StepResult result = 1;
 }

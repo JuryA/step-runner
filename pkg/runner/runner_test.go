@@ -19,10 +19,10 @@ steps:
     step: ./test_steps/greeting
     inputs: {}
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "steppy", results[0].Outputs["name"])
-			require.Equal(t, "steppy", results[0].Exports["NAME"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "steppy", result.SubStepResults[0].Outputs["name"])
+			require.Equal(t, "steppy", result.SubStepResults[0].Exports["NAME"])
 		},
 	}, {
 		name: "greeting outputs and exports name parameter",
@@ -35,10 +35,10 @@ steps:
     inputs:
       name: foo
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "foo", results[0].Outputs["name"])
-			require.Equal(t, "foo", results[0].Exports["NAME"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "foo", result.SubStepResults[0].Outputs["name"])
+			require.Equal(t, "foo", result.SubStepResults[0].Exports["NAME"])
 		},
 	}, {
 		name: "can access outputs of a previous step",
@@ -55,10 +55,10 @@ steps:
     inputs:
       name: ${{steps.greet_foo.outputs.name}}
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 2)
-			requireStringEqualValue(t, "foo", results[0].Outputs["name"])
-			requireStringEqualValue(t, "foo", results[1].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 2)
+			requireStringEqualValue(t, "foo", result.SubStepResults[0].Outputs["name"])
+			requireStringEqualValue(t, "foo", result.SubStepResults[1].Outputs["name"])
 		},
 	}, {
 		name: "can access outputs of a composite step",
@@ -74,10 +74,10 @@ steps:
     inputs:
       name: ${{steps.greet_the_crew.outputs.crew_name_1}}
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 2)
-			requireStringEqualValue(t, "sponge bob", results[0].Outputs["crew_name_1"])
-			requireStringEqualValue(t, "sponge bob", results[1].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 2)
+			requireStringEqualValue(t, "sponge bob", result.SubStepResults[0].Outputs["crew_name_1"])
+			requireStringEqualValue(t, "sponge bob", result.SubStepResults[1].Outputs["name"])
 		},
 	}, {
 		name: "cannot access outputs of composite children",
@@ -124,8 +124,8 @@ meet sponge bob who is 5 likes {"pants":"square"} and is hungry false
 meet patrick star who is 7 likes {"color":"red"} and is hungry true
 meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hungry false
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 3)
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 3)
 		},
 	}, {
 		name: "global environment can be referenced",
@@ -141,9 +141,9 @@ steps:
 		globalEnv: map[string]string{
 			"NAME": "from-global",
 		},
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-global", results[0].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "from-global", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "steps environment can be referenced",
@@ -158,9 +158,9 @@ steps:
     inputs:
       name: ${{ env.NAME }}
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-steps", results[0].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "from-steps", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "individual step invocation environment cannot be referenced during invokation",
@@ -187,9 +187,9 @@ steps:
     env:
       NAME: from-step-invocation
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-step-invocation", results[0].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "from-step-invocation", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "steps environment takes precedence over global environment",
@@ -207,9 +207,9 @@ steps:
 		globalEnv: map[string]string{
 			"NAME": "from-global",
 		},
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-steps", results[0].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "from-steps", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "individual step invocation environment takes precedence over global environment",
@@ -225,9 +225,9 @@ steps:
 		globalEnv: map[string]string{
 			"NAME": "from-global",
 		},
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-step-invocation", results[0].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "from-step-invocation", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "individual step invocation environment takes precedence over steps environment",
@@ -242,9 +242,9 @@ steps:
     env:
       NAME: from-step-invocation
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-step-invocation", results[0].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "from-step-invocation", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "steps environment variables are expanded",
@@ -260,9 +260,9 @@ steps:
 		globalEnv: map[string]string{
 			"WHERE_EXACTLY": "global",
 		},
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-global", results[0].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "from-global", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "step invocation environment variables are expanded",
@@ -279,9 +279,9 @@ steps:
 		globalEnv: map[string]string{
 			"WHERE_EXACTLY": "global",
 		},
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-global", results[0].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "from-global", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "steps environment variables are expanded before invocation",
@@ -299,9 +299,48 @@ steps:
 		globalEnv: map[string]string{
 			"WHERE_EXACTLY": "global",
 		},
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "from-global-then-steps-then-invocation", results[0].Outputs["name"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "from-global-then-steps-then-invocation", result.SubStepResults[0].Outputs["name"])
+		},
+	}, {
+		name: "steps and parameters are recorded both expanded and not expanded",
+		globalEnv: map[string]string{
+			"REPLACE_ME": "replaced",
+		},
+		yaml: `
+spec: {}
+---
+env:
+  PLEASE: ${{ env.REPLACE_ME }}
+  NAME: subby
+steps:
+  - name: greet_steppy
+    step: ./test_steps/greeting
+    inputs:
+      name: ${{ env.NAME }}
+`,
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+
+			// Top level step definition should be recorded but not expanded.
+			require.Equal(t, "${{ env.REPLACE_ME }}", result.SpecDefinition.Definition.Env["PLEASE"])
+			requireStringEqualValue(t, "${{ env.NAME }}", result.SpecDefinition.Definition.Steps[0].Inputs["name"])
+
+			// Sub-step invokation should be expanded and recorded.
+			requireStringEqualValue(t, "subby", result.SubStepResults[0].Step.Inputs["name"])
+
+			// Exec definition should be recorded but not expanded.
+			require.Equal(t, "${{ work_dir }}", result.SubStepResults[0].SpecDefinition.Definition.Env["HOME"])
+
+			// Exec environment should be expanded and recorded.
+			require.NotContains(t, "work_dir", result.SubStepResults[0].Env["HOME"])
+
+			// Exec results should be recorded and expanded.
+			require.NotContains(t, "work_dir", result.SubStepResults[0].ExecResult.WorkDir)
+			require.Equal(t, "--name=subby", result.SubStepResults[0].ExecResult.Command[3])
+
+			// Sub-steps environment should be expanded and recorded.
+			require.Equal(t, "replaced", result.Env["PLEASE"])
 		},
 	}}
 

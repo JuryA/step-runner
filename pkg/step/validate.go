@@ -8,7 +8,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-func ValidateStepDefinition(stepDef *proto.StepDefinition) error {
+func ValidateStepDefinition(stepDef *proto.SpecDefinition) error {
 	v, err := protovalidate.New()
 	if err != nil {
 		return fmt.Errorf("failed to initialize validator: %w", err)

@@ -74,7 +74,7 @@ verify-e2e:
   needs: ["run-e2e"]
   script:
     - apt update && apt install -y jq
-    - if [[ $(jq -r '.childrenStepResults[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
+    - if [[ $(jq -r '.subStepResults[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
 
 docker-push:
   stage: deploy

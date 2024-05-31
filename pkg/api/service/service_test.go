@@ -116,7 +116,7 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	assert.Nil(t, err)
 	require.NotNil(t, res)
 
-	assert.Equal(t, int32(0), res.ExitCode)
+	assert.Equal(t, proto.StepResult_success, res.Status)
 
 	job.Close()
 	assert.NoDirExists(t, job.TmpDir)
@@ -271,7 +271,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			assert.Nil(t, err)
 			require.NotNil(t, res)
 
-			assert.Equal(t, int32(0), res.ExitCode)
+			assert.Equal(t, proto.StepResult_success, res.Status)
 			assert.FileExists(t, path.Join(job.WorkDir, "blammo.txt"))
 			data, err := os.ReadFile(path.Join(job.WorkDir, "blammo.txt"))
 			require.NoError(t, err)

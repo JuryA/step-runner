@@ -214,7 +214,7 @@ food=apple
 			Outputs: map[string]*structpb.Value{
 				"name": structpb.NewStringValue("steppy"),
 			},
-			ChildrenStepResults: []*proto.StepResult{{
+			SubStepResults: []*proto.StepResult{{
 				Outputs: map[string]*structpb.Value{
 					"name": structpb.NewStringValue("steppy"),
 				},
@@ -232,7 +232,7 @@ food=apple
 					"food": structpb.NewStringValue("hamburger"),
 				}}),
 			},
-			ChildrenStepResults: []*proto.StepResult{{
+			SubStepResults: []*proto.StepResult{{
 				Outputs: map[string]*structpb.Value{
 					"favorites": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
 						"food": structpb.NewStringValue("hamburger"),
