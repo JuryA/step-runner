@@ -17,7 +17,7 @@ spec: {}
 ---
 steps:
   - name: echo_hello
-    step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@master
+    step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@main
     inputs:
       echo: hello
 `,
@@ -36,7 +36,7 @@ steps:
       git:
         url: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step
         dir: reverse
-        rev: master
+        rev: main
     inputs:
       echo: hello
 `,
