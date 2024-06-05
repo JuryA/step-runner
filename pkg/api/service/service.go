@@ -73,7 +73,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	return &proto.RunResponse{}, nil
 }
 
-func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.StepDefinition, error) {
+func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, error) {
 	stepDef, err := step.ReadSteps(stepsStr, "")
 	if err != nil {
 		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
@@ -88,7 +88,7 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.StepDefinition, e
 }
 
 // run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
-func (s *StepRunnerService) run(execution *runner.Execution, job *jobs.Job, steps *proto.StepDefinition) {
+func (s *StepRunnerService) run(execution *runner.Execution, job *jobs.Job, steps *proto.SpecDefinition) {
 	// TODO: Add streaming of step-results as they are produced.
 	result, err := execution.Run(job.Ctx, job.GlobCtx, &runner.Params{}, steps)
 	job.Finish(result, err)

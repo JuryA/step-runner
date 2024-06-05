@@ -10,8 +10,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func CompileSteps(steps *schema.StepDefinition) (*proto.StepDefinition, error) {
-	protoStepDef := &proto.StepDefinition{
+func CompileSteps(steps *schema.StepDefinition) (*proto.SpecDefinition, error) {
+	protoStepDef := &proto.SpecDefinition{
 		Dir: steps.Dir,
 	}
 	if steps.Spec != nil {

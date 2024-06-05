@@ -58,7 +58,7 @@ func (e *Execution) Run(
 	ctx ctx.Context,
 	globalCtx *context.Global,
 	params *Params,
-	specDefinition *proto.StepDefinition,
+	specDefinition *proto.SpecDefinition,
 ) (*proto.StepResult, error) {
 	stepsCtx := context.NewSteps(globalCtx)
 
@@ -75,7 +75,7 @@ func (e *Execution) Run(
 	maps.Copy(stepsCtx.Env, params.Env)
 
 	result := &proto.StepResult{
-		StepDefinition: specDefinition,
+		SpecDefinition: specDefinition,
 		Status:         proto.StepResult_success,
 		Outputs:        make(map[string]*structpb.Value),
 		Exports:        make(map[string]string),
@@ -92,7 +92,7 @@ func (e *Execution) Run(
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
 	}
 
-	result.StepDefinition = specDefinition
+	result.SpecDefinition = specDefinition
 
 	// Expand step definition outputs which may reference outputs
 	// of sub-steps. Outputs of sub-steps will not be available
@@ -159,11 +159,12 @@ func addDefinitionEnv(stepsCtx *context.Steps, definition *proto.Definition) err
 func (e *Execution) runExec(
 	ctx ctx.Context,
 	stepsCtx *context.Steps,
-	specDefinition *proto.StepDefinition,
+	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
 ) error {
 	execDefinition := specDefinition.Definition.Exec
 	outputs := specDefinition.Spec.Spec.Outputs
+	result.ExecResult = &proto.StepResult_ExecResult{}
 
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("exec cancelled: %w", err)
@@ -216,8 +217,13 @@ func (e *Execution) runExec(
 		return fmt.Errorf("exec: %w, ", err)
 	}
 
-	if cmd.ProcessState.ExitCode() != 0 {
-		result.ExitCode = int32(cmd.ProcessState.ExitCode())
+	// Record expanded command parameters and environment
+	result.ExecResult.Command = cmd.Args
+	result.ExecResult.WorkDir = cmd.Dir
+	result.Env = stepsCtx.GetEnvs()
+
+	result.ExecResult.ExitCode = int32(cmd.ProcessState.ExitCode())
+	if result.ExecResult.ExitCode != 0 {
 		result.Status = proto.StepResult_failure
 	}
 
@@ -239,7 +245,7 @@ func (e *Execution) runExec(
 func (e *Execution) runSteps(
 	ctx ctx.Context,
 	stepsCtx *context.Steps,
-	specDefinition *proto.StepDefinition,
+	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
 ) error {
 	// Expand and add the definition environment to context
@@ -247,16 +253,17 @@ func (e *Execution) runSteps(
 	if err != nil {
 		return fmt.Errorf("adding definition env: %w", err)
 	}
+	result.Env = stepsCtx.GetEnvs()
 
+	result.Status = proto.StepResult_success
 	for _, step := range specDefinition.Definition.Steps {
 		stepResult, err := e.runSubStep(ctx, stepsCtx, specDefinition, step)
 		if err != nil {
 			return err
 		}
+		result.SubStepResults = append(result.SubStepResults, stepResult)
 
-		result.ChildrenStepResults = append(result.ChildrenStepResults, stepResult)
-
-		// One step failed, return early
+		// One sub-step failed. Mark this step failed and return early
 		if stepResult.Status == proto.StepResult_failure {
 			result.Status = proto.StepResult_failure
 			break
@@ -272,7 +279,7 @@ func (e *Execution) runSteps(
 func (e *Execution) runSubStep(
 	ctx ctx.Context,
 	stepsCtx *context.Steps,
-	specDefinition *proto.StepDefinition,
+	specDefinition *proto.SpecDefinition,
 	stepReference *proto.Step,
 ) (*proto.StepResult, error) {
 	params := &Params{}
@@ -297,17 +304,25 @@ func (e *Execution) runSubStep(
 		params.Env[k] = res
 	}
 
-	stepDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
+	// Load the step spec and definition from the cache
+	specDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
 	if err != nil {
 		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
 	}
 
-	result, err := e.Run(ctx, stepsCtx.Global, params, stepDefinition)
+	// Run the step definition with the global context and expanded parameters
+	result, err := e.Run(ctx, stepsCtx.Global, params, specDefinition)
 	if err != nil {
 		return nil, err
 	}
 
-	result.Step = stepReference
+	// Record expanded step in results
+	result.Step = &proto.Step{
+		Name:   stepReference.Name,
+		Step:   stepReference.Step,
+		Inputs: params.Inputs,
+		Env:    params.Env,
+	}
 	stepsCtx.Steps[stepReference.Name] = result
 	return result, nil
 }

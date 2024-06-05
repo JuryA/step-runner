@@ -63,7 +63,7 @@ func WriteSteps(stepDef *schema.StepDefinition) (string, error) {
 	return buf.String(), nil
 }
 
-func LoadProto(filename string) (*proto.StepDefinition, error) {
+func LoadProto(filename string) (*proto.SpecDefinition, error) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
@@ -72,7 +72,7 @@ func LoadProto(filename string) (*proto.StepDefinition, error) {
 	return ReadProto(string(buf), filepath.Dir(filename))
 }
 
-func ReadProto(content, dir string) (*proto.StepDefinition, error) {
+func ReadProto(content, dir string) (*proto.SpecDefinition, error) {
 	var (
 		spec       proto.Spec
 		definition proto.Definition
@@ -81,7 +81,7 @@ func ReadProto(content, dir string) (*proto.StepDefinition, error) {
 	if err := unmarshalProto(content, &spec, &definition); err != nil {
 		return nil, fmt.Errorf("unmarshaling proto: %w", err)
 	}
-	stepDef := &proto.StepDefinition{
+	stepDef := &proto.SpecDefinition{
 		Spec:       &spec,
 		Definition: &definition,
 		Dir:        dir,

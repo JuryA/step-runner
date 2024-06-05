@@ -15,7 +15,7 @@ import (
 )
 
 type Cache interface {
-	Get(ctx context.Context, parentDir string, step *proto.Step_Reference) (*proto.StepDefinition, error)
+	Get(ctx context.Context, parentDir string, step *proto.Step_Reference) (*proto.SpecDefinition, error)
 }
 
 var _ Cache = &cache{}
@@ -36,8 +36,8 @@ func New() (Cache, error) {
 	}, nil
 }
 
-func (c *cache) Get(ctx context.Context, parentDir string, stepRef *proto.Step_Reference) (*proto.StepDefinition, error) {
-	load := func(dir string) (*proto.StepDefinition, error) {
+func (c *cache) Get(ctx context.Context, parentDir string, stepRef *proto.Step_Reference) (*proto.SpecDefinition, error) {
+	load := func(dir string) (*proto.SpecDefinition, error) {
 		path := filepath.Join(stepRef.Path...)
 		filename := filepath.Join(dir, path, stepRef.Filename)
 		stepDef, err := step.LoadSteps(filename)

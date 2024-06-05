@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	stepRes  = proto.StepResult{ExitCode: 123456}
+	stepRes  = proto.StepResult{ExecResult: &proto.StepResult_ExecResult{ExitCode: 123456}}
 	errFinal = fmt.Errorf("FOO")
 )
 

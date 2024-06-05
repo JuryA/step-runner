@@ -21,9 +21,9 @@ steps:
     inputs:
       echo: hello
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "hello", results[0].Outputs["echo"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "hello", result.SubStepResults[0].Outputs["echo"])
 		},
 	}, {
 		name: "echo reverse",
@@ -40,9 +40,9 @@ steps:
     inputs:
       echo: hello
 `,
-		wantResults: func(t *testing.T, results []*proto.StepResult) {
-			require.Len(t, results, 1)
-			requireStringEqualValue(t, "olleh", results[0].Outputs["echo"])
+		wantResults: func(t *testing.T, result *proto.StepResult) {
+			require.Len(t, result.SubStepResults, 1)
+			requireStringEqualValue(t, "olleh", result.SubStepResults[0].Outputs["echo"])
 		},
 	}}
 	testCases(t, cases)

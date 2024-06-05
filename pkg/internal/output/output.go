@@ -160,9 +160,9 @@ func (f *Files) mergeDelegateOutput(result *proto.StepResult, delegateOutputs ma
 		result.Outputs[k] = v
 	}
 
-	// Merge the delegate step result as a child to give an
+	// Merge the delegate step result as a sub-step to give an
 	// accurate representation of the execution trace.
-	result.ChildrenStepResults = append(result.ChildrenStepResults, delegateResult)
+	result.SubStepResults = append(result.SubStepResults, delegateResult)
 
 	return nil
 }

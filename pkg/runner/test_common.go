@@ -21,7 +21,7 @@ type runnerTest struct {
 	yaml        string
 	globalEnv   map[string]string
 	wantLog     string
-	wantResults func(*testing.T, []*proto.StepResult)
+	wantResults func(*testing.T, *proto.StepResult)
 	wantErr     error
 }
 
@@ -62,7 +62,7 @@ func testCases(t *testing.T, cases []runnerTest) {
 				if c.wantLog != "" {
 					require.Equal(t, c.wantLog, log.String())
 				}
-				c.wantResults(t, result.ChildrenStepResults)
+				c.wantResults(t, result)
 			}
 		})
 	}
