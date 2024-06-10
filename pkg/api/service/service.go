@@ -137,3 +137,15 @@ func waitFor(f func() bool, pollInterval, maxWait time.Duration) error {
 	}
 	return fmt.Errorf("timed out waiting for operation")
 }
+
+func (s *StepRunnerService) Close(ctx context.Context, request *proto.CloseRequest) (*proto.CloseResponse, error) {
+	job, ok := s.jobs.Get(request.Id)
+	if !ok {
+		return nil, &errNoJobID{id: request.Id}
+	}
+
+	job.Close()
+	s.jobs.Remove(request.Id)
+
+	return &proto.CloseResponse{}, nil
+}
