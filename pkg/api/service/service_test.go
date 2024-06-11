@@ -311,3 +311,16 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 
 	assert.Equal(t, want.String(), got.Result.String())
 }
+
+func Test_StepRunnerService_FollowSteps_BadID(t *testing.T) {
+	bg := context.Background()
+	_, client, cleanup := startService(t)
+	defer cleanup()
+
+	stream, err := client.FollowSteps(bg, &proto.FollowStepsRequest{Id: "4130"})
+	require.NoError(t, err)
+
+	_, err = stream.Recv()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no job with id")
+}
