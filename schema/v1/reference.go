@@ -51,9 +51,9 @@ func (g GitReference) IsEmpty() bool {
 
 func (r *Reference) UnmarshalYAML(value *yaml.Node) error {
 	switch value.Tag {
-	case "!!str":
+	case yamlStringTag:
 		return value.Decode(&r.Short)
-	case "!!map":
+	case yamlMapTag:
 		ref := map[string]GitReference{}
 		err := value.Decode(ref)
 		if err != nil {

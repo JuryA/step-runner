@@ -26,6 +26,7 @@ steps:
 		wantCompiled: `
 spec:
     inputs: {}
+    output_method: "outputs"
 ---
 type: steps
 steps:
@@ -54,6 +55,7 @@ spec:
     inputs:
         name:
             type: string
+    output_method: "outputs"
 ---
 type: exec
 exec:
@@ -73,6 +75,7 @@ steps:
 		wantCompiled: `
 spec:
     inputs: {}
+    output_method: "outputs"
 ---
 type: steps
 steps:
@@ -135,6 +138,7 @@ spec:
         eye_color:
             type: raw_string
             default: brown
+    output_method: "outputs"
 ---
 exec:
     command:
@@ -174,7 +178,8 @@ steps:
       step: ../steps/redux
 `,
 		wantCompiled: `
-spec: {}
+spec:
+    output_method: "outputs"
 ---
 env:
     NAME: foo
@@ -183,7 +188,7 @@ steps:
     - name: foo_to_the_max
       step:
           protocol: git
-          url: "https://gitlab.com/components/foo" # until we create the canonical step repository
+          url: "https://gitlab.com/components/foo"
           version: v1
           filename: step.yml
       env:
@@ -219,7 +224,8 @@ steps:
           cmd: yq .name some.yaml
 `,
 		wantCompiled: `
-spec: {}
+spec:
+    output_method: "outputs"
 ---
 type: steps
 steps:
@@ -233,6 +239,31 @@ steps:
           action: mikefarah/yq@master
           inputs:
               cmd: yq .name some.yaml
+`,
+	}, {
+		name: "compile delegate output method",
+		steps: `
+spec:
+  outputs: delegate
+---
+steps:
+    - name: delegate_me
+      step: https://gitlab.com/components/foo@v1
+delegate: delegate_me
+`,
+		wantCompiled: `
+spec:
+    output_method: delegate
+---
+type: steps
+steps:
+    - name: delegate_me
+      step:
+          protocol: git
+          url: "https://gitlab.com/components/foo"
+          version: v1
+          filename: step.yml
+delegate: delegate_me
 `,
 	}}
 	for _, c := range cases {

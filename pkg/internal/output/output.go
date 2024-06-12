@@ -3,13 +3,12 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/joho/godotenv"
-	"golang.org/x/exp/maps"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
@@ -22,18 +21,23 @@ const (
 )
 
 type Files struct {
-	stepCtx     *context.Steps
-	specOutputs map[string]*proto.Spec_Content_Output
+	stepCtx      *context.Steps
+	outputMethod proto.OutputMethod
+	specOutputs  map[string]*proto.Spec_Content_Output
 
 	dir        string
 	outputFile string
 	exportFile string
 }
 
-func New(stepCtx *context.Steps, specOutputs map[string]*proto.Spec_Content_Output) (*Files, error) {
+func New(
+	stepCtx *context.Steps,
+	outputMethod proto.OutputMethod,
+	specOutputs map[string]*proto.Spec_Content_Output,
+) (*Files, error) {
 	dir, err := os.MkdirTemp("", "step-runner-output-*")
 	if err != nil {
-		return nil, fmt.Errorf("making output directoy: %w", err)
+		return nil, fmt.Errorf("making output directory: %w", err)
 	}
 	outputFile := filepath.Join(dir, outputFilename)
 	err = os.WriteFile(outputFile, []byte{}, 0660)
@@ -48,24 +52,26 @@ func New(stepCtx *context.Steps, specOutputs map[string]*proto.Spec_Content_Outp
 	stepCtx.OutputFile = outputFile
 	stepCtx.ExportFile = exportFile
 	return &Files{
-		stepCtx:     stepCtx,
-		specOutputs: specOutputs,
-		dir:         dir,
-		outputFile:  outputFile,
-		exportFile:  exportFile,
+		stepCtx:      stepCtx,
+		outputMethod: outputMethod,
+		specOutputs:  specOutputs,
+		dir:          dir,
+		outputFile:   outputFile,
+		exportFile:   exportFile,
 	}, nil
 }
 
 func (f *Files) OutputTo(result *proto.StepResult) error {
-	outputs, err := readFile(f.outputFile)
-	if err != nil {
-		return fmt.Errorf("reading outputs: %w", err)
-	}
 
 	// Delegates take over step execution including reading and
 	// validating outputs.
-	if f.isDelegate() {
-		return f.mergeDelegateOutput(result, outputs)
+	if f.outputMethod == proto.OutputMethod_delegate {
+		return f.mergeDelegateOutput(result)
+	}
+
+	outputs, err := readFile(f.outputFile)
+	if err != nil {
+		return fmt.Errorf("reading outputs: %w", err)
 	}
 
 	protoOutputs := map[string]*structpb.Value{}
@@ -107,43 +113,18 @@ func (f *Files) OutputTo(result *proto.StepResult) error {
 	return nil
 }
 
-// isDelegate detects a step which returns a single output of type
-// step_result. This is the signature of a delegate step which has
-// taken over step execution. A delegate step's results should be
-// incorporated directly into the step result tree.
-func (f *Files) isDelegate() bool {
-	return len(f.specOutputs) == 1 && maps.Values(f.specOutputs)[0].Type == proto.ValueType_step_result
-}
-
 // mergeDelegateOutput reifies the delegate output as a step result
 // and merges with the given step result.
-func (f *Files) mergeDelegateOutput(result *proto.StepResult, delegateOutputs map[string]string) error {
+func (f *Files) mergeDelegateOutput(result *proto.StepResult) error {
 
-	// Find and unmarshal the delegate result
+	// Delegate return a full step result in the output file.
 	delegateResult := &proto.StepResult{}
-	delegateResultFound := false
-	for k, v := range delegateOutputs {
-		outputSpec, ok := f.specOutputs[k]
-		if !ok {
-			return fmt.Errorf("output %q received from step is not declared in spec", k)
-		}
-		if delegateResultFound {
-			return fmt.Errorf("output %q emitted more than once. unsupported for type step_result", k)
-		}
-		if outputSpec.Type != proto.ValueType_step_result {
-			// Checked already in isDelegate but this makes it clear
-			return fmt.Errorf("output %q must be type step_result", k)
-		}
-		err := protojson.Unmarshal([]byte(v), delegateResult)
-		if err != nil {
-			return fmt.Errorf("unmarshaling output %q as step result: %w", k, err)
-		}
-		delegateResultFound = true
+	data, err := os.ReadFile(f.outputFile)
+	if err != nil {
+		return fmt.Errorf("reading file %v: %w", f.outputFile, err)
 	}
-	// isDelegate already verified there is only one which is of
-	// type step_result
-	if !delegateResultFound && maps.Values(f.specOutputs)[0].Type == proto.ValueType_step_result {
-		return fmt.Errorf("output %q (type step_result) was declared by spec but not received from step", maps.Keys(f.specOutputs)[0])
+	if err := json.Unmarshal(data, delegateResult); err != nil {
+		return fmt.Errorf("reading output_file as a step result: %w", err)
 	}
 
 	// Merge outputs only. Environment variables should be written
@@ -152,13 +133,12 @@ func (f *Files) mergeDelegateOutput(result *proto.StepResult, delegateOutputs ma
 	if result.Outputs == nil {
 		result.Outputs = map[string]*structpb.Value{}
 	}
-	for k, v := range delegateResult.Outputs {
-		// Outputs are take as-is. They will not match the
-		// outputs declared by the calling step. The delegate
-		// step has already verified the outputs when
-		// producing the step result.
-		result.Outputs[k] = v
-	}
+
+	// Outputs are taken as-is. They will not match the
+	// outputs declared by the calling step. The delegate
+	// step has already verified the outputs when
+	// producing the step result.
+	maps.Copy(result.Outputs, delegateResult.Outputs)
 
 	// Merge the delegate step result as a sub-step to give an
 	// accurate representation of the execution trace.

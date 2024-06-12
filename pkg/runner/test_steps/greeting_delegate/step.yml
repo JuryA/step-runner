@@ -1,0 +1,12 @@
+spec:
+  inputs:
+    name:
+      type: string
+  outputs: delegate
+---
+steps:
+  - name: exec_step
+    step: ../greeting
+    inputs:
+      name: ${{ inputs.name }}
+delegate: exec_step

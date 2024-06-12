@@ -18,6 +18,8 @@ type Definition struct {
 	Outputs map[string]any `json:"outputs,omitempty" yaml:"outputs,omitempty"`
 	// Env is a map of environment variable names to values for all steps
 	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
+	// Delegate selects a step by name which will produce the outputs for this step.
+	Delegate string `json:"delegate,omitempty" yaml:"delegate,omitempty"`
 }
 
 type Exec struct {
@@ -54,7 +56,7 @@ type Signature struct {
 	// Inputs is a map of input names to their parameters.
 	Inputs map[string]Input `json:"inputs,omitempty" yaml:"inputs,omitempty"`
 	// Outputs is a map of output names to their parameters.
-	Outputs map[string]Output `json:"outputs,omitempty" yaml:"outputs,omitempty"`
+	Outputs Outputs `json:"outputs,omitempty" yaml:"outputs,omitempty"`
 }
 
 // Input describes a single step input.

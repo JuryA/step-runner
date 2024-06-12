@@ -74,6 +74,8 @@ message Definition {
   };
   // Env is a map of environment variable names to values for all steps
   map<string,string> env = 5;
+  // Delegate selects a step by name which will produce the outputs for this step.
+  string delegate = 6;
 }
 
 // Definition type is either exec or steps.
@@ -116,7 +118,16 @@ message Spec {
       // Default is the default output value.
       google.protobuf.Value default = 2;
     }
+    // OutputMethod selects how this step will return its outputs.
+    OutputMethod output_method = 3;
   }
+}
+
+// OutputMethod is either outputs or delegate.
+enum OutputMethod {
+  output_method_unspecified = 0;
+  outputs = 1;
+  delegate = 2;
 }
 
 // SpecDefinition is the spec and definition from an exec.yml file.
@@ -138,7 +149,6 @@ enum ValueType {
   boolean = 4;
   struct = 5;
   array = 6;
-  step_result = 7;
 }
 
 // StepResult is the result of executing a single step.
