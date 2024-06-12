@@ -91,22 +91,29 @@ func (e *Execution) Run(
 	default:
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
 	}
+	if err != nil {
+		return nil, err
+	}
 
 	result.SpecDefinition = specDefinition
 
-	// Expand step definition outputs which may reference outputs
-	// of sub-steps. Outputs of sub-steps will not be available
-	// for reference after returning, which would break
-	// encapsulation of the step function.
-	for k, v := range specDefinition.Definition.Outputs {
-		res, resErr := expression.Expand(stepsCtx, v)
-		if resErr == nil {
-			result.Outputs[k] = res
-		} else {
-			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
+	return result, err
+}
+
+// mergeDelegateOutput copies outputs from the designated delegate sub-step.
+func mergeDelegateOutput(
+	delegate string,
+	result *proto.StepResult,
+) error {
+	for _, s := range result.SubStepResults {
+		if s.Step != nil && s.Step.Name == delegate {
+			for k, v := range s.Outputs {
+				result.Outputs[k] = v
+			}
+			return nil
 		}
 	}
-	return result, err
+	return fmt.Errorf("delegating outputs to %q: could not find substep", delegate)
 }
 
 // addInputs combines the provided input parameters with the step
@@ -162,16 +169,18 @@ func (e *Execution) runExec(
 	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
 ) error {
-	execDefinition := specDefinition.Definition.Exec
-	outputs := specDefinition.Spec.Spec.Outputs
-	result.ExecResult = &proto.StepResult_ExecResult{}
-
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("exec cancelled: %w", err)
 	}
 
+	result.ExecResult = &proto.StepResult_ExecResult{}
+
+	execDefinition := specDefinition.Definition.Exec
+	outputs := specDefinition.Spec.Spec.Outputs
+	outputMethod := specDefinition.Spec.Spec.OutputMethod
+
 	// Create output and export files and add to context
-	files, err := output.New(stepsCtx, outputs)
+	files, err := output.New(stepsCtx, outputMethod, outputs)
 	if err != nil {
 		return err
 	}
@@ -270,6 +279,26 @@ func (e *Execution) runSteps(
 		}
 	}
 
+	// Delegate outputs are surfaced directly, effectively making
+	// the delegation mechanism "disappear" from the execution
+	// context.
+	if specDefinition.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
+		return mergeDelegateOutput(specDefinition.Definition.Delegate, result)
+	}
+
+	// Expand step definition outputs which may reference outputs
+	// of sub-steps. Outputs of sub-steps will not be available
+	// for reference after returning, which would break
+	// encapsulation of the step function.
+	for k, v := range specDefinition.Definition.Outputs {
+		res, resErr := expression.Expand(stepsCtx, v)
+		if resErr == nil {
+			result.Outputs[k] = res
+		} else {
+			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
+		}
+	}
+
 	return nil
 }
 
@@ -305,13 +334,13 @@ func (e *Execution) runSubStep(
 	}
 
 	// Load the step spec and definition from the cache
-	specDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
+	subStepSpecDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
 	if err != nil {
 		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
 	}
 
 	// Run the step definition with the global context and expanded parameters
-	result, err := e.Run(ctx, stepsCtx.Global, params, specDefinition)
+	result, err := e.Run(ctx, stepsCtx.Global, params, subStepSpecDefinition)
 	if err != nil {
 		return nil, err
 	}

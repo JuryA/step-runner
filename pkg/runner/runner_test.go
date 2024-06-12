@@ -342,6 +342,38 @@ steps:
 			// Sub-steps environment should be expanded and recorded.
 			require.Equal(t, "replaced", result.Env["PLEASE"])
 		},
+	}, {
+		name: "delegate to exec step",
+		yaml: `
+spec:
+  outputs: delegate
+---
+steps:
+  - name: exec_step
+    step: ./test_steps/greeting
+    inputs:
+      name: steppy loves delegation
+delegate: exec_step
+`,
+		wantResults: func(t *testing.T, results *proto.StepResult) {
+			requireStringEqualValue(t, "steppy loves delegation", results.Outputs["name"])
+		},
+	}, {
+		name: "delegate to composite step",
+		yaml: `
+spec:
+  outputs: delegate
+---
+steps:
+  - name: composite_step
+    step: ./test_steps/greeting_delegate
+    inputs:
+      name: steppy loves delegation
+delegate: composite_step
+`,
+		wantResults: func(t *testing.T, results *proto.StepResult) {
+			requireStringEqualValue(t, "steppy loves delegation", results.Outputs["name"])
+		},
 	}}
 
 	testCases(t, cases)

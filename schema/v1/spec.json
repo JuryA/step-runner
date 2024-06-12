@@ -23,21 +23,29 @@
                     "description": "Inputs is a map of input names to their parameters."
                 },
                 "outputs": {
-                    "additionalProperties": {
-                        "properties": {
-                            "type": {
-                                "type": "string",
-                                "description": "Type is the value type of the output."
-                            },
-                            "default": {
-                                "description": "Default is the default output value."
-                            }
+                    "oneOf": [
+                        {
+                            "type": "string"
                         },
-                        "additionalProperties": false,
-                        "type": "object",
-                        "description": "Output describes a single step output."
-                    },
-                    "type": "object",
+                        {
+                            "$schema": "https://json-schema.org/draft/2020-12/schema",
+                            "additionalProperties": {
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "description": "Type is the value type of the output."
+                                    },
+                                    "default": {
+                                        "description": "Default is the default output value."
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "type": "object",
+                                "description": "Output describes a single step output."
+                            },
+                            "type": "object"
+                        }
+                    ],
                     "description": "Outputs is a map of output names to their parameters."
                 }
             },

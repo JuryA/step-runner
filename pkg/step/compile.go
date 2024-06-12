@@ -28,7 +28,6 @@ func CompileSteps(steps *schema.StepDefinition) (*proto.SpecDefinition, error) {
 		}
 		protoStepDef.Definition = protoDef
 	}
-
 	if err := ValidateStepDefinition(protoStepDef); err != nil {
 		return nil, err
 	}
@@ -48,12 +47,18 @@ func (spec *specCompiler) compile() (*proto.Spec, error) {
 		inputs[k] = protoV
 	}
 	outputs := map[string]*proto.Spec_Content_Output{}
-	for k, v := range spec.Spec.Outputs {
+	for k, v := range spec.Spec.Outputs.Outputs {
 		protoV, err := (*outputCompiler)(&v).compile()
 		if err != nil {
 			return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
 		}
 		outputs[k] = protoV
+	}
+	switch {
+	case spec.Spec.Outputs.Delegate:
+		protoSpec.Spec.OutputMethod = proto.OutputMethod_delegate
+	default:
+		protoSpec.Spec.OutputMethod = proto.OutputMethod_outputs
 	}
 	protoSpec.Spec.Inputs = inputs
 	protoSpec.Spec.Outputs = outputs
@@ -180,8 +185,6 @@ func (output *outputCompiler) compileToProto() (*proto.Spec_Content_Output, erro
 		protoOutput.Type = proto.ValueType_string
 	case schema.ValueTypeStruct:
 		protoOutput.Type = proto.ValueType_struct
-	case schema.ValueTypeStepResult:
-		protoOutput.Type = proto.ValueType_step_result
 	default:
 		return nil, fmt.Errorf("unsupported output type: %v", output.Type)
 	}
@@ -296,6 +299,7 @@ func (def *definitionCompiler) compileToProto() (*proto.Definition, error) {
 		return nil, fmt.Errorf("could not determine step type")
 	}
 	protoDef.Env = def.Env
+	protoDef.Delegate = def.Delegate
 	return protoDef, nil
 }
 

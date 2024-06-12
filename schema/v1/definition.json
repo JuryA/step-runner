@@ -143,6 +143,10 @@
             },
             "type": "object",
             "description": "Env is a map of environment variable names to values for all steps"
+        },
+        "delegate": {
+            "type": "string",
+            "description": "Delegate selects a step by name which will produce the outputs for this step."
         }
     },
     "additionalProperties": false,

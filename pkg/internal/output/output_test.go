@@ -15,16 +15,19 @@ import (
 func TestOutput(t *testing.T) {
 	cases := []struct {
 		name          string
+		outputMethod  proto.OutputMethod
 		outputs       map[string]*proto.Spec_Content_Output
 		writeToOutput string
 		want          *proto.StepResult
 		wantErr       bool
 	}{{
-		name:    "no outputs",
-		outputs: map[string]*proto.Spec_Content_Output{},
-		want:    &proto.StepResult{},
+		name:         "no outputs",
+		outputMethod: proto.OutputMethod_outputs,
+		outputs:      map[string]*proto.Spec_Content_Output{},
+		want:         &proto.StepResult{},
 	}, {
-		name: "single output",
+		name:         "single output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_raw_string},
 		},
@@ -35,7 +38,8 @@ func TestOutput(t *testing.T) {
 			},
 		},
 	}, {
-		name: "multiple outputs",
+		name:         "multiple outputs",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_raw_string},
 			"food":  {Type: proto.ValueType_raw_string},
@@ -48,7 +52,8 @@ func TestOutput(t *testing.T) {
 			},
 		},
 	}, {
-		name: "outputs with extra white space",
+		name:         "outputs with extra white space",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_raw_string},
 			"food":  {Type: proto.ValueType_raw_string},
@@ -67,7 +72,8 @@ food=apple
 			},
 		},
 	}, {
-		name: "json string output",
+		name:         "json string output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_string},
 		},
@@ -78,7 +84,8 @@ food=apple
 			},
 		},
 	}, {
-		name: "json number output",
+		name:         "json number output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_number},
 		},
@@ -89,7 +96,8 @@ food=apple
 			},
 		},
 	}, {
-		name: "json bool output",
+		name:         "json bool output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_boolean},
 		},
@@ -100,7 +108,8 @@ food=apple
 			},
 		},
 	}, {
-		name: "json empty struct output",
+		name:         "json empty struct output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_struct},
 		},
@@ -111,7 +120,8 @@ food=apple
 			},
 		},
 	}, {
-		name: "json full struct output",
+		name:         "json full struct output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_struct},
 		},
@@ -127,7 +137,8 @@ food=apple
 			},
 		},
 	}, {
-		name: "json empty list output",
+		name:         "json empty list output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_array},
 		},
@@ -138,7 +149,8 @@ food=apple
 			},
 		},
 	}, {
-		name: "json full list output",
+		name:         "json full list output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_array},
 		},
@@ -154,7 +166,8 @@ food=apple
 			},
 		},
 	}, {
-		name: "default output",
+		name:         "default output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {
 				Type:    proto.ValueType_string,
@@ -168,21 +181,24 @@ food=apple
 			},
 		},
 	}, {
-		name: "invalid format",
+		name:         "invalid format",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_raw_string},
 		},
 		writeToOutput: `invalid`,
 		wantErr:       true,
 	}, {
-		name: "invalid json",
+		name:         "invalid json",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_string},
 		},
 		writeToOutput: `value=foo`,
 		wantErr:       true,
 	}, {
-		name: "missing output",
+		name:         "missing output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_raw_string},
 			"food":  {Type: proto.ValueType_raw_string},
@@ -190,7 +206,8 @@ food=apple
 		writeToOutput: "value=foo",
 		wantErr:       true,
 	}, {
-		name: "extra output",
+		name:         "extra output",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_raw_string},
 			"food":  {Type: proto.ValueType_raw_string},
@@ -198,18 +215,18 @@ food=apple
 		writeToOutput: "value=foo\nfood=apple\nextra=output",
 		wantErr:       true,
 	}, {
-		name: "wrong type received",
+		name:         "wrong type received",
+		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_string},
 		},
 		writeToOutput: `value=12.34`,
 		wantErr:       true,
 	}, {
-		name: "delegate output string",
-		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_step_result},
-		},
-		writeToOutput: `value={"outputs":{"name":"steppy"}}`,
+		name:          "delegate output string",
+		outputMethod:  proto.OutputMethod_delegate,
+		outputs:       nil,
+		writeToOutput: `{"outputs":{"name":"steppy"}}`,
 		want: &proto.StepResult{
 			Outputs: map[string]*structpb.Value{
 				"name": structpb.NewStringValue("steppy"),
@@ -221,11 +238,10 @@ food=apple
 			}},
 		},
 	}, {
-		name: "delegate output struct",
-		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_step_result},
-		},
-		writeToOutput: `value={"outputs":{"favorites":{"food":"hamburger"}}}`,
+		name:          "delegate output struct",
+		outputMethod:  proto.OutputMethod_delegate,
+		outputs:       nil,
+		writeToOutput: `{"outputs":{"favorites":{"food":"hamburger"}}}`,
 		want: &proto.StepResult{
 			Outputs: map[string]*structpb.Value{
 				"favorites": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
@@ -244,7 +260,7 @@ food=apple
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			files, err := New(context.NewSteps(context.NewGlobal()), tc.outputs)
+			files, err := New(context.NewSteps(context.NewGlobal()), tc.outputMethod, tc.outputs)
 			require.NoError(t, err)
 
 			outputFile, err := os.OpenFile(filepath.Join(files.dir, outputFilename), os.O_APPEND|os.O_WRONLY, 0660)
