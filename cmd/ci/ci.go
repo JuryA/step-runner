@@ -77,21 +77,25 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	result, err := execution.Run(ctx.Background(), globalCtx, params, protoStepDef)
+	writeResults := func() error {
+		bytes, err := protojson.Marshal(result)
+		if err != nil {
+			return fmt.Errorf("error marshaling step results: %w", err)
+		}
+		outputFile := "step-results.json"
+		err = os.WriteFile(outputFile, bytes, 0640)
+		if err != nil {
+			return fmt.Errorf("writing step results to %v: %w", outputFile, err)
+		}
+		fmt.Printf("trace written to %v\n", outputFile)
+		return nil
+	}
 	if err != nil {
+		_ = writeResults()
+		fmt.Printf("unable to write results: %v", err)
 		return fmt.Errorf("running execution: %w", err)
 	}
-
-	bytes, err := protojson.Marshal(result)
-	if err != nil {
-		return fmt.Errorf("error marshaling step results: %w", err)
-	}
-	outputFile := "step-results.json"
-	err = os.WriteFile(outputFile, bytes, 0640)
-	if err != nil {
-		return fmt.Errorf("writing step results to %v: %w", outputFile, err)
-	}
-	fmt.Printf("trace written to %v\n", outputFile)
-	return nil
+	return writeResults()
 }
 
 func wrapStepsInSpecDef(steps string) (*schema.StepDefinition, error) {

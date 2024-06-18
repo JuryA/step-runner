@@ -92,7 +92,10 @@ func (e *Execution) Run(
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
 	}
 	if err != nil {
-		return nil, err
+		// We return partial results with an error to help
+		// callers understand what went wrong.
+		result.Status = proto.StepResult_failure
+		return result, err
 	}
 
 	result.SpecDefinition = specDefinition
@@ -202,6 +205,7 @@ func (e *Execution) runExec(
 		cmdArgs = append(cmdArgs, res)
 	}
 	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
+	result.ExecResult.Command = cmd.Args
 
 	// Expand working directory if present. Otherwise fall back to
 	// the working directory defined globally.
@@ -214,26 +218,24 @@ func (e *Execution) runExec(
 	} else {
 		cmd.Dir = stepsCtx.WorkDir
 	}
+	result.ExecResult.WorkDir = cmd.Dir
 
 	// Provide only environment variables from the steps
 	// context. Not from the step runner's environment.
 	cmd.Env = stepsCtx.GetEnvList()
+	result.Env = stepsCtx.GetEnvs()
 	// TODO: Use multi-writer
 	cmd.Stdout = stepsCtx.Global.Stdout
 	cmd.Stderr = stepsCtx.Global.Stderr
+
+	// Capture results of execution
 	err = cmd.Run()
-	if err != nil {
-		return fmt.Errorf("exec: %w, ", err)
-	}
-
-	// Record expanded command parameters and environment
-	result.ExecResult.Command = cmd.Args
-	result.ExecResult.WorkDir = cmd.Dir
-	result.Env = stepsCtx.GetEnvs()
-
 	result.ExecResult.ExitCode = int32(cmd.ProcessState.ExitCode())
 	if result.ExecResult.ExitCode != 0 {
 		result.Status = proto.StepResult_failure
+	}
+	if err != nil {
+		return fmt.Errorf("exec: %w, ", err)
 	}
 
 	err = files.OutputTo(result)
@@ -267,15 +269,19 @@ func (e *Execution) runSteps(
 	result.Status = proto.StepResult_success
 	for _, step := range specDefinition.Definition.Steps {
 		stepResult, err := e.runSubStep(ctx, stepsCtx, specDefinition, step)
+
+		// Capture results even if there was an error
+		if stepResult != nil {
+			result.SubStepResults = append(result.SubStepResults, stepResult)
+
+			// If a sub-step fails then fail this step
+			if stepResult.Status == proto.StepResult_failure {
+				result.Status = proto.StepResult_failure
+				return fmt.Errorf("failed step %q: %w", step.Name, err)
+			}
+		}
 		if err != nil {
 			return err
-		}
-		result.SubStepResults = append(result.SubStepResults, stepResult)
-
-		// One sub-step failed. Mark this step failed and return early
-		if stepResult.Status == proto.StepResult_failure {
-			result.Status = proto.StepResult_failure
-			break
 		}
 	}
 
@@ -342,7 +348,7 @@ func (e *Execution) runSubStep(
 	// Run the step definition with the global context and expanded parameters
 	result, err := e.Run(ctx, stepsCtx.Global, params, subStepSpecDefinition)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 
 	// Record expanded step in results

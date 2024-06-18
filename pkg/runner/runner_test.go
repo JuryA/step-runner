@@ -2,6 +2,7 @@ package runner
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -373,6 +374,23 @@ delegate: composite_step
 `,
 		wantResults: func(t *testing.T, results *proto.StepResult) {
 			requireStringEqualValue(t, "steppy loves delegation", results.Outputs["name"])
+		},
+	}, {
+		name: "return results even with an error",
+		yaml: `
+spec: {}
+---
+steps:
+  - name: bang
+    script: exit 1
+`,
+		wantErr: fmt.Errorf(`failed step "bang": exec: exit status 1, `),
+		wantResults: func(t *testing.T, results *proto.StepResult) {
+			require.NotNil(t, results)
+			require.Equal(t, proto.StepResult_failure, results.Status)
+			require.Len(t, results.SubStepResults, 1)
+			require.Equal(t, proto.StepResult_failure, results.SubStepResults[0].Status)
+			require.Equal(t, int32(1), results.SubStepResults[0].ExecResult.ExitCode)
 		},
 	}}
 
