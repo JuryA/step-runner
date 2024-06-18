@@ -56,7 +56,10 @@ func testCases(t *testing.T, cases []runnerTest) {
 
 			result, err := runner.Run(ctx.Background(), globalCtx, params, protoStepDef)
 			if c.wantErr != nil {
-				require.Equal(t, c.wantErr, err)
+				require.Equal(t, c.wantErr.Error(), err.Error())
+				if c.wantResults != nil {
+					c.wantResults(t, result)
+				}
 			} else {
 				require.NoError(t, err)
 				if c.wantLog != "" {
