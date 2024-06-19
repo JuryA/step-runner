@@ -30,7 +30,8 @@ spec:
 ---
 type: steps
 steps:
-    - step:
+    - name: "0"
+      step:
           protocol: git
           url: "https://gitlab.com/components/script"
           version: main
@@ -264,6 +265,32 @@ steps:
           version: v1
           filename: step.yml
 delegate: delegate_me
+`,
+	}, {
+		name: "name is optional",
+		steps: `
+spec: {}
+---
+steps:
+    - step: ./one
+    - step: ./two
+`,
+		wantCompiled: `
+spec:
+    output_method: outputs
+---
+type: steps
+steps:
+    - name: "0"
+      step:
+          protocol: local
+          path: [ ., one ]
+          filename: step.yml
+    - name: "1"
+      step:
+          protocol: local
+          path: [ ., two ]
+          filename: step.yml
 `,
 	}}
 	for _, c := range cases {
