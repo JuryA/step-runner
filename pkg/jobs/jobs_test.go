@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/streamer/memory"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -70,7 +71,7 @@ func Test_Err(t *testing.T) {
 }
 
 func Test_Finish(t *testing.T) {
-	j := Job{}
+	j := Job{stepResults: memory.New[*proto.StepResult]()}
 
 	j.Finish(nil)
 

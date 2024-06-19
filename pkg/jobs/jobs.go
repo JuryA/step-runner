@@ -10,6 +10,7 @@ import (
 	"time"
 
 	rctx "gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/streamer/memory"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -25,6 +26,8 @@ type Job struct {
 	finished   bool      // Indicated whether all processing of this job has finished.
 	finishTime time.Time // time when the job finished execution.
 	mux        sync.RWMutex
+
+	stepResults *memory.Streamer[*proto.StepResult]
 }
 
 func New(request *proto.RunRequest) (*Job, error) {
@@ -56,12 +59,13 @@ func New(request *proto.RunRequest) (*Job, error) {
 	globCtx.WorkDir = workDir
 
 	return &Job{
-		TmpDir:  tmpDir,
-		WorkDir: workDir,
-		ID:      request.Id,
-		Ctx:     ctx,
-		GlobCtx: globCtx,
-		cancel:  cancel,
+		TmpDir:      tmpDir,
+		WorkDir:     workDir,
+		ID:          request.Id,
+		Ctx:         ctx,
+		GlobCtx:     globCtx,
+		cancel:      cancel,
+		stepResults: memory.New[*proto.StepResult](),
 	}, nil
 }
 
@@ -85,6 +89,7 @@ func (j *Job) Finish(err error) {
 	j.err = err
 	j.finished = true
 	j.finishTime = now
+	j.stepResults.Stop()
 }
 
 func (j *Job) Finished() bool {
