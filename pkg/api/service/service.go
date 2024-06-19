@@ -16,9 +16,9 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-type errNoJobID struct{ id string }
+type errBadJobID struct{ id string }
 
-func (e *errNoJobID) Error() string { return fmt.Sprintf("no job with id %q", e.id) }
+func (e *errBadJobID) Error() string { return fmt.Sprintf("no job with id %q", e.id) }
 
 type StepRunnerService struct {
 	proto.StepRunnerServer
@@ -106,7 +106,7 @@ func (s *StepRunnerService) run(execution *runner.Execution, job *jobs.Job, step
 func (s *StepRunnerService) FollowSteps(request *proto.FollowStepsRequest, writer proto.StepRunner_FollowStepsServer) error {
 	job, ok := s.jobs.Get(request.Id)
 	if !ok {
-		return &errNoJobID{id: request.Id}
+		return &errBadJobID{id: request.Id}
 	}
 
 	// TODO: this is temporary until we implement step-result streaming and job timeout.
@@ -141,7 +141,7 @@ func waitFor(f func() bool, pollInterval, maxWait time.Duration) error {
 func (s *StepRunnerService) Close(ctx context.Context, request *proto.CloseRequest) (*proto.CloseResponse, error) {
 	job, ok := s.jobs.Get(request.Id)
 	if !ok {
-		return nil, &errNoJobID{id: request.Id}
+		return nil, &errBadJobID{id: request.Id}
 	}
 
 	job.Close()
