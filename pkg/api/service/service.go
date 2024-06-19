@@ -112,7 +112,6 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 
 // run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
 func (s *StepRunnerService) run(execution *runner.Execution, job *jobs.Job, steps *proto.SpecDefinition) {
-	// TODO: Add streaming of step-results as they are produced.
 	_, err := execution.Run(job.Ctx, job.GlobCtx, &runner.Params{}, steps)
 	job.Finish(err)
 	if err != nil {
@@ -121,15 +120,16 @@ func (s *StepRunnerService) run(execution *runner.Execution, job *jobs.Job, step
 	}
 }
 
-// TODO: this is very much a temporary/throwaway implementation until we implement step-result streaming and job timeout.
 func (s *StepRunnerService) FollowSteps(request *proto.FollowStepsRequest, writer proto.StepRunner_FollowStepsServer) error {
 	job, ok := s.jobs.Get(request.Id)
 	if !ok {
 		return &errBadJobID{id: request.Id}
 	}
 
-	// TODO: implement this
-	return nil
+	// TODO: add offset to request
+	return job.FollowStepResults(func(result *proto.StepResult) error {
+		return writer.Send(&proto.FollowStepsResponse{Result: result})
+	})
 }
 
 func (s *StepRunnerService) Close(ctx context.Context, request *proto.CloseRequest) (*proto.CloseResponse, error) {

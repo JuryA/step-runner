@@ -269,7 +269,7 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 	defer os.RemoveAll(testDirName(t))
 
 	bg := context.Background()
-	srs, client, cleanup := startService(t)
+	_, client, cleanup := startService(t)
 	defer cleanup()
 
 	rr := makeRunRequest(t, makeBashStep("sleep 1"), false)
@@ -279,21 +279,31 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 	stream, err := client.FollowSteps(bg, &proto.FollowStepsRequest{Id: rr.Id})
 	require.NoError(t, err)
 
-	got, err := stream.Recv()
-	require.NoError(t, err)
-	require.NotNil(t, got)
+	streamedResults := []*proto.StepResult{}
+
+	for {
+		res, ierr := stream.Recv()
+		if ierr == io.EOF {
+			err = ierr
+			break
+		}
+		streamedResults = append(streamedResults, res.Result)
+	}
+
 	client.Close(bg, &proto.CloseRequest{Id: rr.Id})
 
-	// since there's currently only one step-result, a subsequent read should return EOF.
-	_, err = stream.Recv()
 	require.True(t, errors.Is(err, io.EOF))
+	require.Len(t, streamedResults, 2)
+	assert.Len(t, streamedResults[0].SubStepResults, 0)
+	assert.Len(t, streamedResults[1].SubStepResults, 1)
 
-	job, ok := srs.jobs.Get(rr.Id)
-	require.True(t, ok)
-	defer os.RemoveAll(job.WorkDir)
-	want, _ := job.Result()
+	got := streamedResults[0]
+	want := streamedResults[1].SubStepResults[0]
 
-	assert.Equal(t, want.String(), got.Result.String())
+	// the first StepResult emitted is the single embedded step-result of the final step-result.
+	assert.Equal(t, want.SpecDefinition, got.SpecDefinition)
+	assert.Equal(t, want.Status, got.Status)
+	assert.Equal(t, want.ExecResult, got.ExecResult)
 }
 
 func Test_StepRunnerService_FollowSteps_BadID(t *testing.T) {
