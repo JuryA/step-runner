@@ -59,55 +59,53 @@ var exprExca = [...]int8{
 	-1, 1,
 	1, -1,
 	-2, 0,
+	-1, 23,
+	11, 13,
+	-2, 15,
 }
 
 const exprPrivate = 57344
 
-const exprLast = 44
+const exprLast = 30
 
 var exprAct = [...]int8{
-	25, 2, 23, 6, 33, 11, 12, 28, 7, 8,
-	9, 17, 26, 29, 10, 31, 28, 20, 21, 7,
-	8, 9, 7, 8, 9, 10, 24, 5, 10, 32,
-	30, 4, 27, 16, 15, 14, 13, 22, 3, 1,
-	19, 0, 0, 18,
+	2, 6, 28, 11, 5, 8, 9, 12, 16, 4,
+	7, 17, 27, 22, 23, 20, 21, 19, 15, 14,
+	13, 18, 24, 25, 26, 10, 3, 1, 0, 29,
 }
 
 var exprPact = [...]int16{
-	18, -1000, -1000, -8, -6, 28, 25, 23, -1000, -1000,
-	18, 18, 18, 18, 18, 33, 15, 1, -6, 28,
-	25, 25, 22, 2, -1000, -1000, -1000, 4, 18, -1000,
-	-7, -1000, -1000, -1000,
+	0, -1000, -1000, -10, -5, 12, 9, 0, -1000, -1000,
+	7, 0, 0, 0, 0, -1000, 2, 4, -5, 12,
+	9, 9, -1000, 0, 1, -12, -1000, -1000, 0, -1000,
 }
 
 var exprPgo = [...]int8{
-	0, 39, 0, 38, 31, 27, 3, 2,
+	0, 27, 0, 26, 9, 4, 1, 25, 23, 22,
 }
 
 var exprR1 = [...]int8{
-	0, 1, 7, 7, 2, 3, 3, 4, 4, 5,
-	5, 5, 6, 6, 6, 6, 6, 6, 6, 6,
+	0, 1, 8, 8, 2, 3, 3, 4, 4, 5,
+	5, 5, 9, 9, 7, 7, 6, 6, 6, 6,
 	6,
 }
 
 var exprR2 = [...]int8{
 	0, 1, 3, 1, 1, 3, 1, 3, 1, 3,
-	3, 1, 1, 1, 1, 3, 3, 4, 3, 6,
+	3, 1, 1, 0, 2, 0, 3, 1, 1, 2,
 	5,
 }
 
 var exprChk = [...]int16{
-	-1000, -1, -2, -3, -4, -5, -6, 4, 5, 6,
-	10, 13, 12, 8, 7, 9, 10, -2, -4, -5,
-	-6, -6, 4, -7, 11, -2, 11, 10, 14, 11,
-	-7, 11, -2, 11,
+	-1000, -1, -2, -3, -4, -5, -6, 10, 5, 6,
+	-7, 13, 12, 8, 7, 9, -2, 4, -4, -5,
+	-6, -6, 11, 10, -9, -8, -2, 11, 14, -2,
 }
 
 var exprDef = [...]int8{
-	0, -2, 1, 4, 6, 8, 11, 12, 13, 14,
-	0, 0, 0, 0, 0, 0, 0, 0, 5, 7,
-	9, 10, 16, 0, 18, 3, 15, 0, 0, 17,
-	0, 20, 2, 19,
+	15, -2, 1, 4, 6, 8, 11, 15, 17, 18,
+	0, 15, 15, 15, 15, 14, 0, 19, 5, 7,
+	9, 10, 16, -2, 0, 12, 3, 20, 15, 2,
 }
 
 var exprTok1 = [...]int8{
@@ -530,55 +528,55 @@ exprdefault:
 		exprDollar = exprS[exprpt-1 : exprpt+1]
 //line expr_parser.y:49
 		{
-			exprVAL.expr = &nodeDig{expr: &nodeContext{}, key: exprDollar[1].id}
+			exprVAL.exprList = exprDollar[1].exprList
 		}
 	case 13:
-		exprDollar = exprS[exprpt-1 : exprpt+1]
+		exprDollar = exprS[exprpt-0 : exprpt+1]
 //line expr_parser.y:50
 		{
-			exprVAL.expr = &nodeValue{value: value.ToValue(exprDollar[1].number)}
+			clear(exprVAL.exprList)
 		}
 	case 14:
-		exprDollar = exprS[exprpt-1 : exprpt+1]
-//line expr_parser.y:51
+		exprDollar = exprS[exprpt-2 : exprpt+1]
+//line expr_parser.y:53
 		{
-			exprVAL.expr = &nodeValue{value: value.ToValue(exprDollar[1].str)}
+			exprVAL.expr = exprDollar[1].expr
 		}
 	case 15:
-		exprDollar = exprS[exprpt-3 : exprpt+1]
-//line expr_parser.y:52
+		exprDollar = exprS[exprpt-0 : exprpt+1]
+//line expr_parser.y:54
 		{
-			exprVAL.expr = exprDollar[2].expr
+			exprVAL.expr = &nodeContext{}
 		}
 	case 16:
 		exprDollar = exprS[exprpt-3 : exprpt+1]
-//line expr_parser.y:53
+//line expr_parser.y:57
 		{
-			exprVAL.expr = &nodeDig{expr: exprDollar[1].expr, key: exprDollar[3].id}
+			exprVAL.expr = exprDollar[2].expr
 		}
 	case 17:
-		exprDollar = exprS[exprpt-4 : exprpt+1]
-//line expr_parser.y:54
+		exprDollar = exprS[exprpt-1 : exprpt+1]
+//line expr_parser.y:58
 		{
-			exprVAL.expr = &nodeCall{expr: &nodeContext{}, method: exprDollar[1].id, args: exprDollar[3].exprList}
+			exprVAL.expr = &nodeValue{value: value.ToValue(exprDollar[1].number)}
 		}
 	case 18:
-		exprDollar = exprS[exprpt-3 : exprpt+1]
-//line expr_parser.y:55
+		exprDollar = exprS[exprpt-1 : exprpt+1]
+//line expr_parser.y:59
 		{
-			exprVAL.expr = &nodeCall{expr: &nodeContext{}, method: exprDollar[1].id}
+			exprVAL.expr = &nodeValue{value: value.ToValue(exprDollar[1].str)}
 		}
 	case 19:
-		exprDollar = exprS[exprpt-6 : exprpt+1]
-//line expr_parser.y:56
+		exprDollar = exprS[exprpt-2 : exprpt+1]
+//line expr_parser.y:60
 		{
-			exprVAL.expr = &nodeCall{expr: exprDollar[1].expr, method: exprDollar[3].id, args: exprDollar[5].exprList}
+			exprVAL.expr = &nodeDig{expr: exprDollar[1].expr, key: exprDollar[2].id}
 		}
 	case 20:
 		exprDollar = exprS[exprpt-5 : exprpt+1]
-//line expr_parser.y:57
+//line expr_parser.y:61
 		{
-			exprVAL.expr = &nodeCall{expr: exprDollar[1].expr, method: exprDollar[3].id}
+			exprVAL.expr = &nodeCall{expr: exprDollar[1].expr, method: exprDollar[2].id, args: exprDollar[4].exprList}
 		}
 	}
 	goto exprstack /* stack new state and value */
