@@ -41,7 +41,7 @@ func testCases(t *testing.T, cases []runnerTest) {
 
 			defs, err := cache.New()
 			require.NoError(t, err)
-			runner, err := New(defs)
+			runner, err := New(defs, nil)
 			require.NoError(t, err)
 
 			var log bytes.Buffer

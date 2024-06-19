@@ -4,9 +4,8 @@ import (
 	ctx "context"
 	"fmt"
 	"os"
-	"strings"
-
 	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
@@ -46,7 +45,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	defer globalCtx.Cleanup()
 
-	execution, err := runner.New(defs)
+	execution, err := runner.New(defs, nil)
 	if err != nil {
 		return fmt.Errorf("creating execution: %w", err)
 	}

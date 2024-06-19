@@ -40,7 +40,7 @@ func New() (*StepRunnerService, error) {
 
 // Run parses, prepares, and initiates execution of a RunRequest.
 func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) (*proto.RunResponse, error) {
-	execution, err := runner.New(s.cache)
+	execution, err := runner.New(s.cache, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating execution: %w", err)
 	}

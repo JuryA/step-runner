@@ -27,7 +27,8 @@ func (*noopRunHook) PreExit(*proto.StepResult)       {}
 
 // Execution is the execution of a single step.
 type Execution struct {
-	defs cache.Cache
+	defs    cache.Cache
+	runHook ExecutionRunHook
 }
 
 // Params are the input and environment parameters for an execution.
@@ -37,9 +38,13 @@ type Params struct {
 }
 
 // New creates a new execution using a shared cache.
-func New(defs cache.Cache) (*Execution, error) {
+func New(defs cache.Cache, runHook ExecutionRunHook) (*Execution, error) {
+	if runHook == nil {
+		runHook = &noopRunHook{}
+	}
 	return &Execution{
-		defs: defs,
+		defs:    defs,
+		runHook: runHook,
 	}, nil
 }
 
