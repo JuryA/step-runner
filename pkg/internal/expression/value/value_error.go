@@ -12,6 +12,10 @@ func (v *ValueError) Dig(key string) Value {
 	return NewError(errors.New("not supported"))
 }
 
+func (v *ValueError) Call(method string, args []Value) Value {
+	return NewError(errors.New("not supported"))
+}
+
 func (v *ValueError) IsTrue() bool {
 	return false
 }

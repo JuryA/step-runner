@@ -13,6 +13,10 @@ func (v *ValueInt) Dig(key string) Value {
 	return NewError(errors.New("not supported"))
 }
 
+func (v *ValueInt) Call(method string, args []Value) Value {
+	return NewError(errors.New("not supported"))
+}
+
 func (v *ValueInt) IsTrue() bool {
 	return v.v != 0
 }

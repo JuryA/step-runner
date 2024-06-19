@@ -17,8 +17,17 @@ func TestCompileStatement(t *testing.T) {
 	}{
 		{name: "and expression", text: "1 && 2", result: value.ToValue(2)},
 		{name: "or expression", text: "1 || 2", result: value.ToValue(1)},
-		{name: "equals expression", text: "1 == 2", result: value.ToValue(false)},
 		{name: "not equals expression", text: "1 != 2", result: value.ToValue(true)},
+		{name: "equals expression", text: "1 == 2", result: value.ToValue(false)},
+		{name: "equals expression", text: "\"1\" == 1", result: value.ToValue(true)},
+		{name: "equals expression", text: "\"1\" == \"1\"", result: value.ToValue(true)},
+		{name: "equals expression", text: "\"1\" == \"2\"", result: value.ToValue(false)},
+		{name: "and expression", text: "0 && 2", result: value.ToValue(nil)},
+		{name: "or expression", text: "0 || 2", result: value.ToValue(2)},
+		{name: "and expression", text: "\"\" && 2", result: value.ToValue(nil)},
+		{name: "or expression", text: "\"\" || 2", result: value.ToValue(2)},
+		{name: "variable", text: "v", result: value.ToValue(nil)},
+		{name: "str()", text: "str(10)", result: value.ToValue("10")},
 	}
 
 	for _, test := range tests {

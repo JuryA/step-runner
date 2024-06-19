@@ -8,6 +8,11 @@ type ValueNil struct {
 }
 
 func (v *ValueNil) Dig(key string) Value {
+	// going deeper is always nil
+	return v
+}
+
+func (v *ValueNil) Call(method string, args []Value) Value {
 	return NewError(errors.New("not supported"))
 }
 

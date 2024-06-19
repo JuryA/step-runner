@@ -1,8 +1,6 @@
 package evaluator
 
 import (
-	"errors"
-
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression/value"
 )
 
@@ -13,5 +11,19 @@ type nodeCall struct {
 }
 
 func (n *nodeCall) Calculate(context value.Value) value.Value {
-	return value.NewError(errors.New("not supported"))
+	exprValue := n.expr.Calculate(context)
+	if exprValue.Error() != nil {
+		return exprValue
+	}
+
+	args := []value.Value{}
+	for _, arg := range n.args {
+		argValue := arg.Calculate(context)
+		if argValue.Error() != nil {
+			return argValue
+		}
+		args = append(args, argValue)
+	}
+
+	return exprValue.Call(n.method, args)
 }
