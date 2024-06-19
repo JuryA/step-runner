@@ -122,24 +122,25 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 
 	assert.Equal(t, proto.StepResult_success, res.Status)
 
-	job.Close()
+	client.Close(bg, &proto.CloseRequest{Id: rr.Id})
 	assert.NoDirExists(t, job.TmpDir)
 }
 
 func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 	defer os.RemoveAll(testDirName(t))
+	bg := context.Background()
 
 	tests := map[string]struct {
 		id       string
 		script   string
-		finish   func(*jobs.Job, *StepRunnerService, *sync.WaitGroup)
+		finish   func(*jobs.Job, proto.StepRunnerClient, *sync.WaitGroup)
 		validate func(*jobs.Job)
 	}{
 		"Close called before request executed": {
 			script: "sleep 1",
-			finish: func(j *jobs.Job, srs *StepRunnerService, wg *sync.WaitGroup) {
+			finish: func(j *jobs.Job, client proto.StepRunnerClient, wg *sync.WaitGroup) {
 				defer wg.Done()
-				j.Close()
+				client.Close(bg, &proto.CloseRequest{Id: j.ID})
 			},
 			validate: func(j *jobs.Job) {
 				res, err := j.Result()
@@ -149,11 +150,11 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 		},
 		"Close called after request finished": {
 			script: "sleep 1",
-			finish: func(j *jobs.Job, srs *StepRunnerService, wg *sync.WaitGroup) {
+			finish: func(j *jobs.Job, client proto.StepRunnerClient, wg *sync.WaitGroup) {
 				defer wg.Done()
 				// Make sure the step execution finished
 				assert.Eventually(t, j.Finished, time.Millisecond*1900, time.Millisecond*100)
-				j.Close()
+				client.Close(bg, &proto.CloseRequest{Id: j.ID})
 			},
 			validate: func(j *jobs.Job) {
 				res, err := j.Result()
@@ -163,11 +164,11 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 		},
 		"Close called before request finishes": {
 			script: "sleep 1",
-			finish: func(j *jobs.Job, srs *StepRunnerService, wg *sync.WaitGroup) {
+			finish: func(j *jobs.Job, client proto.StepRunnerClient, wg *sync.WaitGroup) {
 				defer wg.Done()
 				// Make sure the step sub-process was executed before calling Finish()
 				time.Sleep(time.Millisecond * 50)
-				j.Close()
+				client.Close(bg, &proto.CloseRequest{Id: j.ID})
 			},
 			validate: func(j *jobs.Job) {
 				res, err := j.Result()
@@ -179,7 +180,6 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			bg := context.Background()
 			srs, client, cleanup := startService(t)
 			defer cleanup()
 
@@ -194,7 +194,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			require.True(t, ok)
 			defer os.RemoveAll(job.WorkDir)
 
-			go tt.finish(job, srs, &wg)
+			go tt.finish(job, client, &wg)
 
 			assert.Eventually(t, job.Finished, time.Millisecond*5500, time.Millisecond*100)
 			wg.Wait()
@@ -275,7 +275,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, "foobarbaz", strings.TrimSpace(string(data)))
 
-			job.Close()
+			client.Close(bg, &proto.CloseRequest{Id: rr.Id})
 			assert.NoDirExists(t, job.TmpDir)
 		})
 	}
@@ -289,6 +289,7 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 	rr := makeRunRequest(t, makeBashStep("sleep 1"), false)
 	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
+	defer client.Close(bg, &proto.CloseRequest{Id: rr.Id})
 
 	stream, err := client.FollowSteps(bg, &proto.FollowStepsRequest{Id: rr.Id})
 	require.NoError(t, err)
