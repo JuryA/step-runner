@@ -3,6 +3,7 @@ package step
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -281,7 +282,7 @@ func (def *definitionCompiler) compileToProto() (*proto.Definition, error) {
 		protoDef.Type = proto.DefinitionType_steps
 		protoDef.Steps = make([]*proto.Step, len(def.Steps))
 		for i, s := range def.Steps {
-			protoStep, err := (*stepCompiler)(s).compile()
+			protoStep, err := (*stepCompiler)(s).compile(i)
 			if err != nil {
 				return nil, fmt.Errorf("compiling steps[%v]: %q: %w", i, s.Name, err)
 			}
@@ -305,7 +306,7 @@ func (def *definitionCompiler) compileToProto() (*proto.Definition, error) {
 
 type stepCompiler schema.Step
 
-func (step *stepCompiler) compile() (*proto.Step, error) {
+func (step *stepCompiler) compile(i int) (*proto.Step, error) {
 	err := step.compileScriptKeywordToStep()
 	if err != nil {
 		return nil, err
@@ -314,6 +315,7 @@ func (step *stepCompiler) compile() (*proto.Step, error) {
 	if err != nil {
 		return nil, err
 	}
+	step.defaultName(i)
 	return step.compileToProto()
 }
 
@@ -361,6 +363,12 @@ func (step *stepCompiler) compileActionKeywordToStep() error {
 	}
 	step.Action = ""
 	return nil
+}
+
+func (step *stepCompiler) defaultName(i int) {
+	if step.Name == "" {
+		step.Name = strconv.Itoa(i)
+	}
 }
 
 func (step *stepCompiler) compileToProto() (*proto.Step, error) {
