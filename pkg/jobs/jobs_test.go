@@ -14,10 +14,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-var (
-	stepRes  = proto.StepResult{ExecResult: &proto.StepResult_ExecResult{ExitCode: 123456}}
-	errFinal = fmt.Errorf("FOO")
-)
+var errFinal = fmt.Errorf("FOO")
 
 func makeRunRequest(t *testing.T, withJob bool) *proto.RunRequest {
 	testDir := path.Join(os.TempDir(), t.Name())
@@ -111,4 +108,40 @@ func Test_Finalize(t *testing.T) {
 	assert.True(t, errors.Is(j.err, j.Ctx.Err()))
 
 	assert.NoDirExists(t, j.TmpDir)
+}
+
+func Test_FollowStepResults(t *testing.T) {
+	tests := map[string]struct {
+		finishErr error
+		writeErr  error
+		wantErr   error
+	}{
+		"write error": {
+			writeErr:  errors.New("POW!!!"),
+			finishErr: errors.New("BLAMMO!!!"),
+			wantErr:   errors.New("POW!!!"),
+		},
+		"finish error": {
+			finishErr: errors.New("BLAMMO!!!"),
+			wantErr:   errors.New("BLAMMO!!!"),
+		},
+		"no error": {},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			j := Job{stepResults: memory.New[*proto.StepResult]()}
+
+			go func() {
+				j.StepResultWriter()(&proto.StepResult{})
+				j.Finish(tt.finishErr)
+			}()
+
+			gotErr := j.FollowStepResults(func(w *proto.StepResult) error {
+				return tt.writeErr
+			})
+
+			assert.Equal(t, tt.wantErr, gotErr)
+		})
+	}
 }

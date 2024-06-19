@@ -105,3 +105,19 @@ func (j *Job) Close() {
 	defer j.GlobCtx.Cleanup()
 	j.Finish(j.Ctx.Err())
 }
+
+// StepResultWriter return a function that when called, will collect/accumulate StepResults into the embedded
+// stepresult.Streamer instance.
+func (j *Job) StepResultWriter() func(*proto.StepResult) { return j.stepResults.Write }
+
+// FollowStepResults will write all current and future accumulated StepResults to the specified writer. This function
+// returns:
+// - a non-nil error returned by the writer.
+// - the error that terminated the job (if any)
+// - nil
+func (j *Job) FollowStepResults(writer func(*proto.StepResult) error) error {
+	if err := j.stepResults.Follow(writer); err != nil {
+		return err
+	}
+	return j.Err()
+}
