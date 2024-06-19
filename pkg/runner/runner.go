@@ -15,6 +15,16 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
+type ExecutionRunHook interface {
+	PostEnter(*proto.SpecDefinition) // TODO: is the arg necessary?
+	PreExit(*proto.StepResult)
+}
+
+type noopRunHook struct{}
+
+func (*noopRunHook) PostEnter(*proto.SpecDefinition) {}
+func (*noopRunHook) PreExit(*proto.StepResult)       {}
+
 // Execution is the execution of a single step.
 type Execution struct {
 	defs cache.Cache
