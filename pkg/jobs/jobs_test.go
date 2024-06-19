@@ -60,36 +60,28 @@ func Test_New_Job_WorkDir(t *testing.T) {
 	assert.DirExists(t, j.WorkDir)
 }
 
-func Test_Result(t *testing.T) {
+func Test_Err(t *testing.T) {
 	j := Job{}
 
-	r, e := j.Result()
-	assert.Nil(t, r)
-	assert.Nil(t, e)
+	assert.Nil(t, j.Err())
 
-	j.stepResult = &stepRes
 	j.err = errFinal
-
-	r, e = j.Result()
-	assert.Equal(t, &stepRes, r)
-	assert.Equal(t, errFinal, e)
+	assert.Equal(t, errFinal, j.Err())
 }
 
 func Test_Finish(t *testing.T) {
 	j := Job{}
 
-	j.Finish(&stepRes, nil)
+	j.Finish(nil)
 
-	assert.True(t, j.finished)
+	assert.True(t, j.Finished())
 	assert.WithinDuration(t, time.Now(), j.finishTime, time.Millisecond*5)
 
-	assert.Equal(t, &stepRes, j.stepResult)
-	assert.Nil(t, j.err)
+	assert.Nil(t, j.Err())
 
 	// stepResult and err remain unchanged on subsequent calls to Close
-	j.Finish(nil, errFinal)
-	assert.Equal(t, &stepRes, j.stepResult)
-	assert.Nil(t, j.err)
+	j.Finish(errFinal)
+	assert.Nil(t, j.Err())
 }
 
 func Test_Finalize_AlreadyFinished(t *testing.T) {
@@ -97,12 +89,11 @@ func Test_Finalize_AlreadyFinished(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(j.WorkDir)
 
-	j.Finish(&stepRes, nil)
+	j.Finish(nil)
 
 	j.Close()
 
-	assert.Equal(t, &stepRes, j.stepResult)
-	assert.Nil(t, j.err)
+	assert.Nil(t, j.Err())
 	assert.WithinDuration(t, time.Now(), j.finishTime, time.Millisecond*5)
 
 	assert.NoDirExists(t, j.TmpDir)
@@ -115,8 +106,7 @@ func Test_Finalize(t *testing.T) {
 
 	j.Close()
 
-	assert.True(t, j.finished)
-	assert.Nil(t, j.stepResult)
+	assert.True(t, j.Finished())
 	assert.True(t, errors.Is(j.err, j.Ctx.Err()))
 
 	assert.NoDirExists(t, j.TmpDir)

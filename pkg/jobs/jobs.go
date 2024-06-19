@@ -25,9 +25,6 @@ type Job struct {
 	finished   bool      // Indicated whether all processing of this job has finished.
 	finishTime time.Time // time when the job finished execution.
 	mux        sync.RWMutex
-
-	// TODO: This is temporary, until we implement streaming of step-results.
-	stepResult *proto.StepResult
 }
 
 func New(request *proto.RunRequest) (*Job, error) {
@@ -68,17 +65,15 @@ func New(request *proto.RunRequest) (*Job, error) {
 	}, nil
 }
 
-// Result returns the StepResult and error resulting from executing the step. Note that this function might not be
-// necessary when we implement streaming step-results as they are executed.
-func (j *Job) Result() (*proto.StepResult, error) {
+func (j *Job) Err() error {
 	j.mux.RLock()
 	defer j.mux.RUnlock()
-	return j.stepResult, j.err
+	return j.err
 }
 
 // Finish() finishes/completes natural job execution (i.e. not cancelled). It does not clean up resources created
-// during job execution. The signature of this method may change when we implement streaming step-results.
-func (j *Job) Finish(result *proto.StepResult, err error) {
+// during job execution.
+func (j *Job) Finish(err error) {
 	now := time.Now()
 
 	j.mux.Lock()
@@ -87,14 +82,9 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 		return
 	}
 
-	j.stepResult = result
 	j.err = err
 	j.finished = true
 	j.finishTime = now
-
-	if err != nil {
-		j.stepResult = nil
-	}
 }
 
 func (j *Job) Finished() bool {
@@ -108,5 +98,5 @@ func (j *Job) Close() {
 	j.cancel()
 	defer os.RemoveAll(j.TmpDir)
 	defer j.GlobCtx.Cleanup()
-	j.Finish(nil, j.Ctx.Err())
+	j.Finish(j.Ctx.Err())
 }
