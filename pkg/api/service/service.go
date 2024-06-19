@@ -26,6 +26,24 @@ type StepRunnerService struct {
 	jobs *syncmap.SyncMap[string, *jobs.Job]
 }
 
+type executionRunHook struct {
+	collect func(*proto.StepResult)
+}
+
+func (eh *executionRunHook) PostEnter(sd *proto.SpecDefinition) {
+	// TODO: log something better here. This is probably TMI.
+	log.Println("executing step", sd.Definition.String())
+}
+
+func (eh *executionRunHook) PreExit(result *proto.StepResult) {
+	if result == nil {
+		return
+	}
+	// TODO: log something better here. This is probably TMI.
+	eh.collect(result)
+	log.Println("finished step", result.String())
+}
+
 func New() (*StepRunnerService, error) {
 	c, err := cache.New()
 	if err != nil {
@@ -39,11 +57,6 @@ func New() (*StepRunnerService, error) {
 
 // Run parses, prepares, and initiates execution of a RunRequest.
 func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) (*proto.RunResponse, error) {
-	execution, err := runner.New(s.cache, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating execution: %w", err)
-	}
-
 	steps, err := s.loadSteps(request.Steps)
 	if err != nil {
 		return nil, fmt.Errorf("loading step: %w", err)
@@ -54,8 +67,15 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("initializing request: %w", err)
 	}
 
+	execution, err := runner.New(s.cache, &executionRunHook{collect: job.StepResultWriter()})
+	if err != nil {
+		job.Close()
+		return nil, fmt.Errorf("creating execution: %w", err)
+	}
+
 	jobVars, err := variables.Prepare(request.Job, job.TmpDir)
 	if err != nil {
+		job.Close()
 		return nil, fmt.Errorf("preparing environment: %w", err)
 	}
 
