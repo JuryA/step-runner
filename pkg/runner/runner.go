@@ -74,7 +74,10 @@ func (e *Execution) Run(
 	globalCtx *context.Global,
 	params *Params,
 	specDefinition *proto.SpecDefinition,
-) (*proto.StepResult, error) {
+) (result *proto.StepResult, err error) {
+	e.runHook.PostEnter(specDefinition)
+	defer func() { e.runHook.PreExit(result) }()
+
 	stepsCtx := context.NewSteps(globalCtx)
 
 	// We tell steps where to find their cached definition so they
@@ -83,13 +86,13 @@ func (e *Execution) Run(
 	stepsCtx.StepDir = specDefinition.Dir
 
 	// Add param inputs and environment to context
-	err := addInputs(stepsCtx, specDefinition.Spec, params.Inputs)
+	err = addInputs(stepsCtx, specDefinition.Spec, params.Inputs)
 	if err != nil {
 		return nil, fmt.Errorf("adding inputs: %w", err)
 	}
 	maps.Copy(stepsCtx.Env, params.Env)
 
-	result := &proto.StepResult{
+	result = &proto.StepResult{
 		SpecDefinition: specDefinition,
 		Status:         proto.StepResult_success,
 		Outputs:        make(map[string]*structpb.Value),
