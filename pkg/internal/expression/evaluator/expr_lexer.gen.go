@@ -88,6 +88,8 @@ func (lex *expressionParser) Lex(out *exprSymType) int {
 		goto st_case_5
 	case 9:
 		goto st_case_9
+	case 10:
+		goto st_case_10
 	case 6:
 		goto st_case_6
 	}
@@ -118,7 +120,7 @@ tr7:
 { tok = OR; {( lex.p)++;  lex.cs = 7; goto _out } }
 	goto st7
 tr8:
-//line expr_lexer.rl:77
+//line expr_lexer.rl:80
  lex.te = ( lex.p)+1
 
 	goto st7
@@ -142,13 +144,29 @@ tr14:
  lex.te = ( lex.p)+1
 { tok = DOT; {( lex.p)++;  lex.cs = 7; goto _out } }
 	goto st7
-tr19:
+tr16:
+//line expr_lexer.rl:77
+ lex.te = ( lex.p)+1
+{ tok = COLON; {( lex.p)++;  lex.cs = 7; goto _out } }
+	goto st7
+tr21:
 //line expr_lexer.rl:59
  lex.te = ( lex.p)
 ( lex.p)--
 { out.number, _ = strconv.ParseInt(lex.str(), 10, 64); tok = NUMBER; {( lex.p)++;  lex.cs = 7; goto _out } }
 	goto st7
-tr20:
+tr22:
+//line expr_lexer.rl:76
+ lex.te = ( lex.p)
+( lex.p)--
+{ tok = CONDITION; {( lex.p)++;  lex.cs = 7; goto _out } }
+	goto st7
+tr23:
+//line expr_lexer.rl:78
+ lex.te = ( lex.p)+1
+{ tok = COALESCE; {( lex.p)++;  lex.cs = 7; goto _out } }
+	goto st7
+tr24:
 //line expr_lexer.rl:62
  lex.te = ( lex.p)
 ( lex.p)--
@@ -165,7 +183,7 @@ tr20:
 //line NONE:1
  lex.ts = ( lex.p)
 
-//line expr_lexer.gen.go:169
+//line expr_lexer.gen.go:187
 		switch  lex.data[( lex.p)] {
 		case 32:
 			goto tr8
@@ -183,10 +201,14 @@ tr20:
 			goto tr13
 		case 46:
 			goto tr14
+		case 58:
+			goto tr16
 		case 61:
 			goto st5
-		case 95:
+		case 63:
 			goto st9
+		case 95:
+			goto st10
 		case 124:
 			goto st6
 		}
@@ -199,10 +221,10 @@ tr20:
 			switch {
 			case  lex.data[( lex.p)] > 90:
 				if 97 <=  lex.data[( lex.p)] &&  lex.data[( lex.p)] <= 122 {
-					goto st9
+					goto st10
 				}
 			case  lex.data[( lex.p)] >= 65:
-				goto st9
+				goto st10
 			}
 		default:
 			goto st8
@@ -256,7 +278,7 @@ st_case_0:
 		if 48 <=  lex.data[( lex.p)] &&  lex.data[( lex.p)] <= 57 {
 			goto st8
 		}
-		goto tr19
+		goto tr21
 	st5:
 		if ( lex.p)++; ( lex.p) == ( lex.pe) {
 			goto _test_eof5
@@ -271,22 +293,31 @@ st_case_0:
 			goto _test_eof9
 		}
 	st_case_9:
+		if  lex.data[( lex.p)] == 58 {
+			goto tr23
+		}
+		goto tr22
+	st10:
+		if ( lex.p)++; ( lex.p) == ( lex.pe) {
+			goto _test_eof10
+		}
+	st_case_10:
 		if  lex.data[( lex.p)] == 95 {
-			goto st9
+			goto st10
 		}
 		switch {
 		case  lex.data[( lex.p)] < 65:
 			if 48 <=  lex.data[( lex.p)] &&  lex.data[( lex.p)] <= 57 {
-				goto st9
+				goto st10
 			}
 		case  lex.data[( lex.p)] > 90:
 			if 97 <=  lex.data[( lex.p)] &&  lex.data[( lex.p)] <= 122 {
-				goto st9
+				goto st10
 			}
 		default:
-			goto st9
+			goto st10
 		}
-		goto tr20
+		goto tr24
 	st6:
 		if ( lex.p)++; ( lex.p) == ( lex.pe) {
 			goto _test_eof6
@@ -305,22 +336,25 @@ st_case_0:
 	_test_eof8:  lex.cs = 8; goto _test_eof
 	_test_eof5:  lex.cs = 5; goto _test_eof
 	_test_eof9:  lex.cs = 9; goto _test_eof
+	_test_eof10:  lex.cs = 10; goto _test_eof
 	_test_eof6:  lex.cs = 6; goto _test_eof
 
 	_test_eof: {}
 	if ( lex.p) == eof {
 		switch  lex.cs {
 		case 8:
-			goto tr19
+			goto tr21
 		case 9:
-			goto tr20
+			goto tr22
+		case 10:
+			goto tr24
 		}
 	}
 
 	_out: {}
 	}
 
-//line expr_lexer.rl:81
+//line expr_lexer.rl:84
 
 
   return tok;

@@ -41,6 +41,15 @@ func TestCompileStatement(t *testing.T) {
 		{name: "str()", text: "0.orDefault(20)", result: value.ToValue(20)},
 		{name: "str()", text: "non_existing.orDefault(20)", result: value.ToValue(20)},
 		{name: "str()", text: "non_existing.orDefault(20) && v", result: value.ToValue(true)},
+		{name: "conditional", text: "1 ? 2 : 3", result: value.ToValue(2)},
+		{name: "conditional", text: "0 ? 2 : 3", result: value.ToValue(3)},
+		{name: "conditional", text: "v ? 2 : 3", result: value.ToValue(2)},
+		{name: "conditional", text: "non_existing ? 2 : 3", result: value.ToValue(3)},
+		{name: "coalesce", text: "0 ?: 0 ?: 0 ?: 2", result: value.ToValue(2)},
+		{name: "coalesce", text: "1 ?: 2", result: value.ToValue(1)},
+		{name: "coalesce", text: "0 ?: 2", result: value.ToValue(2)},
+		{name: "coalesce", text: "v ?: 2", result: value.ToValue("test")},
+		{name: "coalesce", text: "non_existing ?: 2", result: value.ToValue(2)},
 	}
 
 	for _, test := range tests {

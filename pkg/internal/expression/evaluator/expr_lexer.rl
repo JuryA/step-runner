@@ -73,6 +73,9 @@ func (lex *expressionParser) Lex(out *exprSymType) int {
       "\." => { tok = DOT; fbreak; };
       "==" => { tok = EQUAL; fbreak; };
       "!=" => { tok = NOT_EQUAL; fbreak; };
+      "?" => { tok = CONDITION; fbreak; };
+      ":" => { tok = COLON; fbreak; };
+      "?:" => { tok = COALESCE; fbreak; };
 
       space;
     *|;

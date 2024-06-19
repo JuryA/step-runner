@@ -30,6 +30,9 @@ const CLOSE = 57353
 const AND = 57354
 const OR = 57355
 const SEPARATOR = 57356
+const CONDITION = 57357
+const COLON = 57358
+const COALESCE = 57359
 
 var exprToknames = [...]string{
 	"$end",
@@ -46,6 +49,9 @@ var exprToknames = [...]string{
 	"AND",
 	"OR",
 	"SEPARATOR",
+	"CONDITION",
+	"COLON",
+	"COALESCE",
 }
 
 var exprStatenames = [...]string{}
@@ -59,53 +65,58 @@ var exprExca = [...]int8{
 	-1, 1,
 	1, -1,
 	-2, 0,
-	-1, 23,
-	11, 13,
-	-2, 15,
+	-1, 28,
+	11, 16,
+	-2, 18,
 }
 
 const exprPrivate = 57344
 
-const exprLast = 30
+const exprLast = 37
 
 var exprAct = [...]int8{
-	2, 6, 28, 11, 5, 8, 9, 12, 16, 4,
-	7, 17, 27, 22, 23, 20, 21, 19, 15, 14,
-	13, 18, 24, 25, 26, 10, 3, 1, 0, 29,
+	2, 3, 14, 7, 12, 14, 13, 6, 29, 19,
+	5, 35, 15, 4, 34, 22, 27, 9, 10, 28,
+	25, 26, 8, 24, 18, 23, 21, 17, 16, 32,
+	20, 33, 30, 31, 11, 1, 36,
 }
 
 var exprPact = [...]int16{
-	0, -1000, -1000, -10, -5, 12, 9, 0, -1000, -1000,
-	7, 0, 0, 0, 0, -1000, 2, 4, -5, 12,
-	9, 9, -1000, 0, 1, -12, -1000, -1000, 0, -1000,
+	12, -1000, -1000, -1000, -11, 0, 20, 15, 12, -1000,
+	-1000, 26, 12, 12, 12, 12, 12, 12, -1000, 5,
+	9, -8, -1000, 0, 20, 15, 15, -1000, 12, 12,
+	3, -3, -1000, -1000, -1000, 12, -1000,
 }
 
 var exprPgo = [...]int8{
-	0, 27, 0, 26, 9, 4, 1, 25, 23, 22,
+	0, 35, 0, 13, 10, 7, 3, 34, 1, 33,
+	32,
 }
 
 var exprR1 = [...]int8{
-	0, 1, 8, 8, 2, 3, 3, 4, 4, 5,
-	5, 5, 9, 9, 7, 7, 6, 6, 6, 6,
-	6,
+	0, 1, 9, 9, 2, 8, 8, 8, 3, 3,
+	4, 4, 5, 5, 5, 10, 10, 7, 7, 6,
+	6, 6, 6, 6,
 }
 
 var exprR2 = [...]int8{
-	0, 1, 3, 1, 1, 3, 1, 3, 1, 3,
-	3, 1, 1, 0, 2, 0, 3, 1, 1, 2,
-	5,
+	0, 1, 3, 1, 1, 5, 3, 1, 3, 1,
+	3, 1, 3, 3, 1, 1, 0, 2, 0, 3,
+	1, 1, 2, 5,
 }
 
 var exprChk = [...]int16{
-	-1000, -1, -2, -3, -4, -5, -6, 10, 5, 6,
-	-7, 13, 12, 8, 7, 9, -2, 4, -4, -5,
-	-6, -6, 11, 10, -9, -8, -2, 11, 14, -2,
+	-1000, -1, -2, -8, -3, -4, -5, -6, 10, 5,
+	6, -7, 15, 17, 13, 12, 8, 7, 9, -2,
+	4, -3, -8, -4, -5, -6, -6, 11, 10, 16,
+	-10, -9, -2, -8, 11, 14, -2,
 }
 
 var exprDef = [...]int8{
-	15, -2, 1, 4, 6, 8, 11, 15, 17, 18,
-	0, 15, 15, 15, 15, 14, 0, 19, 5, 7,
-	9, 10, 16, -2, 0, 12, 3, 20, 15, 2,
+	18, -2, 1, 4, 7, 9, 11, 14, 18, 20,
+	21, 0, 18, 18, 18, 18, 18, 18, 17, 0,
+	22, 0, 6, 8, 10, 12, 13, 19, -2, 18,
+	0, 15, 3, 5, 23, 18, 2,
 }
 
 var exprTok1 = [...]int8{
@@ -114,7 +125,7 @@ var exprTok1 = [...]int8{
 
 var exprTok2 = [...]int8{
 	2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-	12, 13, 14,
+	12, 13, 14, 15, 16, 17,
 }
 
 var exprTok3 = [...]int8{
@@ -483,40 +494,40 @@ exprdefault:
 			exprVAL.expr = exprDollar[1].expr
 		}
 	case 5:
-		exprDollar = exprS[exprpt-3 : exprpt+1]
+		exprDollar = exprS[exprpt-5 : exprpt+1]
 //line expr_parser.y:36
+		{
+			exprVAL.expr = &nodeConditional{check: exprDollar[1].expr, left: exprDollar[3].expr, right: exprDollar[5].expr}
+		}
+	case 6:
+		exprDollar = exprS[exprpt-3 : exprpt+1]
+//line expr_parser.y:37
+		{
+			exprVAL.expr = &nodeCoalesce{left: exprDollar[1].expr, right: exprDollar[3].expr}
+		}
+	case 7:
+		exprDollar = exprS[exprpt-1 : exprpt+1]
+//line expr_parser.y:38
+		{
+			exprVAL.expr = exprDollar[1].expr
+		}
+	case 8:
+		exprDollar = exprS[exprpt-3 : exprpt+1]
+//line expr_parser.y:41
 		{
 			exprVAL.expr = &nodeOr{left: exprDollar[1].expr, right: exprDollar[3].expr}
 		}
-	case 6:
-		exprDollar = exprS[exprpt-1 : exprpt+1]
-//line expr_parser.y:37
-		{
-			exprVAL.expr = exprDollar[1].expr
-		}
-	case 7:
-		exprDollar = exprS[exprpt-3 : exprpt+1]
-//line expr_parser.y:40
-		{
-			exprVAL.expr = &nodeAnd{left: exprDollar[1].expr, right: exprDollar[3].expr}
-		}
-	case 8:
-		exprDollar = exprS[exprpt-1 : exprpt+1]
-//line expr_parser.y:41
-		{
-			exprVAL.expr = exprDollar[1].expr
-		}
 	case 9:
-		exprDollar = exprS[exprpt-3 : exprpt+1]
-//line expr_parser.y:44
+		exprDollar = exprS[exprpt-1 : exprpt+1]
+//line expr_parser.y:42
 		{
-			exprVAL.expr = &nodeCompareNotEquals{left: exprDollar[1].expr, right: exprDollar[3].expr}
+			exprVAL.expr = exprDollar[1].expr
 		}
 	case 10:
 		exprDollar = exprS[exprpt-3 : exprpt+1]
 //line expr_parser.y:45
 		{
-			exprVAL.expr = &nodeCompareEquals{left: exprDollar[1].expr, right: exprDollar[3].expr}
+			exprVAL.expr = &nodeAnd{left: exprDollar[1].expr, right: exprDollar[3].expr}
 		}
 	case 11:
 		exprDollar = exprS[exprpt-1 : exprpt+1]
@@ -525,56 +536,74 @@ exprdefault:
 			exprVAL.expr = exprDollar[1].expr
 		}
 	case 12:
-		exprDollar = exprS[exprpt-1 : exprpt+1]
+		exprDollar = exprS[exprpt-3 : exprpt+1]
 //line expr_parser.y:49
 		{
-			exprVAL.exprList = exprDollar[1].exprList
+			exprVAL.expr = &nodeCompareNotEquals{left: exprDollar[1].expr, right: exprDollar[3].expr}
 		}
 	case 13:
-		exprDollar = exprS[exprpt-0 : exprpt+1]
+		exprDollar = exprS[exprpt-3 : exprpt+1]
 //line expr_parser.y:50
 		{
-			clear(exprVAL.exprList)
+			exprVAL.expr = &nodeCompareEquals{left: exprDollar[1].expr, right: exprDollar[3].expr}
 		}
 	case 14:
-		exprDollar = exprS[exprpt-2 : exprpt+1]
-//line expr_parser.y:53
+		exprDollar = exprS[exprpt-1 : exprpt+1]
+//line expr_parser.y:51
 		{
 			exprVAL.expr = exprDollar[1].expr
 		}
 	case 15:
-		exprDollar = exprS[exprpt-0 : exprpt+1]
+		exprDollar = exprS[exprpt-1 : exprpt+1]
 //line expr_parser.y:54
+		{
+			exprVAL.exprList = exprDollar[1].exprList
+		}
+	case 16:
+		exprDollar = exprS[exprpt-0 : exprpt+1]
+//line expr_parser.y:55
+		{
+			clear(exprVAL.exprList)
+		}
+	case 17:
+		exprDollar = exprS[exprpt-2 : exprpt+1]
+//line expr_parser.y:58
+		{
+			exprVAL.expr = exprDollar[1].expr
+		}
+	case 18:
+		exprDollar = exprS[exprpt-0 : exprpt+1]
+//line expr_parser.y:59
 		{
 			exprVAL.expr = &nodeContext{}
 		}
-	case 16:
+	case 19:
 		exprDollar = exprS[exprpt-3 : exprpt+1]
-//line expr_parser.y:57
+//line expr_parser.y:62
 		{
 			exprVAL.expr = exprDollar[2].expr
 		}
-	case 17:
+	case 20:
 		exprDollar = exprS[exprpt-1 : exprpt+1]
-//line expr_parser.y:58
+//line expr_parser.y:63
 		{
 			exprVAL.expr = &nodeValue{value: value.ToValue(exprDollar[1].number)}
 		}
-	case 18:
+	case 21:
 		exprDollar = exprS[exprpt-1 : exprpt+1]
-//line expr_parser.y:59
+//line expr_parser.y:64
 		{
 			exprVAL.expr = &nodeValue{value: value.ToValue(exprDollar[1].str)}
 		}
-	case 19:
+	case 22:
 		exprDollar = exprS[exprpt-2 : exprpt+1]
-//line expr_parser.y:60
+//line expr_parser.y:65
 		{
 			exprVAL.expr = &nodeDig{expr: exprDollar[1].expr, key: exprDollar[2].id}
 		}
-	case 20:
+	case 23:
 		exprDollar = exprS[exprpt-5 : exprpt+1]
-//line expr_parser.y:61
+//line expr_parser.y:66
 		{
 			exprVAL.expr = &nodeCall{expr: exprDollar[1].expr, method: exprDollar[2].id, args: exprDollar[4].exprList}
 		}
