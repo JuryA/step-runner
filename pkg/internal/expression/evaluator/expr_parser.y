@@ -23,7 +23,7 @@ import "gitlab.com/gitlab-org/step-runner/pkg/internal/expression/value"
 %%
 
 start: expression {
-  exprlex.(*exprLexerImpl).result = $1;
+  exprlex.(*expressionParser).result = $1;
 };
 
 expression_list:

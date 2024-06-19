@@ -458,7 +458,7 @@ exprdefault:
 		exprDollar = exprS[exprpt-1 : exprpt+1]
 //line expr_parser.y:25
 		{
-			exprlex.(*exprLexerImpl).result = exprDollar[1].expr
+			exprlex.(*expressionParser).result = exprDollar[1].expr
 		}
 	case 2:
 		exprDollar = exprS[exprpt-3 : exprpt+1]

@@ -3,13 +3,12 @@
 package evaluator
 
 import (
-  "fmt"
   "strconv"
   "strings"
 )
 
 
-//line expr_lexer.gen.go:13
+//line expr_lexer.gen.go:12
 const expr_start int = 7
 const expr_first_final int = 7
 const expr_error int = 0
@@ -17,33 +16,34 @@ const expr_error int = 0
 const expr_en_main int = 7
 
 
-//line expr_lexer.rl:15
+//line expr_lexer.rl:14
 
 
-type exprLexerImpl struct {
-  data []byte
-  p, pe, cs int
-  ts, te, act int
-  result Node
+type expressionParser struct {
+	data        []byte
+	p, pe, cs   int
+	ts, te, act int
+	result      Node
+	errors      []string
 }
 
-func (l *exprLexerImpl) str2(loff, roff int) string {
+func (l *expressionParser) str2(loff, roff int) string {
   return string(l.data[l.ts+loff:l.te-roff])
 }
 
-func (l *exprLexerImpl) str() string {
+func (l *expressionParser) str() string {
   return l.str2(0, 0)
 }
 
-func (l *exprLexerImpl) unquoted2(loff, roff int) string {
+func (l *expressionParser) unquoted2(loff, roff int) string {
   s := l.str2(loff, roff)
   s = strings.ReplaceAll(s, "\\\"", "\"");
   s = strings.ReplaceAll(s, "\\\\", "\\");
   return s;
 }
 
-func newExprLexer(data []byte) *exprLexerImpl {
-  lex := &exprLexerImpl {
+func newExpressionParser(data []byte) *expressionParser {
+  lex := &expressionParser {
     data: data,
     pe: len(data),
   }
@@ -60,7 +60,7 @@ func newExprLexer(data []byte) *exprLexerImpl {
   return lex
 }
 
-func (lex *exprLexerImpl) Lex(out *exprSymType) int {
+func (lex *expressionParser) Lex(out *exprSymType) int {
   eof := lex.pe
   tok := 0
   
@@ -326,6 +326,6 @@ st_case_0:
   return tok;
 }
 
-func (lex *exprLexerImpl) Error(e string) {
-  fmt.Println("error:", e)
+func (lex *expressionParser) Error(e string) {
+  lex.errors = append(lex.errors, e)
 }

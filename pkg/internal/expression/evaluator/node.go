@@ -11,11 +11,14 @@ type Node interface {
 }
 
 func CompileStatement(text string) (Node, error) {
-	lexer := newExprLexer([]byte(text))
-	status := exprParse(lexer)
+	parser := newExpressionParser([]byte(text))
+	status := exprParse(parser)
+	if len(parser.errors) > 0 {
+		return nil, fmt.Errorf("Parse errors: %v", parser.errors)
+	}
 	if status != 0 {
 		return nil, fmt.Errorf("Parse failure: %d", status)
 	}
 
-	return lexer.result, nil
+	return parser.result, nil
 }
