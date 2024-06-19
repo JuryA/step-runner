@@ -57,6 +57,8 @@ state 5
 state 6
 	comparison_expression:  value_expression.    (11)
 	value_expression:  value_expression.DOT ID 
+	value_expression:  value_expression.DOT ID OPEN expression_list CLOSE 
+	value_expression:  value_expression.DOT ID OPEN CLOSE 
 
 	DOT  shift 15
 	.  reduce 11 (src line 46)
@@ -147,6 +149,8 @@ state 14
 
 state 15
 	value_expression:  value_expression DOT.ID 
+	value_expression:  value_expression DOT.ID OPEN expression_list CLOSE 
+	value_expression:  value_expression DOT.ID OPEN CLOSE 
 
 	ID  shift 22
 	.  error
@@ -198,6 +202,8 @@ state 19
 state 20
 	comparison_expression:  comparison_expression NOT_EQUAL value_expression.    (9)
 	value_expression:  value_expression.DOT ID 
+	value_expression:  value_expression.DOT ID OPEN expression_list CLOSE 
+	value_expression:  value_expression.DOT ID OPEN CLOSE 
 
 	DOT  shift 15
 	.  reduce 9 (src line 43)
@@ -206,6 +212,8 @@ state 20
 state 21
 	comparison_expression:  comparison_expression EQUAL value_expression.    (10)
 	value_expression:  value_expression.DOT ID 
+	value_expression:  value_expression.DOT ID OPEN expression_list CLOSE 
+	value_expression:  value_expression.DOT ID OPEN CLOSE 
 
 	DOT  shift 15
 	.  reduce 10 (src line 45)
@@ -213,7 +221,10 @@ state 21
 
 state 22
 	value_expression:  value_expression DOT ID.    (16)
+	value_expression:  value_expression DOT ID.OPEN expression_list CLOSE 
+	value_expression:  value_expression DOT ID.OPEN CLOSE 
 
+	OPEN  shift 27
 	.  reduce 16 (src line 53)
 
 
@@ -221,8 +232,8 @@ state 23
 	expression_list:  expression_list.SEPARATOR expression 
 	value_expression:  ID OPEN expression_list.CLOSE 
 
-	CLOSE  shift 28
-	SEPARATOR  shift 27
+	CLOSE  shift 29
+	SEPARATOR  shift 28
 	.  error
 
 
@@ -245,6 +256,24 @@ state 26
 
 
 state 27
+	value_expression:  value_expression DOT ID OPEN.expression_list CLOSE 
+	value_expression:  value_expression DOT ID OPEN.CLOSE 
+
+	ID  shift 7
+	NUMBER  shift 8
+	STRING  shift 9
+	OPEN  shift 10
+	CLOSE  shift 31
+	.  error
+
+	expression  goto 25
+	or_expression  goto 3
+	and_expression  goto 4
+	comparison_expression  goto 5
+	value_expression  goto 6
+	expression_list  goto 30
+
+state 28
 	expression_list:  expression_list SEPARATOR.expression 
 
 	ID  shift 7
@@ -253,33 +282,54 @@ state 27
 	OPEN  shift 10
 	.  error
 
-	expression  goto 29
+	expression  goto 32
 	or_expression  goto 3
 	and_expression  goto 4
 	comparison_expression  goto 5
 	value_expression  goto 6
 
-state 28
+state 29
 	value_expression:  ID OPEN expression_list CLOSE.    (17)
 
 	.  reduce 17 (src line 54)
 
 
-state 29
+state 30
+	expression_list:  expression_list.SEPARATOR expression 
+	value_expression:  value_expression DOT ID OPEN expression_list.CLOSE 
+
+	CLOSE  shift 33
+	SEPARATOR  shift 28
+	.  error
+
+
+state 31
+	value_expression:  value_expression DOT ID OPEN CLOSE.    (20)
+
+	.  reduce 20 (src line 57)
+
+
+state 32
 	expression_list:  expression_list SEPARATOR expression.    (2)
 
 	.  reduce 2 (src line 29)
 
 
+state 33
+	value_expression:  value_expression DOT ID OPEN expression_list CLOSE.    (19)
+
+	.  reduce 19 (src line 56)
+
+
 14 terminals, 8 nonterminals
-19 grammar rules, 30/16000 states
+21 grammar rules, 34/16000 states
 0 shift/reduce, 0 reduce/reduce conflicts reported
 57 working sets used
-memory: parser 28/240000
-24 extra closures
-48 shift entries, 1 exceptions
-14 goto entries
-15 entries saved by goto default
-Optimizer space used: output 33/240000
-33 table entries, 0 zero
-maximum spread: 14, maximum offset: 27
+memory: parser 34/240000
+28 extra closures
+56 shift entries, 1 exceptions
+15 goto entries
+20 entries saved by goto default
+Optimizer space used: output 44/240000
+44 table entries, 2 zero
+maximum spread: 14, maximum offset: 28

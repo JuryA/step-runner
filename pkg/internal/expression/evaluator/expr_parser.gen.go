@@ -63,45 +63,51 @@ var exprExca = [...]int8{
 
 const exprPrivate = 57344
 
-const exprLast = 33
+const exprLast = 44
 
 var exprAct = [...]int8{
-	2, 6, 28, 11, 12, 27, 7, 8, 9, 5,
-	26, 17, 10, 24, 4, 20, 21, 25, 7, 8,
-	9, 16, 19, 22, 10, 15, 18, 23, 29, 14,
-	13, 3, 1,
+	25, 2, 23, 6, 33, 11, 12, 28, 7, 8,
+	9, 17, 26, 29, 10, 31, 28, 20, 21, 7,
+	8, 9, 7, 8, 9, 10, 24, 5, 10, 32,
+	30, 4, 27, 16, 15, 14, 13, 22, 3, 1,
+	19, 0, 0, 18,
 }
 
 var exprPact = [...]int16{
-	14, -1000, -1000, -10, -8, 22, 16, 11, -1000, -1000,
-	14, 14, 14, 14, 14, 19, 2, -1, -8, 22,
-	16, 16, -1000, -9, -1000, -1000, -1000, 14, -1000, -1000,
+	18, -1000, -1000, -8, -6, 28, 25, 23, -1000, -1000,
+	18, 18, 18, 18, 18, 33, 15, 1, -6, 28,
+	25, 25, 22, 2, -1000, -1000, -1000, 4, 18, -1000,
+	-7, -1000, -1000, -1000,
 }
 
 var exprPgo = [...]int8{
-	0, 32, 0, 31, 14, 9, 1, 27,
+	0, 39, 0, 38, 31, 27, 3, 2,
 }
 
 var exprR1 = [...]int8{
 	0, 1, 7, 7, 2, 3, 3, 4, 4, 5,
-	5, 5, 6, 6, 6, 6, 6, 6, 6,
+	5, 5, 6, 6, 6, 6, 6, 6, 6, 6,
+	6,
 }
 
 var exprR2 = [...]int8{
 	0, 1, 3, 1, 1, 3, 1, 3, 1, 3,
-	3, 1, 1, 1, 1, 3, 3, 4, 3,
+	3, 1, 1, 1, 1, 3, 3, 4, 3, 6,
+	5,
 }
 
 var exprChk = [...]int16{
 	-1000, -1, -2, -3, -4, -5, -6, 4, 5, 6,
 	10, 13, 12, 8, 7, 9, 10, -2, -4, -5,
-	-6, -6, 4, -7, 11, -2, 11, 14, 11, -2,
+	-6, -6, 4, -7, 11, -2, 11, 10, 14, 11,
+	-7, 11, -2, 11,
 }
 
 var exprDef = [...]int8{
 	0, -2, 1, 4, 6, 8, 11, 12, 13, 14,
 	0, 0, 0, 0, 0, 0, 0, 0, 5, 7,
-	9, 10, 16, 0, 18, 3, 15, 0, 17, 2,
+	9, 10, 16, 0, 18, 3, 15, 0, 0, 17,
+	0, 20, 2, 19,
 }
 
 var exprTok1 = [...]int8{
@@ -561,6 +567,18 @@ exprdefault:
 //line expr_parser.y:55
 		{
 			exprVAL.expr = &nodeCall{expr: &nodeContext{}, method: exprDollar[1].id}
+		}
+	case 19:
+		exprDollar = exprS[exprpt-6 : exprpt+1]
+//line expr_parser.y:56
+		{
+			exprVAL.expr = &nodeCall{expr: exprDollar[1].expr, method: exprDollar[3].id, args: exprDollar[5].exprList}
+		}
+	case 20:
+		exprDollar = exprS[exprpt-5 : exprpt+1]
+//line expr_parser.y:57
+		{
+			exprVAL.expr = &nodeCall{expr: exprDollar[1].expr, method: exprDollar[3].id}
 		}
 	}
 	goto exprstack /* stack new state and value */

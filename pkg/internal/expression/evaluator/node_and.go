@@ -11,8 +11,15 @@ func (n *nodeAnd) Calculate(context value.Value) value.Value {
 	if left.Error() != nil {
 		return left
 	} else if !left.IsTrue() {
-		return value.ToValue(nil)
+		return value.ToValue(false)
 	}
 
-	return n.right.Calculate(context)
+	right := n.right.Calculate(context)
+	if right.Error() != nil {
+		return right
+	} else if !right.IsTrue() {
+		return value.ToValue(false)
+	}
+
+	return value.ToValue(true)
 }

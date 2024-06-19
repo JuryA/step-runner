@@ -53,3 +53,5 @@ value_expression:
   | value_expression DOT ID { $$ = &nodeDig{expr: $1, key: $3}; }
   | ID OPEN expression_list CLOSE { $$ = &nodeCall{expr: &nodeContext{}, method: $1, args: $3}; }
   | ID OPEN CLOSE { $$ = &nodeCall{expr: &nodeContext{}, method: $1}; }
+  | value_expression DOT ID OPEN expression_list CLOSE { $$ = &nodeCall{expr: $1, method: $3, args: $5}; }
+  | value_expression DOT ID OPEN CLOSE { $$ = &nodeCall{expr: $1, method: $3}; }

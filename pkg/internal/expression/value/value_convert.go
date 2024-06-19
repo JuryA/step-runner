@@ -2,6 +2,7 @@ package value
 
 import (
 	"fmt"
+	"reflect"
 )
 
 func ToValue2(v any) (Value, error) {
@@ -18,6 +19,15 @@ func ToValue2(v any) (Value, error) {
 		return &ValueNil{}, nil
 	case error:
 		return &ValueError{v: x}, nil
+	}
+
+	val := reflect.ValueOf(v)
+	val = reflect.Indirect(val) // drop pointer
+	switch val.Kind() {
+	case reflect.Map:
+		return &valueMap{v: val}, nil
+	case reflect.Struct:
+		return &valueStruct{v: val}, nil
 	}
 
 	return nil, fmt.Errorf("unsupported type: %T", v)

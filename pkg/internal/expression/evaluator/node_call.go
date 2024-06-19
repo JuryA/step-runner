@@ -12,9 +12,6 @@ type nodeCall struct {
 
 func (n *nodeCall) Calculate(context value.Value) value.Value {
 	exprValue := n.expr.Calculate(context)
-	if exprValue.Error() != nil {
-		return exprValue
-	}
 
 	args := []value.Value{}
 	for _, arg := range n.args {

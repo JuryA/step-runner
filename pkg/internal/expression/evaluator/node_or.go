@@ -11,8 +11,15 @@ func (n *nodeOr) Calculate(context value.Value) value.Value {
 	if left.Error() != nil {
 		return left
 	} else if left.IsTrue() {
-		return left
+		return value.ToValue(true)
 	}
 
-	return n.right.Calculate(context)
+	right := n.right.Calculate(context)
+	if right.Error() != nil {
+		return right
+	} else if right.IsTrue() {
+		return value.ToValue(true)
+	}
+
+	return value.ToValue(false)
 }

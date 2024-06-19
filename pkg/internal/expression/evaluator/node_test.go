@@ -9,25 +9,38 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression/value"
 )
 
+type testContext struct {
+	Value string `json:"v"`
+}
+
 func TestCompileStatement(t *testing.T) {
+	context := &testContext{
+		Value: "test",
+	}
+
 	tests := []struct {
 		name   string
 		text   string
 		result value.Value
 	}{
-		{name: "and expression", text: "1 && 2", result: value.ToValue(2)},
-		{name: "or expression", text: "1 || 2", result: value.ToValue(1)},
+		{name: "and expression", text: "1 && 2", result: value.ToValue(true)},
+		{name: "or expression", text: "1 || 2", result: value.ToValue(true)},
 		{name: "not equals expression", text: "1 != 2", result: value.ToValue(true)},
 		{name: "equals expression", text: "1 == 2", result: value.ToValue(false)},
 		{name: "equals expression", text: "\"1\" == 1", result: value.ToValue(true)},
 		{name: "equals expression", text: "\"1\" == \"1\"", result: value.ToValue(true)},
 		{name: "equals expression", text: "\"1\" == \"2\"", result: value.ToValue(false)},
-		{name: "and expression", text: "0 && 2", result: value.ToValue(nil)},
-		{name: "or expression", text: "0 || 2", result: value.ToValue(2)},
-		{name: "and expression", text: "\"\" && 2", result: value.ToValue(nil)},
-		{name: "or expression", text: "\"\" || 2", result: value.ToValue(2)},
-		{name: "variable", text: "v", result: value.ToValue(nil)},
+		{name: "and expression", text: "0 && 2", result: value.ToValue(false)},
+		{name: "or expression", text: "0 || 2", result: value.ToValue(true)},
+		{name: "and expression", text: "\"\" && 2", result: value.ToValue(false)},
+		{name: "or expression", text: "\"\" || 2", result: value.ToValue(true)},
+		{name: "variable", text: "v", result: value.ToValue("test")},
 		{name: "str()", text: "str(10)", result: value.ToValue("10")},
+		{name: "str()", text: "10.str()", result: value.ToValue("10")},
+		{name: "str()", text: "10.orDefault(20)", result: value.ToValue(10)},
+		{name: "str()", text: "0.orDefault(20)", result: value.ToValue(20)},
+		{name: "str()", text: "non_existing.orDefault(20)", result: value.ToValue(20)},
+		{name: "str()", text: "non_existing.orDefault(20) && v", result: value.ToValue(true)},
 	}
 
 	for _, test := range tests {
@@ -38,8 +51,9 @@ func TestCompileStatement(t *testing.T) {
 				return
 			}
 
-			result := node.Calculate(nil)
-			assert.EqualValues(t, test.result, result)
+			result := node.Calculate(value.ToValue(context))
+			resultStr, _ := result.ToString()
+			assert.EqualValues(t, test.result, result, "result should be equal: %s", resultStr)
 		})
 	}
 }

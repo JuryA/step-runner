@@ -13,6 +13,9 @@ func (v *ValueBool) Dig(key string) Value {
 }
 
 func (v *ValueBool) Call(method string, args []Value) Value {
+	if res := valueCall(v, method, args); res != nil {
+		return res
+	}
 	return NewError(errors.New("not supported"))
 }
 
