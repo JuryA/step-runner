@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -17,13 +18,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/step-runner/pkg/jobs"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 )
 
 const (
-	ID        = "853"
 	helloStep = `spec: {}
 ---
 steps:
@@ -49,10 +50,12 @@ func testDirName(t *testing.T) string {
 	return path.Join(os.TempDir(), t.Name())
 }
 
-func makeRunRequest(t *testing.T, id string, step string, withJob bool) *proto.RunRequest {
+func randID() string { return strconv.Itoa(rand.Intn(999)) }
+
+func makeRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
 	testDir := testDirName(t)
 	runReq := proto.RunRequest{
-		Id:    id,
+		Id:    randID(),
 		Steps: step,
 		Env:   map[string]string{},
 	}
@@ -100,12 +103,12 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	srs, client, cleanup := startService(t)
 	defer cleanup()
 
-	rr := makeRunRequest(t, ID, helloStep, false)
+	rr := makeRunRequest(t, helloStep, false)
 
 	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
 
-	job, ok := srs.jobs.Get(ID)
+	job, ok := srs.jobs.Get(rr.Id)
 	require.True(t, ok)
 	defer os.RemoveAll(job.WorkDir)
 
@@ -182,10 +185,11 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 
-			_, err := client.Run(bg, makeRunRequest(t, ID, makeBashStep(tt.script), false))
+			rr := makeRunRequest(t, makeBashStep(tt.script), false)
+			_, err := client.Run(bg, rr)
 			require.NoError(t, err)
 
-			job, ok := srs.jobs.Get(ID)
+			job, ok := srs.jobs.Get(rr.Id)
 			require.True(t, ok)
 			defer os.RemoveAll(job.WorkDir)
 
@@ -207,12 +211,10 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 
 	tests := map[string]struct {
 		jobWorkDir bool
-		id         string
 		script     string
 		setup      func(*proto.RunRequest)
 	}{
 		"env vars": {
-			id:     "111",
 			script: "echo ${{ env.BAR}} > ${{ env.FOO }}",
 			setup: func(rr *proto.RunRequest) {
 				rr.Env = map[string]string{
@@ -223,7 +225,6 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 		},
 		"job vars": {
 			jobWorkDir: true,
-			id:         "222",
 			script:     "echo ${{ job.BAR}} > ${{ job.FOO }}",
 			setup: func(rr *proto.RunRequest) {
 				rr.Job.Variables = []*proto.Variable{
@@ -234,7 +235,6 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 		},
 		"job file vars": {
 			jobWorkDir: true,
-			id:         "333",
 			script:     "cat ${{ job.BAR}} > ${{ job.FOO }}",
 			setup: func(rr *proto.RunRequest) {
 				rr.Job.Variables = []*proto.Variable{
@@ -251,13 +251,13 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			srs, client, cleanup := startService(t)
 			defer cleanup()
 
-			rr := makeRunRequest(t, tt.id, makeBashStep(tt.script), tt.jobWorkDir)
+			rr := makeRunRequest(t, makeBashStep(tt.script), tt.jobWorkDir)
 			tt.setup(rr)
 
 			_, err := client.Run(bg, rr)
 			require.NoError(t, err)
 
-			job, ok := srs.jobs.Get(tt.id)
+			job, ok := srs.jobs.Get(rr.Id)
 			require.True(t, ok)
 			defer os.RemoveAll(job.WorkDir)
 
@@ -285,12 +285,11 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 	srs, client, cleanup := startService(t)
 	defer cleanup()
 
-	rr := makeRunRequest(t, ID, makeBashStep("sleep 1"), false)
-
+	rr := makeRunRequest(t, makeBashStep("sleep 1"), false)
 	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
 
-	stream, err := client.FollowSteps(bg, &proto.FollowStepsRequest{Id: ID})
+	stream, err := client.FollowSteps(bg, &proto.FollowStepsRequest{Id: rr.Id})
 	require.NoError(t, err)
 
 	got, err := stream.Recv()
@@ -301,7 +300,7 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 	_, err = stream.Recv()
 	require.True(t, errors.Is(err, io.EOF))
 
-	job, ok := srs.jobs.Get(ID)
+	job, ok := srs.jobs.Get(rr.Id)
 	require.True(t, ok)
 	defer os.RemoveAll(job.WorkDir)
 	want, _ := job.Result()
@@ -324,13 +323,11 @@ func Test_StepRunnerService_FollowSteps_BadID(t *testing.T) {
 
 func Test_StepRunnerService_Close(t *testing.T) {
 	tests := map[string]struct {
-		id       string
 		cmd      string
 		preClose func(*jobs.Job)
 		validate func(*jobs.Job)
 	}{
 		"Close called after job finished": {
-			id:  "853",
 			cmd: "echo 'yes we can!!!'",
 			preClose: func(j *jobs.Job) {
 				require.Eventually(t, j.Finished, 200*time.Millisecond, 25*time.Millisecond)
@@ -343,7 +340,6 @@ func Test_StepRunnerService_Close(t *testing.T) {
 			},
 		},
 		"Close called before job finished (should cancel task)": {
-			id:  "953",
 			cmd: "sleep 60",
 			preClose: func(j *jobs.Job) {
 				assert.False(t, j.Finished())
@@ -363,7 +359,7 @@ func Test_StepRunnerService_Close(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			rr := makeRunRequest(t, tt.id, makeBashStep(tt.cmd), false)
+			rr := makeRunRequest(t, makeBashStep(tt.cmd), false)
 			_, err := client.Run(bg, rr)
 			require.NoError(t, err)
 
@@ -371,7 +367,7 @@ func Test_StepRunnerService_Close(t *testing.T) {
 			var job *jobs.Job
 			var ok bool
 			require.Eventually(t, func() bool {
-				job, ok = srs.jobs.Get(tt.id)
+				job, ok = srs.jobs.Get(rr.Id)
 				return ok && job != nil
 			}, 200*time.Millisecond, 25*time.Millisecond)
 
@@ -379,13 +375,13 @@ func Test_StepRunnerService_Close(t *testing.T) {
 
 			tt.preClose(job)
 
-			_, err = client.Close(bg, &proto.CloseRequest{Id: tt.id})
+			_, err = client.Close(bg, &proto.CloseRequest{Id: rr.Id})
 			require.NoError(t, err)
 
 			tt.validate(job)
 
 			// the job was removed from the map of jobs
-			_, ok = srs.jobs.Get(tt.id)
+			_, ok = srs.jobs.Get(rr.Id)
 			require.False(t, ok)
 		})
 	}
