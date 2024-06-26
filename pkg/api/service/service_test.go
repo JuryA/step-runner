@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -16,9 +15,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/test"
 	"gitlab.com/gitlab-org/step-runner/pkg/jobs"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -44,29 +43,6 @@ steps:
 
 func makeBashStep(cmd string) string {
 	return fmt.Sprintf(bashStep, cmd)
-}
-
-func testDirName(t *testing.T) string {
-	return path.Join(os.TempDir(), t.Name())
-}
-
-func randID() string { return strconv.Itoa(rand.Intn(999)) }
-
-func makeRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
-	testDir := testDirName(t)
-	runReq := proto.RunRequest{
-		Id:    randID(),
-		Steps: step,
-		Env:   map[string]string{},
-	}
-
-	if withJob {
-		runReq.Job = &proto.Job{BuildDir: testDir}
-	} else {
-		runReq.WorkDir = testDir
-	}
-
-	return &runReq
 }
 
 const bufSize = 1024 * 1024
@@ -99,13 +75,13 @@ func startService(t *testing.T) (*StepRunnerService, proto.StepRunnerClient, fun
 }
 
 func Test_StepRunnerService_Run_Success(t *testing.T) {
-	defer os.RemoveAll(testDirName(t))
+	defer os.RemoveAll(test.TestDirName(t))
 
 	bg := context.Background()
 	srs, client, cleanup := startService(t)
 	defer cleanup()
 
-	rr := makeRunRequest(t, helloStep, false)
+	rr := test.MakeRunRequest(t, helloStep, false)
 
 	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
@@ -122,7 +98,7 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 }
 
 func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
-	defer os.RemoveAll(testDirName(t))
+	defer os.RemoveAll(test.TestDirName(t))
 	bg := context.Background()
 
 	tests := map[string]struct {
@@ -175,7 +151,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 
-			rr := makeRunRequest(t, makeBashStep(tt.script), false)
+			rr := test.MakeRunRequest(t, makeBashStep(tt.script), false)
 			_, err := client.Run(bg, rr)
 			require.NoError(t, err)
 
@@ -197,7 +173,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 }
 
 func Test_StepRunnerService_Run_Vars(t *testing.T) {
-	defer os.RemoveAll(testDirName(t))
+	defer os.RemoveAll(test.TestDirName(t))
 
 	tests := map[string]struct {
 		jobWorkDir bool
@@ -241,7 +217,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			srs, client, cleanup := startService(t)
 			defer cleanup()
 
-			rr := makeRunRequest(t, makeBashStep(tt.script), tt.jobWorkDir)
+			rr := test.MakeRunRequest(t, makeBashStep(tt.script), tt.jobWorkDir)
 			tt.setup(rr)
 
 			_, err := client.Run(bg, rr)
@@ -266,13 +242,13 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 }
 
 func Test_StepRunnerService_FollowSteps(t *testing.T) {
-	defer os.RemoveAll(testDirName(t))
+	defer os.RemoveAll(test.TestDirName(t))
 
 	bg := context.Background()
 	_, client, cleanup := startService(t)
 	defer cleanup()
 
-	rr := makeRunRequest(t, makeBashStep("sleep 1"), false)
+	rr := test.MakeRunRequest(t, makeBashStep("sleep 1"), false)
 	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
 
@@ -307,7 +283,7 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 }
 
 func Test_StepRunnerService_FollowSteps_BadID(t *testing.T) {
-	defer os.RemoveAll(testDirName(t))
+	defer os.RemoveAll(test.TestDirName(t))
 
 	bg := context.Background()
 	_, client, cleanup := startService(t)
@@ -322,7 +298,7 @@ func Test_StepRunnerService_FollowSteps_BadID(t *testing.T) {
 }
 
 func Test_StepRunnerService_Close(t *testing.T) {
-	defer os.RemoveAll(testDirName(t))
+	defer os.RemoveAll(test.TestDirName(t))
 
 	tests := map[string]struct {
 		cmd      string
@@ -359,7 +335,7 @@ func Test_StepRunnerService_Close(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			rr := makeRunRequest(t, makeBashStep(tt.cmd), false)
+			rr := test.MakeRunRequest(t, makeBashStep(tt.cmd), false)
 			_, err := client.Run(bg, rr)
 			require.NoError(t, err)
 

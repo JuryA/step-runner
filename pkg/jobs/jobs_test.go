@@ -4,40 +4,22 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/streamer/memory"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/test"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 var errFinal = fmt.Errorf("FOO")
 
-func makeRunRequest(t *testing.T, withJob bool) *proto.RunRequest {
-	testDir := path.Join(os.TempDir(), t.Name())
-	runReq := proto.RunRequest{
-		Id:  "853",
-		Env: map[string]string{},
-	}
-
-	if withJob {
-		runReq.Job = &proto.Job{BuildDir: testDir}
-	} else {
-		runReq.WorkDir = testDir
-	}
-
-	return &runReq
-}
-
 func Test_New(t *testing.T) {
-	runReq := makeRunRequest(t, false)
+	runReq := test.MakeRunRequest(t, "", false)
 	j, err := New(runReq)
 	require.NoError(t, err)
-
-	defer os.RemoveAll(j.TmpDir)
+	defer j.Close()
 	defer os.RemoveAll(j.WorkDir)
 
 	assert.Equal(t, runReq.Id, j.ID)
@@ -46,12 +28,11 @@ func Test_New(t *testing.T) {
 }
 
 func Test_New_Job_WorkDir(t *testing.T) {
-	runReq := makeRunRequest(t, true)
+	runReq := test.MakeRunRequest(t, "", true)
 	j, err := New(runReq)
 	require.NoError(t, err)
-
+	defer j.Close()
 	defer os.RemoveAll(j.WorkDir)
-	defer os.RemoveAll(j.TmpDir)
 
 	assert.Equal(t, runReq.Id, j.ID)
 	assert.DirExists(t, j.TmpDir)
@@ -68,7 +49,11 @@ func Test_Err(t *testing.T) {
 }
 
 func Test_Finish(t *testing.T) {
-	j := Job{stepResults: memory.New[*proto.StepResult]()}
+	runReq := test.MakeRunRequest(t, "", true)
+	j, err := New(runReq)
+	require.NoError(t, err)
+	defer j.Close()
+	defer os.RemoveAll(j.WorkDir)
 
 	j.Finish(nil)
 
@@ -83,7 +68,7 @@ func Test_Finish(t *testing.T) {
 }
 
 func Test_Close_AlreadyFinished(t *testing.T) {
-	j, err := New(makeRunRequest(t, false))
+	j, err := New(test.MakeRunRequest(t, "", false))
 	require.NoError(t, err)
 	defer os.RemoveAll(j.WorkDir)
 
@@ -98,7 +83,7 @@ func Test_Close_AlreadyFinished(t *testing.T) {
 }
 
 func Test_Close(t *testing.T) {
-	j, err := New(makeRunRequest(t, false))
+	j, err := New(test.MakeRunRequest(t, "", false))
 	require.NoError(t, err)
 	defer os.RemoveAll(j.WorkDir)
 
@@ -130,7 +115,10 @@ func Test_FollowStepResults(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			j := Job{stepResults: memory.New[*proto.StepResult]()}
+			j, err := New(test.MakeRunRequest(t, "", true))
+			require.NoError(t, err)
+			defer j.Close()
+			defer os.RemoveAll(j.WorkDir)
 
 			go func() {
 				j.StepResultWriter()(&proto.StepResult{})
