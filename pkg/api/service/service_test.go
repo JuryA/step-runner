@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -381,4 +382,36 @@ func Test_StepRunnerService_Close_BadID(t *testing.T) {
 	_, err := client.Close(bg, &proto.CloseRequest{Id: "4130"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no job with id")
+}
+
+func Test_StepRunnerService_FollowLogs(t *testing.T) {
+	defer os.RemoveAll(test.TestDirName(t))
+
+	bg := context.Background()
+	_, client, cleanup := startService(t)
+	defer cleanup()
+
+	rr := test.MakeRunRequest(t, helloStep, false)
+	_, err := client.Run(bg, rr)
+	require.NoError(t, err)
+
+	stream, err := client.FollowLogs(bg, &proto.FollowLogsRequest{Id: rr.Id})
+	require.NoError(t, err)
+
+	logs := bytes.Buffer{}
+
+	for {
+		p, ierr := stream.Recv()
+		if ierr == io.EOF {
+			err = ierr
+			break
+		}
+		logs.Write(p.Data)
+		require.NoError(t, err)
+	}
+
+	client.Close(bg, &proto.CloseRequest{Id: rr.Id})
+
+	require.True(t, errors.Is(err, io.EOF))
+	require.Equal(t, "meet steppy who is 1 likes {\"color\":\"red\"} and is hungry false\n", logs.String())
 }

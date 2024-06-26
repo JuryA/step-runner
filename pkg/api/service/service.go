@@ -149,3 +149,24 @@ func (s *StepRunnerService) Close(ctx context.Context, request *proto.CloseReque
 
 	return &proto.CloseResponse{}, nil
 }
+
+// toIOWriter can be used to "cast" a func([]byte)(int, error) to an io.Writer.
+type toIOWriter func([]byte) (int, error)
+
+func (w toIOWriter) Write(p []byte) (int, error) { return w(p) }
+
+func (s *StepRunnerService) FollowLogs(request *proto.FollowLogsRequest, writer proto.StepRunner_FollowLogsServer) error {
+	job, ok := s.jobs.Get(request.Id)
+	if !ok {
+		return &errBadJobID{id: request.Id}
+	}
+
+	return job.FollowLogs(writer.Context(), request.Offset, toIOWriter(func(p []byte) (int, error) {
+		err := writer.Send(&proto.FollowLogsResponse{Data: p})
+		if err != nil {
+			return 0, err
+		}
+
+		return len(p), nil
+	}))
+}
