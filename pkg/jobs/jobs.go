@@ -10,6 +10,7 @@ import (
 	"time"
 
 	rctx "gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/streamer/file"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -28,6 +29,7 @@ type Job struct {
 
 	// TODO: This is temporary, until we implement streaming of step-results.
 	stepResult *proto.StepResult
+	logs       *file.Streamer
 }
 
 func New(request *proto.RunRequest) (*Job, error) {
@@ -48,6 +50,12 @@ func New(request *proto.RunRequest) (*Job, error) {
 		return nil, fmt.Errorf("creating tmpdir %q: %w", tmpDir, err)
 	}
 
+	logs, err := file.New(path.Join(tmpDir, "logs"))
+	if err != nil {
+		os.RemoveAll(tmpDir)
+		return nil, fmt.Errorf("creating log file: %w", err)
+	}
+
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -57,6 +65,9 @@ func New(request *proto.RunRequest) (*Job, error) {
 		return nil, fmt.Errorf("creating global context: %w", err)
 	}
 	globCtx.WorkDir = workDir
+	// TODO: differentiate between stdin/stderr
+	globCtx.Stderr = logs
+	globCtx.Stdout = logs
 
 	return &Job{
 		TmpDir:  tmpDir,
@@ -65,6 +76,7 @@ func New(request *proto.RunRequest) (*Job, error) {
 		Ctx:     ctx,
 		GlobCtx: globCtx,
 		cancel:  cancel,
+		logs:    logs,
 	}, nil
 }
 
@@ -95,6 +107,7 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 	if err != nil {
 		j.stepResult = nil
 	}
+	j.logs.Stop()
 }
 
 func (j *Job) Finished() bool {
