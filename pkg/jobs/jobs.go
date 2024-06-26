@@ -4,6 +4,7 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"sync"
@@ -108,6 +109,7 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 		j.stepResult = nil
 	}
 	j.logs.Stop()
+	j.logs.Close()
 }
 
 func (j *Job) Finished() bool {
@@ -122,4 +124,16 @@ func (j *Job) Close() {
 	defer os.RemoveAll(j.TmpDir)
 	defer j.GlobCtx.Cleanup()
 	j.Finish(nil, j.Ctx.Err())
+}
+
+// FollowLogs will write all current and future accumulated logs written to stdout/stderr from all step sub-processes to
+// the specified writer. This function returns:
+// - a non-nil error returned by the writer.
+// - the error that terminated the job (if any)
+// - nil
+func (j *Job) FollowLogs(ctx context.Context, offset int64, writer io.Writer) error {
+	if err := j.logs.Follow(ctx, offset, writer); err != nil {
+		return err
+	}
+	return j.err
 }

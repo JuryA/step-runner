@@ -1,6 +1,8 @@
 package jobs
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -107,4 +109,69 @@ func Test_Close(t *testing.T) {
 	assert.True(t, errors.Is(j.err, j.Ctx.Err()))
 
 	assert.NoDirExists(t, j.TmpDir)
+}
+
+var data = [][]byte{
+	[]byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"),
+	[]byte("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"),
+	[]byte("cccccccccccccccccccccccccccccccccc\n"),
+}
+
+// toIOWriter can be used to "cast" a func([]byte)(int, error) to an io.Writer.
+type toIOWriter func([]byte) (int, error)
+
+func (w toIOWriter) Write(p []byte) (int, error) { return w(p) }
+
+func Test_FollowLogs(t *testing.T) {
+	tests := map[string]struct {
+		finishErr   error
+		writeErr    error
+		wantErr     error
+		wantWritten []byte
+	}{
+		"write error": {
+			writeErr:    errors.New("POW!!!"),
+			finishErr:   errors.New("BLAMMO!!!"),
+			wantErr:     errors.New("POW!!!"),
+			wantWritten: data[0][:len(data[0])-1],
+		},
+		"finish error": {
+			finishErr:   context.Canceled,
+			wantErr:     context.Canceled,
+			wantWritten: bytes.Join(data, nil),
+		},
+
+		"no error": {
+			wantWritten: bytes.Join(data, nil),
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			gotWritten := bytes.Buffer{}
+
+			rr := test.MakeRunRequest(t, "", false)
+			j, err := New(rr)
+			require.NoError(t, err)
+			defer j.Close()
+			defer os.RemoveAll(j.WorkDir)
+
+			go func() {
+				for _, d := range data {
+					_, err := j.logs.Write(d)
+					assert.NoError(t, err)
+				}
+				j.Finish(nil, tt.finishErr)
+			}()
+
+			gotErr := j.FollowLogs(context.Background(), 0, toIOWriter(func(p []byte) (int, error) {
+				n, err := gotWritten.Write(p)
+				require.NoError(t, err)
+				return n, tt.writeErr
+			}))
+
+			assert.Equal(t, tt.wantErr, gotErr)
+			assert.Equal(t, string(tt.wantWritten), gotWritten.String())
+		})
+	}
 }
