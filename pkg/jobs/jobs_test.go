@@ -93,7 +93,7 @@ func Test_Finish(t *testing.T) {
 	assert.Nil(t, j.err)
 }
 
-func Test_Finalize_AlreadyFinished(t *testing.T) {
+func Test_Close_AlreadyFinished(t *testing.T) {
 	j, err := New(makeRunRequest(t, false))
 	require.NoError(t, err)
 	defer os.RemoveAll(j.WorkDir)
@@ -109,7 +109,7 @@ func Test_Finalize_AlreadyFinished(t *testing.T) {
 	assert.NoDirExists(t, j.TmpDir)
 }
 
-func Test_Finalize(t *testing.T) {
+func Test_Close(t *testing.T) {
 	j, err := New(makeRunRequest(t, false))
 	require.NoError(t, err)
 	defer os.RemoveAll(j.WorkDir)
