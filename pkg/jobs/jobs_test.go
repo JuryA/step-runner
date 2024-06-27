@@ -125,7 +125,7 @@ func Test_FollowStepResults(t *testing.T) {
 				j.Finish(tt.finishErr)
 			}()
 
-			gotErr := j.FollowStepResults(func(w *proto.StepResult) error {
+			gotErr := j.FollowStepResults(0, func(w *proto.StepResult) error {
 				return tt.writeErr
 			})
 

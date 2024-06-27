@@ -263,6 +263,7 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 			err = ierr
 			break
 		}
+		require.NotNil(t, res)
 		streamedResults = append(streamedResults, res.Result)
 	}
 
@@ -280,6 +281,39 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 	assert.Equal(t, want.SpecDefinition, got.SpecDefinition)
 	assert.Equal(t, want.Status, got.Status)
 	assert.Equal(t, want.ExecResult, got.ExecResult)
+}
+
+func Test_StepRunnerService_FollowSteps_Offset(t *testing.T) {
+	defer os.RemoveAll(test.TestDirName(t))
+
+	bg := context.Background()
+	_, client, cleanup := startService(t)
+	defer cleanup()
+
+	rr := test.MakeRunRequest(t, makeBashStep("sleep 1"), false)
+	_, err := client.Run(bg, rr)
+	require.NoError(t, err)
+
+	stream, err := client.FollowSteps(bg, &proto.FollowStepsRequest{Id: rr.Id, Offset: 1})
+	require.NoError(t, err)
+
+	streamedResults := []*proto.StepResult{}
+
+	for {
+		res, ierr := stream.Recv()
+		if ierr == io.EOF {
+			err = ierr
+			break
+		}
+		require.NotNil(t, res)
+		streamedResults = append(streamedResults, res.Result)
+	}
+
+	client.Close(bg, &proto.CloseRequest{Id: rr.Id})
+
+	require.True(t, errors.Is(err, io.EOF))
+	require.Len(t, streamedResults, 1)
+	assert.Len(t, streamedResults[0].SubStepResults, 1)
 }
 
 func Test_StepRunnerService_FollowSteps_BadID(t *testing.T) {

@@ -126,8 +126,7 @@ func (s *StepRunnerService) FollowSteps(request *proto.FollowStepsRequest, write
 		return &errBadJobID{id: request.Id}
 	}
 
-	// TODO: add offset to request
-	return job.FollowStepResults(func(result *proto.StepResult) error {
+	return job.FollowStepResults(request.Offset, func(result *proto.StepResult) error {
 		return writer.Send(&proto.FollowStepsResponse{Result: result})
 	})
 }

@@ -26,6 +26,7 @@ func Test_Streamer(t *testing.T) {
 	tests := map[string]struct {
 		writer      func(*proto.StepResult) error
 		validate    func(error)
+		offset      int32
 		wantResults int
 	}{
 		"happy path": {
@@ -51,6 +52,29 @@ func Test_Streamer(t *testing.T) {
 				assert.ErrorContains(t, e, "POW!!!")
 			},
 		},
+		"with offset": {
+			wantResults: 3,
+			offset:      2,
+			writer: func(sr *proto.StepResult) error {
+				gotResults = append(gotResults, sr)
+				return nil
+			},
+			validate: func(e error) {
+				assert.NoError(t, e)
+			},
+		},
+
+		"with offset greater than total results": {
+			wantResults: 0,
+			offset:      6,
+			writer: func(sr *proto.StepResult) error {
+				gotResults = append(gotResults, sr)
+				return nil
+			},
+			validate: func(e error) {
+				assert.NoError(t, e)
+			},
+		},
 	}
 
 	for name, tt := range tests {
@@ -63,7 +87,7 @@ func Test_Streamer(t *testing.T) {
 			var err error
 			go func() {
 				defer wg.Done()
-				err = s.Follow(tt.writer)
+				err = s.Follow(tt.offset, tt.writer)
 			}()
 
 			sourceResults := makeStepResults(numSourceResults)
@@ -71,17 +95,17 @@ func Test_Streamer(t *testing.T) {
 				s.Write(result)
 			}
 
-			s.Stop()
-
 			assert.Eventually(t, func() bool {
 				return len(gotResults) == tt.wantResults
-			}, 100*time.Millisecond, 25*time.Millisecond)
+			}, 100*time.Millisecond, 25*time.Millisecond,
+				"want: %d; got: %d", tt.wantResults, len(gotResults))
 
+			s.Stop()
 			wg.Wait()
 
 			tt.validate(err)
 			for i := range gotResults {
-				assert.Equal(t, sourceResults[i].ExecResult.ExitCode, gotResults[i].ExecResult.ExitCode)
+				assert.Equal(t, sourceResults[i+int(tt.offset)].ExecResult.ExitCode, gotResults[i].ExecResult.ExitCode)
 			}
 		})
 	}
@@ -101,7 +125,7 @@ func Test_Streamer_StopBeforeFollow(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.Follow(func(sr *proto.StepResult) error {
+		err := s.Follow(0, func(sr *proto.StepResult) error {
 			gotResults = append(gotResults, sr)
 			return nil
 		})

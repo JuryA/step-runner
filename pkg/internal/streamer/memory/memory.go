@@ -35,8 +35,8 @@ func (s *Streamer[T]) Stop() {
 	s.cond.Broadcast()
 }
 
-func (s *Streamer[T]) Follow(write func(T) error) error {
-	i := 0
+func (s *Streamer[T]) Follow(offset int32, write func(T) error) error {
+	i := int(offset)
 	for {
 		s.cond.L.Lock()
 		for ; i < len(s.data); i++ {
