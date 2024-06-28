@@ -126,7 +126,7 @@ func (s *StepRunnerService) FollowSteps(request *proto.FollowStepsRequest, write
 		return &errBadJobID{id: request.Id}
 	}
 
-	return job.FollowStepResults(request.Offset, func(result *proto.StepResult) error {
+	return job.FollowStepResults(writer.Context(), request.Offset, func(result *proto.StepResult) error {
 		return writer.Send(&proto.FollowStepsResponse{Result: result})
 	})
 }

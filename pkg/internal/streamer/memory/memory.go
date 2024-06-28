@@ -8,6 +8,7 @@
 package memory
 
 import (
+	"context"
 	"sync"
 )
 
@@ -35,9 +36,14 @@ func (s *Streamer[T]) Stop() {
 	s.cond.Broadcast()
 }
 
-func (s *Streamer[T]) Follow(offset int32, write func(T) error) error {
+// Follow simulates the `tail -f` command by iterating over the elements collected by calls to Write(), returning only
+// when told to by a call to Stop().
+func (s *Streamer[T]) Follow(ctx context.Context, offset int32, write func(T) error) error {
 	i := int(offset)
 	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		s.cond.L.Lock()
 		for ; i < len(s.data); i++ {
 			if err := write(s.data[i]); err != nil {

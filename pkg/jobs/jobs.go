@@ -115,8 +115,8 @@ func (j *Job) StepResultWriter() func(*proto.StepResult) { return j.stepResults.
 // - a non-nil error returned by the writer.
 // - the error that terminated the job (if any)
 // - nil
-func (j *Job) FollowStepResults(offset int32, writer func(*proto.StepResult) error) error {
-	if err := j.stepResults.Follow(offset, writer); err != nil {
+func (j *Job) FollowStepResults(ctx context.Context, offset int32, writer func(*proto.StepResult) error) error {
+	if err := j.stepResults.Follow(ctx, offset, writer); err != nil {
 		return err
 	}
 	return j.Err()
