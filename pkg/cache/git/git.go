@@ -15,7 +15,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/go-git/go-git/v5/plumbing/transport"
-	"gitlab.com/gitlab-org/step-runner/proto"
 	"golang.org/x/mod/module"
 )
 
@@ -28,11 +27,11 @@ func New(cacheDir string) *GitFetcher {
 	return &GitFetcher{cacheDir: cacheDir}
 }
 
-func (gf *GitFetcher) Get(ctx context.Context, step *proto.Step_Reference) (string, error) {
+func (gf *GitFetcher) Get(ctx context.Context, url, version string) (string, error) {
 	gf.mu.Lock()
 	defer gf.mu.Unlock()
 
-	endpoint, err := transport.NewEndpoint(step.Url)
+	endpoint, err := transport.NewEndpoint(url)
 	if err != nil {
 		return "", fmt.Errorf("parsing git endpoint: %w", err)
 	}
@@ -42,11 +41,11 @@ func (gf *GitFetcher) Get(ctx context.Context, step *proto.Step_Reference) (stri
 		return "", fmt.Errorf("escaping path: %w", err)
 	}
 
-	return gf.clone(ctx, repoDir, step)
+	return gf.clone(ctx, repoDir, url, version)
 }
 
-func (gf *GitFetcher) clone(ctx context.Context, repoDir string, step *proto.Step_Reference) (string, error) {
-	if step.Version == ".git" {
+func (gf *GitFetcher) clone(ctx context.Context, repoDir, url, version string) (string, error) {
+	if version == ".git" {
 		// disallow this as a version
 		return "", fmt.Errorf(".git version not allowed")
 	}
@@ -67,7 +66,7 @@ func (gf *GitFetcher) clone(ctx context.Context, repoDir string, step *proto.Ste
 	} else {
 		repo, err = git.PlainCloneContext(ctx, gitDir, false, &git.CloneOptions{
 			Depth:             1,
-			URL:               step.Url,
+			URL:               url,
 			NoCheckout:        true,
 			RecurseSubmodules: git.SubmoduleRescursivity(1),
 			ShallowSubmodules: true,
@@ -79,15 +78,15 @@ func (gf *GitFetcher) clone(ctx context.Context, repoDir string, step *proto.Ste
 	}
 
 	// find, fetch, find
-	ref := gf.find(repo, step.Version)
+	ref := gf.find(repo, version)
 	if ref == nil {
 		if repo.FetchContext(ctx, &git.FetchOptions{Depth: 1}) == nil {
-			ref = gf.find(repo, step.Version)
+			ref = gf.find(repo, version)
 		}
 	}
 
 	if ref == nil {
-		return "", fmt.Errorf("cannot find version %q", step.Version)
+		return "", fmt.Errorf("cannot find version %q", version)
 	}
 
 	ver, err := module.EscapeVersion(ref.Hash().String())
