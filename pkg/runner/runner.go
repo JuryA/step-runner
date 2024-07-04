@@ -242,7 +242,7 @@ func (e *Execution) runExec(
 	if err != nil {
 		return fmt.Errorf("outputting: %w", err)
 	}
-	err = files.ExportTo(stepsCtx.Global, result)
+	err = stepsCtx.Global.ExportTo(result)
 	if err != nil {
 		return fmt.Errorf("exporting: %w", err)
 	}
@@ -265,6 +265,13 @@ func (e *Execution) runSteps(
 		return fmt.Errorf("adding definition env: %w", err)
 	}
 	result.Env = stepsCtx.GetEnvs()
+
+	// Create output and export files and add to context
+	files, err := output.New(stepsCtx, specDefinition.Spec.Spec.OutputMethod, specDefinition.Spec.Spec.Outputs)
+	if err != nil {
+		return err
+	}
+	defer files.Cleanup()
 
 	result.Status = proto.StepResult_success
 	for _, step := range specDefinition.Definition.Steps {

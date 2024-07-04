@@ -40,7 +40,11 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("creating cache: %w", err)
 	}
-	globalCtx := context.NewGlobal()
+	globalCtx, err := context.NewGlobal()
+	if err != nil {
+		return fmt.Errorf("creating global context: %w", err)
+	}
+	defer globalCtx.Cleanup()
 
 	execution, err := runner.New(defs)
 	if err != nil {
