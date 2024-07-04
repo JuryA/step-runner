@@ -56,7 +56,7 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepRef *proto.Step_R
 		return load(parentDir)
 
 	case stepRef.Protocol == proto.StepReferenceProtocol_git:
-		dir, err := c.gitFetcher.Get(ctx, stepRef)
+		dir, err := c.gitFetcher.Get(ctx, stepRef.Url, stepRef.Version)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}
