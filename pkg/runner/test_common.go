@@ -46,7 +46,9 @@ func testCases(t *testing.T, cases []runnerTest) {
 
 			var log bytes.Buffer
 
-			globalCtx := context.NewGlobal()
+			globalCtx, err := context.NewGlobal()
+			require.NoError(t, err)
+			defer globalCtx.Cleanup()
 			maps.Copy(globalCtx.Env, c.globalEnv)
 			globalCtx.Stdout = &log
 			globalCtx.Stderr = &log

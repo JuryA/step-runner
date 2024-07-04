@@ -1,6 +1,7 @@
 package output
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"testing"
@@ -260,7 +261,10 @@ food=apple
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			files, err := New(context.NewSteps(context.NewGlobal()), tc.outputMethod, tc.outputs)
+			ctx, err := context.NewGlobal()
+			require.NoError(t, err)
+			defer ctx.Cleanup()
+			files, err := New(context.NewSteps(ctx), tc.outputMethod, tc.outputs)
 			require.NoError(t, err)
 
 			outputFile, err := os.OpenFile(filepath.Join(files.dir, outputFilename), os.O_APPEND|os.O_WRONLY, 0660)
@@ -283,5 +287,81 @@ food=apple
 }
 
 func TestExport(t *testing.T) {
+	cases := []struct {
+		name          string
+		globalEnv     map[string]string
+		writeToExport string
+		wantExports   map[string]string
+		wantGlobalEnv map[string]string
+	}{{
+		name: "no export",
+	}, {
+		name: "no export keeping global env",
+		globalEnv: map[string]string{
+			"foo": "bar",
+		},
+		wantGlobalEnv: map[string]string{
+			"foo": "bar",
+		},
+	}, {
+		name: "export overwriting global env",
+		globalEnv: map[string]string{
+			"foo": "bar",
+		},
+		writeToExport: "foo=baz",
+		wantExports: map[string]string{
+			"foo": "baz",
+		},
+		wantGlobalEnv: map[string]string{
+			"foo": "baz",
+		},
+	}, {
+		name: "export multiple times last value controls",
+		writeToExport: `
+foo=bar
+foo=baz
+`,
+		wantExports: map[string]string{
+			"foo": "baz",
+		},
+		wantGlobalEnv: map[string]string{
+			"foo": "baz",
+		},
+	}, {
+		name: "re-export a value",
+		globalEnv: map[string]string{
+			"foo": "bar",
+		},
+		writeToExport: "foo=bar",
+		wantExports: map[string]string{
+			"foo": "bar",
+		},
+		wantGlobalEnv: map[string]string{
+			"foo": "bar",
+		},
+	}}
 
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, err := context.NewGlobal()
+			require.NoError(t, err)
+			if tc.globalEnv != nil {
+				ctx.Env = tc.globalEnv
+			}
+			defer ctx.Cleanup()
+
+			exportFile, err := os.OpenFile(filepath.Join(ctx.ExportFile), os.O_APPEND|os.O_WRONLY, 0660)
+			require.NoError(t, err)
+			_, err = exportFile.Write([]byte(tc.writeToExport))
+			require.NoError(t, err)
+			err = exportFile.Close()
+			require.NoError(t, err)
+
+			got := &proto.StepResult{}
+			err = ctx.ExportTo(got)
+			require.NoError(t, err)
+			require.True(t, maps.Equal(tc.wantExports, got.Exports), "want %+v. got %+v", tc.wantExports, got.Exports)
+			require.True(t, maps.Equal(tc.wantGlobalEnv, ctx.Env), "want %+v. got %+v", tc.wantGlobalEnv, ctx.Env)
+		})
+	}
 }

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/joho/godotenv"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
@@ -17,7 +16,6 @@ import (
 
 const (
 	outputFilename = "output"
-	exportFilename = "export"
 )
 
 type Files struct {
@@ -27,7 +25,6 @@ type Files struct {
 
 	dir        string
 	outputFile string
-	exportFile string
 }
 
 func New(
@@ -44,20 +41,13 @@ func New(
 	if err != nil {
 		return nil, fmt.Errorf("creating output file: %w", err)
 	}
-	exportFile := filepath.Join(dir, exportFilename)
-	err = os.WriteFile(exportFile, []byte{}, 0660)
-	if err != nil {
-		return nil, fmt.Errorf("creating export file: %w", err)
-	}
 	stepCtx.OutputFile = outputFile
-	stepCtx.ExportFile = exportFile
 	return &Files{
 		stepCtx:      stepCtx,
 		outputMethod: outputMethod,
 		specOutputs:  specOutputs,
 		dir:          dir,
 		outputFile:   outputFile,
-		exportFile:   exportFile,
 	}, nil
 }
 
@@ -173,18 +163,6 @@ func checkOutputType(want proto.ValueType, have *structpb.Value) error {
 		return fmt.Errorf("unsupported output type: %v", want)
 	}
 	return fmt.Errorf("declared output type %v and type %T received from step must match", want, have.Kind)
-}
-
-func (f *Files) ExportTo(globalCtx *context.Global, result *proto.StepResult) error {
-	exports, err := godotenv.Read(f.exportFile)
-	if err != nil {
-		return fmt.Errorf("reading exports: %w", err)
-	}
-	for k, v := range exports {
-		globalCtx.Env[k] = v
-	}
-	result.Exports = exports
-	return nil
 }
 
 func (f *Files) Cleanup() {

@@ -51,7 +51,11 @@ func New(request *proto.RunRequest) (*Job, error) {
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
-	globCtx := rctx.NewGlobal()
+	globCtx, err := rctx.NewGlobal()
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("creating global context: %w", err)
+	}
 	globCtx.WorkDir = workDir
 
 	return &Job{
@@ -103,5 +107,6 @@ func (j *Job) Finished() bool {
 func (j *Job) Close() {
 	j.cancel()
 	defer os.RemoveAll(j.TmpDir)
+	defer j.GlobCtx.Cleanup()
 	j.Finish(nil, j.Ctx.Err())
 }
