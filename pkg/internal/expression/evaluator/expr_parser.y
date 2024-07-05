@@ -46,7 +46,7 @@ and_expression:
   | comparison_expression { $$ = $1; }
 
 comparison_expression:
-    comparison_expression NOT_EQUAL value_expression { $$ = &nodeCompareNotEquals{left: $1, right: $3}; }
+    comparison_expression NOT_EQUAL value_expression { $$ = &nodeUnaryNot{expr: &nodeCompareEquals{left: $1, right: $3}}; }
   | comparison_expression EQUAL value_expression { $$ = &nodeCompareEquals{left: $1, right: $3}; }
   | value_expression { $$ = $1; }
 
