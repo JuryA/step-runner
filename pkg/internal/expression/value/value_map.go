@@ -41,6 +41,6 @@ func (v *valueMap) Error() error {
 }
 
 func (v *valueMap) ToString() (string, error) {
-	data, err := json.Marshal(v.v)
+	data, err := json.Marshal(v.v.Interface())
 	return string(data), err
 }

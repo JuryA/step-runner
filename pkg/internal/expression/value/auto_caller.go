@@ -26,7 +26,8 @@ func AutoCaller(self Value, method string, args []Value) (ret Value) {
 
 	returnValues := reflectMethod.Call(reflectArgs)
 	if len(returnValues) != 1 {
-		return NewErrorf("Method %q.%q returned %d arguments instead of 1", len(returnValues))
+		return NewErrorf("Method %q.%q returned %d arguments instead of 1",
+			method, reflectSelf.Type().Name(), len(returnValues))
 	}
 
 	switch x := returnValues[0].Interface().(type) {
@@ -34,6 +35,7 @@ func AutoCaller(self Value, method string, args []Value) (ret Value) {
 		return x
 
 	default:
-		return NewErrorf("Method %q.%q needs to return Value instead of %v", returnValues[0].Type().Name())
+		return NewErrorf("Method %q.%q needs to return Value instead of %v",
+			method, reflectSelf.Type().Name(), returnValues[0].Type().Name())
 	}
 }
