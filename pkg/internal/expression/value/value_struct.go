@@ -9,6 +9,7 @@ import (
 )
 
 type valueStruct struct {
+	DefaultFunctions
 	v reflect.Value
 }
 
@@ -44,13 +45,6 @@ func (v *valueStruct) Dig(key string) Value {
 	}
 
 	return ToValue(value)
-}
-
-func (v *valueStruct) Call(method string, args []Value) Value {
-	if res := valueCall(v, method, args); res != nil {
-		return res
-	}
-	return NewError(errors.New("not supported"))
 }
 
 func (v *valueStruct) IsTrue() bool {

@@ -22,5 +22,5 @@ func (n *nodeCall) Calculate(context value.Value) value.Value {
 		args = append(args, argValue)
 	}
 
-	return exprValue.Call(n.method, args)
+	return value.AutoCaller(exprValue, n.method, args)
 }

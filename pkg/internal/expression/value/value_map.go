@@ -2,12 +2,12 @@ package value
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 )
 
 type valueMap struct {
+	DefaultFunctions
 	v reflect.Value
 }
 
@@ -26,13 +26,6 @@ func (v *valueMap) Dig(key string) Value {
 	default:
 		return NewError(fmt.Errorf("the map key needs to be %q, but is %q", "string", kind))
 	}
-}
-
-func (v *valueMap) Call(method string, args []Value) Value {
-	if res := valueCall(v, method, args); res != nil {
-		return res
-	}
-	return NewError(errors.New("not supported"))
 }
 
 func (v *valueMap) IsTrue() bool {

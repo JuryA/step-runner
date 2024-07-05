@@ -2,20 +2,15 @@ package value
 
 import (
 	"errors"
+	"fmt"
 )
 
 type ValueError struct {
+	DefaultFunctions
 	v error
 }
 
 func (v *ValueError) Dig(key string) Value {
-	return NewError(errors.New("not supported"))
-}
-
-func (v *ValueError) Call(method string, args []Value) Value {
-	if res := valueCall(v, method, args); res != nil {
-		return res
-	}
 	return NewError(errors.New("not supported"))
 }
 
@@ -37,4 +32,8 @@ func (v *ValueError) ToString() (string, error) {
 
 func NewError(err error) Value {
 	return &ValueError{v: err}
+}
+
+func NewErrorf(format string, a ...any) Value {
+	return NewError(fmt.Errorf(format, a...))
 }

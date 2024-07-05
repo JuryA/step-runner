@@ -1,8 +1,6 @@
 package evaluator
 
 import (
-	"fmt"
-
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression/value"
 )
 
@@ -18,20 +16,12 @@ func (v *valueContext) Dig(key string) value.Value {
 	return v.context.Dig(key)
 }
 
-func (v *valueContext) Call(method string, args []value.Value) value.Value {
-	switch method {
-	case "str":
-		if len(args) != 1 {
-			return value.NewError(fmt.Errorf("invalid number of arguments (%d) to str()", len(args)))
-		}
-		x, err := args[0].ToString()
-		if err != nil {
-			return value.NewError(err)
-		}
-		return value.ToValue(x)
+func (v *valueContext) Call_str(_self value.Value, arg value.Value) value.Value {
+	x, err := arg.ToString()
+	if err != nil {
+		return value.NewError(err)
 	}
-
-	return v.context.Call(method, args)
+	return value.ToValue(x)
 }
 
 func (v *valueContext) IsTrue() bool {
