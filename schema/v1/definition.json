@@ -104,9 +104,6 @@
                 },
                 "additionalProperties": false,
                 "type": "object",
-                "required": [
-                    "name"
-                ],
                 "description": "Step is a single step invocation."
             },
             "type": "array",

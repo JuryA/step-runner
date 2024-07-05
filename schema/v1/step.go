@@ -32,7 +32,7 @@ type Exec struct {
 // Step is a single step invocation.
 type Step struct {
 	// Name is a unique identifier for this step.
-	Name string `json:"name" yaml:"name"`
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Step is a reference to the step to invoke.
 	Step Reference `json:"step,omitempty" yaml:"step,omitempty" jsonschema:"oneof_required=step"`
 	// Env is a map of environment variable names to string values.
