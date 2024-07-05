@@ -39,10 +39,15 @@ $(SCHEMA_GEN): $(SCHEMA_SRC)
 .generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
 	go generate ./proto
 
+.PHONY: .generate-expr
+.generate-expr:
+	go generate ./pkg/internal/expression/evaluator
+
 .PHONY: generate
 generate:
 	$(MAKE) .generate-schema
 	$(MAKE) .generate-proto
+	$(MAKE) .generate-expr
 
 .PHONY: test
 test: generate
