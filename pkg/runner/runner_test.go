@@ -394,5 +394,7 @@ steps:
 		},
 	}}
 
-	testCases(t, cases)
+	for _, test := range cases {
+		t.Run(test.name, runTestCase(test))
+	}
 }

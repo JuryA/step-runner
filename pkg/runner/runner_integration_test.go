@@ -45,5 +45,8 @@ steps:
 			requireStringEqualValue(t, "olleh", result.SubStepResults[0].Outputs["echo"])
 		},
 	}}
-	testCases(t, cases)
+
+	for _, test := range cases {
+		t.Run(test.name, runTestCase(test))
+	}
 }

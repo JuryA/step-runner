@@ -30,45 +30,43 @@ func requireStringEqualValue(t *testing.T, str string, got *structpb.Value) {
 	require.True(t, protobuf.Equal(want, got), "want %+v. got %+v", want, got)
 }
 
-func testCases(t *testing.T, cases []runnerTest) {
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			stepDef, err := step.ReadSteps(c.yaml, "")
-			require.NoError(t, err)
-			protoStepDef, err := step.CompileSteps(stepDef)
-			require.NoError(t, err)
-			protoStepDef.Dir, _ = os.Getwd()
+func runTestCase(testCase runnerTest) func(t *testing.T) {
+	return func(t *testing.T) {
+		stepDef, err := step.ReadSteps(testCase.yaml, "")
+		require.NoError(t, err)
+		protoStepDef, err := step.CompileSteps(stepDef)
+		require.NoError(t, err)
+		protoStepDef.Dir, _ = os.Getwd()
 
-			defs, err := cache.New()
-			require.NoError(t, err)
-			runner, err := New(defs)
-			require.NoError(t, err)
+		defs, err := cache.New()
+		require.NoError(t, err)
+		runner, err := New(defs)
+		require.NoError(t, err)
 
-			var log bytes.Buffer
+		var log bytes.Buffer
 
-			globalCtx, err := context.NewGlobal()
-			require.NoError(t, err)
-			defer globalCtx.Cleanup()
-			maps.Copy(globalCtx.Env, c.globalEnv)
-			globalCtx.Stdout = &log
-			globalCtx.Stderr = &log
-			globalCtx.WorkDir, _ = os.UserHomeDir()
+		globalCtx, err := context.NewGlobal()
+		require.NoError(t, err)
+		defer globalCtx.Cleanup()
+		maps.Copy(globalCtx.Env, testCase.globalEnv)
+		globalCtx.Stdout = &log
+		globalCtx.Stderr = &log
+		globalCtx.WorkDir, _ = os.UserHomeDir()
 
-			params := &Params{}
+		params := &Params{}
 
-			result, err := runner.Run(ctx.Background(), globalCtx, params, protoStepDef)
-			if c.wantErr != nil {
-				require.Equal(t, c.wantErr.Error(), err.Error())
-				if c.wantResults != nil {
-					c.wantResults(t, result)
-				}
-			} else {
-				require.NoError(t, err)
-				if c.wantLog != "" {
-					require.Equal(t, c.wantLog, log.String())
-				}
-				c.wantResults(t, result)
+		result, err := runner.Run(ctx.Background(), globalCtx, params, protoStepDef)
+		if testCase.wantErr != nil {
+			require.Equal(t, testCase.wantErr.Error(), err.Error())
+			if testCase.wantResults != nil {
+				testCase.wantResults(t, result)
 			}
-		})
+		} else {
+			require.NoError(t, err)
+			if testCase.wantLog != "" {
+				require.Equal(t, testCase.wantLog, log.String())
+			}
+			testCase.wantResults(t, result)
+		}
 	}
 }
