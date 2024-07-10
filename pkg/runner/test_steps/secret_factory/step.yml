@@ -3,6 +3,7 @@ spec:
     secret_override:
       type: string
       default: ""
+      sensitive: true
   outputs:
     secret:
       type: string

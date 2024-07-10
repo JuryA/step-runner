@@ -52,6 +52,30 @@ spec:
 				},
 			},
 		},
+	}, {
+		name: "output with all fields",
+		json: `{"spec":{"outputs":{"name":{"type":"string","default":"foobar","sensitive":true}}}}`,
+		yaml: `
+spec:
+  outputs:
+    name:
+      type: string
+      default: foobar
+      sensitive: true
+`,
+		wantSpec: Spec{
+			Spec: Signature{
+				Outputs: Outputs{
+					Outputs: map[string]Output{
+						"name": {
+							Type:      "string",
+							Default:   "foobar",
+							Sensitive: true,
+						},
+					},
+				},
+			},
+		},
 	}}
 
 	data, err := os.ReadFile("spec.json")
