@@ -57,6 +57,7 @@ func runTestCase(testCase runnerTest) func(t *testing.T) {
 
 		result, err := runner.Run(ctx.Background(), globalCtx, params, protoStepDef)
 		if testCase.wantErr != nil {
+			require.Error(t, err)
 			require.Equal(t, testCase.wantErr.Error(), err.Error())
 			if testCase.wantResults != nil {
 				testCase.wantResults(t, result)

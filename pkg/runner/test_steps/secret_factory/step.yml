@@ -1,0 +1,20 @@
+spec:
+  inputs:
+    secret_override:
+      type: string
+      default: ""
+  outputs:
+    secret:
+      type: string
+      sensitive: true
+---
+env:
+  HOME: ${{ work_dir }}
+exec:
+  work_dir: ${{ step_dir }}
+  command:
+    - go
+    - run
+    - .
+    - --output_file=${{ output_file }}
+    - --secret_override=${{ inputs.secret_override }}
