@@ -44,7 +44,7 @@ func interpolateString(obj any, value string) (*structpb.Value, error) {
 				break
 			}
 
-			insideValue, err := Evaluate(obj, insideString)
+			insideValue, _, err := Evaluate(obj, insideString)
 			if err != nil {
 				return nil, err
 			}

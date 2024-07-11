@@ -65,7 +65,7 @@ type Input struct {
 	Type ValueType `json:"type,omitempty" yaml:"type,omitempty"`
 	// Default is the default input value. Its type must match `type`.
 	Default any `json:"default,omitempty" yaml:"default,omitempty"`
-	// Sensitive implies the input is of sensitive nature and efforts should be taken to prevent accidental disclosure.
+	// Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure.
 	Sensitive bool `json:"sensitive,omitempty" yaml:"sensitive,omitempty"`
 }
 
@@ -75,7 +75,7 @@ type Output struct {
 	Type ValueType `json:"type,omitempty" yaml:"type,omitempty"`
 	// Default is the default output value.
 	Default any `json:"default,omitempty" yaml:"default,omitempty"`
-	// Sensitive implies the output is of sensitive nature and efforts should be taken to prevent accidental disclosure.
+	// Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure.
 	Sensitive bool `json:"sensitive,omitempty" yaml:"sensitive,omitempty"`
 }
 

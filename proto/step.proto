@@ -103,6 +103,8 @@ message Spec {
       ValueType type = 1;
       // Default is the default input value. Its type must match `type`.
       google.protobuf.Value default = 2;
+      // Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure.
+      bool sensitive = 3;
     }
     // Outputs is a map of output names to their parameters.
     map<string,Output> outputs = 2;
@@ -117,6 +119,8 @@ message Spec {
       ValueType type = 1;
       // Default is the default output value.
       google.protobuf.Value default = 2;
+      // Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure.
+      bool sensitive = 3;
     }
     // OutputMethod selects how this step will return its outputs.
     OutputMethod output_method = 3;

@@ -16,7 +16,7 @@
                             },
                             "sensitive": {
                                 "type": "boolean",
-                                "description": "Sensitive implies the input is of sensitive nature and efforts should be taken to prevent accidental disclosure."
+                                "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
                             }
                         },
                         "additionalProperties": false,
@@ -44,7 +44,7 @@
                                     },
                                     "sensitive": {
                                         "type": "boolean",
-                                        "description": "Sensitive implies the output is of sensitive nature and efforts should be taken to prevent accidental disclosure."
+                                        "description": "Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure."
                                     }
                                 },
                                 "additionalProperties": false,
