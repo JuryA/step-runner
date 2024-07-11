@@ -396,24 +396,16 @@ steps:
 		name: "non-sensitive input cannot derive value from sensitive output",
 		yaml: `
 spec:
-  inputs: {}
-  outputs:
-    secret:
-      type: string
 ---
 steps:
   - name: secret_factory
     step: ./test_steps/secret_factory
-    inputs:
-      secret_override: "my.secret"
   - name: greeting
     step: ./test_steps/greeting
     inputs:
       name: look, a secret! ${{ steps.secret_factory.outputs.secret }}
-outputs:
-  secret: ">>${{ steps.greeting.outputs.name }}<<"
 `,
-		wantErr: fmt.Errorf(`cannot assign input "name" due to error: cannot use sensitive value steps.secret_factdory.outputs.secret in non-sensitive input`),
+		wantErr: fmt.Errorf(`cannot assign input "name" due to error: cannot use sensitive value steps.secret_factory.outputs.secret in non-sensitive input`),
 	}}
 
 	for _, test := range cases {
