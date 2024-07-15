@@ -12,11 +12,8 @@ func Evaluate(obj any, s string) (*structpb.Value, bool, error) {
 	s = strings.TrimSpace(s)
 	fields := strings.Split(s, ".")
 
-	isSensitive, err := fieldIsSensitive(obj, fields)
-
-	if err != nil {
-		return nil, false, fmt.Errorf("failed to evaluate %s due to %w", s, err)
-	}
+	// ignore the error, if a field is not accessible then a better error message will be surfaced later on.
+	isSensitive, _ := fieldIsSensitive(obj, fields)
 
 	value, err := evaluate(obj, s)
 	return value, isSensitive, err

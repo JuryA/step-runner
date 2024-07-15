@@ -93,60 +93,72 @@ func TestExpandString(t *testing.T) {
 
 func TestExpand(t *testing.T) {
 	cases := []struct {
-		value   *structpb.Value
-		want    *structpb.Value
+		value   *context.Variable
+		want    *context.Variable
 		wantErr error
 	}{{
-		value: structpb.NewStringValue(""),
-		want:  structpb.NewStringValue(""),
+		value: context.NewStringVariable("", false),
+		want:  context.NewStringVariable("", false),
 	}, {
-		value: structpb.NewStringValue("${{job.job_id}}"),
-		want:  structpb.NewStringValue("1982"),
+		value: context.NewStringVariable("${{job.job_id}}", false),
+		want:  context.NewStringVariable("1982", false),
 	}, {
-		value: structpb.NewStringValue("${{env.MOVIE}}"),
-		want:  structpb.NewStringValue("tron"),
+		value: context.NewStringVariable("${{env.MOVIE}}", false),
+		want:  context.NewStringVariable("tron", false),
 	}, {
-		value: structpb.NewStringValue("${{env.WHERE}}"),
-		want:  structpb.NewStringValue("inside"),
+		value: context.NewStringVariable("${{env.WHERE}}", false),
+		want:  context.NewStringVariable("inside", false),
 	}, {
-		value: structpb.NewStringValue("${{inputs.name}}"),
-		want:  structpb.NewStringValue("Kevin Flynn"),
+		value: context.NewStringVariable("${{inputs.name}}", false),
+		want:  context.NewStringVariable("Kevin Flynn", false),
 	}, {
-		value: structpb.NewStringValue("${{inputs.light_cycle}}"),
-		want: structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
-			"color":  structpb.NewStringValue("yellow"),
-			"number": structpb.NewNumberValue(3),
-		}}),
+		value: context.NewStringVariable("${{inputs.light_cycle}}", false),
+		want: context.NewStructVariable(
+			&structpb.Struct{Fields: map[string]*structpb.Value{
+				"color":  structpb.NewStringValue("yellow"),
+				"number": structpb.NewNumberValue(3),
+			}},
+			false),
 	}, {
-		value: structpb.NewStringValue("PREFIX ${{inputs.light_cycle}} SUFFIX"),
-		want:  structpb.NewStringValue(`PREFIX {"color":"yellow","number":3} SUFFIX`),
+		value: context.NewStringVariable("PREFIX ${{inputs.light_cycle}} SUFFIX", false),
+		want:  context.NewStringVariable(`PREFIX {"color":"yellow","number":3} SUFFIX`, false),
 	}, {
-		value: structpb.NewStringValue("${{inputs.team_members}}"),
-		want: structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
-			structpb.NewStringValue("tron"),
-			structpb.NewStringValue("ram"),
-			structpb.NewStringValue("flynn"),
-		}}),
+		value: context.NewStringVariable("${{inputs.team_members}}", false),
+		want: context.NewVariable(
+			structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
+				structpb.NewStringValue("tron"),
+				structpb.NewStringValue("ram"),
+				structpb.NewStringValue("flynn"),
+			}}),
+			false),
 	}, {
-		value: structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
-			"replace within": structpb.NewStringValue("${{inputs.name}}"),
-		}}),
-		want: structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
-			"replace within": structpb.NewStringValue("Kevin Flynn"),
-		}}),
+		value: context.NewStructVariable(
+			&structpb.Struct{Fields: map[string]*structpb.Value{
+				"replace within": structpb.NewStringValue("${{inputs.name}}"),
+			}},
+			false),
+		want: context.NewStructVariable(
+			&structpb.Struct{Fields: map[string]*structpb.Value{
+				"replace within": structpb.NewStringValue("Kevin Flynn"),
+			}},
+			false),
 	}, {
-		value: structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
-			structpb.NewStringValue("${{inputs.name}}"),
-		}}),
-		want: structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
-			structpb.NewStringValue("Kevin Flynn"),
-		}}),
+		value: context.NewListVariable(
+			&structpb.ListValue{Values: []*structpb.Value{
+				structpb.NewStringValue("${{inputs.name}}"),
+			}},
+			false),
+		want: context.NewListVariable(
+			&structpb.ListValue{Values: []*structpb.Value{
+				structpb.NewStringValue("Kevin Flynn"),
+			}},
+			false),
 	}, {
-		value: structpb.NewStringValue("Hello, my name is ${{inputs.name}}. You killed my process. Prepare to SIGTERM."),
-		want:  structpb.NewStringValue("Hello, my name is Kevin Flynn. You killed my process. Prepare to SIGTERM."),
+		value: context.NewStringVariable("Hello, my name is ${{inputs.name}}. You killed my process. Prepare to SIGTERM.", false),
+		want:  context.NewStringVariable("Hello, my name is Kevin Flynn. You killed my process. Prepare to SIGTERM.", false),
 	}}
 	for _, c := range cases {
-		got, err := Expand(textContextSteps(), context.NewVariable(c.value, true))
+		got, err := Expand(textContextSteps(), c.value)
 		if c.wantErr != nil {
 			require.Equal(t, c.wantErr, err)
 		} else {

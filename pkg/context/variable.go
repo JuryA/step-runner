@@ -19,3 +19,24 @@ func NewVariable(value *structpb.Value, sensitive bool) *Variable {
 
 	return variable
 }
+
+func NewStringVariable(value string, sensitive bool) *Variable {
+	return &Variable{
+		Value:     structpb.NewStringValue(value),
+		Sensitive: sensitive,
+	}
+}
+
+func NewStructVariable(value *structpb.Struct, sensitive bool) *Variable {
+	return &Variable{
+		Value:     structpb.NewStructValue(value),
+		Sensitive: sensitive,
+	}
+}
+
+func NewListVariable(value *structpb.ListValue, sensitive bool) *Variable {
+	return &Variable{
+		Value:     structpb.NewListValue(value),
+		Sensitive: sensitive,
+	}
+}
