@@ -10,12 +10,6 @@ spec:
       sensitive: true
 ---
 env:
-  HOME: ${{ work_dir }}
+  OUTPUT: ${{ inputs.secret_override }}
 exec:
-  work_dir: ${{ step_dir }}
-  command:
-    - go
-    - run
-    - .
-    - --output_file=${{ output_file }}
-    - --secret_override=${{ inputs.secret_override }}
+  command: [bash, -c, "echo 'secret=\"er\"' >${{ output_file }}"]

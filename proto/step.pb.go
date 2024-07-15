@@ -1399,7 +1399,7 @@ type Spec_Content_Output struct {
 	Type ValueType `protobuf:"varint,1,opt,name=type,proto3,enum=proto.ValueType" json:"type,omitempty"`
 	// Default is the default output value.
 	Default *structpb.Value `protobuf:"bytes,2,opt,name=default,proto3" json:"default,omitempty"`
-	// Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure.
+	// Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure.
 	Sensitive bool `protobuf:"varint,3,opt,name=sensitive,proto3" json:"sensitive,omitempty"`
 }
 

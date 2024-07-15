@@ -405,7 +405,7 @@ steps:
     inputs:
       name: look, a secret! ${{ steps.secret_factory.outputs.secret }}
 `,
-		wantErr: fmt.Errorf(`cannot assign input "name" due to error: cannot use sensitive value steps.secret_factory.outputs.secret in non-sensitive input`),
+		wantErr: fmt.Errorf(`Cannot assign input "name" due to error: cannot assign sensitive value "steps.secret_factory.outputs.secret" to non-sensitive field`),
 	}}
 
 	for _, test := range cases {

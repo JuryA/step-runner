@@ -2,7 +2,9 @@ package expression
 
 import (
 	"fmt"
+	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"regexp"
+	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -12,7 +14,7 @@ const InterpolateClose = "}}"
 
 var interpolateRegex = regexp.MustCompile(regexp.QuoteMeta(InterpolateOpen) + "|" + regexp.QuoteMeta(InterpolateClose))
 
-func interpolateString(obj any, value string) (*structpb.Value, error) {
+func interpolateString(obj any, value string, assignToSensitiveVar bool) (*context.Variable, error) {
 	output := []*structpb.Value{}
 	depth := 0
 	prev_idx := 0
@@ -44,10 +46,15 @@ func interpolateString(obj any, value string) (*structpb.Value, error) {
 				break
 			}
 
-			insideValue, _, err := Evaluate(obj, insideString)
+			insideValue, isSensitive, err := Evaluate(obj, insideString)
 			if err != nil {
 				return nil, err
 			}
+
+			if !assignToSensitiveVar && isSensitive {
+				return nil, fmt.Errorf(`cannot assign sensitive value "%s" to non-sensitive field`, strings.TrimSpace(insideString))
+			}
+
 			output = append(output, insideValue)
 
 		default:
@@ -65,7 +72,7 @@ func interpolateString(obj any, value string) (*structpb.Value, error) {
 
 	// retain type if this is single item, otherwise convert to string
 	if len(output) == 1 {
-		return output[0], nil
+		return context.NewVariable(output[0], false), nil
 	}
 
 	// concat all items
@@ -78,46 +85,46 @@ func interpolateString(obj any, value string) (*structpb.Value, error) {
 		res += str
 	}
 
-	return structpb.NewStringValue(res), nil
+	return context.NewVariable(structpb.NewStringValue(res), false), nil
 }
 
-func expandStruct(obj any, value *structpb.Struct) (*structpb.Value, error) {
+func expandStruct(obj any, value *structpb.Struct, assignToSensitiveVar bool) (*context.Variable, error) {
 	res := &structpb.Struct{Fields: make(map[string]*structpb.Value, len(value.Fields))}
 
 	for fieldKey, fieldValue := range value.Fields {
-		fieldNewValue, err := Expand(obj, fieldValue)
+		fieldNewValue, err := Expand(obj, context.NewVariable(fieldValue, assignToSensitiveVar))
 		if err != nil {
 			return nil, err
 		}
-		res.Fields[fieldKey] = fieldNewValue
+		res.Fields[fieldKey] = fieldNewValue.Value
 	}
-	return structpb.NewStructValue(res), nil
+	return context.NewVariable(structpb.NewStructValue(res), false), nil
 }
 
-func expandList(obj any, value *structpb.ListValue) (*structpb.Value, error) {
+func expandList(obj any, value *structpb.ListValue, assignToSensitiveVar bool) (*context.Variable, error) {
 	res := &structpb.ListValue{Values: make([]*structpb.Value, len(value.Values))}
 
 	for listIndex, listValue := range value.Values {
-		listNewValue, err := Expand(obj, listValue)
+		listNewValue, err := Expand(obj, context.NewVariable(listValue, assignToSensitiveVar))
 		if err != nil {
 			return nil, err
 		}
-		res.Values[listIndex] = listNewValue
+		res.Values[listIndex] = listNewValue.Value
 	}
-	return structpb.NewListValue(res), nil
+	return context.NewVariable(structpb.NewListValue(res), false), nil
 }
 
 // The Expand rewrites struct/list/string mutating data structure
-func Expand(obj any, value *structpb.Value) (*structpb.Value, error) {
-	switch value.Kind.(type) {
+func Expand(obj any, value *context.Variable) (*context.Variable, error) {
+	switch value.Value.Kind.(type) {
 	case *structpb.Value_StringValue:
-		return interpolateString(obj, value.GetStringValue())
+		return interpolateString(obj, value.Value.GetStringValue(), value.Sensitive)
 
 	case *structpb.Value_StructValue:
-		return expandStruct(obj, value.GetStructValue())
+		return expandStruct(obj, value.Value.GetStructValue(), value.Sensitive)
 
 	case *structpb.Value_ListValue:
-		return expandList(obj, value.GetListValue())
+		return expandList(obj, value.Value.GetListValue(), value.Sensitive)
 
 	default:
 		return value, nil
@@ -126,10 +133,10 @@ func Expand(obj any, value *structpb.Value) (*structpb.Value, error) {
 
 // The ExpandString rewrites string and returns string
 func ExpandString(obj any, value string) (string, error) {
-	res, err := interpolateString(obj, value)
+	res, err := interpolateString(obj, value, false)
 	if err != nil {
 		return "", err
 	}
 
-	return ValueToString(res)
+	return ValueToString(res.Value)
 }

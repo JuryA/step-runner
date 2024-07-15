@@ -2,6 +2,7 @@ package expression
 
 import (
 	"errors"
+	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -145,7 +146,7 @@ func TestExpand(t *testing.T) {
 		want:  structpb.NewStringValue("Hello, my name is Kevin Flynn. You killed my process. Prepare to SIGTERM."),
 	}}
 	for _, c := range cases {
-		got, err := Expand(textContextSteps(), c.value)
+		got, err := Expand(textContextSteps(), context.NewVariable(c.value, true))
 		if c.wantErr != nil {
 			require.Equal(t, c.wantErr, err)
 		} else {

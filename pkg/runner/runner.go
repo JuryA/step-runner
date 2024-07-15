@@ -22,7 +22,7 @@ type Execution struct {
 
 // Params are the input and environment parameters for an execution.
 type Params struct {
-	Inputs map[string]*structpb.Value
+	Inputs map[string]*context.Variable
 	Env    map[string]string
 }
 
@@ -123,12 +123,12 @@ func mergeDelegateOutput(
 // spec. Missing inputs are given defaults. Missing inputs without a
 // default produce an error. Extra inputs not declared also produce an
 // error.
-func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*structpb.Value) error {
+func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*context.Variable) error {
 	// Match inputs with definition
 	for key, value := range spec.Spec.Inputs {
 		callValue := inputs[key]
 		if callValue != nil {
-			stepsCtx.Inputs[key] = callValue
+			stepsCtx.Inputs[key] = callValue.Value
 		} else if value.Default != nil {
 			stepsCtx.Inputs[key] = value.Default
 		} else {
@@ -304,9 +304,9 @@ func (e *Execution) runSteps(
 	// for reference after returning, which would break
 	// encapsulation of the step function.
 	for k, v := range specDefinition.Definition.Outputs {
-		res, resErr := expression.Expand(stepsCtx, v)
+		res, resErr := expression.Expand(stepsCtx, context.NewVariable(v, false))
 		if resErr == nil {
-			result.Outputs[k] = res
+			result.Outputs[k] = res.Value
 		} else {
 			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
 		}
@@ -326,10 +326,21 @@ func (e *Execution) runSubStep(
 ) (*proto.StepResult, error) {
 	params := &Params{}
 
+	// Load the step spec and definition from the cache
+	subStepSpecDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
+	if err != nil {
+		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
+	}
+
 	// Expand inputs
-	params.Inputs = make(map[string]*structpb.Value)
+	params.Inputs = make(map[string]*context.Variable)
 	for k, v := range stepReference.Inputs {
-		res, resErr := expression.Expand(stepsCtx, v)
+		variable := &context.Variable{
+			Value:     v,
+			Sensitive: subStepSpecDefinition.Spec.Spec.Inputs[k].Sensitive,
+		}
+
+		res, resErr := expression.Expand(stepsCtx, variable)
 		if resErr != nil {
 			return nil, fmt.Errorf("Cannot assign input %q due to error: %s", k, resErr.Error())
 		}
@@ -346,12 +357,6 @@ func (e *Execution) runSubStep(
 		params.Env[k] = res
 	}
 
-	// Load the step spec and definition from the cache
-	subStepSpecDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
-	if err != nil {
-		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
-	}
-
 	// Run the step definition with the global context and expanded parameters
 	result, err := e.Run(ctx, stepsCtx.Global, params, subStepSpecDefinition)
 	if err != nil {
@@ -362,9 +367,19 @@ func (e *Execution) runSubStep(
 	result.Step = &proto.Step{
 		Name:   stepReference.Name,
 		Step:   stepReference.Step,
-		Inputs: params.Inputs,
+		Inputs: toMapStringStructpbValue(params.Inputs),
 		Env:    params.Env,
 	}
 	stepsCtx.Steps[stepReference.Name] = result
 	return result, nil
+}
+
+func toMapStringStructpbValue(value map[string]*context.Variable) map[string]*structpb.Value {
+	converted := make(map[string]*structpb.Value)
+
+	for k, v := range value {
+		converted[k] = v.Value
+	}
+
+	return converted
 }

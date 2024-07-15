@@ -42,9 +42,8 @@ func fieldIsSensitive(obj any, fields []string) (bool, error) {
 		return false, nil
 	}
 
-	pathToOutputSpec := slices.Concat(
-		fields[0:outputIndex],
-		[]string{"specDefinition", "spec", "spec", "outputs", fields[outputIndex+1], "sensitive"})
+	pathToOutputSpec := fields[0:outputIndex]
+	pathToOutputSpec = append(pathToOutputSpec, "specDefinition", "spec", "spec", "outputs", fields[outputIndex+1], "sensitive")
 	value, err := evaluate(obj, strings.Join(pathToOutputSpec, "."))
 
 	if err != nil {
