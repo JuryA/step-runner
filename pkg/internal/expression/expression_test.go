@@ -58,7 +58,6 @@ type Builders struct{}
 var b = &Builders{}
 
 type StepContextBuilder struct {
-	global      *context.Global
 	stepResults map[string]*proto.StepResult
 }
 
