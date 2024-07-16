@@ -13,6 +13,10 @@
                             },
                             "default": {
                                 "description": "Default is the default input value. Its type must match `type`."
+                            },
+                            "sensitive": {
+                                "type": "boolean",
+                                "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
                             }
                         },
                         "additionalProperties": false,
@@ -37,6 +41,10 @@
                                     },
                                     "default": {
                                         "description": "Default is the default output value."
+                                    },
+                                    "sensitive": {
+                                        "type": "boolean",
+                                        "description": "Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure."
                                     }
                                 },
                                 "additionalProperties": false,
