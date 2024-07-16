@@ -362,19 +362,19 @@ func (e *Execution) runSubStep(
 	result.Step = &proto.Step{
 		Name:   stepReference.Name,
 		Step:   stepReference.Step,
-		Inputs: toMapStringStructpbValue(params.Inputs),
+		Inputs: mapValue(params.Inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
 		Env:    params.Env,
 	}
 	stepsCtx.Steps[stepReference.Name] = result
 	return result, nil
 }
 
-func toMapStringStructpbValue(value map[string]*context.Variable) map[string]*structpb.Value {
-	converted := make(map[string]*structpb.Value)
+func mapValue[Key comparable, Value any, NewValue any](value map[Key]Value, f func(v Value) NewValue) map[Key]NewValue {
+	result := make(map[Key]NewValue, len(value))
 
 	for k, v := range value {
-		converted[k] = v.Value
+		result[k] = f(v)
 	}
 
-	return converted
+	return result
 }
