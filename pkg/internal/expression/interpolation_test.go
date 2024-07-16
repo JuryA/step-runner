@@ -150,7 +150,7 @@ func TestExpand(t *testing.T) {
 			require.Equal(t, c.wantErr, err)
 		} else {
 			require.Nil(t, err)
-			require.Equal(t, c.want, got)
+			require.Equal(t, c.want, got.Value)
 		}
 	}
 }

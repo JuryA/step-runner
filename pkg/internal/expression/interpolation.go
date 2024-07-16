@@ -49,7 +49,7 @@ func interpolateString(obj any, value string) (*context.Variable, error) {
 			if err != nil {
 				return nil, err
 			}
-			output = append(output, insideValue)
+			output = append(output, insideValue.Value)
 
 		default:
 		}
