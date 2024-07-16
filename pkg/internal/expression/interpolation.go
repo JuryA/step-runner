@@ -3,9 +3,8 @@ package expression
 import (
 	"fmt"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
-	"regexp"
-
 	"google.golang.org/protobuf/types/known/structpb"
+	"regexp"
 )
 
 const InterpolateOpen = "${{"
@@ -18,6 +17,7 @@ func interpolateString(obj any, value string) (*context.Variable, error) {
 	depth := 0
 	prev_idx := 0
 	open_idx := 0
+	sensitive := false
 
 	for _, loc := range interpolateRegex.FindAllStringIndex(value, -1) {
 		if depth == 0 && prev_idx != loc[0] {
@@ -46,9 +46,12 @@ func interpolateString(obj any, value string) (*context.Variable, error) {
 			}
 
 			insideValue, err := Evaluate(obj, insideString)
+
 			if err != nil {
 				return nil, err
 			}
+
+			sensitive = sensitive || insideValue.Sensitive
 			output = append(output, insideValue.Value)
 
 		default:
@@ -66,7 +69,7 @@ func interpolateString(obj any, value string) (*context.Variable, error) {
 
 	// retain type if this is single item, otherwise convert to string
 	if len(output) == 1 {
-		return context.NewVariable(output[0], false), nil
+		return context.NewVariable(output[0], sensitive), nil
 	}
 
 	// concat all items
@@ -79,7 +82,7 @@ func interpolateString(obj any, value string) (*context.Variable, error) {
 		res += str
 	}
 
-	return context.NewStringVariable(res, false), nil
+	return context.NewStringVariable(res, sensitive), nil
 }
 
 func expandStruct(obj any, value *structpb.Struct) (*context.Variable, error) {

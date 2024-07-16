@@ -2,6 +2,7 @@ package expression
 
 import (
 	"errors"
+	"gitlab.com/gitlab-org/step-runner/proto"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -151,6 +152,53 @@ func TestExpand(t *testing.T) {
 		} else {
 			require.Nil(t, err)
 			require.Equal(t, c.want, got.Value)
+			require.False(t, got.Sensitive)
 		}
+	}
+}
+
+func TestExpandSensitivity(t *testing.T) {
+	tests := []struct {
+		name          string
+		stepResult    *proto.StepResult
+		template      *structpb.Value
+		wantValue     *structpb.Value
+		wantSensitive bool
+	}{
+		{
+			name: "contains a sensitive value",
+			stepResult: b.ProtoStepResult().
+				WithName("secret_factory").
+				WithOutputSpec("secret", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: true}).
+				WithOutputSpec("engine", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: false}).
+				WithOutput("secret", structpb.NewStringValue("secret.value")).
+				WithOutput("engine", structpb.NewStringValue("hard-coded")).
+				Build(),
+			template:      structpb.NewStringValue("a secret factory using the ${{ steps.secret_factory.outputs.engine }} engine generated ${{ steps.secret_factory.outputs.secret }}"),
+			wantValue:     structpb.NewStringValue("a secret factory using the hard-coded engine generated secret.value"),
+			wantSensitive: true,
+		},
+		{
+			name: "contains no sensitive values",
+			stepResult: b.ProtoStepResult().
+				WithName("word-of-the-day").
+				WithOutputSpec("word", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: false}).
+				WithOutput("word", structpb.NewStringValue("collywobbles")).
+				Build(),
+			template:      structpb.NewStringValue("word of the day is ${{ steps.word-of-the-day.outputs.word }}"),
+			wantValue:     structpb.NewStringValue("word of the day is collywobbles"),
+			wantSensitive: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stepContext := b.StepContext().WithStepResult(test.stepResult).Build()
+
+			value, err := Expand(stepContext, test.template)
+			require.NoError(t, err)
+			require.Equal(t, test.wantValue, value.Value)
+			require.Equal(t, test.wantSensitive, value.Sensitive)
+		})
 	}
 }
