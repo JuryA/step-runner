@@ -22,7 +22,7 @@ type Execution struct {
 
 // Params are the input and environment parameters for an execution.
 type Params struct {
-	Inputs map[string]*structpb.Value
+	Inputs map[string]*context.Variable
 	Env    map[string]string
 }
 
@@ -123,12 +123,12 @@ func mergeDelegateOutput(
 // spec. Missing inputs are given defaults. Missing inputs without a
 // default produce an error. Extra inputs not declared also produce an
 // error.
-func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*structpb.Value) error {
+func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*context.Variable) error {
 	// Match inputs with definition
 	for key, value := range spec.Spec.Inputs {
 		callValue := inputs[key]
 		if callValue != nil {
-			stepsCtx.Inputs[key] = callValue
+			stepsCtx.Inputs[key] = callValue.Value
 		} else if value.Default != nil {
 			stepsCtx.Inputs[key] = value.Default
 		} else {
@@ -306,7 +306,7 @@ func (e *Execution) runSteps(
 	for k, v := range specDefinition.Definition.Outputs {
 		res, resErr := expression.Expand(stepsCtx, v)
 		if resErr == nil {
-			result.Outputs[k] = res
+			result.Outputs[k] = res.Value
 		} else {
 			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
 		}
@@ -327,7 +327,7 @@ func (e *Execution) runSubStep(
 	params := &Params{}
 
 	// Expand inputs
-	params.Inputs = make(map[string]*structpb.Value)
+	params.Inputs = make(map[string]*context.Variable)
 	for k, v := range stepReference.Inputs {
 		res, resErr := expression.Expand(stepsCtx, v)
 		if resErr != nil {
@@ -362,9 +362,19 @@ func (e *Execution) runSubStep(
 	result.Step = &proto.Step{
 		Name:   stepReference.Name,
 		Step:   stepReference.Step,
-		Inputs: params.Inputs,
+		Inputs: mapValue(params.Inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
 		Env:    params.Env,
 	}
 	stepsCtx.Steps[stepReference.Name] = result
 	return result, nil
+}
+
+func mapValue[Key comparable, Value any, NewValue any](value map[Key]Value, f func(v Value) NewValue) map[Key]NewValue {
+	result := make(map[Key]NewValue, len(value))
+
+	for k, v := range value {
+		result[k] = f(v)
+	}
+
+	return result
 }
