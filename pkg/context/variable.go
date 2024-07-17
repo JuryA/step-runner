@@ -2,7 +2,6 @@ package context
 
 import (
 	"google.golang.org/protobuf/types/known/structpb"
-	"strings"
 )
 
 type Variable struct {
@@ -11,18 +10,14 @@ type Variable struct {
 }
 
 func NewVariable(value *structpb.Value, sensitive bool) *Variable {
-	strings.NewReplacer()
-
 	if value == nil {
 		panic("variable must have a value")
 	}
 
-	variable := &Variable{
+	return &Variable{
 		Value:     value,
 		Sensitive: sensitive,
 	}
-
-	return variable
 }
 
 func NewStringVariable(value string, sensitive bool) *Variable {

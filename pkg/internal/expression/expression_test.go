@@ -40,22 +40,19 @@ func TestEvaluate(t *testing.T) {
 }
 
 func TestEvaluateSensitivity(t *testing.T) {
-	tests := []struct {
-		name      string
-		sensitive bool
-	}{
-		{name: "sensitive", sensitive: true},
-		{name: "not sensitive", sensitive: false},
+	tests := map[string]struct{ sensitive bool }{
+		"sensitive":     {sensitive: true},
+		"not sensitive": {sensitive: false},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			stepResult := b.ProtoStepResult().
-				WithName("secret_factory").
-				WithOutputSpec("secret", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: test.sensitive}).
-				WithOutput("secret", structpb.NewStringValue("secret.value")).
-				Build()
-			stepContext := b.StepContext().WithStepResult(stepResult).Build()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			stepResult := b.protoStepResult().
+				withName("secret_factory").
+				withOutputSpec("secret", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: test.sensitive}).
+				withOutput("secret", structpb.NewStringValue("secret.value")).
+				build()
+			stepContext := b.stepContext().withStepResult(stepResult).build()
 
 			value, err := Evaluate(stepContext, "steps.secret_factory.outputs.secret")
 			require.NoError(t, err)
@@ -65,28 +62,28 @@ func TestEvaluateSensitivity(t *testing.T) {
 	}
 }
 
-type Builders struct{}
+type builders struct{}
 
-var b = &Builders{}
+var b = &builders{}
 
-type StepContextBuilder struct {
+type stepContextBuilder struct {
 	stepResults map[string]*proto.StepResult
 }
 
-func (b *Builders) StepContext() *StepContextBuilder {
-	return &StepContextBuilder{
+func (*builders) stepContext() *stepContextBuilder {
+	return &stepContextBuilder{
 		stepResults: map[string]*proto.StepResult{},
 	}
 }
 
-func (bldr *StepContextBuilder) WithStepResult(stepResult *proto.StepResult) *StepContextBuilder {
+func (bldr *stepContextBuilder) withStepResult(stepResult *proto.StepResult) *stepContextBuilder {
 	bldr.stepResults[stepResult.Step.Name] = stepResult
 	return bldr
 }
 
-func (bldr *StepContextBuilder) Build() *context.Steps {
+func (bldr *stepContextBuilder) build() *context.Steps {
 	return &context.Steps{
-		Global:     b.GlobalContext().Build(),
+		Global:     b.globalContext().build(),
 		StepDir:    ".",
 		OutputFile: "output",
 		Env:        map[string]string{},
@@ -95,14 +92,14 @@ func (bldr *StepContextBuilder) Build() *context.Steps {
 	}
 }
 
-type GlobalContextBuilder struct {
+type globalContextBuilder struct {
 }
 
-func (b *Builders) GlobalContext() *GlobalContextBuilder {
-	return &GlobalContextBuilder{}
+func (*builders) globalContext() *globalContextBuilder {
+	return &globalContextBuilder{}
 }
 
-func (bldr *GlobalContextBuilder) Build() *context.Global {
+func (*globalContextBuilder) build() *context.Global {
 	return &context.Global{
 		WorkDir:    ".",
 		Job:        map[string]string{},
@@ -113,36 +110,36 @@ func (bldr *GlobalContextBuilder) Build() *context.Global {
 	}
 }
 
-type ProtoStepResultBuilder struct {
+type protoStepResultBuilder struct {
 	name       string
 	outputSpec map[string]*proto.Spec_Content_Output
 	output     map[string]*structpb.Value
 }
 
-func (b *Builders) ProtoStepResult() *ProtoStepResultBuilder {
-	return &ProtoStepResultBuilder{
+func (*builders) protoStepResult() *protoStepResultBuilder {
+	return &protoStepResultBuilder{
 		name:       "my-step",
 		outputSpec: map[string]*proto.Spec_Content_Output{},
 		output:     map[string]*structpb.Value{},
 	}
 }
 
-func (bldr *ProtoStepResultBuilder) WithName(name string) *ProtoStepResultBuilder {
+func (bldr *protoStepResultBuilder) withName(name string) *protoStepResultBuilder {
 	bldr.name = name
 	return bldr
 }
 
-func (bldr *ProtoStepResultBuilder) WithOutputSpec(name string, spec *proto.Spec_Content_Output) *ProtoStepResultBuilder {
+func (bldr *protoStepResultBuilder) withOutputSpec(name string, spec *proto.Spec_Content_Output) *protoStepResultBuilder {
 	bldr.outputSpec[name] = spec
 	return bldr
 }
 
-func (bldr *ProtoStepResultBuilder) WithOutput(name string, value *structpb.Value) *ProtoStepResultBuilder {
+func (bldr *protoStepResultBuilder) withOutput(name string, value *structpb.Value) *protoStepResultBuilder {
 	bldr.output[name] = value
 	return bldr
 }
 
-func (bldr *ProtoStepResultBuilder) Build() *proto.StepResult {
+func (bldr *protoStepResultBuilder) build() *proto.StepResult {
 	return &proto.StepResult{
 		Step: &proto.Step{
 			Name:   bldr.name,
