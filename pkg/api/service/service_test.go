@@ -38,7 +38,7 @@ steps:
 ---
 steps:
   - name: bash
-    step: ./testdata/bash
+    step: ../testdata/bash
     inputs:
         script: %s
 `
