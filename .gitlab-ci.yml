@@ -1,5 +1,6 @@
 variables:
   IMAGE_TAG: $CI_REGISTRY_IMAGE/pipelines:$CI_PIPELINE_IID
+  GO_IMAGE: golang:1.22
 
 stages:
   - test
@@ -9,7 +10,7 @@ stages:
 
 go-fmt:
   stage: test
-  image: golang:1.21
+  image: $GO_IMAGE
   script: |
     if [[ -n $(gofmt -l .) ]]; then
         gofmt -d .
@@ -18,13 +19,13 @@ go-fmt:
 
 go-lint:
   stage: test
-  image: golangci/golangci-lint:v1.55.2
+  image: golangci/golangci-lint:v1.59.1
   script:
     - golangci-lint run -v --timeout 5m
 
 check-generated:
   stage: test
-  image: golang:1.21
+  image: $GO_IMAGE
   before_script:
     - apt-get update && apt-get install -y zip
   script:
@@ -32,13 +33,13 @@ check-generated:
 
 go-test:
   stage: test
-  image: golang:1.21
+  image: $GO_IMAGE
   script:
     - go test ./...
 
 go-integration:
   stage: test
-  image: golang:1.21
+  image: $GO_IMAGE
   script:
     - go test -tags integration ./...
 
