@@ -392,7 +392,25 @@ steps:
 			require.Equal(t, proto.StepResult_failure, results.SubStepResults[0].Status)
 			require.Equal(t, int32(1), results.SubStepResults[0].ExecResult.ExitCode)
 		},
+	}, {
+		name: "non-sensitive input can derives value from sensitive output",
+		yaml: `
+spec:
+---
+steps:
+  - name: secret_factory
+    step: ./test_steps/secret_factory
+  - name: greeting
+    step: ./test_steps/greeting
+    inputs:
+      name: look, a secret! ${{ steps.secret_factory.outputs.secret }}
+`,
+		wantResults: func(t *testing.T, results *proto.StepResult) {
+			require.Equal(t, proto.StepResult_success, results.Status)
+		},
 	}}
 
-	testCases(t, cases)
+	for _, c := range cases {
+		t.Run(c.name, runTest(c))
+	}
 }
