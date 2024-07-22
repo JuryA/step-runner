@@ -3,9 +3,10 @@ package expression
 import (
 	"bytes"
 	"errors"
+	"testing"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"

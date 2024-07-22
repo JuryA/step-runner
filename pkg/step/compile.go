@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"gitlab.com/gitlab-org/step-runner/proto"
 	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func CompileSteps(steps *schema.StepDefinition) (*proto.SpecDefinition, error) {

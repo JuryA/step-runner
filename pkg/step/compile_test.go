@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	protobuf "google.golang.org/protobuf/proto"
+
 	"gitlab.com/gitlab-org/step-runner/proto"
 	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
-	protobuf "google.golang.org/protobuf/proto"
 )
 
 func TestCompile(t *testing.T) {

@@ -11,11 +11,9 @@ stages:
 go-fmt:
   stage: test
   image: $GO_IMAGE
-  script: |
-    if [[ -n $(gofmt -l .) ]]; then
-        gofmt -d .
-        exit 1
-    fi
+  script:
+    - make go-fmt
+    - git diff --exit-code
 
 go-lint:
   stage: test

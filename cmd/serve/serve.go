@@ -10,8 +10,9 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
 	"google.golang.org/grpc"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
