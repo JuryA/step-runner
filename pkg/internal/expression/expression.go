@@ -2,10 +2,12 @@ package expression
 
 import (
 	"fmt"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
+	"strings"
+
 	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/types/known/structpb"
-	"strings"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/context"
 )
 
 func Evaluate(obj any, s string) (*context.Variable, error) {

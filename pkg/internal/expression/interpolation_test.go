@@ -2,8 +2,9 @@ package expression
 
 import (
 	"errors"
-	"gitlab.com/gitlab-org/step-runner/proto"
 	"testing"
+
+	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"

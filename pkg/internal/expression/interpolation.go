@@ -2,9 +2,11 @@ package expression
 
 import (
 	"fmt"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
-	"google.golang.org/protobuf/types/known/structpb"
 	"regexp"
+
+	"google.golang.org/protobuf/types/known/structpb"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/context"
 )
 
 const InterpolateOpen = "${{"

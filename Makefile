@@ -21,6 +21,9 @@ PROTO_GEN := $(wildcard proto/*.pb.go)
 SCHEMA_SRC := $(shell find schema/v1 -name "*.go")
 SCHEMA_GEN := $(wildcard schema/v1/*.json)
 
+GOIMPORTS := goimports
+GOIMPORTS_VERSION := v0.23.0
+
 .PHONY: build
 build: $(PROTO_GEN) $(SCHEMA_GEN)
 	go build .
@@ -38,6 +41,7 @@ $(SCHEMA_GEN): $(SCHEMA_SRC)
 .PHONY: .generate-proto
 .generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
 	go generate ./proto
+	@$(MAKE) DIRECTORY=./proto go-fmt
 
 .PHONY: generate
 generate:
@@ -91,3 +95,12 @@ image:
 check-generated: generate
 	@git --no-pager diff --compact-summary --exit-code && \
 		git --no-pager diff --compact-summary --cached --exit-code
+
+.PHONY: $(GOIMPORTS)
+$(GOIMPORTS):
+	@go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
+
+.PHONY: go-fmt
+go-fmt: DIRECTORY := .
+go-fmt: $(GOIMPORTS)
+	goimports -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
