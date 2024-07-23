@@ -112,6 +112,7 @@ func (input *inputCompiler) compileToProto() (*proto.Spec_Content_Input, error) 
 		}
 		protoInput.Default = protoV
 	}
+	protoInput.Sensitive = input.Sensitive
 	return protoInput, nil
 }
 
@@ -197,6 +198,7 @@ func (output *outputCompiler) compileToProto() (*proto.Spec_Content_Output, erro
 		}
 		protoOutput.Default = protoV
 	}
+	protoOutput.Sensitive = output.Sensitive
 	return protoOutput, nil
 }
 

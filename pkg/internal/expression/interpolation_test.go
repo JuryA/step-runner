@@ -160,10 +160,11 @@ func TestExpand(t *testing.T) {
 
 func TestExpandSensitivity(t *testing.T) {
 	tests := map[string]struct {
-		stepResult    *proto.StepResult
-		template      *structpb.Value
-		wantValue     *structpb.Value
-		wantSensitive bool
+		stepResult          *proto.StepResult
+		template            *structpb.Value
+		wantValue           *structpb.Value
+		wantSensitive       bool
+		wantSensitiveReason string
 	}{
 		"contains a sensitive value": {
 			stepResult: b.protoStepResult().
@@ -173,9 +174,10 @@ func TestExpandSensitivity(t *testing.T) {
 				withOutput("secret", structpb.NewStringValue("secret.value")).
 				withOutput("engine", structpb.NewStringValue("hard-coded")).
 				build(),
-			template:      structpb.NewStringValue("a secret factory using the ${{ steps.secret_factory.outputs.engine }} engine generated ${{ steps.secret_factory.outputs.secret }}"),
-			wantValue:     structpb.NewStringValue("a secret factory using the hard-coded engine generated secret.value"),
-			wantSensitive: true,
+			template:            structpb.NewStringValue("a secret factory using the ${{ steps.secret_factory.outputs.engine }} engine generated ${{ steps.secret_factory.outputs.secret }}"),
+			wantValue:           structpb.NewStringValue("a secret factory using the hard-coded engine generated secret.value"),
+			wantSensitive:       true,
+			wantSensitiveReason: "steps.secret_factory.outputs.secret",
 		},
 		"contains no sensitive values": {
 			stepResult: b.protoStepResult().
@@ -197,6 +199,10 @@ func TestExpandSensitivity(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, test.wantValue, value.Value)
 			require.Equal(t, test.wantSensitive, value.Sensitive)
+
+			if test.wantSensitive {
+				require.Equal(t, test.wantSensitiveReason, value.SensitiveReason)
+			}
 		})
 	}
 }

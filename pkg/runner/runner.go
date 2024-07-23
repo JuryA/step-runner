@@ -326,14 +326,26 @@ func (e *Execution) runSubStep(
 ) (*proto.StepResult, error) {
 	params := &Params{}
 
-	// Expand inputs
-	params.Inputs = make(map[string]*context.Variable)
-	for k, v := range stepReference.Inputs {
-		res, resErr := expression.Expand(stepsCtx, v)
+	// Load the step spec and definition from the cache
+	subStepSpecDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
+	if err != nil {
+		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
+	}
+
+	params.Inputs = buildInputVars(stepReference, subStepSpecDefinition)
+
+	for name, v := range params.Inputs {
+		res, resErr := expression.Expand(stepsCtx, v.Value)
+
 		if resErr != nil {
-			return nil, fmt.Errorf("Cannot assign input %q due to error: %s", k, resErr.Error())
+			return nil, fmt.Errorf("Cannot assign input %q due to error: %w", name, resErr)
 		}
-		params.Inputs[k] = res
+
+		err := params.Inputs[name].Assign(res)
+
+		if err != nil {
+			return nil, fmt.Errorf("Cannot assign input %q due to error: %w", name, err)
+		}
 	}
 
 	// Clone environment and add step reference environment
@@ -344,12 +356,6 @@ func (e *Execution) runSubStep(
 			return nil, fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
 		}
 		params.Env[k] = res
-	}
-
-	// Load the step spec and definition from the cache
-	subStepSpecDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
-	if err != nil {
-		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
 	}
 
 	// Run the step definition with the global context and expanded parameters
@@ -377,4 +383,14 @@ func mapValue[Key comparable, Value any, NewValue any](value map[Key]Value, f fu
 	}
 
 	return result
+}
+
+func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) map[string]*context.Variable {
+	inputs := make(map[string]*context.Variable)
+
+	for name, val := range stepReference.Inputs {
+		inputs[name] = context.NewVariable(val, stepSpecDef.Spec.Spec.Inputs[name].Sensitive)
+	}
+
+	return inputs
 }
