@@ -10,7 +10,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 )
 
-func Evaluate(obj any, s string) (*context.Variable, error) {
+func Evaluate(obj any, s string) (*context.Value, error) {
 	s = strings.TrimSpace(s)
 	fields := strings.Split(s, ".")
 
@@ -26,7 +26,7 @@ func Evaluate(obj any, s string) (*context.Variable, error) {
 		return nil, err
 	}
 
-	return context.NewVariable(value, isSensitive), nil
+	return context.NewValue(value, isSensitive, s), nil
 }
 
 func evaluate(obj any, s string) (*structpb.Value, error) {

@@ -394,7 +394,7 @@ steps:
 			require.Equal(t, int32(1), results.SubStepResults[0].ExecResult.ExitCode)
 		},
 	}, {
-		name: "non-sensitive input can derives value from sensitive output",
+		name: "non-sensitive input cannot derive value using sensitive output",
 		yaml: `
 spec:
 ---
@@ -406,9 +406,8 @@ steps:
     inputs:
       name: look, a secret! ${{ steps.secret_factory.outputs.secret }}
 `,
-		wantResults: func(t *testing.T, results *proto.StepResult) {
-			require.Equal(t, proto.StepResult_success, results.Status)
-		},
+		wantErr: fmt.Errorf("Cannot assign input \"name\" due to error: non-sensitive input cannot derive " +
+			"value using sensitive value(s) \"steps.secret_factory.outputs.secret\""),
 	}}
 
 	for _, c := range cases {

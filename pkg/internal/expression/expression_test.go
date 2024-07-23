@@ -41,9 +41,17 @@ func TestEvaluate(t *testing.T) {
 }
 
 func TestEvaluateSensitivity(t *testing.T) {
-	tests := map[string]struct{ sensitive bool }{
-		"sensitive":     {sensitive: true},
-		"not sensitive": {sensitive: false},
+	tests := map[string]struct {
+		sensitive           bool
+		wantSensitiveReason string
+	}{
+		"sensitive": {
+			sensitive:           true,
+			wantSensitiveReason: "steps.secret_factory.outputs.secret",
+		},
+		"not sensitive": {
+			sensitive: false,
+		},
 	}
 
 	for name, test := range tests {
@@ -59,6 +67,10 @@ func TestEvaluateSensitivity(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, structpb.NewStringValue("secret.value"), value.Value)
 			require.Equal(t, test.sensitive, value.Sensitive)
+
+			if test.sensitive {
+				require.Equal(t, test.wantSensitiveReason, value.SensitiveReason)
+			}
 		})
 	}
 }
