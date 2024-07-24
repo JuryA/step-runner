@@ -10,6 +10,7 @@ type ProtoStepResultBuilder struct {
 	name       string
 	outputSpec map[string]*proto.Spec_Content_Output
 	output     map[string]*structpb.Value
+	specDef    *proto.SpecDefinition
 }
 
 func ProtoStepResult() *ProtoStepResultBuilder {
@@ -35,32 +36,15 @@ func (bldr *ProtoStepResultBuilder) WithOutput(name string, value *structpb.Valu
 	return bldr
 }
 
+func (bldr *ProtoStepResultBuilder) WithProtoSpecDef(specDef *proto.SpecDefinition) *ProtoStepResultBuilder {
+	bldr.specDef = specDef
+	return bldr
+}
+
 func (bldr *ProtoStepResultBuilder) Build() *proto.StepResult {
 	return &proto.StepResult{
-		Step: &proto.Step{
-			Name:   bldr.name,
-			Step:   &proto.Step_Reference{Filename: "step.yml"},
-			Env:    map[string]string{},
-			Inputs: map[string]*structpb.Value{},
-		},
-		SpecDefinition: &proto.SpecDefinition{
-			Spec: &proto.Spec{
-				Spec: &proto.Spec_Content{
-					Inputs:       map[string]*proto.Spec_Content_Input{},
-					Outputs:      bldr.outputSpec,
-					OutputMethod: proto.OutputMethod_outputs,
-				},
-			},
-			Definition: &proto.Definition{
-				Type:     proto.DefinitionType_exec,
-				Exec:     &proto.Definition_Exec{Command: []string{"go", "run", "."}, WorkDir: ""},
-				Steps:    nil,
-				Outputs:  map[string]*structpb.Value(nil),
-				Env:      map[string]string{},
-				Delegate: "",
-			},
-			Dir: "",
-		},
+		Step:           ProtoStep().WithName(bldr.name).Build(),
+		SpecDefinition: ProtoSpecDef().WithOutputSpec(bldr.outputSpec).Build(),
 		Status:         proto.StepResult_success,
 		Outputs:        bldr.output,
 		Exports:        map[string]string{},
