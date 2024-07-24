@@ -27,11 +27,10 @@ func NewVariable(value *structpb.Value, sensitive bool) *Variable {
 	}
 }
 
-func (v *Variable) Assign(value *Value) error {
+func (v *Variable) Assign(value *Value) (*Variable, error) {
 	if value.Sensitive && !v.Sensitive {
-		return fmt.Errorf("non-sensitive input cannot derive value using sensitive value(s) %q", value.SensitiveReason)
+		return nil, fmt.Errorf("non-sensitive input cannot derive value using sensitive value(s) %q", value.SensitiveReason)
 	}
 
-	v.Value = value.Value
-	return nil
+	return NewVariable(value.Value, value.Sensitive), nil
 }

@@ -13,6 +13,7 @@ func TestVariable_Assign(t *testing.T) {
 		value    *Value
 		variable *Variable
 		wantErr  string
+		want     *Variable
 	}{
 		"cannot assign sensitive variable to non-sensitive variable": {
 			value:    NewStringValue("new_value", true, "outputs.secret"),
@@ -22,22 +23,26 @@ func TestVariable_Assign(t *testing.T) {
 		"can assign sensitive variable to sensitive variable": {
 			value:    NewStringValue("new_value", true, "outputs.secret"),
 			variable: NewVariable(structpb.NewStringValue("old_value"), true),
+			want:     NewVariable(structpb.NewStringValue("new_value"), true),
 		},
 		"can assign non-sensitive variable to non-sensitive variable": {
 			value:    NewStringValue("new_value", false, ""),
 			variable: NewVariable(structpb.NewStringValue("old_value"), false),
+			want:     NewVariable(structpb.NewStringValue("new_value"), false),
 		},
 		"can assign non-sensitive variable to sensitive variable": {
 			value:    NewStringValue("new_value", false, ""),
 			variable: NewVariable(structpb.NewStringValue("old_value"), true),
+			want:     NewVariable(structpb.NewStringValue("new_value"), false),
 		},
 	}
 
 	for _, test := range tests {
-		err := test.variable.Assign(test.value)
+		newVar, err := test.variable.Assign(test.value)
 
 		if test.wantErr == "" {
 			require.NoError(t, err)
+			require.Equal(t, test.want, newVar)
 		} else {
 			require.Error(t, err)
 			require.Equal(t, test.wantErr, err.Error())

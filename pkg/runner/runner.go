@@ -325,22 +325,14 @@ func (e *Execution) runSteps(
 // and environment are expanded. And the current environment is cloned
 // into params in preparation for a recursive call to Run.
 func (e *Execution) runSubStep(ctx ctx.Context, stepsCtx *context.Steps, step *context.Step) (*proto.StepResult, error) {
-	params := &Params{
-		Inputs: step.Inputs,
+	inputs, err := step.ExpandInputs(stepsCtx, expression.Expand)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to run step %q: %w", step.Name(), err)
 	}
 
-	for name, v := range params.Inputs {
-		res, resErr := expression.Expand(stepsCtx, v.Value)
-
-		if resErr != nil {
-			return nil, fmt.Errorf("Cannot assign input %q due to error: %w", name, resErr)
-		}
-
-		err := params.Inputs[name].Assign(res)
-
-		if err != nil {
-			return nil, fmt.Errorf("Cannot assign input %q due to error: %w", name, err)
-		}
+	params := &Params{
+		Inputs: inputs,
 	}
 
 	// Clone environment and add step reference environment
