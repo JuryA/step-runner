@@ -274,8 +274,14 @@ func (e *Execution) runSteps(
 	defer files.Cleanup()
 
 	result.Status = proto.StepResult_success
-	for _, step := range specDefinition.Definition.Steps {
-		stepResult, err := e.runSubStep(ctx, stepsCtx, specDefinition, step)
+	for _, protoStep := range specDefinition.Definition.Steps {
+		step, err := e.loadStep(ctx, specDefinition.Dir, protoStep)
+
+		if err != nil {
+			return fmt.Errorf("failed to run steps due to: %w", err)
+		}
+
+		stepResult, err := e.runSubStep(ctx, stepsCtx, step)
 
 		// Capture results even if there was an error
 		if stepResult != nil {
@@ -284,7 +290,7 @@ func (e *Execution) runSteps(
 			// If a sub-step fails then fail this step
 			if stepResult.Status == proto.StepResult_failure {
 				result.Status = proto.StepResult_failure
-				return fmt.Errorf("failed step %q: %w", step.Name, err)
+				return fmt.Errorf("failed step %q: %w", step.Name(), err)
 			}
 		}
 		if err != nil {
@@ -318,21 +324,10 @@ func (e *Execution) runSteps(
 // runSubStep executes a single sub-step. The step reference inputs
 // and environment are expanded. And the current environment is cloned
 // into params in preparation for a recursive call to Run.
-func (e *Execution) runSubStep(
-	ctx ctx.Context,
-	stepsCtx *context.Steps,
-	specDefinition *proto.SpecDefinition,
-	stepReference *proto.Step,
-) (*proto.StepResult, error) {
-	params := &Params{}
-
-	// Load the step spec and definition from the cache
-	subStepSpecDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
-	if err != nil {
-		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
+func (e *Execution) runSubStep(ctx ctx.Context, stepsCtx *context.Steps, step *context.Step) (*proto.StepResult, error) {
+	params := &Params{
+		Inputs: step.Inputs,
 	}
-
-	params.Inputs = buildInputVars(stepReference, subStepSpecDefinition)
 
 	for name, v := range params.Inputs {
 		res, resErr := expression.Expand(stepsCtx, v.Value)
@@ -350,7 +345,7 @@ func (e *Execution) runSubStep(
 
 	// Clone environment and add step reference environment
 	params.Env = maps.Clone(stepsCtx.Env)
-	for k, v := range stepReference.Env {
+	for k, v := range step.Env() {
 		res, resErr := expression.ExpandString(stepsCtx, v)
 		if resErr != nil {
 			return nil, fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
@@ -359,19 +354,19 @@ func (e *Execution) runSubStep(
 	}
 
 	// Run the step definition with the global context and expanded parameters
-	result, err := e.Run(ctx, stepsCtx.Global, params, subStepSpecDefinition)
+	result, err := e.Run(ctx, stepsCtx.Global, params, step.ProtoDef)
 	if err != nil {
 		return result, err
 	}
 
 	// Record expanded step in results
 	result.Step = &proto.Step{
-		Name:   stepReference.Name,
-		Step:   stepReference.Step,
+		Name:   step.Name(),
+		Step:   step.ProtoStep.Step,
 		Inputs: mapValue(params.Inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
 		Env:    params.Env,
 	}
-	stepsCtx.Steps[stepReference.Name] = result
+	stepsCtx.Steps[step.Name()] = result
 	return result, nil
 }
 
@@ -385,12 +380,18 @@ func mapValue[Key comparable, Value any, NewValue any](value map[Key]Value, f fu
 	return result
 }
 
-func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) map[string]*context.Variable {
-	inputs := make(map[string]*context.Variable)
+func (e *Execution) loadStep(ctx ctx.Context, parentDir string, step *proto.Step) (*context.Step, error) {
+	specDefinition, err := e.defs.Get(ctx, parentDir, step.Step)
 
-	for name, val := range stepReference.Inputs {
-		inputs[name] = context.NewVariable(val, stepSpecDef.Spec.Spec.Inputs[name].Sensitive)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load step %q due to: %w", step.Name, err)
 	}
 
-	return inputs
+	inputs := make(map[string]*context.Variable)
+
+	for name, val := range step.Inputs {
+		inputs[name] = context.NewVariable(val, specDefinition.Spec.Spec.Inputs[name].Sensitive)
+	}
+
+	return context.NewStep(step, specDefinition, inputs), nil
 }
