@@ -6,14 +6,14 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// Variable represents an expression that is dynamically evaluated. Variables are mutable.
+// Variable represents an expression that is dynamically evaluated. Variables are immutable.
 // e.g. 'greeting' in the following is a Variable:
 //   - step: ./say-hello
 //     inputs:
 //     greeting: Hello, ${{ env.USERNAME }}
 type Variable struct {
-	Value     *structpb.Value // Value is initially an expression, and can be updated to be the result of the expression.
-	Sensitive bool            // Whether the variable can hold sensitive data
+	Value     *structpb.Value // Value is an expression or the result of an expression
+	Sensitive bool            // Whether the variable holds sensitive data
 }
 
 func NewVariable(value *structpb.Value, sensitive bool) *Variable {
