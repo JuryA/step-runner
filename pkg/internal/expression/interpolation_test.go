@@ -1,9 +1,11 @@
-package expression
+package expression_test
 
 import (
 	"errors"
 	"testing"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/context/b"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
@@ -81,7 +83,7 @@ func TestExpandString(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.value, func(t *testing.T) {
-			got, err := ExpandString(textContextSteps(), c.value)
+			got, err := expression.ExpandString(textContextSteps(), c.value)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {
@@ -147,7 +149,7 @@ func TestExpand(t *testing.T) {
 		want:  structpb.NewStringValue("Hello, my name is Kevin Flynn. You killed my process. Prepare to SIGTERM."),
 	}}
 	for _, c := range cases {
-		got, err := Expand(textContextSteps(), c.value)
+		got, err := expression.Expand(textContextSteps(), c.value)
 		if c.wantErr != nil {
 			require.Equal(t, c.wantErr, err)
 		} else {
@@ -167,24 +169,24 @@ func TestExpandSensitivity(t *testing.T) {
 		wantSensitiveReason string
 	}{
 		"contains a sensitive value": {
-			stepResult: b.protoStepResult().
-				withName("secret_factory").
-				withOutputSpec("secret", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: true}).
-				withOutputSpec("engine", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: false}).
-				withOutput("secret", structpb.NewStringValue("secret.value")).
-				withOutput("engine", structpb.NewStringValue("hard-coded")).
-				build(),
+			stepResult: b.ProtoStepResult().
+				WithName("secret_factory").
+				WithOutputSpec("secret", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: true}).
+				WithOutputSpec("engine", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: false}).
+				WithOutput("secret", structpb.NewStringValue("secret.value")).
+				WithOutput("engine", structpb.NewStringValue("hard-coded")).
+				Build(),
 			template:            structpb.NewStringValue("a secret factory using the ${{ steps.secret_factory.outputs.engine }} engine generated ${{ steps.secret_factory.outputs.secret }}"),
 			wantValue:           structpb.NewStringValue("a secret factory using the hard-coded engine generated secret.value"),
 			wantSensitive:       true,
 			wantSensitiveReason: "steps.secret_factory.outputs.secret",
 		},
 		"contains no sensitive values": {
-			stepResult: b.protoStepResult().
-				withName("word-of-the-day").
-				withOutputSpec("word", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: false}).
-				withOutput("word", structpb.NewStringValue("collywobbles")).
-				build(),
+			stepResult: b.ProtoStepResult().
+				WithName("word-of-the-day").
+				WithOutputSpec("word", &proto.Spec_Content_Output{Type: proto.ValueType_string, Sensitive: false}).
+				WithOutput("word", structpb.NewStringValue("collywobbles")).
+				Build(),
 			template:      structpb.NewStringValue("word of the day is ${{ steps.word-of-the-day.outputs.word }}"),
 			wantValue:     structpb.NewStringValue("word of the day is collywobbles"),
 			wantSensitive: false,
@@ -193,9 +195,9 @@ func TestExpandSensitivity(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			stepContext := b.stepContext().withStepResult(test.stepResult).build()
+			stepContext := b.StepContext().WithStepResult(test.stepResult).Build()
 
-			value, err := Expand(stepContext, test.template)
+			value, err := expression.Expand(stepContext, test.template)
 			require.NoError(t, err)
 			require.Equal(t, test.wantValue, value.Value)
 			require.Equal(t, test.wantSensitive, value.Sensitive)
