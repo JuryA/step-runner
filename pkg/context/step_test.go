@@ -22,8 +22,8 @@ func TestStep_ExpandInputs(t *testing.T) {
 		Build()
 	stepsCtx := b.StepContext().WithStepResult(stepResult).Build()
 	inputs := map[string]*context.Variable{
-		"welcome": context.NewVariable(structpb.NewStringValue("welcome, ${{steps.my_step.outputs.first_name}}"), false),
-		"name":    context.NewVariable(structpb.NewStringValue("Your name is ${{steps.my_step.outputs.first_name}}."), false),
+		"welcome": context.NewStringVariable("welcome, ${{steps.my_step.outputs.first_name}}", false),
+		"name":    context.NewStringVariable("Your name is ${{steps.my_step.outputs.first_name}}.", false),
 	}
 
 	expandedInputs, err := context.NewStep(protoStep, protoSpecDef, inputs).ExpandInputs(stepsCtx, expression.Expand)
@@ -47,8 +47,8 @@ func TestStep_ExpandEnv(t *testing.T) {
 		Build()
 	stepsCtx := b.StepContext().WithStepResult(stepResult).Build()
 	inputs := map[string]*context.Variable{
-		"welcome": context.NewVariable(structpb.NewStringValue("welcome, ${{steps.my_step.outputs.first_name}}"), false),
-		"name":    context.NewVariable(structpb.NewStringValue("Your name is ${{steps.my_step.outputs.first_name}}."), false),
+		"welcome": context.NewStringVariable("welcome, ${{steps.my_step.outputs.first_name}}", false),
+		"name":    context.NewStringVariable("Your name is ${{steps.my_step.outputs.first_name}}.", false),
 	}
 
 	expandedEnv, err := context.NewStep(protoStep, protoSpecDef, inputs).ExpandEnv(stepsCtx, expression.ExpandString)

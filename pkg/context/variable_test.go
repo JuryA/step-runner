@@ -3,8 +3,6 @@ package context
 import (
 	"testing"
 
-	"google.golang.org/protobuf/types/known/structpb"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,23 +15,23 @@ func TestVariable_Assign(t *testing.T) {
 	}{
 		"cannot assign sensitive variable to non-sensitive variable": {
 			value:    NewStringValue("new_value", true, "outputs.secret"),
-			variable: NewVariable(structpb.NewStringValue("old_value"), false),
+			variable: NewStringVariable("old_value", false),
 			wantErr:  `non-sensitive input cannot derive value using sensitive value(s) "outputs.secret"`,
 		},
 		"can assign sensitive variable to sensitive variable": {
 			value:    NewStringValue("new_value", true, "outputs.secret"),
-			variable: NewVariable(structpb.NewStringValue("old_value"), true),
-			want:     NewVariable(structpb.NewStringValue("new_value"), true),
+			variable: NewStringVariable("old_value", true),
+			want:     NewStringVariable("new_value", true),
 		},
 		"can assign non-sensitive variable to non-sensitive variable": {
 			value:    NewStringValue("new_value", false, ""),
-			variable: NewVariable(structpb.NewStringValue("old_value"), false),
-			want:     NewVariable(structpb.NewStringValue("new_value"), false),
+			variable: NewStringVariable("old_value", false),
+			want:     NewStringVariable("new_value", false),
 		},
 		"can assign non-sensitive variable to sensitive variable": {
 			value:    NewStringValue("new_value", false, ""),
-			variable: NewVariable(structpb.NewStringValue("old_value"), true),
-			want:     NewVariable(structpb.NewStringValue("new_value"), false),
+			variable: NewStringVariable("old_value", true),
+			want:     NewStringVariable("new_value", false),
 		},
 	}
 
