@@ -331,18 +331,15 @@ func (e *Execution) runSubStep(ctx ctx.Context, stepsCtx *context.Steps, step *c
 		return nil, fmt.Errorf("failed to run step %q: %w", step.Name(), err)
 	}
 
-	params := &Params{
-		Inputs: inputs,
+	env, err := step.ExpandEnv(stepsCtx, expression.ExpandString)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to run step %q: %w", step.Name(), err)
 	}
 
-	// Clone environment and add step reference environment
-	params.Env = maps.Clone(stepsCtx.Env)
-	for k, v := range step.Env() {
-		res, resErr := expression.ExpandString(stepsCtx, v)
-		if resErr != nil {
-			return nil, fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
-		}
-		params.Env[k] = res
+	params := &Params{
+		Inputs: inputs,
+		Env:    env,
 	}
 
 	// Run the step definition with the global context and expanded parameters
@@ -355,8 +352,8 @@ func (e *Execution) runSubStep(ctx ctx.Context, stepsCtx *context.Steps, step *c
 	result.Step = &proto.Step{
 		Name:   step.Name(),
 		Step:   step.ProtoStep.Step,
-		Inputs: mapValue(params.Inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
-		Env:    params.Env,
+		Inputs: mapValue(inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
+		Env:    env,
 	}
 	stepsCtx.Steps[step.Name()] = result
 	return result, nil

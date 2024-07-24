@@ -123,3 +123,7 @@ func (s *Steps) GetEnvList() []string {
 	}
 	return r
 }
+
+func (s *Steps) CloneEnv() map[string]string {
+	return maps.Clone(s.Env)
+}

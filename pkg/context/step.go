@@ -57,3 +57,19 @@ func (s *Step) ExpandInputs(stepsCtx *Steps, expand func(obj any, value *structp
 
 	return expanded, nil
 }
+
+func (s *Step) ExpandEnv(stepsCtx *Steps, expand func(obj any, value string) (string, error)) (map[string]string, error) {
+	env := stepsCtx.CloneEnv()
+
+	for k, v := range s.Env() {
+		value, err := expand(stepsCtx, v)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to expand env %q: %w", k, err)
+		}
+
+		env[k] = value
+	}
+
+	return env, nil
+}

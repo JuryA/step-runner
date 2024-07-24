@@ -48,6 +48,45 @@ func TestStep_ExpandInputs(t *testing.T) {
 	require.Equal(t, "Your name is fred.", expandedInputs["name"].Value.GetStringValue())
 }
 
+func TestStep_ExpandEnv(t *testing.T) {
+	protoStep := &proto.Step{
+		Name: "step.name",
+		Step: &proto.Step_Reference{Filename: "step.yml"},
+		Env: map[string]string{
+			"welcome": "welcome, ${{steps.my_step.outputs.first_name}}",
+			"name":    "Your name is ${{steps.my_step.outputs.first_name}}.",
+		},
+		Inputs: map[string]*structpb.Value{},
+	}
+
+	protoSpecDef := &proto.SpecDefinition{
+		Spec: &proto.Spec{
+			Spec: &proto.Spec_Content{
+				Inputs:       map[string]*proto.Spec_Content_Input{},
+				Outputs:      map[string]*proto.Spec_Content_Output{},
+				OutputMethod: proto.OutputMethod_outputs,
+			},
+		},
+	}
+
+	stepResult := b.protoStepResult().
+		withName("my_step").
+		withOutputSpec("first_name", &proto.Spec_Content_Output{Type: proto.ValueType_string}).
+		withOutput("first_name", structpb.NewStringValue("fred")).
+		build()
+	stepsCtx := b.stepContext().withStepResult(stepResult).build()
+	inputs := map[string]*context.Variable{
+		"welcome": context.NewVariable(structpb.NewStringValue("welcome, ${{steps.my_step.outputs.first_name}}"), false),
+		"name":    context.NewVariable(structpb.NewStringValue("Your name is ${{steps.my_step.outputs.first_name}}."), false),
+	}
+
+	expandedEnv, err := context.NewStep(protoStep, protoSpecDef, inputs).ExpandEnv(stepsCtx, expression.ExpandString)
+	require.NoError(t, err)
+	require.Len(t, expandedEnv, 2)
+	require.Equal(t, "welcome, fred", expandedEnv["welcome"])
+	require.Equal(t, "Your name is fred.", expandedEnv["name"])
+}
+
 type builders struct{}
 
 var b = &builders{}
