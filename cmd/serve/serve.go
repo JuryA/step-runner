@@ -21,7 +21,7 @@ var socketPath = path.Join(os.TempDir(), "step-runner.sock")
 
 var Cmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Start StepRunner service",
+	Short: "Start the step-runner gRPC service",
 	Args:  cobra.ExactArgs(0),
 	RunE:  run,
 }
