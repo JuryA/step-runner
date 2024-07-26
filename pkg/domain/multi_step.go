@@ -17,7 +17,7 @@ func NewMultiStep(steps ...Step) *MultiStep {
 	}
 }
 
-func (ms *MultiStep) Run(ctx goctx.Context, globalCtx *context.Global, stepCtx *context.Steps) (*StepResult, error) {
+func (ms *MultiStep) Run(ctx goctx.Context, globalCtx *context.Global, stepCtx *context.Steps) (StepResult, error) {
 	for _, step := range ms.steps {
 		_, err := step.Run(ctx, globalCtx, stepCtx)
 
