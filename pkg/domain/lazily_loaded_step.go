@@ -29,7 +29,7 @@ func (lls *LazilyLoadedStep) Run(ctx goctx.Context, globalCtx *context.Global, s
 		return nil, fmt.Errorf("failed to run lazily loaded step %q: %w", lls.name, err)
 	}
 
-	step, err := lls.parser.Parse(string(rawSteps))
+	step, err := lls.parser.Parse(rawSteps)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lazily loaded step %q: %w", lls.name, err)

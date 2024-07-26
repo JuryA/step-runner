@@ -7,29 +7,29 @@ import (
 	"path/filepath"
 )
 
-type LocalFileLoader struct {
+type FileResource struct {
 	dir      string
 	path     []string
 	filename string
 }
 
-func NewLocalFileLoader(dir string, path []string, filename string) *LocalFileLoader {
-	return &LocalFileLoader{
+func NewFileResource(dir string, path []string, filename string) *FileResource {
+	return &FileResource{
 		dir:      dir,
 		path:     path,
 		filename: filename,
 	}
 }
 
-func (l *LocalFileLoader) Load(_ context.Context) ([]byte, error) {
+func (l *FileResource) Load(_ context.Context) (string, error) {
 	name := filepath.Join(l.path...)
 	name = filepath.Join(l.dir, name, l.filename)
 
 	contents, err := os.ReadFile(name)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to load resource from file %s: %w", name, err)
+		return "", fmt.Errorf("failed to load resource from file %s: %w", name, err)
 	}
 
-	return contents, nil
+	return string(contents), nil
 }
