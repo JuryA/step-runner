@@ -1,24 +1,39 @@
 package domain
 
 import (
-	ctx "context"
+	goctx "context"
+	"fmt"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/domain/resource"
 )
 
 type LazilyLoadedStep struct {
+	parser   StepParser
 	name     string
 	resource resource.Resource
 }
 
-func NewLazilyLoadedStep(name string, resource resource.Resource) *LazilyLoadedStep {
+func NewLazilyLoadedStep(parser StepParser, name string, resource resource.Resource) *LazilyLoadedStep {
 	return &LazilyLoadedStep{
+		parser:   parser,
 		name:     name,
 		resource: resource,
 	}
 }
 
-func (lls *LazilyLoadedStep) Run(ctx.Context, *context.Global, *context.Steps) (*StepResult, error) {
-	return nil, nil
+func (lls *LazilyLoadedStep) Run(ctx goctx.Context, globalCtx *context.Global, stepCtx *context.Steps) (*StepResult, error) {
+	rawSteps, err := lls.resource.Load(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to run lazily loaded step %q: %w", lls.name, err)
+	}
+
+	step, err := lls.parser.Parse(string(rawSteps))
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to run lazily loaded step %q: %w", lls.name, err)
+	}
+
+	return step.Run(ctx, globalCtx, stepCtx)
 }

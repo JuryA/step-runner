@@ -9,6 +9,6 @@ func NewStepFactory() *StepFactory {
 	return &StepFactory{}
 }
 
-func (sf *StepFactory) CreateLazilyLoadedStep(name string, resource resource.Resource) Step {
-	return NewLazilyLoadedStep(name, resource)
+func (sf *StepFactory) CreateLazilyLoadedStep(parser StepParser, name string, resource resource.Resource) Step {
+	return NewLazilyLoadedStep(parser, name, resource)
 }

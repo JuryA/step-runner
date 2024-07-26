@@ -100,12 +100,13 @@ func (p *StepParser) buildMultiStep(inputs *domain.Inputs, outputs *domain.Outpu
 		switch subStepDef.Step.Protocol {
 		case proto.StepReferenceProtocol_local:
 			loader := resource.NewLocalFileLoader(stepDef.Dir, subStepDef.Step.Path, subStepDef.Step.Filename)
-			steps[i] = p.stepFactory.CreateLazilyLoadedStep(subStepDef.Name, loader)
+			steps[i] = p.stepFactory.CreateLazilyLoadedStep(p, subStepDef.Name, loader)
 		case proto.StepReferenceProtocol_git:
 			loader := resource.NewGitFileLoader(p.gitFetcher, subStepDef.Step.Url, subStepDef.Step.Version, subStepDef.Step.Path, subStepDef.Step.Filename)
-			steps[i] = p.stepFactory.CreateLazilyLoadedStep(subStepDef.Name, loader)
+			steps[i] = p.stepFactory.CreateLazilyLoadedStep(p, subStepDef.Name, loader)
 		}
 
 	}
-	return nil, nil
+
+	return domain.NewMultiStep(steps...), nil
 }

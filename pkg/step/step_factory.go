@@ -6,5 +6,5 @@ import (
 )
 
 type StepFactory interface {
-	CreateLazilyLoadedStep(name string, resource resource.Resource) domain.Step
+	CreateLazilyLoadedStep(parser domain.StepParser, name string, resource resource.Resource) domain.Step
 }
