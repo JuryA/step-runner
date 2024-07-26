@@ -24,8 +24,8 @@ func NewStepParser(stepFactory StepFactory, gitFetcher *git.GitFetcher) *StepPar
 	}
 }
 
-func (p *StepParser) Parse(rawSteps string) (domain.Step, *proto.SpecDefinition, error) {
-	stepDef, err := wrapStepsInSpecDef(rawSteps)
+func (p *StepParser) Parse(yamlSteps string) (domain.Step, *proto.SpecDefinition, error) {
+	stepDef, err := unmarshalToStepDef(yamlSteps)
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse steps: %w", err)
@@ -46,17 +46,14 @@ func (p *StepParser) Parse(rawSteps string) (domain.Step, *proto.SpecDefinition,
 	return step, protoDef, nil
 }
 
-func wrapStepsInSpecDef(steps string) (*schema.StepDefinition, error) {
-	specDef := &schema.StepDefinition{
-		Spec:       &schema.Spec{},
-		Definition: &schema.Definition{},
-	}
-	err := yaml.Unmarshal([]byte(steps), &specDef.Definition.Steps)
+func unmarshalToStepDef(steps string) (*schema.StepDefinition, error) {
+	specDef := &schema.StepDefinition{}
+	err := yaml.Unmarshal([]byte(steps), specDef)
+
 	if err != nil {
-		return nil, fmt.Errorf("unmarshalling steps: %w", err)
+		return nil, fmt.Errorf("failed to unmarshall steps YAML: %w", err)
 	}
-	runningSteps, _ := yaml.Marshal(specDef)
-	fmt.Printf("running steps:\n%v", string(runningSteps))
+
 	return specDef, nil
 }
 
