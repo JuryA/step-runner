@@ -4,22 +4,28 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
+	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 )
 
 type Container struct {
+	GlobalCtx   *context.Global
 	GitFetcher  *git.GitFetcher
 	StepFactory step.StepFactory
 	StepParser  *step.StepParser
+	CleanUpFns  []func()
 }
 
 func Initialize() (*Container, error) {
-	c := &Container{}
+	c := &Container{
+		CleanUpFns: make([]func(), 0),
+	}
 
 	initializers := []func(*Container) error{
 		InitializeGitFetcher(),
 		InitializeStepFactory(),
 		InitializeStepParser(),
+		InitializeGlobalContext(),
 	}
 
 	for _, initializer := range initializers {
@@ -29,4 +35,10 @@ func Initialize() (*Container, error) {
 	}
 
 	return c, nil
+}
+
+func (c *Container) CleanUp() {
+	for _, cleanUpFn := range c.CleanUpFns {
+		cleanUpFn()
+	}
 }

@@ -24,26 +24,26 @@ func NewStepParser(stepFactory StepFactory, gitFetcher *git.GitFetcher) *StepPar
 	}
 }
 
-func (p *StepParser) Parse(rawSteps string) (domain.Step, error) {
+func (p *StepParser) Parse(rawSteps string) (domain.Step, *proto.SpecDefinition, error) {
 	stepDef, err := wrapStepsInSpecDef(rawSteps)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse steps: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse steps: %w", err)
 	}
 
 	protoDef, err := CompileSteps(stepDef)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse steps: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse steps: %w", err)
 	}
 
 	step, err := p.compileToDomainSteps(stepDef, protoDef)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse steps: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse steps: %w", err)
 	}
 
-	return step, nil
+	return step, protoDef, nil
 }
 
 func wrapStepsInSpecDef(steps string) (*schema.StepDefinition, error) {

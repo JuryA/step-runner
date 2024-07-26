@@ -4,19 +4,13 @@ import (
 	ctx "context"
 	"fmt"
 	"os"
-	"slices"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
-	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
-	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 var Cmd = &cobra.Command{
@@ -28,6 +22,7 @@ var Cmd = &cobra.Command{
 
 func run(cmd *cobra.Command, args []string) error {
 	container, err := di.Initialize()
+	defer container.CleanUp()
 
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)
@@ -35,26 +30,16 @@ func run(cmd *cobra.Command, args []string) error {
 
 	steps := os.Getenv("STEPS")
 
-	_, _ = container.StepParser.Parse(steps)
+	_, protoStepDef, err := container.StepParser.Parse(steps)
 
-	stepDef, err := wrapStepsInSpecDef(steps)
 	if err != nil {
-		return fmt.Errorf("reading STEPS %q: %w", steps, err)
-	}
-	protoStepDef, err := step.CompileSteps(stepDef)
-	if err != nil {
-		return fmt.Errorf("compiling STEPS: %w", err)
+		return fmt.Errorf("failed to run steps: %w", err)
 	}
 
 	defs, err := cache.New()
 	if err != nil {
 		return fmt.Errorf("creating cache: %w", err)
 	}
-	globalCtx, err := context.NewGlobal()
-	if err != nil {
-		return fmt.Errorf("creating global context: %w", err)
-	}
-	defer globalCtx.Cleanup()
 
 	execution, err := runner.New(defs)
 	if err != nil {
@@ -63,34 +48,8 @@ func run(cmd *cobra.Command, args []string) error {
 
 	params := &runner.Params{}
 
-	// Step runner should have no concept of "CI_BUILDS_DIR".
-	// However entire `ci` command is a workaround hack because
-	// steps are not yet plumbed through runner. Once we receive
-	// steps from runner over gRPC we will receive "work_dir"
-	// explicitly (set to CI_BUILDS_DIR by runner). Then we can
-	// delete this whole command.
-	workDir := os.Getenv("CI_BUILDS_DIR")
-	if workDir == "" {
-		workDir, _ = os.Getwd()
-	}
-	globalCtx.WorkDir = workDir
+	result, err := execution.Run(ctx.Background(), container.GlobalCtx, params, protoStepDef)
 
-	// Add all CI_, GITLAB_ and DOCKER_ environment variables as a
-	// workaround until we get an explicit list in the Run gRPC
-	// call.
-	globalCtx.Job = map[string]string{}
-	prefixes := []string{"CI_", "GITLAB_", "DOCKER_"}
-	for _, e := range os.Environ() {
-		k, v, ok := strings.Cut(e, "=")
-		if !ok || !slices.ContainsFunc(prefixes, func(prefix string) bool {
-			return strings.HasPrefix(k, prefix)
-		}) {
-			continue
-		}
-		globalCtx.Job[k] = v
-	}
-
-	result, err := execution.Run(ctx.Background(), globalCtx, params, protoStepDef)
 	writeResults := func() error {
 		bytes, err := protojson.Marshal(result)
 		if err != nil {
@@ -104,24 +63,12 @@ func run(cmd *cobra.Command, args []string) error {
 		fmt.Printf("trace written to %v\n", outputFile)
 		return nil
 	}
+
 	if err != nil {
 		_ = writeResults()
 		fmt.Printf("unable to write results: %v", err)
 		return fmt.Errorf("running execution: %w", err)
 	}
-	return writeResults()
-}
 
-func wrapStepsInSpecDef(steps string) (*schema.StepDefinition, error) {
-	specDef := &schema.StepDefinition{
-		Spec:       &schema.Spec{},
-		Definition: &schema.Definition{},
-	}
-	err := yaml.Unmarshal([]byte(steps), &specDef.Definition.Steps)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshalling steps: %w", err)
-	}
-	runningSteps, _ := yaml.Marshal(specDef)
-	fmt.Printf("running steps:\n%v", string(runningSteps))
-	return specDef, nil
+	return writeResults()
 }
