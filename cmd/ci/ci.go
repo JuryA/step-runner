@@ -4,9 +4,8 @@ import (
 	ctx "context"
 	"fmt"
 	"os"
-	"strings"
-
 	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -14,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
@@ -27,7 +27,16 @@ var Cmd = &cobra.Command{
 }
 
 func run(cmd *cobra.Command, args []string) error {
+	container, err := di.Initialize()
+
+	if err != nil {
+		return fmt.Errorf("failed to run steps: %w", err)
+	}
+
 	steps := os.Getenv("STEPS")
+
+	_, _ = container.StepParser.Parse(steps)
+
 	stepDef, err := wrapStepsInSpecDef(steps)
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", steps, err)

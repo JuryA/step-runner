@@ -405,6 +405,7 @@ steps:
     step: ./test_steps/greeting
     inputs:
       name: look, a secret! ${{ steps.secret_factory.outputs.secret }}
+      name: look, a secret! ${{ steps.secret_factory.oudtputs.secret }}
 `,
 		wantErr: fmt.Errorf("Cannot assign input \"name\" due to error: non-sensitive input cannot derive " +
 			"value using sensitive value(s) \"steps.secret_factory.outputs.secret\""),

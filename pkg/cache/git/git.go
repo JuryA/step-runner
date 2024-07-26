@@ -19,8 +19,9 @@ import (
 )
 
 type GitFetcher struct {
-	cacheDir string
-	mu       sync.Mutex
+	cacheDir   string
+	mu         sync.Mutex
+	mkCacheDir sync.Once
 }
 
 func New(cacheDir string) *GitFetcher {
