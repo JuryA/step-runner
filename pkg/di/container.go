@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/domain"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 )
 
 type Container struct {
-	GlobalCtx   *context.Global
+	GlobalCtx   *domain.GlobalCtx
 	GitFetcher  *git.GitFetcher
 	StepFactory step.StepFactory
 	StepParser  *step.StepParser

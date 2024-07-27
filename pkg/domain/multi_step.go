@@ -3,8 +3,6 @@ package domain
 import (
 	goctx "context"
 	"fmt"
-
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 )
 
 type MultiStep struct {
@@ -17,7 +15,7 @@ func NewMultiStep(steps ...Step) *MultiStep {
 	}
 }
 
-func (ms *MultiStep) Run(ctx goctx.Context, globalCtx *context.Global, stepCtx *context.Steps) (StepResult, error) {
+func (ms *MultiStep) Run(ctx goctx.Context, globalCtx *GlobalCtx, stepCtx *StepsCtx) (StepResult, error) {
 	for _, step := range ms.steps {
 		_, err := step.Run(ctx, globalCtx, stepCtx)
 

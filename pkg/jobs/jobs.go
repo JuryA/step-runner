@@ -9,16 +9,16 @@ import (
 	"sync"
 	"time"
 
-	rctx "gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/domain"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type Job struct {
 	TmpDir  string
 	WorkDir string
-	GlobCtx *rctx.Global    // To capture stdout/err from all subprocesses
-	Ctx     context.Context // The context used to manage the Job's entire lifetime.
-	ID      string          // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
+	GlobCtx *domain.GlobalCtx // To capture stdout/err from all subprocesses
+	Ctx     context.Context   // The context used to manage the Job's entire lifetime.
+	ID      string            // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
 
 	cancel     func()    // Used to cancel the Ctx.
 	err        error     // Captures any error returned when executing steps.
@@ -51,7 +51,7 @@ func New(request *proto.RunRequest) (*Job, error) {
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
-	globCtx, err := rctx.NewGlobal()
+	globCtx, err := domain.NewGlobalCtx()
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("creating global context: %w", err)

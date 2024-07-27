@@ -10,6 +10,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/domain"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/output"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -56,11 +57,11 @@ func New(defs cache.Cache) (*Execution, error) {
 // will be expanded before sub-steps are executed.
 func (e *Execution) Run(
 	ctx ctx.Context,
-	globalCtx *context.Global,
+	globalCtx *domain.GlobalCtx,
 	params *Params,
 	specDefinition *proto.SpecDefinition,
 ) (*proto.StepResult, error) {
-	stepsCtx := context.NewSteps(globalCtx)
+	stepsCtx := domain.NewStepsCtx(globalCtx)
 
 	// We tell steps where to find their cached definition so they
 	// can find their files. And so that sub-steps with relative
@@ -123,7 +124,7 @@ func mergeDelegateOutput(
 // spec. Missing inputs are given defaults. Missing inputs without a
 // default produce an error. Extra inputs not declared also produce an
 // error.
-func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*context.Variable) error {
+func addInputs(stepsCtx *domain.StepsCtx, spec *proto.Spec, inputs map[string]*context.Variable) error {
 	// Match inputs with definition
 	for key, value := range spec.Spec.Inputs {
 		callValue := inputs[key]
@@ -150,7 +151,7 @@ func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*con
 // addDefinitionEnv expands the step definition environment variables
 // with the step context. After expansion, definition environment
 // variables are added to the step context.
-func addDefinitionEnv(stepsCtx *context.Steps, definition *proto.Definition) error {
+func addDefinitionEnv(stepsCtx *domain.StepsCtx, definition *proto.Definition) error {
 	defEnv := map[string]string{}
 	for k, v := range definition.Env {
 		res, resErr := expression.ExpandString(stepsCtx, v)
@@ -168,7 +169,7 @@ func addDefinitionEnv(stepsCtx *context.Steps, definition *proto.Definition) err
 // written to the provided step result.
 func (e *Execution) runExec(
 	ctx ctx.Context,
-	stepsCtx *context.Steps,
+	stepsCtx *domain.StepsCtx,
 	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
 ) error {
@@ -225,8 +226,8 @@ func (e *Execution) runExec(
 	cmd.Env = stepsCtx.GetEnvList()
 	result.Env = stepsCtx.GetEnvs()
 	// TODO: Use multi-writer
-	cmd.Stdout = stepsCtx.Global.Stdout
-	cmd.Stderr = stepsCtx.Global.Stderr
+	cmd.Stdout = stepsCtx.GlobalCtx.Stdout
+	cmd.Stderr = stepsCtx.GlobalCtx.Stderr
 
 	// Capture results of execution
 	err = cmd.Run()
@@ -242,7 +243,7 @@ func (e *Execution) runExec(
 	if err != nil {
 		return fmt.Errorf("outputting: %w", err)
 	}
-	err = stepsCtx.Global.ExportTo(result)
+	err = stepsCtx.GlobalCtx.ExportTo(result)
 	if err != nil {
 		return fmt.Errorf("exporting: %w", err)
 	}
@@ -255,7 +256,7 @@ func (e *Execution) runExec(
 // written to the provided step result.
 func (e *Execution) runSteps(
 	ctx ctx.Context,
-	stepsCtx *context.Steps,
+	stepsCtx *domain.StepsCtx,
 	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
 ) error {
@@ -308,7 +309,7 @@ func (e *Execution) runSteps(
 		if resErr == nil {
 			result.Outputs[k] = res.Value
 		} else {
-			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
+			fmt.Fprintf(stepsCtx.GlobalCtx.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
 		}
 	}
 
@@ -320,7 +321,7 @@ func (e *Execution) runSteps(
 // into params in preparation for a recursive call to Run.
 func (e *Execution) runSubStep(
 	ctx ctx.Context,
-	stepsCtx *context.Steps,
+	stepsCtx *domain.StepsCtx,
 	specDefinition *proto.SpecDefinition,
 	stepReference *proto.Step,
 ) (*proto.StepResult, error) {
@@ -359,7 +360,7 @@ func (e *Execution) runSubStep(
 	}
 
 	// Run the step definition with the global context and expanded parameters
-	result, err := e.Run(ctx, stepsCtx.Global, params, subStepSpecDefinition)
+	result, err := e.Run(ctx, stepsCtx.GlobalCtx, params, subStepSpecDefinition)
 	if err != nil {
 		return result, err
 	}

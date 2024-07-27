@@ -4,7 +4,6 @@ import (
 	goctx "context"
 	"fmt"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/domain/resource"
 )
 
@@ -22,7 +21,7 @@ func NewLazilyLoadedStep(parser StepParser, name string, resource resource.Resou
 	}
 }
 
-func (lls *LazilyLoadedStep) Run(ctx goctx.Context, globalCtx *context.Global, stepCtx *context.Steps) (StepResult, error) {
+func (lls *LazilyLoadedStep) Run(ctx goctx.Context, globalCtx *GlobalCtx, stepCtx *StepsCtx) (StepResult, error) {
 	yamlSteps, dir, err := lls.resource.Load(ctx)
 
 	if err != nil {

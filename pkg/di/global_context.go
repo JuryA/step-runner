@@ -7,12 +7,12 @@ import (
 
 	"golang.org/x/exp/slices"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/domain"
 )
 
 func InitializeGlobalContext() func(*Container) error {
 	return func(c *Container) error {
-		globalCtx, err := context.NewGlobal()
+		globalCtx, err := domain.NewGlobalCtx()
 
 		if err != nil {
 			return fmt.Errorf("creating global context: %w", err)
