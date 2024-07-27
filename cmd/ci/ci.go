@@ -4,15 +4,14 @@ import (
 	ctx "context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
-	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 var Cmd = &cobra.Command{
@@ -36,7 +35,9 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to run steps: %w", err)
 	}
 
-	_, protoStepDef, err := container.StepParser.Parse(steps)
+	fmt.Printf("running steps:\n%s\n", steps)
+
+	_, protoStepDef, err := container.StepParser.Parse(steps, "")
 
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)
@@ -80,22 +81,24 @@ func run(cmd *cobra.Command, args []string) error {
 }
 
 func convertToYAML(envSteps string) (string, error) {
-	specDef := &schema.StepDefinition{
-		Spec:       &schema.Spec{},
-		Definition: &schema.Definition{},
-	}
+	return fmt.Sprintf("spec:\n---\nsteps:\n%s", strings.TrimSpace(envSteps)), nil
 
-	err := yaml.Unmarshal([]byte(envSteps), &specDef.Definition.Steps)
-
-	if err != nil {
-		return "", fmt.Errorf("failed to convert CI/CD steps to YAML: %w", err)
-	}
-
-	runningSteps, err := yaml.Marshal(specDef)
-
-	if err != nil {
-		return "", fmt.Errorf("failed to convert CI/CD steps to YAML: %w", err)
-	}
-
-	return string(runningSteps), nil
+	//specDef := &schema.StepDefinition{
+	//	Spec:       &schema.Spec{},
+	//	Definition: &schema.Definition{},
+	//}
+	//
+	//err := yaml.Unmarshal([]byte(envSteps), &specDef.Definition.Steps)
+	//
+	//if err != nil {
+	//	return "", fmt.Errorf("failed to convert CI/CD steps to YAML: %w", err)
+	//}
+	//
+	//runningSteps, err := yaml.Marshal(specDef)
+	//
+	//if err != nil {
+	//	return "", fmt.Errorf("failed to convert CI/CD steps to YAML: %w", err)
+	//}
+	//
+	//return string(runningSteps), nil
 }

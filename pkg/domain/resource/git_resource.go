@@ -25,18 +25,18 @@ func NewGitResource(gitFetcher *git.GitFetcher, url, version string, path []stri
 	}
 }
 
-func (l *GitResource) Load(ctx context.Context) (string, error) {
-	dir, err := l.gitFetcher.Get(ctx, l.url, l.version)
+func (l *GitResource) Load(ctx context.Context) (string, string, error) {
+	clonedDir, err := l.gitFetcher.Get(ctx, l.url, l.version)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to load git resource %s@%s: %w", l.url, l.version, err)
+		return "", "", fmt.Errorf("failed to load git resource %s@%s: %w", l.url, l.version, err)
 	}
 
-	contents, err := NewFileResource(dir, l.path, l.filename).Load(ctx)
+	contents, filenameDir, err := NewFileResource(clonedDir, l.path, l.filename).Load(ctx)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to load git resource %s@%s: %w", l.url, l.version, err)
+		return "", "", fmt.Errorf("failed to load git resource %s@%s: %w", l.url, l.version, err)
 	}
 
-	return contents, nil
+	return contents, filenameDir, nil
 }

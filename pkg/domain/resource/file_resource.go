@@ -21,15 +21,15 @@ func NewFileResource(dir string, path []string, filename string) *FileResource {
 	}
 }
 
-func (l *FileResource) Load(_ context.Context) (string, error) {
+func (l *FileResource) Load(_ context.Context) (string, string, error) {
 	name := filepath.Join(l.path...)
 	name = filepath.Join(l.dir, name, l.filename)
 
 	contents, err := os.ReadFile(name)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to load resource from file %s: %w", name, err)
+		return "", "", fmt.Errorf("failed to load resource from file %s: %w", name, err)
 	}
 
-	return string(contents), nil
+	return string(contents), filepath.Dir(l.filename), nil
 }

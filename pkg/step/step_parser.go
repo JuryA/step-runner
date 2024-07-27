@@ -2,6 +2,7 @@ package step
 
 import (
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -24,8 +25,8 @@ func NewStepParser(stepFactory StepFactory, gitFetcher *git.GitFetcher) *StepPar
 	}
 }
 
-func (p *StepParser) Parse(yamlSteps string) (domain.Step, *proto.SpecDefinition, error) {
-	stepDef, err := unmarshalToStepDef(yamlSteps)
+func (p *StepParser) Parse(yamlSteps, dir string) (domain.Step, *proto.SpecDefinition, error) {
+	stepDef, err := unmarshalToStepDef(yamlSteps, dir)
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse steps: %w", err)
@@ -46,15 +47,25 @@ func (p *StepParser) Parse(yamlSteps string) (domain.Step, *proto.SpecDefinition
 	return step, protoDef, nil
 }
 
-func unmarshalToStepDef(steps string) (*schema.StepDefinition, error) {
-	specDef := &schema.StepDefinition{}
-	err := yaml.Unmarshal([]byte(steps), specDef)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshall steps YAML: %w", err)
+func unmarshalToStepDef(yamlSteps, dir string) (*schema.StepDefinition, error) {
+	stepDef := &schema.StepDefinition{
+		Spec:       &schema.Spec{},
+		Definition: &schema.Definition{},
+		Dir:        dir,
 	}
 
-	return specDef, nil
+	d := yaml.NewDecoder(strings.NewReader(yamlSteps))
+	d.KnownFields(true)
+
+	for _, subject := range []any{&stepDef.Spec, &stepDef.Definition} {
+		err := d.Decode(subject)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal schema: %w", err)
+		}
+	}
+
+	return stepDef, nil
 }
 
 func (p *StepParser) compileToDomainSteps(stepDef *schema.StepDefinition, protoDef *proto.SpecDefinition) (domain.Step, error) {

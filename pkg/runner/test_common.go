@@ -7,13 +7,12 @@ import (
 	"os"
 	"testing"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
-
 	"github.com/stretchr/testify/require"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/di"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -34,10 +33,12 @@ func requireStringEqualValue(t *testing.T, str string, got *structpb.Value) {
 
 func runTest(testCase runnerTest) func(*testing.T) {
 	return func(t *testing.T) {
-		stepDef, err := step.ReadSteps(testCase.yaml, "")
+		container, err := di.Initialize()
 		require.NoError(t, err)
-		protoStepDef, err := step.CompileSteps(stepDef)
-		require.NoError(t, err)
+
+		t.Cleanup(container.CleanUp)
+
+		_, protoStepDef, err := container.StepParser.Parse(testCase.yaml, "")
 		protoStepDef.Dir, _ = os.Getwd()
 
 		defs, err := cache.New()
@@ -47,9 +48,7 @@ func runTest(testCase runnerTest) func(*testing.T) {
 
 		var log bytes.Buffer
 
-		globalCtx, err := context.NewGlobal()
-		require.NoError(t, err)
-		defer globalCtx.Cleanup()
+		globalCtx := container.GlobalCtx
 		maps.Copy(globalCtx.Env, testCase.globalEnv)
 		globalCtx.Stdout = &log
 		globalCtx.Stderr = &log
@@ -57,7 +56,8 @@ func runTest(testCase runnerTest) func(*testing.T) {
 
 		params := &Params{}
 
-		result, err := runner.Run(ctx.Background(), globalCtx, params, protoStepDef)
+		result, err := runner.Run(ctx.Background(), container.GlobalCtx, params, protoStepDef)
+
 		if testCase.wantErr != nil {
 			require.Error(t, err)
 			require.Equal(t, testCase.wantErr.Error(), err.Error())

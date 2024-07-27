@@ -23,13 +23,13 @@ func NewLazilyLoadedStep(parser StepParser, name string, resource resource.Resou
 }
 
 func (lls *LazilyLoadedStep) Run(ctx goctx.Context, globalCtx *context.Global, stepCtx *context.Steps) (StepResult, error) {
-	yamlSteps, err := lls.resource.Load(ctx)
+	yamlSteps, dir, err := lls.resource.Load(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lazily loaded step %q: %w", lls.name, err)
 	}
 
-	step, _, err := lls.parser.Parse(yamlSteps)
+	step, _, err := lls.parser.Parse(yamlSteps, dir)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lazily loaded step %q: %w", lls.name, err)
