@@ -9,7 +9,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/domain"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/output"
@@ -23,7 +22,7 @@ type Execution struct {
 
 // Params are the input and environment parameters for an execution.
 type Params struct {
-	Inputs map[string]*context.Variable
+	Inputs map[string]*domain.Variable
 	Env    map[string]string
 }
 
@@ -124,7 +123,7 @@ func mergeDelegateOutput(
 // spec. Missing inputs are given defaults. Missing inputs without a
 // default produce an error. Extra inputs not declared also produce an
 // error.
-func addInputs(stepsCtx *domain.StepsCtx, spec *proto.Spec, inputs map[string]*context.Variable) error {
+func addInputs(stepsCtx *domain.StepsCtx, spec *proto.Spec, inputs map[string]*domain.Variable) error {
 	// Match inputs with definition
 	for key, value := range spec.Spec.Inputs {
 		callValue := inputs[key]
@@ -369,7 +368,7 @@ func (e *Execution) runSubStep(
 	result.Step = &proto.Step{
 		Name:   stepReference.Name,
 		Step:   stepReference.Step,
-		Inputs: mapValue(params.Inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
+		Inputs: mapValue(params.Inputs, func(v *domain.Variable) *structpb.Value { return v.Value }),
 		Env:    params.Env,
 	}
 	stepsCtx.Steps[stepReference.Name] = result
@@ -386,11 +385,11 @@ func mapValue[Key comparable, Value any, NewValue any](value map[Key]Value, f fu
 	return result
 }
 
-func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) map[string]*context.Variable {
-	inputs := make(map[string]*context.Variable)
+func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) map[string]*domain.Variable {
+	inputs := make(map[string]*domain.Variable)
 
 	for name, val := range stepReference.Inputs {
-		inputs[name] = context.NewVariable(val, stepSpecDef.Spec.Spec.Inputs[name].Sensitive)
+		inputs[name] = domain.NewVariable(val, stepSpecDef.Spec.Spec.Inputs[name].Sensitive)
 	}
 
 	return inputs

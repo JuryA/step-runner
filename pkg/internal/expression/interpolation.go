@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/domain"
 )
 
 const InterpolateOpen = "${{"
@@ -14,7 +14,7 @@ const InterpolateClose = "}}"
 
 var interpolateRegex = regexp.MustCompile(regexp.QuoteMeta(InterpolateOpen) + "|" + regexp.QuoteMeta(InterpolateClose))
 
-func interpolateString(obj any, value string) (*context.Value, error) {
+func interpolateString(obj any, value string) (*domain.Value, error) {
 	output := []*structpb.Value{}
 	depth := 0
 	prev_idx := 0
@@ -76,7 +76,7 @@ func interpolateString(obj any, value string) (*context.Value, error) {
 
 	// retain type if this is single item, otherwise convert to string
 	if len(output) == 1 {
-		return context.NewValue(output[0], sensitive, sensitiveReasons...), nil
+		return domain.NewValue(output[0], sensitive, sensitiveReasons...), nil
 	}
 
 	// concat all items
@@ -89,10 +89,10 @@ func interpolateString(obj any, value string) (*context.Value, error) {
 		res += str
 	}
 
-	return context.NewStringValue(res, sensitive, sensitiveReasons...), nil
+	return domain.NewStringValue(res, sensitive, sensitiveReasons...), nil
 }
 
-func expandStruct(obj any, value *structpb.Struct) (*context.Value, error) {
+func expandStruct(obj any, value *structpb.Struct) (*domain.Value, error) {
 	res := &structpb.Struct{Fields: make(map[string]*structpb.Value, len(value.Fields))}
 
 	for fieldKey, fieldValue := range value.Fields {
@@ -102,10 +102,10 @@ func expandStruct(obj any, value *structpb.Struct) (*context.Value, error) {
 		}
 		res.Fields[fieldKey] = fieldNewValue.Value
 	}
-	return context.NewNonSensitiveValue(structpb.NewStructValue(res)), nil
+	return domain.NewNonSensitiveValue(structpb.NewStructValue(res)), nil
 }
 
-func expandList(obj any, value *structpb.ListValue) (*context.Value, error) {
+func expandList(obj any, value *structpb.ListValue) (*domain.Value, error) {
 	res := &structpb.ListValue{Values: make([]*structpb.Value, len(value.Values))}
 
 	for listIndex, listValue := range value.Values {
@@ -115,11 +115,11 @@ func expandList(obj any, value *structpb.ListValue) (*context.Value, error) {
 		}
 		res.Values[listIndex] = listNewValue.Value
 	}
-	return context.NewNonSensitiveValue(structpb.NewListValue(res)), nil
+	return domain.NewNonSensitiveValue(structpb.NewListValue(res)), nil
 }
 
 // The Expand rewrites struct/list/string mutating data structure
-func Expand(obj any, value *structpb.Value) (*context.Value, error) {
+func Expand(obj any, value *structpb.Value) (*domain.Value, error) {
 	switch value.Kind.(type) {
 	case *structpb.Value_StringValue:
 		return interpolateString(obj, value.GetStringValue())
@@ -131,7 +131,7 @@ func Expand(obj any, value *structpb.Value) (*context.Value, error) {
 		return expandList(obj, value.GetListValue())
 
 	default:
-		return context.NewNonSensitiveValue(value), nil
+		return domain.NewNonSensitiveValue(value), nil
 	}
 }
 

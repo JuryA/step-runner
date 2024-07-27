@@ -7,10 +7,10 @@ import (
 	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/domain"
 )
 
-func Evaluate(obj any, s string) (*context.Value, error) {
+func Evaluate(obj any, s string) (*domain.Value, error) {
 	s = strings.TrimSpace(s)
 	fields := strings.Split(s, ".")
 
@@ -26,7 +26,7 @@ func Evaluate(obj any, s string) (*context.Value, error) {
 		return nil, err
 	}
 
-	return context.NewValue(value, isSensitive, s), nil
+	return domain.NewValue(value, isSensitive, s), nil
 }
 
 func evaluate(obj any, s string) (*structpb.Value, error) {
