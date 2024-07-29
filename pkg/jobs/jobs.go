@@ -4,12 +4,14 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"sync"
 	"time"
 
 	rctx "gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/streamer/file"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -28,6 +30,7 @@ type Job struct {
 
 	// TODO: This is temporary, until we implement streaming of step-results.
 	stepResult *proto.StepResult
+	logs       *file.Streamer
 }
 
 func New(request *proto.RunRequest) (*Job, error) {
@@ -48,6 +51,12 @@ func New(request *proto.RunRequest) (*Job, error) {
 		return nil, fmt.Errorf("creating tmpdir %q: %w", tmpDir, err)
 	}
 
+	logs, err := file.New(path.Join(tmpDir, "logs"))
+	if err != nil {
+		os.RemoveAll(tmpDir)
+		return nil, fmt.Errorf("creating log file: %w", err)
+	}
+
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -57,6 +66,9 @@ func New(request *proto.RunRequest) (*Job, error) {
 		return nil, fmt.Errorf("creating global context: %w", err)
 	}
 	globCtx.WorkDir = workDir
+	// TODO: differentiate between stdin/stderr
+	globCtx.Stderr = logs
+	globCtx.Stdout = logs
 
 	return &Job{
 		TmpDir:  tmpDir,
@@ -65,6 +77,7 @@ func New(request *proto.RunRequest) (*Job, error) {
 		Ctx:     ctx,
 		GlobCtx: globCtx,
 		cancel:  cancel,
+		logs:    logs,
 	}, nil
 }
 
@@ -95,6 +108,8 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 	if err != nil {
 		j.stepResult = nil
 	}
+	j.logs.Stop()
+	j.logs.Close()
 }
 
 func (j *Job) Finished() bool {
@@ -109,4 +124,16 @@ func (j *Job) Close() {
 	defer os.RemoveAll(j.TmpDir)
 	defer j.GlobCtx.Cleanup()
 	j.Finish(nil, j.Ctx.Err())
+}
+
+// FollowLogs will write all current and future accumulated logs written to stdout/stderr from all step sub-processes to
+// the specified writer. This function returns:
+// - a non-nil error returned by the writer.
+// - the error that terminated the job (if any)
+// - nil
+func (j *Job) FollowLogs(ctx context.Context, offset int64, writer io.Writer) error {
+	if err := j.logs.Follow(ctx, offset, writer); err != nil {
+		return err
+	}
+	return j.err
 }

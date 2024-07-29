@@ -205,6 +205,7 @@ service StepRunner {
   rpc Run(RunRequest) returns (RunResponse);
   rpc FollowSteps(FollowStepsRequest) returns (stream FollowStepsResponse);
   rpc Close(CloseRequest) returns (CloseResponse);
+  rpc FollowLogs(FollowLogsRequest) returns (stream FollowLogsResponse);
 }
 
 message Variable {
@@ -243,4 +244,13 @@ message CloseRequest {
 }
 
 message CloseResponse {
+}
+
+message FollowLogsRequest {
+    string id = 1;
+    int64 offset = 2;
+}
+
+message FollowLogsResponse {
+    bytes data = 1;
 }

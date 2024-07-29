@@ -23,6 +23,7 @@ const (
 	StepRunner_Run_FullMethodName         = "/proto.StepRunner/Run"
 	StepRunner_FollowSteps_FullMethodName = "/proto.StepRunner/FollowSteps"
 	StepRunner_Close_FullMethodName       = "/proto.StepRunner/Close"
+	StepRunner_FollowLogs_FullMethodName  = "/proto.StepRunner/FollowLogs"
 )
 
 // StepRunnerClient is the client API for StepRunner service.
@@ -32,6 +33,7 @@ type StepRunnerClient interface {
 	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	FollowSteps(ctx context.Context, in *FollowStepsRequest, opts ...grpc.CallOption) (StepRunner_FollowStepsClient, error)
 	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error)
+	FollowLogs(ctx context.Context, in *FollowLogsRequest, opts ...grpc.CallOption) (StepRunner_FollowLogsClient, error)
 }
 
 type stepRunnerClient struct {
@@ -92,6 +94,38 @@ func (c *stepRunnerClient) Close(ctx context.Context, in *CloseRequest, opts ...
 	return out, nil
 }
 
+func (c *stepRunnerClient) FollowLogs(ctx context.Context, in *FollowLogsRequest, opts ...grpc.CallOption) (StepRunner_FollowLogsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &StepRunner_ServiceDesc.Streams[1], StepRunner_FollowLogs_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &stepRunnerFollowLogsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type StepRunner_FollowLogsClient interface {
+	Recv() (*FollowLogsResponse, error)
+	grpc.ClientStream
+}
+
+type stepRunnerFollowLogsClient struct {
+	grpc.ClientStream
+}
+
+func (x *stepRunnerFollowLogsClient) Recv() (*FollowLogsResponse, error) {
+	m := new(FollowLogsResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // StepRunnerServer is the server API for StepRunner service.
 // All implementations must embed UnimplementedStepRunnerServer
 // for forward compatibility
@@ -99,6 +133,7 @@ type StepRunnerServer interface {
 	Run(context.Context, *RunRequest) (*RunResponse, error)
 	FollowSteps(*FollowStepsRequest, StepRunner_FollowStepsServer) error
 	Close(context.Context, *CloseRequest) (*CloseResponse, error)
+	FollowLogs(*FollowLogsRequest, StepRunner_FollowLogsServer) error
 	mustEmbedUnimplementedStepRunnerServer()
 }
 
@@ -114,6 +149,9 @@ func (UnimplementedStepRunnerServer) FollowSteps(*FollowStepsRequest, StepRunner
 }
 func (UnimplementedStepRunnerServer) Close(context.Context, *CloseRequest) (*CloseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
+}
+func (UnimplementedStepRunnerServer) FollowLogs(*FollowLogsRequest, StepRunner_FollowLogsServer) error {
+	return status.Errorf(codes.Unimplemented, "method FollowLogs not implemented")
 }
 func (UnimplementedStepRunnerServer) mustEmbedUnimplementedStepRunnerServer() {}
 
@@ -185,6 +223,27 @@ func _StepRunner_Close_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StepRunner_FollowLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(FollowLogsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(StepRunnerServer).FollowLogs(m, &stepRunnerFollowLogsServer{stream})
+}
+
+type StepRunner_FollowLogsServer interface {
+	Send(*FollowLogsResponse) error
+	grpc.ServerStream
+}
+
+type stepRunnerFollowLogsServer struct {
+	grpc.ServerStream
+}
+
+func (x *stepRunnerFollowLogsServer) Send(m *FollowLogsResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // StepRunner_ServiceDesc is the grpc.ServiceDesc for StepRunner service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -205,6 +264,11 @@ var StepRunner_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "FollowSteps",
 			Handler:       _StepRunner_FollowSteps_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "FollowLogs",
+			Handler:       _StepRunner_FollowLogs_Handler,
 			ServerStreams: true,
 		},
 	},
