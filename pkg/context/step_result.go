@@ -1,6 +1,8 @@
 package context
 
 import (
+	"maps"
+
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -40,6 +42,28 @@ func WithStepResultFailureStatus() func(*proto.StepResult) {
 func WithStepResultEnv(env map[string]string) func(*proto.StepResult) {
 	return func(stepResult *proto.StepResult) {
 		stepResult.Env = env
+	}
+}
+
+func WithStepResultOutputs(outputs map[string]*structpb.Value) func(*proto.StepResult) {
+	return func(stepResult *proto.StepResult) {
+		stepResult.Outputs = outputs
+	}
+}
+
+func WithStepResultAdditionalOutputs(outputs map[string]*structpb.Value) func(*proto.StepResult) {
+	return func(stepResult *proto.StepResult) {
+		if stepResult.Outputs == nil {
+			stepResult.Outputs = map[string]*structpb.Value{}
+		}
+
+		maps.Copy(stepResult.Outputs, outputs)
+	}
+}
+
+func WithStepResultSubStepResult(subStepResult *proto.StepResult) func(*proto.StepResult) {
+	return func(stepResult *proto.StepResult) {
+		stepResult.SubStepResults = append(stepResult.SubStepResults, subStepResult)
 	}
 }
 

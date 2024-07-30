@@ -247,11 +247,13 @@ func (e *Execution) runExec(
 		return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("exec: %w, ", err)
 	}
 
-	err = files.OutputTo(result)
+	outputOpts, err := files.OutputTo()
 
 	if err != nil {
 		return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("outputting: %w", err)
 	}
+
+	stepResultOpts = append(stepResultOpts, outputOpts...)
 
 	err = stepsCtx.Global.ExportTo(result)
 

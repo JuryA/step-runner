@@ -275,12 +275,14 @@ food=apple
 			err = outputFile.Close()
 			require.NoError(t, err)
 
-			got := &proto.StepResult{}
-			err = files.OutputTo(got)
+			stepResultOpts, err := files.OutputTo()
+
 			if tc.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+
+				got := context.NewStepResult(stepResultOpts...)
 				require.True(t, protobuf.Equal(tc.want, got), "wanted %+v. got %+v", tc.want, got)
 			}
 		})
