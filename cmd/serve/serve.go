@@ -6,22 +6,20 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"path"
 	"syscall"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-var socketPath = path.Join(os.TempDir(), "step-runner.sock")
-
 var Cmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Start StepRunner service",
+	Short: "Start the step-runner gRPC service",
 	Args:  cobra.ExactArgs(0),
 	RunE:  run,
 }
@@ -42,9 +40,9 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create step-runner request handler: %w", err)
 	}
 
-	listener, err := net.Listen("unix", socketPath)
+	listener, err := net.Listen("unix", api.DefaultSocketPath())
 	if err != nil {
-		return fmt.Errorf("failed to open open socket %q for listening: %w", socketPath, err)
+		return fmt.Errorf("failed to open open socket %q for listening: %w", api.DefaultSocketPath(), err)
 	}
 
 	grpcServer = grpc.NewServer()
