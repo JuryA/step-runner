@@ -74,18 +74,19 @@ func (e *Execution) Run(
 	}
 	maps.Copy(stepsCtx.Env, params.Env)
 
-	result := &proto.StepResult{
-		SpecDefinition: specDefinition,
-		Status:         proto.StepResult_success,
-		Outputs:        make(map[string]*structpb.Value),
-		Exports:        make(map[string]string),
-	}
+	var result *proto.StepResult
 
 	switch specDefinition.Definition.Type {
 	case proto.DefinitionType_exec:
-		err = e.runExec(ctx, stepsCtx, specDefinition, result)
+		result, err = e.runExec(ctx, stepsCtx, specDefinition, result)
 
 	case proto.DefinitionType_steps:
+		result = &proto.StepResult{
+			SpecDefinition: specDefinition,
+			Status:         proto.StepResult_success,
+			Outputs:        make(map[string]*structpb.Value),
+			Exports:        make(map[string]string),
+		}
 		err = e.runSteps(ctx, stepsCtx, specDefinition, result)
 
 	default:
@@ -171,12 +172,13 @@ func (e *Execution) runExec(
 	stepsCtx *context.Steps,
 	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
-) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("exec cancelled: %w", err)
-	}
+) (*proto.StepResult, error) {
+	stepResultOpts := []func(*proto.StepResult){context.WithStepResultSpecDefinition(specDefinition)}
+	var execCmdOpts []func(*proto.StepResult_ExecResult)
 
-	result.ExecResult = &proto.StepResult_ExecResult{}
+	if err := ctx.Err(); err != nil {
+		return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("exec cancelled: %w", err)
+	}
 
 	execDefinition := specDefinition.Definition.Exec
 	outputs := specDefinition.Spec.Spec.Outputs
@@ -185,14 +187,14 @@ func (e *Execution) runExec(
 	// Create output and export files and add to context
 	files, err := output.New(stepsCtx, outputMethod, outputs)
 	if err != nil {
-		return err
+		return context.NewFailedStepResult(stepResultOpts...), err
 	}
 	defer files.Cleanup()
 
 	// Expand and add the definition environment to context
 	err = addDefinitionEnv(stepsCtx, specDefinition.Definition)
 	if err != nil {
-		return fmt.Errorf("adding definition env: %w", err)
+		return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("adding definition env: %w", err)
 	}
 
 	// Expand args
@@ -200,54 +202,64 @@ func (e *Execution) runExec(
 	for _, arg := range execDefinition.Command {
 		res, resErr := expression.ExpandString(stepsCtx, arg)
 		if resErr != nil {
-			return fmt.Errorf("Cannot interpolate command argument %q due to err: %s", arg, resErr.Error())
+			return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("Cannot interpolate command argument %q due to err: %s", arg, resErr.Error())
 		}
 		cmdArgs = append(cmdArgs, res)
 	}
 	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
-	result.ExecResult.Command = cmd.Args
+	execCmdOpts = append(execCmdOpts, context.WithExecResultCmd(cmd.Args))
 
 	// Expand working directory if present. Otherwise fall back to
 	// the working directory defined globally.
 	if execDefinition.WorkDir != "" {
 		res, resErr := expression.ExpandString(stepsCtx, execDefinition.WorkDir)
 		if resErr != nil {
-			return fmt.Errorf("Cannot interpolate command workdir %q due to err: %s", execDefinition.WorkDir, resErr.Error())
+			stepResult := context.NewFailedStepResult(append(stepResultOpts, context.WithStepResultExecResultOpts(execCmdOpts...))...)
+			return stepResult, fmt.Errorf("Cannot interpolate command workdir %q due to err: %s", execDefinition.WorkDir, resErr.Error())
 		}
 		cmd.Dir = res
 	} else {
 		cmd.Dir = stepsCtx.WorkDir
 	}
-	result.ExecResult.WorkDir = cmd.Dir
+
+	execCmdOpts = append(execCmdOpts, context.WithExecResultWorkDir(cmd.Dir))
 
 	// Provide only environment variables from the steps
 	// context. Not from the step runner's environment.
 	cmd.Env = stepsCtx.GetEnvList()
-	result.Env = stepsCtx.GetEnvs()
+	stepResultOpts = append(stepResultOpts, context.WithStepResultEnv(stepsCtx.GetEnvs()))
+
 	// TODO: Use multi-writer
 	cmd.Stdout = stepsCtx.Global.Stdout
 	cmd.Stderr = stepsCtx.Global.Stderr
 
 	// Capture results of execution
 	err = cmd.Run()
-	result.ExecResult.ExitCode = int32(cmd.ProcessState.ExitCode())
-	if result.ExecResult.ExitCode != 0 {
-		result.Status = proto.StepResult_failure
+
+	execCmdOpts = append(execCmdOpts, context.WithExecResultExitCode(cmd.ProcessState.ExitCode()))
+	stepResultOpts = append(stepResultOpts, context.WithStepResultExecResultOpts(execCmdOpts...))
+
+	if cmd.ProcessState.ExitCode() != 0 {
+		stepResultOpts = append(stepResultOpts, context.WithStepResultFailureStatus())
 	}
+
 	if err != nil {
-		return fmt.Errorf("exec: %w, ", err)
+		return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("exec: %w, ", err)
 	}
 
 	err = files.OutputTo(result)
+
 	if err != nil {
-		return fmt.Errorf("outputting: %w", err)
-	}
-	err = stepsCtx.Global.ExportTo(result)
-	if err != nil {
-		return fmt.Errorf("exporting: %w", err)
+		return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("outputting: %w", err)
 	}
 
-	return nil
+	err = stepsCtx.Global.ExportTo(result)
+
+	if err != nil {
+		return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("exporting: %w", err)
+	}
+
+	return context.NewStepResult(stepResultOpts...), nil
 }
 
 // runSteps executes an steps type step. Each sub-step's environment
