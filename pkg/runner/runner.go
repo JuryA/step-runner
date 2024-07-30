@@ -78,7 +78,7 @@ func (e *Execution) Run(
 
 	switch specDefinition.Definition.Type {
 	case proto.DefinitionType_exec:
-		result, err = e.runExec(ctx, stepsCtx, specDefinition, result)
+		result, err = e.runExec(ctx, stepsCtx, specDefinition)
 
 	case proto.DefinitionType_steps:
 		result = &proto.StepResult{
@@ -171,7 +171,6 @@ func (e *Execution) runExec(
 	ctx ctx.Context,
 	stepsCtx *context.Steps,
 	specDefinition *proto.SpecDefinition,
-	result *proto.StepResult,
 ) (*proto.StepResult, error) {
 	stepResultOpts := []func(*proto.StepResult){context.WithStepResultSpecDefinition(specDefinition)}
 	var execCmdOpts []func(*proto.StepResult_ExecResult)
