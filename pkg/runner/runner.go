@@ -255,12 +255,13 @@ func (e *Execution) runExec(
 
 	stepResultOpts = append(stepResultOpts, outputOpts...)
 
-	err = stepsCtx.Global.ExportTo(result)
+	exportOpts, err := stepsCtx.Global.ExportTo()
 
 	if err != nil {
 		return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("exporting: %w", err)
 	}
 
+	stepResultOpts = append(stepResultOpts, exportOpts...)
 	return context.NewStepResult(stepResultOpts...), nil
 }
 

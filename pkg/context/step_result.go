@@ -45,6 +45,16 @@ func WithStepResultEnv(env map[string]string) func(*proto.StepResult) {
 	}
 }
 
+func WithStepResultAdditionalExports(exports map[string]string) func(*proto.StepResult) {
+	return func(stepResult *proto.StepResult) {
+		if stepResult.Exports == nil {
+			stepResult.Exports = map[string]string{}
+		}
+
+		maps.Copy(stepResult.Exports, exports)
+	}
+}
+
 func WithStepResultOutputs(outputs map[string]*structpb.Value) func(*proto.StepResult) {
 	return func(stepResult *proto.StepResult) {
 		stepResult.Outputs = outputs

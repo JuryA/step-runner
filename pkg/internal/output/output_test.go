@@ -360,9 +360,10 @@ foo=baz
 			err = exportFile.Close()
 			require.NoError(t, err)
 
-			got := &proto.StepResult{}
-			err = ctx.ExportTo(got)
+			stepResultOps, err := ctx.ExportTo()
 			require.NoError(t, err)
+
+			got := context.NewStepResult(stepResultOps...)
 			require.True(t, maps.Equal(tc.wantExports, got.Exports), "want %+v. got %+v", tc.wantExports, got.Exports)
 			require.True(t, maps.Equal(tc.wantGlobalEnv, ctx.Env), "want %+v. got %+v", tc.wantGlobalEnv, ctx.Env)
 		})
