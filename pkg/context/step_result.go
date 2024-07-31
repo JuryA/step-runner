@@ -10,7 +10,7 @@ import (
 
 func NewStepResult(options ...func(*proto.StepResult)) *proto.StepResult {
 	stepResult := &proto.StepResult{
-		Status:  proto.StepResult_unspecified,
+		Status:  proto.StepResult_success,
 		Outputs: make(map[string]*structpb.Value),
 		Exports: make(map[string]string),
 	}
@@ -25,6 +25,24 @@ func NewStepResult(options ...func(*proto.StepResult)) *proto.StepResult {
 func NewFailedStepResult(options ...func(*proto.StepResult)) *proto.StepResult {
 	defaults := []func(*proto.StepResult){WithStepResultFailureStatus()}
 	return NewStepResult(append(defaults, options...)...)
+}
+
+func MultiStepResult(stepResults ...*proto.StepResult) []func(*proto.StepResult) {
+	var opts []func(*proto.StepResult)
+
+	for _, stepResult := range stepResults {
+		if stepResult == nil {
+			continue
+		}
+
+		opts = append(opts, WithStepResultSubStepResult(stepResult))
+
+		if stepResult.Status != proto.StepResult_failure {
+			opts = append(opts, WithStepResultFailureStatus())
+		}
+	}
+
+	return opts
 }
 
 func WithStepResultSpecDefinition(specDef *proto.SpecDefinition) func(*proto.StepResult) {

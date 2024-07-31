@@ -258,39 +258,39 @@ func (e *Execution) runSteps(
 	stepsCtx *context.Steps,
 	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
-) error {
+) (*proto.StepResult, error) {
+	stepResultOpts := []func(*proto.StepResult){context.WithStepResultSpecDefinition(specDefinition)}
+
 	// Expand and add the definition environment to context
 	err := addDefinitionEnv(stepsCtx, specDefinition.Definition)
 	if err != nil {
-		return fmt.Errorf("adding definition env: %w", err)
+		return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("adding definition env: %w", err)
 	}
-	result.Env = stepsCtx.GetEnvs()
+
+	stepResultOpts = append(stepResultOpts, context.WithStepResultEnv(stepsCtx.GetEnvs()))
 
 	// Create output and export files and add to context
 	files, err := output.New(stepsCtx, specDefinition.Spec.Spec.OutputMethod, specDefinition.Spec.Spec.Outputs)
+
 	if err != nil {
-		return err
+		return context.NewFailedStepResult(stepResultOpts...), err
 	}
+
 	defer files.Cleanup()
 
-	result.Status = proto.StepResult_success
+	var stepResults []*proto.StepResult
+
 	for _, step := range specDefinition.Definition.Steps {
 		stepResult, err := e.runSubStep(ctx, stepsCtx, specDefinition, step)
+		stepResults = append(stepResults, stepResult)
 
-		// Capture results even if there was an error
-		if stepResult != nil {
-			result.SubStepResults = append(result.SubStepResults, stepResult)
-
-			// If a sub-step fails then fail this step
-			if stepResult.Status == proto.StepResult_failure {
-				result.Status = proto.StepResult_failure
-				return fmt.Errorf("failed step %q: %w", step.Name, err)
-			}
-		}
 		if err != nil {
-			return err
+			stepResultOpts = append(stepResultOpts, context.MultiStepResult(stepResults...)...)
+			return context.NewFailedStepResult(stepResultOpts...), fmt.Errorf("failed step %q: %w", step.Name, err)
 		}
 	}
+
+	stepResultOpts = append(stepResultOpts, context.MultiStepResult(stepResults...)...)
 
 	// Delegate outputs are surfaced directly, effectively making
 	// the delegation mechanism "disappear" from the execution
@@ -303,16 +303,19 @@ func (e *Execution) runSteps(
 	// of sub-steps. Outputs of sub-steps will not be available
 	// for reference after returning, which would break
 	// encapsulation of the step function.
+	var outputs map[string]*structpb.Value
+
 	for k, v := range specDefinition.Definition.Outputs {
 		res, resErr := expression.Expand(stepsCtx, v)
 		if resErr == nil {
-			result.Outputs[k] = res.Value
+			outputs[k] = res.Value
 		} else {
 			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
 		}
 	}
 
-	return nil
+	stepResultOpts = append(stepResultOpts, context.WithStepResultAdditionalOutputs(outputs))
+	return context.NewStepResult(stepResultOpts...), nil
 }
 
 // runSubStep executes a single sub-step. The step reference inputs
