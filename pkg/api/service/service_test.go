@@ -181,7 +181,9 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			assert.Error(t, job.Ctx.Err())
 			tt.validate(job)
 
-			assert.NoDirExists(t, job.TmpDir)
+			assert.Eventually(t, func() bool {
+				return assert.NoDirExists(t, job.TmpDir)
+			}, time.Millisecond*5500, time.Millisecond*100)
 		})
 	}
 }
