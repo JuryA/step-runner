@@ -74,31 +74,25 @@ func (e *Execution) Run(
 	}
 	maps.Copy(stepsCtx.Env, params.Env)
 
-	result := &proto.StepResult{
-		SpecDefinition: specDefinition,
-		Status:         proto.StepResult_success,
-		Outputs:        make(map[string]*structpb.Value),
-		Exports:        make(map[string]string),
-	}
+	var result *proto.StepResult
 
 	switch specDefinition.Definition.Type {
 	case proto.DefinitionType_exec:
+		result = &proto.StepResult{
+			SpecDefinition: specDefinition,
+			Status:         proto.StepResult_success,
+			Outputs:        make(map[string]*structpb.Value),
+			Exports:        make(map[string]string),
+		}
 		err = e.runExec(ctx, stepsCtx, specDefinition, result)
 
 	case proto.DefinitionType_steps:
-		err = e.runSteps(ctx, stepsCtx, specDefinition, result)
+		result, err = e.runSteps(ctx, stepsCtx, specDefinition)
 
 	default:
+		result = context.NewFailedStepResult()
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
 	}
-	if err != nil {
-		// We return partial results with an error to help
-		// callers understand what went wrong.
-		result.Status = proto.StepResult_failure
-		return result, err
-	}
-
-	result.SpecDefinition = specDefinition
 
 	return result, err
 }
@@ -106,17 +100,18 @@ func (e *Execution) Run(
 // mergeDelegateOutput copies outputs from the designated delegate sub-step.
 func mergeDelegateOutput(
 	delegate string,
-	result *proto.StepResult,
-) error {
-	for _, s := range result.SubStepResults {
+	stepResults []*proto.StepResult,
+) ([]func(*proto.StepResult), error) {
+	var stepResultOpts []func(*proto.StepResult)
+
+	for _, s := range stepResults {
 		if s.Step != nil && s.Step.Name == delegate {
-			for k, v := range s.Outputs {
-				result.Outputs[k] = v
-			}
-			return nil
+			stepResultOpts = append(stepResultOpts, context.WithStepResultAdditionalOutputs(s.Outputs))
+			return stepResultOpts, nil
 		}
 	}
-	return fmt.Errorf("delegating outputs to %q: could not find substep", delegate)
+
+	return stepResultOpts, fmt.Errorf("delegating outputs to %q: could not find substep", delegate)
 }
 
 // addInputs combines the provided input parameters with the step
@@ -257,7 +252,6 @@ func (e *Execution) runSteps(
 	ctx ctx.Context,
 	stepsCtx *context.Steps,
 	specDefinition *proto.SpecDefinition,
-	result *proto.StepResult,
 ) (*proto.StepResult, error) {
 	stepResultOpts := []func(*proto.StepResult){context.WithStepResultSpecDefinition(specDefinition)}
 
@@ -296,14 +290,19 @@ func (e *Execution) runSteps(
 	// the delegation mechanism "disappear" from the execution
 	// context.
 	if specDefinition.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		return mergeDelegateOutput(specDefinition.Definition.Delegate, result)
+		delegateOpts, err := mergeDelegateOutput(specDefinition.Definition.Delegate, stepResults)
+		stepResultOpts = append(stepResultOpts, delegateOpts...)
+
+		if err != nil {
+			return context.NewFailedStepResult(stepResultOpts...), err
+		}
 	}
 
 	// Expand step definition outputs which may reference outputs
 	// of sub-steps. Outputs of sub-steps will not be available
 	// for reference after returning, which would break
 	// encapsulation of the step function.
-	var outputs map[string]*structpb.Value
+	outputs := make(map[string]*structpb.Value)
 
 	for k, v := range specDefinition.Definition.Outputs {
 		res, resErr := expression.Expand(stepsCtx, v)
