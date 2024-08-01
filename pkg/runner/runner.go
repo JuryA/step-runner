@@ -56,7 +56,7 @@ func New(defs cache.Cache) (*Execution, error) {
 // will be expanded before sub-steps are executed.
 func (e *Execution) Run(
 	ctx ctx.Context,
-	globalCtx *GlobalContext,
+	globalCtx *context.Global,
 	params *Params,
 	specDefinition *proto.SpecDefinition,
 ) (*proto.StepResult, error) {
@@ -225,8 +225,8 @@ func (e *Execution) runExec(
 	cmd.Env = stepsCtx.GetEnvList()
 	result.Env = stepsCtx.GetEnvs()
 	// TODO: Use multi-writer
-	cmd.Stdout = stepsCtx.GlobalContext.Stdout
-	cmd.Stderr = stepsCtx.GlobalContext.Stderr
+	cmd.Stdout = stepsCtx.Global.Stdout
+	cmd.Stderr = stepsCtx.Global.Stderr
 
 	// Capture results of execution
 	err = cmd.Run()
@@ -242,7 +242,7 @@ func (e *Execution) runExec(
 	if err != nil {
 		return fmt.Errorf("outputting: %w", err)
 	}
-	err = stepsCtx.GlobalContext.ExportTo(result)
+	err = stepsCtx.Global.ExportTo(result)
 	if err != nil {
 		return fmt.Errorf("exporting: %w", err)
 	}
@@ -308,7 +308,7 @@ func (e *Execution) runSteps(
 		if resErr == nil {
 			result.Outputs[k] = res.Value
 		} else {
-			fmt.Fprintf(stepsCtx.GlobalContext.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
+			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
 		}
 	}
 
@@ -359,7 +359,7 @@ func (e *Execution) runSubStep(
 	}
 
 	// Run the step definition with the global context and expanded parameters
-	result, err := e.Run(ctx, stepsCtx.GlobalContext, params, subStepSpecDefinition)
+	result, err := e.Run(ctx, stepsCtx.Global, params, subStepSpecDefinition)
 	if err != nil {
 		return result, err
 	}

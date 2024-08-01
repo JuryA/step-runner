@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
-	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
@@ -97,12 +96,12 @@ func (bldr *stepContextBuilder) withStepResult(stepResult *proto.StepResult) *st
 
 func (bldr *stepContextBuilder) build() *context.Steps {
 	return &context.Steps{
-		GlobalContext: b.globalContext().build(),
-		StepDir:       ".",
-		OutputFile:    "output",
-		Env:           map[string]string{},
-		Inputs:        map[string]*structpb.Value{},
-		Steps:         bldr.stepResults,
+		Global:     b.globalContext().build(),
+		StepDir:    ".",
+		OutputFile: "output",
+		Env:        map[string]string{},
+		Inputs:     map[string]*structpb.Value{},
+		Steps:      bldr.stepResults,
 	}
 }
 
@@ -113,8 +112,8 @@ func (*builders) globalContext() *globalContextBuilder {
 	return &globalContextBuilder{}
 }
 
-func (*globalContextBuilder) build() *runner.GlobalContext {
-	return &runner.GlobalContext{
+func (*globalContextBuilder) build() *context.Global {
+	return &context.Global{
 		WorkDir:    ".",
 		Job:        map[string]string{},
 		ExportFile: "export",

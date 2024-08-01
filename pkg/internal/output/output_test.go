@@ -11,7 +11,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
-	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -263,7 +262,7 @@ food=apple
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, err := runner.NewGlobalContext()
+			ctx, err := context.NewGlobal()
 			require.NoError(t, err)
 			defer ctx.Cleanup()
 			files, err := New(context.NewSteps(ctx), tc.outputMethod, tc.outputs)
@@ -345,7 +344,7 @@ foo=baz
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, err := runner.NewGlobalContext()
+			ctx, err := context.NewGlobal()
 			require.NoError(t, err)
 			if tc.globalEnv != nil {
 				ctx.Env = tc.globalEnv
