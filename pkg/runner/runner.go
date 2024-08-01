@@ -60,7 +60,7 @@ func (e *Execution) Run(
 	params *Params,
 	specDefinition *proto.SpecDefinition,
 ) (*proto.StepResult, error) {
-	stepsCtx := context.NewSteps(globalCtx)
+	stepsCtx := NewStepsContext(globalCtx)
 
 	// We tell steps where to find their cached definition so they
 	// can find their files. And so that sub-steps with relative
@@ -123,7 +123,7 @@ func mergeDelegateOutput(
 // spec. Missing inputs are given defaults. Missing inputs without a
 // default produce an error. Extra inputs not declared also produce an
 // error.
-func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*context.Variable) error {
+func addInputs(stepsCtx *StepsContext, spec *proto.Spec, inputs map[string]*context.Variable) error {
 	// Match inputs with definition
 	for key, value := range spec.Spec.Inputs {
 		callValue := inputs[key]
@@ -150,7 +150,7 @@ func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*con
 // addDefinitionEnv expands the step definition environment variables
 // with the step context. After expansion, definition environment
 // variables are added to the step context.
-func addDefinitionEnv(stepsCtx *context.Steps, definition *proto.Definition) error {
+func addDefinitionEnv(stepsCtx *StepsContext, definition *proto.Definition) error {
 	defEnv := map[string]string{}
 	for k, v := range definition.Env {
 		res, resErr := expression.ExpandString(stepsCtx, v)
@@ -168,7 +168,7 @@ func addDefinitionEnv(stepsCtx *context.Steps, definition *proto.Definition) err
 // written to the provided step result.
 func (e *Execution) runExec(
 	ctx ctx.Context,
-	stepsCtx *context.Steps,
+	stepsCtx *StepsContext,
 	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
 ) error {
@@ -255,7 +255,7 @@ func (e *Execution) runExec(
 // written to the provided step result.
 func (e *Execution) runSteps(
 	ctx ctx.Context,
-	stepsCtx *context.Steps,
+	stepsCtx *StepsContext,
 	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
 ) error {
@@ -320,7 +320,7 @@ func (e *Execution) runSteps(
 // into params in preparation for a recursive call to Run.
 func (e *Execution) runSubStep(
 	ctx ctx.Context,
-	stepsCtx *context.Steps,
+	stepsCtx *StepsContext,
 	specDefinition *proto.SpecDefinition,
 	stepReference *proto.Step,
 ) (*proto.StepResult, error) {

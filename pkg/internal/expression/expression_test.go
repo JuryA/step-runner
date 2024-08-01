@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
@@ -95,8 +94,8 @@ func (bldr *stepContextBuilder) withStepResult(stepResult *proto.StepResult) *st
 	return bldr
 }
 
-func (bldr *stepContextBuilder) build() *context.Steps {
-	return &context.Steps{
+func (bldr *stepContextBuilder) build() *runner.StepsContext {
+	return &runner.StepsContext{
 		GlobalContext: b.globalContext().build(),
 		StepDir:       ".",
 		OutputFile:    "output",
