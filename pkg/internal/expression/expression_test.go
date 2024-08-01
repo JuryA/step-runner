@@ -1,11 +1,12 @@
-package expression
+package expression_test
 
 import (
 	"bytes"
 	"errors"
 	"testing"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
@@ -29,7 +30,7 @@ func TestEvaluate(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.value, func(t *testing.T) {
-			got, err := Evaluate(textContextSteps(), c.value)
+			got, err := expression.Evaluate(textContextSteps(), c.value)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {
@@ -63,7 +64,7 @@ func TestEvaluateSensitivity(t *testing.T) {
 				build()
 			stepContext := b.stepContext().withStepResult(stepResult).build()
 
-			value, err := Evaluate(stepContext, "steps.secret_factory.outputs.secret")
+			value, err := expression.Evaluate(stepContext, "steps.secret_factory.outputs.secret")
 			require.NoError(t, err)
 			require.Equal(t, structpb.NewStringValue("secret.value"), value.Value)
 			require.Equal(t, test.sensitive, value.Sensitive)
@@ -94,14 +95,14 @@ func (bldr *stepContextBuilder) withStepResult(stepResult *proto.StepResult) *st
 	return bldr
 }
 
-func (bldr *stepContextBuilder) build() *context.Steps {
-	return &context.Steps{
-		Global:     b.globalContext().build(),
-		StepDir:    ".",
-		OutputFile: "output",
-		Env:        map[string]string{},
-		Inputs:     map[string]*structpb.Value{},
-		Steps:      bldr.stepResults,
+func (bldr *stepContextBuilder) build() *runner.StepsContext {
+	return &runner.StepsContext{
+		GlobalContext: b.globalContext().build(),
+		StepDir:       ".",
+		OutputFile:    "output",
+		Env:           map[string]string{},
+		Inputs:        map[string]*structpb.Value{},
+		Steps:         bldr.stepResults,
 	}
 }
 
@@ -112,8 +113,8 @@ func (*builders) globalContext() *globalContextBuilder {
 	return &globalContextBuilder{}
 }
 
-func (*globalContextBuilder) build() *context.Global {
-	return &context.Global{
+func (*globalContextBuilder) build() *runner.GlobalContext {
+	return &runner.GlobalContext{
 		WorkDir:    ".",
 		Job:        map[string]string{},
 		ExportFile: "export",

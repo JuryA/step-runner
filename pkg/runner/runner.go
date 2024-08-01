@@ -54,11 +54,11 @@ func New(defs cache.Cache) (*Execution, error) {
 // will be expanded before sub-steps are executed.
 func (e *Execution) Run(
 	ctx ctx.Context,
-	globalCtx *context.Global,
+	globalCtx *GlobalContext,
 	params *Params,
 	specDefinition *proto.SpecDefinition,
 ) (*proto.StepResult, error) {
-	stepsCtx := context.NewSteps(globalCtx)
+	stepsCtx := NewStepsContext(globalCtx)
 
 	// We tell steps where to find their cached definition so they
 	// can find their files. And so that sub-steps with relative
@@ -103,7 +103,7 @@ func (e *Execution) Run(
 // spec. Missing inputs are given defaults. Missing inputs without a
 // default produce an error. Extra inputs not declared also produce an
 // error.
-func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*context.Variable) error {
+func addInputs(stepsCtx *StepsContext, spec *proto.Spec, inputs map[string]*context.Variable) error {
 	// Match inputs with definition
 	for key, value := range spec.Spec.Inputs {
 		callValue := inputs[key]
@@ -130,7 +130,7 @@ func addInputs(stepsCtx *context.Steps, spec *proto.Spec, inputs map[string]*con
 // addDefinitionEnv expands the step definition environment variables
 // with the step context. After expansion, definition environment
 // variables are added to the step context.
-func addDefinitionEnv(stepsCtx *context.Steps, definition *proto.Definition) error {
+func addDefinitionEnv(stepsCtx *StepsContext, definition *proto.Definition) error {
 	defEnv := map[string]string{}
 	for k, v := range definition.Env {
 		res, resErr := expression.ExpandString(stepsCtx, v)

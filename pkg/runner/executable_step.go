@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/output"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -21,7 +19,7 @@ func NewExecutableStep() *ExecutableStep {
 
 func (s *ExecutableStep) Run(
 	ctx ctx.Context,
-	stepsCtx *context.Steps,
+	stepsCtx *StepsContext,
 	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
 ) error {
@@ -36,7 +34,7 @@ func (s *ExecutableStep) Run(
 	outputMethod := specDefinition.Spec.Spec.OutputMethod
 
 	// Create output and export files and add to context
-	files, err := output.New(stepsCtx, outputMethod, outputs)
+	files, err := NewFiles(stepsCtx, outputMethod, outputs)
 	if err != nil {
 		return err
 	}
@@ -82,8 +80,8 @@ func (s *ExecutableStep) Run(
 	cmd.Env = stepsCtx.GetEnvList()
 	result.Env = stepsCtx.GetEnvs()
 	// TODO: Use multi-writer
-	cmd.Stdout = stepsCtx.Global.Stdout
-	cmd.Stderr = stepsCtx.Global.Stderr
+	cmd.Stdout = stepsCtx.GlobalContext.Stdout
+	cmd.Stderr = stepsCtx.GlobalContext.Stderr
 
 	// Capture results of execution
 	err = cmd.Run()
@@ -101,7 +99,7 @@ func (s *ExecutableStep) Run(
 		return fmt.Errorf("outputting: %w", err)
 	}
 
-	err = stepsCtx.Global.ExportTo(result)
+	err = stepsCtx.GlobalContext.ExportTo(result)
 
 	if err != nil {
 		return fmt.Errorf("exporting: %w", err)
