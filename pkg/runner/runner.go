@@ -4,14 +4,12 @@ import (
 	ctx "context"
 	"fmt"
 	"maps"
-	"os/exec"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/output"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -83,10 +81,10 @@ func (e *Execution) Run(
 
 	switch specDefinition.Definition.Type {
 	case proto.DefinitionType_exec:
-		err = e.runExec(ctx, stepsCtx, specDefinition, result)
+		err = NewExecutableStep().Run(ctx, stepsCtx, specDefinition, result)
 
 	case proto.DefinitionType_steps:
-		err = e.runSteps(ctx, stepsCtx, specDefinition, result)
+		err = NewSequenceOfSteps(e.defs, e.Run).Run(ctx, stepsCtx, specDefinition, result)
 
 	default:
 		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
@@ -98,25 +96,7 @@ func (e *Execution) Run(
 		return result, err
 	}
 
-	result.SpecDefinition = specDefinition
-
 	return result, err
-}
-
-// mergeDelegateOutput copies outputs from the designated delegate sub-step.
-func mergeDelegateOutput(
-	delegate string,
-	result *proto.StepResult,
-) error {
-	for _, s := range result.SubStepResults {
-		if s.Step != nil && s.Step.Name == delegate {
-			for k, v := range s.Outputs {
-				result.Outputs[k] = v
-			}
-			return nil
-		}
-	}
-	return fmt.Errorf("delegating outputs to %q: could not find substep", delegate)
 }
 
 // addInputs combines the provided input parameters with the step
@@ -161,236 +141,4 @@ func addDefinitionEnv(stepsCtx *context.Steps, definition *proto.Definition) err
 	}
 	maps.Copy(stepsCtx.Env, defEnv)
 	return nil
-}
-
-// runExec executes an exec type step. The exec command and working
-// directory are expanded with the step context and the result is
-// written to the provided step result.
-func (e *Execution) runExec(
-	ctx ctx.Context,
-	stepsCtx *context.Steps,
-	specDefinition *proto.SpecDefinition,
-	result *proto.StepResult,
-) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("exec cancelled: %w", err)
-	}
-
-	result.ExecResult = &proto.StepResult_ExecResult{}
-
-	execDefinition := specDefinition.Definition.Exec
-	outputs := specDefinition.Spec.Spec.Outputs
-	outputMethod := specDefinition.Spec.Spec.OutputMethod
-
-	// Create output and export files and add to context
-	files, err := output.New(stepsCtx, outputMethod, outputs)
-	if err != nil {
-		return err
-	}
-	defer files.Cleanup()
-
-	// Expand and add the definition environment to context
-	err = addDefinitionEnv(stepsCtx, specDefinition.Definition)
-	if err != nil {
-		return fmt.Errorf("adding definition env: %w", err)
-	}
-
-	// Expand args
-	cmdArgs := []string{}
-	for _, arg := range execDefinition.Command {
-		res, resErr := expression.ExpandString(stepsCtx, arg)
-		if resErr != nil {
-			return fmt.Errorf("Cannot interpolate command argument %q due to err: %s", arg, resErr.Error())
-		}
-		cmdArgs = append(cmdArgs, res)
-	}
-	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
-	result.ExecResult.Command = cmd.Args
-
-	// Expand working directory if present. Otherwise fall back to
-	// the working directory defined globally.
-	if execDefinition.WorkDir != "" {
-		res, resErr := expression.ExpandString(stepsCtx, execDefinition.WorkDir)
-		if resErr != nil {
-			return fmt.Errorf("Cannot interpolate command workdir %q due to err: %s", execDefinition.WorkDir, resErr.Error())
-		}
-		cmd.Dir = res
-	} else {
-		cmd.Dir = stepsCtx.WorkDir
-	}
-	result.ExecResult.WorkDir = cmd.Dir
-
-	// Provide only environment variables from the steps
-	// context. Not from the step runner's environment.
-	cmd.Env = stepsCtx.GetEnvList()
-	result.Env = stepsCtx.GetEnvs()
-	// TODO: Use multi-writer
-	cmd.Stdout = stepsCtx.Global.Stdout
-	cmd.Stderr = stepsCtx.Global.Stderr
-
-	// Capture results of execution
-	err = cmd.Run()
-	result.ExecResult.ExitCode = int32(cmd.ProcessState.ExitCode())
-	if result.ExecResult.ExitCode != 0 {
-		result.Status = proto.StepResult_failure
-	}
-	if err != nil {
-		return fmt.Errorf("exec: %w, ", err)
-	}
-
-	err = files.OutputTo(result)
-	if err != nil {
-		return fmt.Errorf("outputting: %w", err)
-	}
-	err = stepsCtx.Global.ExportTo(result)
-	if err != nil {
-		return fmt.Errorf("exporting: %w", err)
-	}
-
-	return nil
-}
-
-// runSteps executes an steps type step. Each sub-step's environment
-// and inputs are expanded with the step context and the result is
-// written to the provided step result.
-func (e *Execution) runSteps(
-	ctx ctx.Context,
-	stepsCtx *context.Steps,
-	specDefinition *proto.SpecDefinition,
-	result *proto.StepResult,
-) error {
-	// Expand and add the definition environment to context
-	err := addDefinitionEnv(stepsCtx, specDefinition.Definition)
-	if err != nil {
-		return fmt.Errorf("adding definition env: %w", err)
-	}
-	result.Env = stepsCtx.GetEnvs()
-
-	// Create output and export files and add to context
-	files, err := output.New(stepsCtx, specDefinition.Spec.Spec.OutputMethod, specDefinition.Spec.Spec.Outputs)
-	if err != nil {
-		return err
-	}
-	defer files.Cleanup()
-
-	result.Status = proto.StepResult_success
-	for _, step := range specDefinition.Definition.Steps {
-		stepResult, err := e.runSubStep(ctx, stepsCtx, specDefinition, step)
-
-		// Capture results even if there was an error
-		if stepResult != nil {
-			result.SubStepResults = append(result.SubStepResults, stepResult)
-
-			// If a sub-step fails then fail this step
-			if stepResult.Status == proto.StepResult_failure {
-				result.Status = proto.StepResult_failure
-				return fmt.Errorf("failed step %q: %w", step.Name, err)
-			}
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	// Delegate outputs are surfaced directly, effectively making
-	// the delegation mechanism "disappear" from the execution
-	// context.
-	if specDefinition.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		return mergeDelegateOutput(specDefinition.Definition.Delegate, result)
-	}
-
-	// Expand step definition outputs which may reference outputs
-	// of sub-steps. Outputs of sub-steps will not be available
-	// for reference after returning, which would break
-	// encapsulation of the step function.
-	for k, v := range specDefinition.Definition.Outputs {
-		res, resErr := expression.Expand(stepsCtx, v)
-		if resErr == nil {
-			result.Outputs[k] = res.Value
-		} else {
-			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
-		}
-	}
-
-	return nil
-}
-
-// runSubStep executes a single sub-step. The step reference inputs
-// and environment are expanded. And the current environment is cloned
-// into params in preparation for a recursive call to Run.
-func (e *Execution) runSubStep(
-	ctx ctx.Context,
-	stepsCtx *context.Steps,
-	specDefinition *proto.SpecDefinition,
-	stepReference *proto.Step,
-) (*proto.StepResult, error) {
-	params := &Params{}
-
-	// Load the step spec and definition from the cache
-	subStepSpecDefinition, err := e.defs.Get(ctx, specDefinition.Dir, stepReference.Step)
-	if err != nil {
-		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
-	}
-
-	params.Inputs = buildInputVars(stepReference, subStepSpecDefinition)
-
-	for name, v := range params.Inputs {
-		res, resErr := expression.Expand(stepsCtx, v.Value)
-
-		if resErr != nil {
-			return nil, fmt.Errorf("Cannot assign input %q due to error: %w", name, resErr)
-		}
-
-		err := params.Inputs[name].Assign(res)
-
-		if err != nil {
-			return nil, fmt.Errorf("Cannot assign input %q due to error: %w", name, err)
-		}
-	}
-
-	// Clone environment and add step reference environment
-	params.Env = maps.Clone(stepsCtx.Env)
-	for k, v := range stepReference.Env {
-		res, resErr := expression.ExpandString(stepsCtx, v)
-		if resErr != nil {
-			return nil, fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
-		}
-		params.Env[k] = res
-	}
-
-	// Run the step definition with the global context and expanded parameters
-	result, err := e.Run(ctx, stepsCtx.Global, params, subStepSpecDefinition)
-	if err != nil {
-		return result, err
-	}
-
-	// Record expanded step in results
-	result.Step = &proto.Step{
-		Name:   stepReference.Name,
-		Step:   stepReference.Step,
-		Inputs: mapValue(params.Inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
-		Env:    params.Env,
-	}
-	stepsCtx.Steps[stepReference.Name] = result
-	return result, nil
-}
-
-func mapValue[Key comparable, Value any, NewValue any](value map[Key]Value, f func(v Value) NewValue) map[Key]NewValue {
-	result := make(map[Key]NewValue, len(value))
-
-	for k, v := range value {
-		result[k] = f(v)
-	}
-
-	return result
-}
-
-func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) map[string]*context.Variable {
-	inputs := make(map[string]*context.Variable)
-
-	for name, val := range stepReference.Inputs {
-		inputs[name] = context.NewVariable(val, stepSpecDef.Spec.Spec.Inputs[name].Sensitive)
-	}
-
-	return inputs
 }
