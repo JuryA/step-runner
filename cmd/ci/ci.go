@@ -4,16 +4,14 @@ import (
 	ctx "context"
 	"fmt"
 	"os"
-	"strings"
-
 	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
@@ -41,7 +39,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("creating cache: %w", err)
 	}
-	globalCtx, err := context.NewGlobal()
+	globalCtx, err := runner.NewGlobalContext()
 	if err != nil {
 		return fmt.Errorf("creating global context: %w", err)
 	}

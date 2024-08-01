@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/step"
 
 	"github.com/stretchr/testify/require"
@@ -47,7 +46,7 @@ func runTest(testCase runnerTest) func(*testing.T) {
 
 		var log bytes.Buffer
 
-		globalCtx, err := context.NewGlobal()
+		globalCtx, err := NewGlobalContext()
 		require.NoError(t, err)
 		defer globalCtx.Cleanup()
 		maps.Copy(globalCtx.Env, testCase.globalEnv)

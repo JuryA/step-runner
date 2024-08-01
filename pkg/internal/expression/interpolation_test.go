@@ -1,9 +1,10 @@
-package expression
+package expression_test
 
 import (
 	"errors"
 	"testing"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
@@ -81,7 +82,7 @@ func TestExpandString(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.value, func(t *testing.T) {
-			got, err := ExpandString(textContextSteps(), c.value)
+			got, err := expression.ExpandString(textContextSteps(), c.value)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {
@@ -147,7 +148,7 @@ func TestExpand(t *testing.T) {
 		want:  structpb.NewStringValue("Hello, my name is Kevin Flynn. You killed my process. Prepare to SIGTERM."),
 	}}
 	for _, c := range cases {
-		got, err := Expand(textContextSteps(), c.value)
+		got, err := expression.Expand(textContextSteps(), c.value)
 		if c.wantErr != nil {
 			require.Equal(t, c.wantErr, err)
 		} else {
@@ -195,7 +196,7 @@ func TestExpandSensitivity(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			stepContext := b.stepContext().withStepResult(test.stepResult).build()
 
-			value, err := Expand(stepContext, test.template)
+			value, err := expression.Expand(stepContext, test.template)
 			require.NoError(t, err)
 			require.Equal(t, test.wantValue, value.Value)
 			require.Equal(t, test.wantSensitive, value.Sensitive)

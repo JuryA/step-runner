@@ -10,17 +10,16 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/output"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 // SequenceOfSteps is a step that executes many steps.
 type SequenceOfSteps struct {
 	resourceLoader cache.Cache
-	runStep        func(ctx ctx.Context, globalCtx *context.Global, params *Params, specDefinition *proto.SpecDefinition) (*proto.StepResult, error)
+	runStep        func(ctx ctx.Context, globalCtx *GlobalContext, params *Params, specDefinition *proto.SpecDefinition) (*proto.StepResult, error)
 }
 
-func NewSequenceOfSteps(resourceLoader cache.Cache, runStep func(ctx ctx.Context, globalCtx *context.Global, params *Params, specDefinition *proto.SpecDefinition) (*proto.StepResult, error)) *SequenceOfSteps {
+func NewSequenceOfSteps(resourceLoader cache.Cache, runStep func(ctx ctx.Context, globalCtx *GlobalContext, params *Params, specDefinition *proto.SpecDefinition) (*proto.StepResult, error)) *SequenceOfSteps {
 	return &SequenceOfSteps{
 		resourceLoader: resourceLoader,
 		runStep:        runStep,
@@ -29,7 +28,7 @@ func NewSequenceOfSteps(resourceLoader cache.Cache, runStep func(ctx ctx.Context
 
 func (s *SequenceOfSteps) Run(
 	ctx ctx.Context,
-	stepsCtx *context.Steps,
+	stepsCtx *StepsContext,
 	specDefinition *proto.SpecDefinition,
 	result *proto.StepResult,
 ) error {
@@ -41,7 +40,7 @@ func (s *SequenceOfSteps) Run(
 	result.Env = stepsCtx.GetEnvs()
 
 	// Create output and export files and add to context
-	files, err := output.New(stepsCtx, specDefinition.Spec.Spec.OutputMethod, specDefinition.Spec.Spec.Outputs)
+	files, err := NewFiles(stepsCtx, specDefinition.Spec.Spec.OutputMethod, specDefinition.Spec.Spec.Outputs)
 	if err != nil {
 		return err
 	}
@@ -82,7 +81,7 @@ func (s *SequenceOfSteps) Run(
 		if resErr == nil {
 			result.Outputs[k] = res.Value
 		} else {
-			fmt.Fprintf(stepsCtx.Global.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
+			fmt.Fprintf(stepsCtx.GlobalContext.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
 		}
 	}
 
@@ -94,7 +93,7 @@ func (s *SequenceOfSteps) Run(
 // into params in preparation for a recursive call to Run.
 func (s *SequenceOfSteps) runSubStep(
 	ctx ctx.Context,
-	stepsCtx *context.Steps,
+	stepsCtx *StepsContext,
 	specDefinition *proto.SpecDefinition,
 	stepReference *proto.Step,
 ) (*proto.StepResult, error) {
@@ -133,7 +132,7 @@ func (s *SequenceOfSteps) runSubStep(
 	}
 
 	// Run the step definition with the global context and expanded parameters
-	result, err := s.runStep(ctx, stepsCtx.Global, params, subStepSpecDefinition)
+	result, err := s.runStep(ctx, stepsCtx.GlobalContext, params, subStepSpecDefinition)
 	if err != nil {
 		return result, err
 	}
