@@ -1,11 +1,10 @@
-package expression_test
+package expression
 
 import (
 	"bytes"
 	"errors"
 	"testing"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
@@ -30,7 +29,7 @@ func TestEvaluate(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.value, func(t *testing.T) {
-			got, err := expression.Evaluate(textContextSteps(), c.value)
+			got, err := Evaluate(textContextSteps(), c.value)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {
@@ -64,7 +63,7 @@ func TestEvaluateSensitivity(t *testing.T) {
 				build()
 			stepContext := b.stepContext().withStepResult(stepResult).build()
 
-			value, err := expression.Evaluate(stepContext, "steps.secret_factory.outputs.secret")
+			value, err := Evaluate(stepContext, "steps.secret_factory.outputs.secret")
 			require.NoError(t, err)
 			require.Equal(t, structpb.NewStringValue("secret.value"), value.Value)
 			require.Equal(t, test.sensitive, value.Sensitive)

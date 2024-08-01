@@ -1,4 +1,4 @@
-package runner
+package output
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -18,7 +19,7 @@ const (
 )
 
 type Files struct {
-	stepCtx      *StepsContext
+	stepCtx      *runner.StepsContext
 	outputMethod proto.OutputMethod
 	specOutputs  map[string]*proto.Spec_Content_Output
 
@@ -26,8 +27,8 @@ type Files struct {
 	outputFile string
 }
 
-func NewFiles(
-	stepCtx *StepsContext,
+func New(
+	stepCtx *runner.StepsContext,
 	outputMethod proto.OutputMethod,
 	specOutputs map[string]*proto.Spec_Content_Output,
 ) (*Files, error) {

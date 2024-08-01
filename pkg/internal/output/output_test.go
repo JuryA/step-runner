@@ -1,4 +1,4 @@
-package runner
+package output
 
 import (
 	"maps"
@@ -10,6 +10,7 @@ import (
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -261,10 +262,10 @@ food=apple
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			globalCtx, err := NewGlobalContext()
+			globalCtx, err := runner.NewGlobalContext()
 			require.NoError(t, err)
 			defer globalCtx.Cleanup()
-			files, err := NewFiles(NewStepsContext(globalCtx), tc.outputMethod, tc.outputs)
+			files, err := New(runner.NewStepsContext(globalCtx), tc.outputMethod, tc.outputs)
 			require.NoError(t, err)
 
 			outputFile, err := os.OpenFile(filepath.Join(files.dir, outputFilename), os.O_APPEND|os.O_WRONLY, 0660)
@@ -343,7 +344,7 @@ foo=baz
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, err := NewGlobalContext()
+			ctx, err := runner.NewGlobalContext()
 			require.NoError(t, err)
 			if tc.globalEnv != nil {
 				ctx.Env = tc.globalEnv
