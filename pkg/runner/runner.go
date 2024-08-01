@@ -11,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/output"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -183,7 +182,7 @@ func (e *Execution) runExec(
 	outputMethod := specDefinition.Spec.Spec.OutputMethod
 
 	// Create output and export files and add to context
-	files, err := output.New(stepsCtx, outputMethod, outputs)
+	files, err := NewFiles(stepsCtx, outputMethod, outputs)
 	if err != nil {
 		return err
 	}
@@ -267,7 +266,7 @@ func (e *Execution) runSteps(
 	result.Env = stepsCtx.GetEnvs()
 
 	// Create output and export files and add to context
-	files, err := output.New(stepsCtx, specDefinition.Spec.Spec.OutputMethod, specDefinition.Spec.Spec.Outputs)
+	files, err := NewFiles(stepsCtx, specDefinition.Spec.Spec.OutputMethod, specDefinition.Spec.Spec.Outputs)
 	if err != nil {
 		return err
 	}
