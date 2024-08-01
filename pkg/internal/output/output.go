@@ -10,7 +10,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -19,7 +19,7 @@ const (
 )
 
 type Files struct {
-	stepCtx      *runner.StepsContext
+	stepCtx      *context.Steps
 	outputMethod proto.OutputMethod
 	specOutputs  map[string]*proto.Spec_Content_Output
 
@@ -28,7 +28,7 @@ type Files struct {
 }
 
 func New(
-	stepCtx *runner.StepsContext,
+	stepCtx *context.Steps,
 	outputMethod proto.OutputMethod,
 	specOutputs map[string]*proto.Spec_Content_Output,
 ) (*Files, error) {

@@ -1,15 +1,16 @@
-package runner
+package context
 
 import (
 	"maps"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-type StepsContext struct {
-	*GlobalContext
+type Steps struct {
+	*runner.GlobalContext
 
 	StepDir    string                       `json:"step_dir"`
 	OutputFile string                       `json:"output_file"`
@@ -18,16 +19,16 @@ type StepsContext struct {
 	Steps      map[string]*proto.StepResult `json:"steps"`
 }
 
-func NewStepsContext(globalCtx *GlobalContext) *StepsContext {
-	return &StepsContext{
-		GlobalContext: globalCtx,
-		Env:           maps.Clone(globalCtx.Env),
+func NewSteps(global *runner.GlobalContext) *Steps {
+	return &Steps{
+		GlobalContext: global,
+		Env:           maps.Clone(global.Env),
 		Inputs:        map[string]*structpb.Value{},
 		Steps:         map[string]*proto.StepResult{},
 	}
 }
 
-func (s *StepsContext) GetEnvs() map[string]string {
+func (s *Steps) GetEnvs() map[string]string {
 	r := make(map[string]string)
 	for k, v := range s.GlobalContext.Env {
 		r[k] = v
@@ -38,7 +39,7 @@ func (s *StepsContext) GetEnvs() map[string]string {
 	return r
 }
 
-func (s *StepsContext) GetEnvList() []string {
+func (s *Steps) GetEnvList() []string {
 	r := []string{}
 	for k, v := range s.GetEnvs() {
 		r = append(r, k+"="+v)
