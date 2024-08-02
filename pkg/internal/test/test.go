@@ -18,7 +18,7 @@ func TestDirName(t *testing.T) string {
 
 func RandJobID() string { return strconv.Itoa(rand.Intn(999)) }
 
-func MakeRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
+func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
 	testDir := TestDirName(t)
 	runReq := proto.RunRequest{
 		Id:    RandJobID(),

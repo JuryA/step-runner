@@ -35,7 +35,7 @@ func execStepResult(status proto.StepResult_Status, exitCode int) *proto.StepRes
 }
 
 func Test_New(t *testing.T) {
-	runReq := test.MakeRunRequest(t, "", false)
+	runReq := test.ProtoRunRequest(t, "", false)
 	j, err := New(runReq)
 	require.NoError(t, err)
 	defer j.Close()
@@ -47,7 +47,7 @@ func Test_New(t *testing.T) {
 }
 
 func Test_New_Job_WorkDir(t *testing.T) {
-	runReq := test.MakeRunRequest(t, "", true)
+	runReq := test.ProtoRunRequest(t, "", true)
 	j, err := New(runReq)
 	require.NoError(t, err)
 	defer j.Close()
@@ -75,7 +75,7 @@ func Test_Result(t *testing.T) {
 }
 
 func Test_Finish(t *testing.T) {
-	runReq := test.MakeRunRequest(t, "", true)
+	runReq := test.ProtoRunRequest(t, "", true)
 	j, err := New(runReq)
 	require.NoError(t, err)
 	defer j.Close()
@@ -97,7 +97,7 @@ func Test_Finish(t *testing.T) {
 }
 
 func Test_Close_AlreadyFinished(t *testing.T) {
-	j, err := New(test.MakeRunRequest(t, "", false))
+	j, err := New(test.ProtoRunRequest(t, "", false))
 	require.NoError(t, err)
 	defer os.RemoveAll(j.WorkDir)
 
@@ -114,7 +114,7 @@ func Test_Close_AlreadyFinished(t *testing.T) {
 }
 
 func Test_Close(t *testing.T) {
-	j, err := New(test.MakeRunRequest(t, "", false))
+	j, err := New(test.ProtoRunRequest(t, "", false))
 	require.NoError(t, err)
 	defer os.RemoveAll(j.WorkDir)
 
@@ -166,7 +166,7 @@ func Test_FollowLogs(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			gotWritten := bytes.Buffer{}
 
-			rr := test.MakeRunRequest(t, "", false)
+			rr := test.ProtoRunRequest(t, "", false)
 			j, err := New(rr)
 			require.NoError(t, err)
 			defer j.Close()
@@ -264,7 +264,7 @@ func Test_Status(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			j, err := New(test.MakeRunRequest(t, "", true))
+			j, err := New(test.ProtoRunRequest(t, "", true))
 			require.NoError(t, err)
 			defer j.Close()
 			defer os.RemoveAll(j.WorkDir)

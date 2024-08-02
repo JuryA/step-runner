@@ -84,7 +84,7 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	srs, client, cleanup := startService(t)
 	defer cleanup()
 
-	rr := test.MakeRunRequest(t, helloStep, false)
+	rr := test.ProtoRunRequest(t, helloStep, false)
 
 	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
@@ -165,7 +165,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 
-			rr := test.MakeRunRequest(t, makeBashStep(tt.script), false)
+			rr := test.ProtoRunRequest(t, makeBashStep(tt.script), false)
 			_, err := client.Run(bg, rr)
 			require.NoError(t, err)
 
@@ -233,7 +233,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			srs, client, cleanup := startService(t)
 			defer cleanup()
 
-			rr := test.MakeRunRequest(t, makeBashStep(tt.script), tt.jobWorkDir)
+			rr := test.ProtoRunRequest(t, makeBashStep(tt.script), tt.jobWorkDir)
 			tt.setup(rr)
 
 			_, err := client.Run(bg, rr)
@@ -269,7 +269,7 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 	srs, client, cleanup := startService(t)
 	defer cleanup()
 
-	rr := test.MakeRunRequest(t, makeBashStep("sleep 1"), false)
+	rr := test.ProtoRunRequest(t, makeBashStep("sleep 1"), false)
 	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
 	defer client.Close(bg, &proto.CloseRequest{Id: rr.Id})
@@ -348,7 +348,7 @@ func Test_StepRunnerService_Close(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			rr := test.MakeRunRequest(t, makeBashStep(tt.cmd), false)
+			rr := test.ProtoRunRequest(t, makeBashStep(tt.cmd), false)
 			_, err := client.Run(bg, rr)
 			require.NoError(t, err)
 
@@ -393,7 +393,7 @@ func Test_StepRunnerService_FollowLogs(t *testing.T) {
 	_, client, cleanup := startService(t)
 	defer cleanup()
 
-	rr := test.MakeRunRequest(t, helloStep, false)
+	rr := test.ProtoRunRequest(t, helloStep, false)
 	_, err := client.Run(bg, rr)
 	require.NoError(t, err)
 
@@ -430,7 +430,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 	tests := map[string]spec{
 		"single job eventually finishes": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.MakeRunRequest(t, helloStep, false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, helloStep, false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
@@ -460,8 +460,8 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		"multiple jobs, no ids in request": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
 				return []*proto.RunRequest{
-					test.MakeRunRequest(t, helloStep, false),
-					test.MakeRunRequest(t, helloStep, false),
+					test.ProtoRunRequest(t, helloStep, false),
+					test.ProtoRunRequest(t, helloStep, false),
 				}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
@@ -476,8 +476,8 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		"multiple jobs, single id in request": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
 				return []*proto.RunRequest{
-					test.MakeRunRequest(t, helloStep, false),
-					test.MakeRunRequest(t, helloStep, false),
+					test.ProtoRunRequest(t, helloStep, false),
+					test.ProtoRunRequest(t, helloStep, false),
 				}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
@@ -490,7 +490,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"bad id in request": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.MakeRunRequest(t, helloStep, false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, helloStep, false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				sr, err := client.Status(bg, &proto.StatusRequest{Id: "blablabla"})
@@ -500,7 +500,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"single job failed": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.MakeRunRequest(t, makeBashStep("sdjskjdfh"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeBashStep("sdjskjdfh"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
@@ -517,7 +517,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"single job cancelled before execution start": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.MakeRunRequest(t, makeBashStep("sleep 1"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeBashStep("sleep 1"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
@@ -536,7 +536,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"single job cancelled after execution start": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.MakeRunRequest(t, makeBashStep("sleep 1"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeBashStep("sleep 1"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
