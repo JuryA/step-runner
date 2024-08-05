@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os/exec"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -17,17 +19,14 @@ func NewExecutableStep() *ExecutableStep {
 	return &ExecutableStep{}
 }
 
-func (s *ExecutableStep) Run(
-	ctx ctx.Context,
-	stepsCtx *StepsContext,
-	specDefinition *proto.SpecDefinition,
-	result *proto.StepResult,
-) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("exec cancelled: %w", err)
+func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error) {
+	result := &proto.StepResult{
+		SpecDefinition: specDefinition,
+		Status:         proto.StepResult_failure,
+		Outputs:        make(map[string]*structpb.Value),
+		Exports:        make(map[string]string),
+		ExecResult:     &proto.StepResult_ExecResult{},
 	}
-
-	result.ExecResult = &proto.StepResult_ExecResult{}
 
 	execDefinition := specDefinition.Definition.Exec
 	outputs := specDefinition.Spec.Spec.Outputs
@@ -35,15 +34,18 @@ func (s *ExecutableStep) Run(
 
 	// Create output and export files and add to context
 	files, err := NewFiles(stepsCtx, outputMethod, outputs)
+
 	if err != nil {
-		return err
+		return result, err
 	}
+
 	defer files.Cleanup()
 
 	// Expand and add the definition environment to context
 	err = addDefinitionEnv(stepsCtx, specDefinition.Definition)
+
 	if err != nil {
-		return fmt.Errorf("adding definition env: %w", err)
+		return result, fmt.Errorf("adding definition env: %w", err)
 	}
 
 	// Expand args
@@ -52,7 +54,7 @@ func (s *ExecutableStep) Run(
 		res, resErr := expression.ExpandString(stepsCtx, arg)
 
 		if resErr != nil {
-			return fmt.Errorf("Cannot interpolate command argument %q due to err: %s", arg, resErr.Error())
+			return result, fmt.Errorf("Cannot interpolate command argument %q due to err: %s", arg, resErr.Error())
 		}
 
 		cmdArgs = append(cmdArgs, res)
@@ -66,7 +68,7 @@ func (s *ExecutableStep) Run(
 		res, resErr := expression.ExpandString(stepsCtx, execDefinition.WorkDir)
 
 		if resErr != nil {
-			return fmt.Errorf("Cannot interpolate command workdir %q due to err: %s", execDefinition.WorkDir, resErr.Error())
+			return result, fmt.Errorf("Cannot interpolate command workdir %q due to err: %s", execDefinition.WorkDir, resErr.Error())
 		}
 
 		cmd.Dir = res
@@ -86,24 +88,26 @@ func (s *ExecutableStep) Run(
 	// Capture results of execution
 	err = cmd.Run()
 	result.ExecResult.ExitCode = int32(cmd.ProcessState.ExitCode())
-	if result.ExecResult.ExitCode != 0 {
-		result.Status = proto.StepResult_failure
-	}
+
 	if err != nil {
-		return fmt.Errorf("exec: %w, ", err)
+		return result, fmt.Errorf("exec: %w, ", err)
 	}
 
 	err = files.OutputTo(result)
 
 	if err != nil {
-		return fmt.Errorf("outputting: %w", err)
+		return result, fmt.Errorf("outputting: %w", err)
 	}
 
 	err = stepsCtx.GlobalContext.ExportTo(result)
 
 	if err != nil {
-		return fmt.Errorf("exporting: %w", err)
+		return result, fmt.Errorf("exporting: %w", err)
 	}
 
-	return nil
+	if result.ExecResult.ExitCode == 0 {
+		result.Status = proto.StepResult_success
+	}
+
+	return result, nil
 }

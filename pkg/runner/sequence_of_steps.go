@@ -26,27 +26,32 @@ func NewSequenceOfSteps(resourceLoader cache.Cache, runStep func(ctx ctx.Context
 	}
 }
 
-func (s *SequenceOfSteps) Run(
-	ctx ctx.Context,
-	stepsCtx *StepsContext,
-	specDefinition *proto.SpecDefinition,
-	result *proto.StepResult,
-) error {
+func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error) {
+	result := &proto.StepResult{
+		SpecDefinition: specDefinition,
+		Status:         proto.StepResult_failure,
+		Outputs:        make(map[string]*structpb.Value),
+		Exports:        make(map[string]string),
+	}
+
 	// Expand and add the definition environment to context
 	err := addDefinitionEnv(stepsCtx, specDefinition.Definition)
+
 	if err != nil {
-		return fmt.Errorf("adding definition env: %w", err)
+		return result, fmt.Errorf("adding definition env: %w", err)
 	}
+
 	result.Env = stepsCtx.GetEnvs()
 
 	// Create output and export files and add to context
 	files, err := NewFiles(stepsCtx, specDefinition.Spec.Spec.OutputMethod, specDefinition.Spec.Spec.Outputs)
+
 	if err != nil {
-		return err
+		return result, err
 	}
+
 	defer files.Cleanup()
 
-	result.Status = proto.StepResult_success
 	for _, step := range specDefinition.Definition.Steps {
 		stepResult, err := s.runSubStep(ctx, stepsCtx, specDefinition, step)
 
@@ -54,14 +59,13 @@ func (s *SequenceOfSteps) Run(
 		if stepResult != nil {
 			result.SubStepResults = append(result.SubStepResults, stepResult)
 
-			// If a sub-step fails then fail this step
 			if stepResult.Status == proto.StepResult_failure {
-				result.Status = proto.StepResult_failure
-				return fmt.Errorf("failed step %q: %w", step.Name, err)
+				return result, fmt.Errorf("failed step %q: %w", step.Name, err)
 			}
 		}
+
 		if err != nil {
-			return err
+			return result, err
 		}
 	}
 
@@ -69,7 +73,14 @@ func (s *SequenceOfSteps) Run(
 	// the delegation mechanism "disappear" from the execution
 	// context.
 	if specDefinition.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		return mergeDelegateOutput(specDefinition.Definition.Delegate, result)
+		err := mergeDelegateOutput(specDefinition.Definition.Delegate, result)
+
+		if err != nil {
+			return result, err
+		}
+
+		result.Status = proto.StepResult_success
+		return result, nil
 	}
 
 	// Expand step definition outputs which may reference outputs
@@ -85,7 +96,8 @@ func (s *SequenceOfSteps) Run(
 		}
 	}
 
-	return nil
+	result.Status = proto.StepResult_success
+	return result, nil
 }
 
 // runSubStep executes a single sub-step. The step reference inputs
