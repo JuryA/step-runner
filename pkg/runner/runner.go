@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"maps"
 
-	"google.golang.org/protobuf/types/known/structpb"
-
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
@@ -72,31 +70,16 @@ func (e *Execution) Run(
 	}
 	maps.Copy(stepsCtx.Env, params.Env)
 
-	result := &proto.StepResult{
-		SpecDefinition: specDefinition,
-		Status:         proto.StepResult_success,
-		Outputs:        make(map[string]*structpb.Value),
-		Exports:        make(map[string]string),
-	}
-
 	switch specDefinition.Definition.Type {
 	case proto.DefinitionType_exec:
-		err = NewExecutableStep().Run(ctx, stepsCtx, specDefinition, result)
+		return NewExecutableStep().Run(ctx, stepsCtx, specDefinition)
 
 	case proto.DefinitionType_steps:
-		err = NewSequenceOfSteps(e.defs, e.Run).Run(ctx, stepsCtx, specDefinition, result)
-
-	default:
-		err = fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
-	}
-	if err != nil {
-		// We return partial results with an error to help
-		// callers understand what went wrong.
-		result.Status = proto.StepResult_failure
-		return result, err
+		return NewSequenceOfSteps(e.defs, e.Run).Run(ctx, stepsCtx, specDefinition)
 	}
 
-	return result, err
+	result := &proto.StepResult{SpecDefinition: specDefinition, Status: proto.StepResult_failure}
+	return result, fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
 }
 
 // addInputs combines the provided input parameters with the step
