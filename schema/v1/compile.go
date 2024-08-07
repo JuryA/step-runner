@@ -11,19 +11,19 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-func CompileSteps(steps *StepDefinition) (*proto.SpecDefinition, error) {
+func CompileSteps(stepFile *StepFile) (*proto.SpecDefinition, error) {
 	protoStepDef := &proto.SpecDefinition{
-		Dir: steps.Dir,
+		Dir: stepFile.Dir,
 	}
-	if steps.Spec != nil {
-		protoSpec, err := (*specCompiler)(steps.Spec).compile()
+	if stepFile.Spec != nil {
+		protoSpec, err := (*specCompiler)(stepFile.Spec).compile()
 		if err != nil {
 			return nil, fmt.Errorf("compiling spec: %w", err)
 		}
 		protoStepDef.Spec = protoSpec
 	}
-	if steps.Definition != nil {
-		protoDef, err := (*definitionCompiler)(steps.Definition).compile()
+	if stepFile.Step != nil {
+		protoDef, err := (*definitionCompiler)(stepFile.Step).compile()
 		if err != nil {
 			return nil, fmt.Errorf("compiling definition: %w", err)
 		}
@@ -240,7 +240,7 @@ func (output *outputCompiler) verifyDefaultValueMatchesType(protoOutput *proto.S
 	return nil
 }
 
-type definitionCompiler Definition
+type definitionCompiler Step
 
 func (def *definitionCompiler) compile() (*proto.Definition, error) {
 	err := def.verifyOneTypeProvided()
@@ -256,7 +256,7 @@ func (def *definitionCompiler) verifyOneTypeProvided() error {
 		// Exec type step
 		have++
 	}
-	if def.Steps != nil {
+	if def.Sequence != nil {
 		// Steps type step
 		have++
 	}
@@ -279,11 +279,11 @@ func (def *definitionCompiler) compileToProto() (*proto.Definition, error) {
 			Command: def.Exec.Command,
 			WorkDir: def.Exec.WorkDir,
 		}
-	case def.Steps != nil:
+	case def.Sequence != nil:
 		// Steps type step
 		protoDef.Type = proto.DefinitionType_steps
-		protoDef.Steps = make([]*proto.Step, len(def.Steps))
-		for i, s := range def.Steps {
+		protoDef.Steps = make([]*proto.Step, len(def.Sequence))
+		for i, s := range def.Sequence {
 			protoStep, err := (*stepCompiler)(s).compile(i)
 			if err != nil {
 				return nil, fmt.Errorf("compiling steps[%v]: %q: %w", i, s.Name, err)

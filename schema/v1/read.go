@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func LoadSteps(filename string) (*StepDefinition, error) {
+func LoadSteps(filename string) (*StepFile, error) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
@@ -19,33 +19,33 @@ func LoadSteps(filename string) (*StepDefinition, error) {
 	return ReadSteps(string(buf), filepath.Dir(filename))
 }
 
-func ReadSteps(content, dir string) (*StepDefinition, error) {
+func ReadSteps(content, dir string) (*StepFile, error) {
 	var (
-		spec       Spec
-		definition Definition
+		spec Spec
+		step Step
 	)
 
-	if err := unmarshalSchema(content, &spec, &definition); err != nil {
+	if err := unmarshalSchema(content, &spec, &step); err != nil {
 		return nil, fmt.Errorf("unmarshaling: %w", err)
 	}
 
-	return &StepDefinition{
-		Spec:       &spec,
-		Definition: &definition,
-		Dir:        dir,
+	return &StepFile{
+		Spec: &spec,
+		Step: &step,
+		Dir:  dir,
 	}, nil
 }
 
-func WriteSteps(stepDef *StepDefinition) (string, error) {
+func WriteSteps(stepFile *StepFile) (string, error) {
 	var buf bytes.Buffer
 	e := yaml.NewEncoder(&buf)
 
-	err := e.Encode(stepDef.Spec)
+	err := e.Encode(stepFile.Spec)
 	if err != nil {
 		return "", fmt.Errorf("encoding spec: %w", err)
 	}
 
-	err = e.Encode(stepDef.Definition)
+	err = e.Encode(stepFile.Step)
 	if err != nil {
 		return "", fmt.Errorf("encoding definition: %w", err)
 	}

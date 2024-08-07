@@ -24,8 +24,8 @@ func main() {
 		name:  "spec",
 		value: &schema.Spec{},
 	}, {
-		name:  "definition",
-		value: &schema.Definition{},
+		name:  "step",
+		value: &schema.Step{},
 	}, {
 		name:  "steps",
 		value: schema.Steps{},

@@ -1,26 +1,12 @@
 package schema
 
-type StepDefinition struct {
-	Spec       *Spec
-	Definition *Definition
-	Dir        string
+type StepFile struct {
+	Spec *Spec
+	Step *Step
+	Dir  string
 }
 
 type Steps []*Step
-
-// Definition is the implementation of a step.
-type Definition struct {
-	// Steps is a list of sub-steps to run for the `steps` type.
-	Steps Steps `json:"steps,omitempty" yaml:"steps,omitempty" jsonschema:"oneof_required=steps"`
-	// Exec is a command to run for the `exec` type.
-	Exec Exec `json:"exec,omitempty" yaml:"exec,omitempty" jsonschema:"oneof_required=exec"`
-	// Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps.
-	Outputs map[string]any `json:"outputs,omitempty" yaml:"outputs,omitempty"`
-	// Env is a map of environment variable names to values for all steps
-	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
-	// Delegate selects a step by name which will produce the outputs for this step.
-	Delegate string `json:"delegate,omitempty" yaml:"delegate,omitempty"`
-}
 
 type Exec struct {
 	// Command are the parameters to the system exec API. It does not invoke a shell.
@@ -29,21 +15,30 @@ type Exec struct {
 	WorkDir string `json:"work_dir,omitempty" yaml:"work_dir,omitempty"`
 }
 
-// Step is a single step invocation.
+// Step is a unit of execution.
 type Step struct {
 	// Name is a unique identifier for this step.
 	Name string `json:"name" yaml:"name"`
-	// Step is a reference to the step to invoke.
-	Step Reference `json:"step,omitempty" yaml:"step,omitempty" jsonschema:"oneof_required=step"`
 	// Env is a map of environment variable names to string values.
 	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	// Inputs is a map of step input names to structured values.
 	Inputs map[string]any `json:"inputs,omitempty" yaml:"inputs,omitempty"`
 
+	// Step is a reference to another step to invoke.
+	Step Reference `json:"step,omitempty" yaml:"step,omitempty" jsonschema:"oneof_required=step"`
+	// Exec is a command to run.
+	Exec Exec `json:"exec,omitempty" yaml:"exec,omitempty" jsonschema:"oneof_required=exec"`
+	// Sequence is a list of sub-steps to run.
+	Sequence Steps `json:"sequence,omitempty" yaml:"sequence,omitempty" jsonschema:"oneof_required=sequence"`
 	// Script is a shell script to evaluate.
 	Script string `json:"script,omitempty" yaml:"script,omitempty" jsonschema:"oneof_required=script"`
 	// Action is a GitHub action to run.
 	Action string `json:"action,omitempty" yaml:"action,omitempty" jsonschema:"oneof_required=action"`
+
+	// Outputs are the output values for a sequence. They can reference the outputs of sub-steps.
+	Outputs map[string]any `json:"outputs,omitempty" yaml:"outputs,omitempty"`
+	// Delegate selects a step by name which will produce the outputs a sequence.
+	Delegate string `json:"delegate,omitempty" yaml:"delegate,omitempty"`
 }
 
 // Spec is a document describing the interface of the step.
