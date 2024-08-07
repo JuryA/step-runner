@@ -1,28 +1,31 @@
 package runner
 
 import (
+	"fmt"
 	"maps"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type StepsContext struct {
 	*GlobalContext
 
-	StepDir    string                       `json:"step_dir"`
-	OutputFile string                       `json:"output_file"`
-	Env        map[string]string            `json:"env"`
-	Inputs     map[string]*structpb.Value   `json:"inputs"`
-	Steps      map[string]*proto.StepResult `json:"steps"`
+	StepDir    string                       `json:"step_dir"`    // The path to the YAML definition directory so steps can find their files and sub-steps with relative references know where to start.
+	OutputFile string                       `json:"output_file"` // The path to the output file.
+	Env        map[string]string            `json:"env"`         // Expanded environment values of the executing step.
+	Inputs     map[string]*structpb.Value   `json:"inputs"`      // Expanded input values of the executing step.
+	Steps      map[string]*proto.StepResult `json:"steps"`       // Results of previously executed steps.
 }
 
-func NewStepsContext(globalCtx *GlobalContext) *StepsContext {
+func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*structpb.Value, env map[string]string) *StepsContext {
 	return &StepsContext{
 		GlobalContext: globalCtx,
-		Env:           maps.Clone(globalCtx.Env),
-		Inputs:        map[string]*structpb.Value{},
+		StepDir:       dir,
+		Env:           env,
+		Inputs:        inputs,
 		Steps:         map[string]*proto.StepResult{},
 	}
 }
@@ -44,4 +47,21 @@ func (s *StepsContext) GetEnvList() []string {
 		r = append(r, k+"="+v)
 	}
 	return r
+}
+
+func (s *StepsContext) ExpandAndApplyEnv(env map[string]string) error {
+	expandedEnv := map[string]string{}
+
+	for key, value := range env {
+		expanded, err := expression.ExpandString(s, value)
+
+		if err != nil {
+			return fmt.Errorf("failed to expand environment variable %q: %w", key, err)
+		}
+
+		expandedEnv[key] = expanded
+	}
+
+	maps.Copy(s.Env, expandedEnv)
+	return nil
 }

@@ -3,6 +3,7 @@ package runner
 import (
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -82,4 +83,10 @@ func (g *GlobalContext) ExportTo(result *proto.StepResult) error {
 
 func (g *GlobalContext) Cleanup() {
 	os.RemoveAll(g.dir)
+}
+
+func (g *GlobalContext) NewEnvMergedFrom(env map[string]string) map[string]string {
+	merged := maps.Clone(g.Env)
+	maps.Copy(merged, env)
+	return merged
 }

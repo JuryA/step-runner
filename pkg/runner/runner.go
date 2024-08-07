@@ -3,11 +3,11 @@ package runner
 import (
 	ctx "context"
 	"fmt"
-	"maps"
+
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -56,53 +56,34 @@ func (e *Execution) Run(
 	params *Params,
 	specDefinition *proto.SpecDefinition,
 ) (*proto.StepResult, error) {
-	stepsCtx := NewStepsContext(globalCtx)
-
-	// We tell steps where to find their cached definition so they
-	// can find their files. And so that sub-steps with relative
-	// references know where to start.
-	stepsCtx.StepDir = specDefinition.Dir
-
-	// Add param inputs and environment to context
-	err := addInputs(stepsCtx, specDefinition.Spec, params.Inputs)
-	if err != nil {
-		return nil, fmt.Errorf("adding inputs: %w", err)
+	if err := validateInputs(specDefinition.Spec, params.Inputs); err != nil {
+		return &proto.StepResult{Status: proto.StepResult_failure}, err
 	}
-	maps.Copy(stepsCtx.Env, params.Env)
 
-	switch specDefinition.Definition.Type {
-	case proto.DefinitionType_exec:
+	if specDefinition.Definition.Type != proto.DefinitionType_exec && specDefinition.Definition.Type != proto.DefinitionType_steps {
+		return &proto.StepResult{Status: proto.StepResult_failure}, fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
+	}
+
+	env := globalCtx.NewEnvMergedFrom(params.Env)
+	inputs := e.valueOrDefault(params.Inputs, specDefinition.Spec.Spec.Inputs)
+	stepsCtx := NewStepsContext(globalCtx, specDefinition.Dir, inputs, env)
+
+	if specDefinition.Definition.Type == proto.DefinitionType_exec {
 		return NewExecutableStep().Run(ctx, stepsCtx, specDefinition)
-
-	case proto.DefinitionType_steps:
-		return NewSequenceOfSteps(e.defs, e.Run).Run(ctx, stepsCtx, specDefinition)
 	}
 
-	result := &proto.StepResult{SpecDefinition: specDefinition, Status: proto.StepResult_failure}
-	return result, fmt.Errorf("invalid type: %q", specDefinition.Definition.Type)
+	return NewSequenceOfSteps(e.defs, e.Run).Run(ctx, stepsCtx, specDefinition)
 }
 
-// addInputs combines the provided input parameters with the step
-// spec. Missing inputs are given defaults. Missing inputs without a
-// default produce an error. Extra inputs not declared also produce an
-// error.
-func addInputs(stepsCtx *StepsContext, spec *proto.Spec, inputs map[string]*context.Variable) error {
-	// Match inputs with definition
+func validateInputs(spec *proto.Spec, inputs map[string]*context.Variable) error {
 	for key, value := range spec.Spec.Inputs {
-		callValue := inputs[key]
-		if callValue != nil {
-			stepsCtx.Inputs[key] = callValue.Value
-		} else if value.Default != nil {
-			stepsCtx.Inputs[key] = value.Default
-		} else {
+		if inputs[key] == nil && value.Default == nil {
 			return fmt.Errorf("input %q required, but not defined", key)
 		}
 	}
 
-	// Reject invalid inputs
 	for key := range inputs {
-		defValue := spec.Spec.Inputs[key]
-		if defValue == nil {
+		if spec.Spec.Inputs[key] == nil {
 			return fmt.Errorf("input %q not found", key)
 		}
 	}
@@ -110,18 +91,16 @@ func addInputs(stepsCtx *StepsContext, spec *proto.Spec, inputs map[string]*cont
 	return nil
 }
 
-// addDefinitionEnv expands the step definition environment variables
-// with the step context. After expansion, definition environment
-// variables are added to the step context.
-func addDefinitionEnv(stepsCtx *StepsContext, definition *proto.Definition) error {
-	defEnv := map[string]string{}
-	for k, v := range definition.Env {
-		res, resErr := expression.ExpandString(stepsCtx, v)
-		if resErr != nil {
-			return fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
+func (e *Execution) valueOrDefault(inputs map[string]*context.Variable, specInputs map[string]*proto.Spec_Content_Input) map[string]*structpb.Value {
+	newInputs := make(map[string]*structpb.Value)
+
+	for key, value := range specInputs {
+		if inputs[key] != nil {
+			newInputs[key] = inputs[key].Value
+		} else {
+			newInputs[key] = value.Default
 		}
-		defEnv[k] = res
 	}
-	maps.Copy(stepsCtx.Env, defEnv)
-	return nil
+
+	return newInputs
 }
