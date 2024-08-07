@@ -34,11 +34,10 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 		Exports:        make(map[string]string),
 	}
 
-	// Expand and add the definition environment to context
-	err := addDefinitionEnv(stepsCtx, specDefinition.Definition)
+	err := stepsCtx.ExpandAndApplyEnv(specDefinition.Definition.Env)
 
 	if err != nil {
-		return result, fmt.Errorf("adding definition env: %w", err)
+		return result, fmt.Errorf("failed to run sequence of steps: %w", err)
 	}
 
 	result.Env = stepsCtx.GetEnvs()
