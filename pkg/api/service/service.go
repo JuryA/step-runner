@@ -170,3 +170,20 @@ func (s *StepRunnerService) FollowLogs(request *proto.FollowLogsRequest, writer 
 		return len(p), nil
 	}))
 }
+
+func (s *StepRunnerService) Status(ctx context.Context, request *proto.StatusRequest) (*proto.StatusResponse, error) {
+	stats := []*proto.Status{}
+	if request.Id != "" {
+		job, ok := s.jobs.Get(request.Id)
+		if !ok {
+			return nil, &errBadJobID{id: request.Id}
+		}
+		stats = append(stats, job.Status())
+	} else {
+		s.jobs.ForEach(func(_ string, j *jobs.Job) {
+			stats = append(stats, j.Status())
+		})
+	}
+
+	return &proto.StatusResponse{Jobs: stats}, nil
+}

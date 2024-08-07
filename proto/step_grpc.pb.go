@@ -24,6 +24,7 @@ const (
 	StepRunner_FollowSteps_FullMethodName = "/proto.StepRunner/FollowSteps"
 	StepRunner_Close_FullMethodName       = "/proto.StepRunner/Close"
 	StepRunner_FollowLogs_FullMethodName  = "/proto.StepRunner/FollowLogs"
+	StepRunner_Status_FullMethodName      = "/proto.StepRunner/Status"
 )
 
 // StepRunnerClient is the client API for StepRunner service.
@@ -34,6 +35,7 @@ type StepRunnerClient interface {
 	FollowSteps(ctx context.Context, in *FollowStepsRequest, opts ...grpc.CallOption) (StepRunner_FollowStepsClient, error)
 	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error)
 	FollowLogs(ctx context.Context, in *FollowLogsRequest, opts ...grpc.CallOption) (StepRunner_FollowLogsClient, error)
+	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 }
 
 type stepRunnerClient struct {
@@ -126,6 +128,15 @@ func (x *stepRunnerFollowLogsClient) Recv() (*FollowLogsResponse, error) {
 	return m, nil
 }
 
+func (c *stepRunnerClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, StepRunner_Status_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StepRunnerServer is the server API for StepRunner service.
 // All implementations must embed UnimplementedStepRunnerServer
 // for forward compatibility
@@ -134,6 +145,7 @@ type StepRunnerServer interface {
 	FollowSteps(*FollowStepsRequest, StepRunner_FollowStepsServer) error
 	Close(context.Context, *CloseRequest) (*CloseResponse, error)
 	FollowLogs(*FollowLogsRequest, StepRunner_FollowLogsServer) error
+	Status(context.Context, *StatusRequest) (*StatusResponse, error)
 	mustEmbedUnimplementedStepRunnerServer()
 }
 
@@ -152,6 +164,9 @@ func (UnimplementedStepRunnerServer) Close(context.Context, *CloseRequest) (*Clo
 }
 func (UnimplementedStepRunnerServer) FollowLogs(*FollowLogsRequest, StepRunner_FollowLogsServer) error {
 	return status.Errorf(codes.Unimplemented, "method FollowLogs not implemented")
+}
+func (UnimplementedStepRunnerServer) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
 }
 func (UnimplementedStepRunnerServer) mustEmbedUnimplementedStepRunnerServer() {}
 
@@ -244,6 +259,24 @@ func (x *stepRunnerFollowLogsServer) Send(m *FollowLogsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _StepRunner_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StepRunnerServer).Status(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StepRunner_Status_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StepRunnerServer).Status(ctx, req.(*StatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StepRunner_ServiceDesc is the grpc.ServiceDesc for StepRunner service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -258,6 +291,10 @@ var StepRunner_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Close",
 			Handler:    _StepRunner_Close_Handler,
+		},
+		{
+			MethodName: "Status",
+			Handler:    _StepRunner_Status_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

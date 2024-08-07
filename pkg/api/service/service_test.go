@@ -415,3 +415,158 @@ func Test_StepRunnerService_FollowLogs(t *testing.T) {
 	require.True(t, errors.Is(err, io.EOF))
 	require.Equal(t, "meet steppy who is 1 likes {\"color\":\"red\"} and is hungry false\n", logs.String())
 }
+
+func Test_StepRunnerService_Status(t *testing.T) {
+	bg := context.Background()
+	srv, client, cleanup := startService(t)
+	defer cleanup()
+
+	type spec struct {
+		runRequests func(*testing.T) []*proto.RunRequest
+		validate    func(*testing.T, *spec, []*proto.RunRequest)
+	}
+	tests := map[string]spec{
+		"single job eventually finishes": {
+			runRequests: func(t *testing.T) []*proto.RunRequest {
+				return []*proto.RunRequest{test.MakeRunRequest(t, helloStep, false)}
+			},
+			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
+				rr := runRequests[0]
+				j, ok := srv.jobs.Get(rr.Id)
+				assert.True(t, ok)
+
+				sr, err := client.Status(bg, &proto.StatusRequest{Id: rr.Id})
+				require.NoError(t, err)
+				assert.Len(t, sr.Jobs, 1)
+				assert.Equal(t, rr.Id, sr.Jobs[0].Id)
+				assert.Equal(t, proto.StepResult_running, sr.Jobs[0].Status)
+				assert.NotNil(t, sr.Jobs[0].StartTime)
+				assert.Nil(t, sr.Jobs[0].EndTime)
+				assert.Empty(t, sr.Jobs[0].Message)
+
+				assert.Eventually(t, j.Finished, time.Second*15, time.Millisecond*50)
+
+				sr, err = client.Status(bg, &proto.StatusRequest{Id: rr.Id})
+				require.NoError(t, err)
+				assert.Len(t, sr.Jobs, 1)
+				assert.Equal(t, rr.Id, sr.Jobs[0].Id)
+				assert.Equal(t, proto.StepResult_success, sr.Jobs[0].Status)
+				assert.NotNil(t, sr.Jobs[0].EndTime)
+				assert.Empty(t, sr.Jobs[0].Message)
+			},
+		},
+		"multiple jobs, no ids in request": {
+			runRequests: func(t *testing.T) []*proto.RunRequest {
+				return []*proto.RunRequest{
+					test.MakeRunRequest(t, helloStep, false),
+					test.MakeRunRequest(t, helloStep, false),
+				}
+			},
+			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
+				sr, err := client.Status(bg, &proto.StatusRequest{})
+				require.NoError(t, err)
+				assert.Len(t, sr.Jobs, 2)
+				ids := []string{runRequests[0].Id, runRequests[1].Id}
+				assert.Contains(t, ids, sr.Jobs[0].Id)
+				assert.Contains(t, ids, sr.Jobs[1].Id)
+			},
+		},
+		"multiple jobs, single id in request": {
+			runRequests: func(t *testing.T) []*proto.RunRequest {
+				return []*proto.RunRequest{
+					test.MakeRunRequest(t, helloStep, false),
+					test.MakeRunRequest(t, helloStep, false),
+				}
+			},
+			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
+				rr := runRequests[1]
+				sr, err := client.Status(bg, &proto.StatusRequest{Id: rr.Id})
+				require.NoError(t, err)
+				assert.Len(t, sr.Jobs, 1)
+				assert.Equal(t, rr.Id, sr.Jobs[0].Id)
+			},
+		},
+		"bad id in request": {
+			runRequests: func(t *testing.T) []*proto.RunRequest {
+				return []*proto.RunRequest{test.MakeRunRequest(t, helloStep, false)}
+			},
+			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
+				sr, err := client.Status(bg, &proto.StatusRequest{Id: "blablabla"})
+				assert.Error(t, err)
+				assert.Nil(t, sr)
+			},
+		},
+		"single job failed": {
+			runRequests: func(t *testing.T) []*proto.RunRequest {
+				return []*proto.RunRequest{test.MakeRunRequest(t, makeBashStep("sdjskjdfh"), false)}
+			},
+			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
+				rr := runRequests[0]
+				j, ok := srv.jobs.Get(rr.Id)
+				require.True(t, ok)
+
+				assert.Eventually(t, j.Finished, time.Second*20, time.Millisecond*50)
+
+				sr, err := client.Status(bg, &proto.StatusRequest{Id: rr.Id})
+				assert.NoError(t, err)
+				assert.Equal(t, proto.StepResult_failure, sr.Jobs[0].Status)
+				assert.Contains(t, sr.Jobs[0].Message, "exec: exit status 127")
+			},
+		},
+		"single job cancelled before execution start": {
+			runRequests: func(t *testing.T) []*proto.RunRequest {
+				return []*proto.RunRequest{test.MakeRunRequest(t, makeBashStep("sleep 1"), false)}
+			},
+			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
+				rr := runRequests[0]
+				j, ok := srv.jobs.Get(rr.Id)
+				require.True(t, ok)
+
+				// cancel the job before it starts executing. This cancels but does not delete the job
+				j.Close()
+
+				sr, err := client.Status(bg, &proto.StatusRequest{})
+				assert.NoError(t, err)
+				// exit-code was never set
+				assert.Equal(t, proto.StepResult_cancelled, sr.Jobs[0].Status)
+				assert.Contains(t, sr.Jobs[0].Message, context.Canceled.Error())
+			},
+		},
+		"single job cancelled after execution start": {
+			runRequests: func(t *testing.T) []*proto.RunRequest {
+				return []*proto.RunRequest{test.MakeRunRequest(t, makeBashStep("sleep 1"), false)}
+			},
+			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
+				rr := runRequests[0]
+				j, ok := srv.jobs.Get(rr.Id)
+				require.True(t, ok)
+
+				// give the job enough time to start execution
+				time.Sleep(250 * time.Millisecond)
+				// this cancels but does not delete the job
+				j.Close()
+
+				assert.Eventually(t, func() bool {
+					sr, err := client.Status(bg, &proto.StatusRequest{})
+					return err == nil &&
+						assert.Equal(t, proto.StepResult_cancelled, sr.Jobs[0].Status) && // :-(
+						strings.Contains(sr.Jobs[0].Message, context.Canceled.Error())
+				}, time.Second*2, time.Millisecond*250)
+			},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			defer os.RemoveAll(test.TestDirName(t))
+
+			rrs := tt.runRequests(t)
+			for _, rr := range rrs {
+				_, err := client.Run(bg, rr)
+				require.NoError(t, err)
+				defer client.Close(bg, &proto.CloseRequest{Id: rr.Id})
+			}
+
+			tt.validate(t, &tt, rrs)
+		})
+	}
+}

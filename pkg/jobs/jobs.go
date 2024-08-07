@@ -3,12 +3,15 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/streamer/file"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
@@ -25,12 +28,15 @@ type Job struct {
 	cancel     func()    // Used to cancel the Ctx.
 	err        error     // Captures any error returned when executing steps.
 	finished   bool      // Indicated whether all processing of this job has finished.
+	startTime  time.Time // time when the job finished execution.
 	finishTime time.Time // time when the job finished execution.
 	mux        sync.RWMutex
 
 	// TODO: This is temporary, until we implement streaming of step-results.
 	stepResult *proto.StepResult
 	logs       *file.Streamer
+
+	stepResultStatus proto.StepResult_Status
 }
 
 func New(request *proto.RunRequest) (*Job, error) {
@@ -53,7 +59,7 @@ func New(request *proto.RunRequest) (*Job, error) {
 
 	logs, err := file.New(path.Join(tmpDir, "logs"))
 	if err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 		return nil, fmt.Errorf("creating log file: %w", err)
 	}
 
@@ -71,13 +77,15 @@ func New(request *proto.RunRequest) (*Job, error) {
 	globCtx.Stdout = logs
 
 	return &Job{
-		TmpDir:  tmpDir,
-		WorkDir: workDir,
-		ID:      request.Id,
-		Ctx:     ctx,
-		GlobCtx: globCtx,
-		cancel:  cancel,
-		logs:    logs,
+		TmpDir:           tmpDir,
+		WorkDir:          workDir,
+		ID:               request.Id,
+		Ctx:              ctx,
+		GlobCtx:          globCtx,
+		startTime:        time.Now(),
+		cancel:           cancel,
+		logs:             logs,
+		stepResultStatus: proto.StepResult_running,
 	}, nil
 }
 
@@ -105,11 +113,20 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 	j.finished = true
 	j.finishTime = now
 
-	if err != nil {
-		j.stepResult = nil
-	}
 	j.logs.Stop()
-	j.logs.Close()
+	_ = j.logs.Close()
+
+	j.stepResultStatus = computeFinalStatus(result, err)
+}
+
+// TODO: this temporary until we add step-result streaming
+func computeFinalStatus(stepResult *proto.StepResult, err error) proto.StepResult_Status {
+	if stepResult == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return proto.StepResult_cancelled
+	}
+
+	// take the state of the root step-result as the overall execution state.
+	return stepResult.Status
 }
 
 func (j *Job) Finished() bool {
@@ -121,6 +138,7 @@ func (j *Job) Finished() bool {
 // Close() cancels jobs (if still running) and cleans up all resources associated with managing the job.
 func (j *Job) Close() {
 	j.cancel()
+	//nolint:errcheck
 	defer os.RemoveAll(j.TmpDir)
 	defer j.GlobCtx.Cleanup()
 	j.Finish(nil, j.Ctx.Err())
@@ -136,4 +154,25 @@ func (j *Job) FollowLogs(ctx context.Context, offset int64, writer io.Writer) er
 		return err
 	}
 	return j.err
+}
+
+// Status returns a proto.Status objected representing the current status of the job. If the job has not Finished, some
+// fields may be empty/nil.
+func (j *Job) Status() *proto.Status {
+	j.mux.RLock()
+	defer j.mux.RUnlock()
+
+	st := proto.Status{
+		Id:        j.ID,
+		StartTime: timestamppb.New(j.startTime),
+		Status:    j.stepResultStatus,
+	}
+
+	if j.finished {
+		st.EndTime = timestamppb.New(j.finishTime)
+	}
+	if j.err != nil {
+		st.Message = j.err.Error()
+	}
+	return &st
 }

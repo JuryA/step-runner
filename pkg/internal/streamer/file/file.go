@@ -49,6 +49,7 @@ func (s *Streamer) Follow(ctx context.Context, offset int64, writer io.Writer) e
 	if err != nil {
 		return err
 	}
+	//nolint:errcheck
 	defer f.Close()
 
 	if _, err := f.Seek(offset, 0); err != nil {

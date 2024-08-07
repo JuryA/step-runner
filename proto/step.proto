@@ -2,6 +2,7 @@ syntax = "proto3";
 package proto;
 
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 import "buf/validate/validate.proto";
 
 option go_package = "../proto";
@@ -167,6 +168,7 @@ message StepResult {
     running = 1;
     success = 2;
     failure = 3;
+    cancelled = 4;
   }
   // Status is the state of this step.
   Status status = 4;
@@ -206,6 +208,7 @@ service StepRunner {
   rpc FollowSteps(FollowStepsRequest) returns (stream FollowStepsResponse);
   rpc Close(CloseRequest) returns (CloseResponse);
   rpc FollowLogs(FollowLogsRequest) returns (stream FollowLogsResponse);
+  rpc Status(StatusRequest) returns (StatusResponse);
 }
 
 message Variable {
@@ -253,4 +256,20 @@ message FollowLogsRequest {
 
 message FollowLogsResponse {
     bytes data = 1;
+}
+
+message Status {
+    string id = 1;
+    string message = 2;
+    StepResult.Status status = 3;
+    google.protobuf.Timestamp start_time = 5;
+    google.protobuf.Timestamp end_time = 6;
+}
+
+message StatusRequest {
+    string id = 1;
+}
+
+message StatusResponse {
+    repeated Status jobs = 1;
 }
