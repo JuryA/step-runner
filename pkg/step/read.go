@@ -1,7 +1,6 @@
 package step
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,55 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
-	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
 )
-
-func LoadSteps(filename string) (*schema.StepDefinition, error) {
-	buf, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("reading file: %w", err)
-	}
-
-	return ReadSteps(string(buf), filepath.Dir(filename))
-}
-
-func ReadSteps(content, dir string) (*schema.StepDefinition, error) {
-	var (
-		spec       schema.Spec
-		definition schema.Definition
-	)
-
-	if err := unmarshalSchema(content, &spec, &definition); err != nil {
-		return nil, fmt.Errorf("unmarshaling: %w", err)
-	}
-
-	return &schema.StepDefinition{
-		Spec:       &spec,
-		Definition: &definition,
-		Dir:        dir,
-	}, nil
-}
-
-func WriteSteps(stepDef *schema.StepDefinition) (string, error) {
-	var buf bytes.Buffer
-	e := yaml.NewEncoder(&buf)
-
-	err := e.Encode(stepDef.Spec)
-	if err != nil {
-		return "", fmt.Errorf("encoding spec: %w", err)
-	}
-
-	err = e.Encode(stepDef.Definition)
-	if err != nil {
-		return "", fmt.Errorf("encoding definition: %w", err)
-	}
-
-	err = e.Close()
-	if err != nil {
-		return "", fmt.Errorf("closing: %w", err)
-	}
-	return buf.String(), nil
-}
 
 func LoadProto(filename string) (*proto.SpecDefinition, error) {
 	buf, err := os.ReadFile(filename)
@@ -90,20 +41,6 @@ func ReadProto(content, dir string) (*proto.SpecDefinition, error) {
 		return nil, err
 	}
 	return stepDef, nil
-}
-
-func unmarshalSchema(input string, subjects ...any) error {
-	d := yaml.NewDecoder(strings.NewReader(input))
-	d.KnownFields(true)
-
-	for _, subject := range subjects {
-		err := d.Decode(subject)
-		if err != nil {
-			return fmt.Errorf("decoding: %w", err)
-		}
-	}
-
-	return nil
 }
 
 func unmarshalProto(input string, subjects ...protoreflect.ProtoMessage) error {

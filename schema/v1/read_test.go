@@ -1,4 +1,4 @@
-package step
+package schema
 
 import (
 	"strings"

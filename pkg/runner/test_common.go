@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 
 	"github.com/stretchr/testify/require"
 	protobuf "google.golang.org/protobuf/proto"
@@ -33,9 +33,9 @@ func requireStringEqualValue(t *testing.T, str string, got *structpb.Value) {
 
 func runTest(testCase runnerTest) func(*testing.T) {
 	return func(t *testing.T) {
-		stepDef, err := step.ReadSteps(testCase.yaml, "")
+		stepDef, err := schema.ReadSteps(testCase.yaml, "")
 		require.NoError(t, err)
-		protoStepDef, err := step.CompileSteps(stepDef)
+		protoStepDef, err := schema.CompileSteps(stepDef)
 		require.NoError(t, err)
 		protoStepDef.Dir, _ = os.Getwd()
 

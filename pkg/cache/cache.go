@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 type Cache interface {
@@ -39,11 +39,11 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepRef *proto.Step_R
 	load := func(dir string) (*proto.SpecDefinition, error) {
 		path := filepath.Join(stepRef.Path...)
 		filename := filepath.Join(dir, path, stepRef.Filename)
-		stepDef, err := step.LoadSteps(filename)
+		stepDef, err := schema.LoadSteps(filename)
 		if err != nil {
 			return nil, fmt.Errorf("loading file %q: %w", filename, err)
 		}
-		protoStepDef, err := step.CompileSteps(stepDef)
+		protoStepDef, err := schema.CompileSteps(stepDef)
 		if err != nil {
 			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
 		}

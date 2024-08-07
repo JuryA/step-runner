@@ -1,4 +1,4 @@
-package step
+package schema
 
 import (
 	"testing"
@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	protobuf "google.golang.org/protobuf/proto"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 func TestCompile(t *testing.T) {
@@ -304,7 +304,7 @@ steps:
 				require.Nil(t, protoStepDef)
 			} else {
 				require.NoError(t, err)
-				wantSpecDef, err := ReadProto(c.wantCompiled, "")
+				wantSpecDef, err := step.ReadProto(c.wantCompiled, "")
 				require.NoError(t, err)
 				if !protobuf.Equal(wantSpecDef, protoStepDef) {
 					t.Errorf("wanted:\n%+v\ngot:\n%+v", wantSpecDef, protoStepDef)
@@ -435,7 +435,7 @@ git:
 
 	for _, c := range cases {
 		t.Run(c.ref, func(t *testing.T) {
-			ref := schema.Reference{}
+			ref := Reference{}
 			err := unmarshalSchema(c.ref, &ref)
 			require.NoError(t, err)
 			got, err := (*referenceCompiler)(&ref).compile()
