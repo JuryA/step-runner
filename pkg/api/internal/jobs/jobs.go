@@ -13,7 +13,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/streamer/file"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/streamer/file"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
