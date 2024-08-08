@@ -10,10 +10,10 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/pkg/syncmap"
 	"gitlab.com/gitlab-org/step-runner/pkg/variables"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 type errBadJobID struct{ id string }
@@ -78,12 +78,12 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 }
 
 func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, error) {
-	stepDef, err := step.ReadSteps(stepsStr, "")
+	stepDef, err := schema.ReadSteps(stepsStr, "")
 	if err != nil {
 		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
 	}
 
-	steps, err := step.CompileSteps(stepDef)
+	steps, err := schema.CompileSteps(stepDef)
 	if err != nil {
 		return nil, fmt.Errorf("compiling steps: %w", err)
 	}

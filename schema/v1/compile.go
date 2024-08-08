@@ -1,4 +1,4 @@
-package step
+package schema
 
 import (
 	"fmt"
@@ -9,10 +9,9 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
-	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
-func CompileSteps(steps *schema.StepDefinition) (*proto.SpecDefinition, error) {
+func CompileSteps(steps *StepDefinition) (*proto.SpecDefinition, error) {
 	protoStepDef := &proto.SpecDefinition{
 		Dir: steps.Dir,
 	}
@@ -30,13 +29,13 @@ func CompileSteps(steps *schema.StepDefinition) (*proto.SpecDefinition, error) {
 		}
 		protoStepDef.Definition = protoDef
 	}
-	if err := ValidateStepDefinition(protoStepDef); err != nil {
+	if err := validateStepDefinition(protoStepDef); err != nil {
 		return nil, err
 	}
 	return protoStepDef, nil
 }
 
-type specCompiler schema.Spec
+type specCompiler Spec
 
 func (spec *specCompiler) compile() (*proto.Spec, error) {
 	protoSpec := &proto.Spec{Spec: &proto.Spec_Content{}}
@@ -67,7 +66,7 @@ func (spec *specCompiler) compile() (*proto.Spec, error) {
 	return protoSpec, nil
 }
 
-type inputCompiler schema.Input
+type inputCompiler Input
 
 func (input *inputCompiler) compile() (*proto.Spec_Content_Input, error) {
 	input.defaultTypeToString()
@@ -86,21 +85,21 @@ func (input *inputCompiler) defaultTypeToString() {
 	if input.Type != "" {
 		return
 	}
-	input.Type = schema.ValueTypeString
+	input.Type = ValueTypeString
 }
 
 func (input *inputCompiler) compileToProto() (*proto.Spec_Content_Input, error) {
 	protoInput := &proto.Spec_Content_Input{}
 	switch input.Type {
-	case schema.ValueTypeBool:
+	case ValueTypeBool:
 		protoInput.Type = proto.ValueType_boolean
-	case schema.ValueTypeList:
+	case ValueTypeList:
 		protoInput.Type = proto.ValueType_array
-	case schema.ValueTypeNumber:
+	case ValueTypeNumber:
 		protoInput.Type = proto.ValueType_number
-	case schema.ValueTypeString:
+	case ValueTypeString:
 		protoInput.Type = proto.ValueType_string
-	case schema.ValueTypeStruct:
+	case ValueTypeStruct:
 		protoInput.Type = proto.ValueType_struct
 	default:
 		return nil, fmt.Errorf("unsupported input type: %v", input.Type)
@@ -120,27 +119,27 @@ func (input *inputCompiler) verifyDefaultValueMatchesType(protoInput *proto.Spec
 	if input.Default == nil || protoInput.Default == nil {
 		return nil
 	}
-	var defaultType schema.ValueType
+	var defaultType ValueType
 	switch input.Type {
-	case schema.ValueTypeBool:
+	case ValueTypeBool:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_BoolValue); ok {
-			defaultType = schema.ValueTypeBool
+			defaultType = ValueTypeBool
 		}
-	case schema.ValueTypeList:
+	case ValueTypeList:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_ListValue); ok {
-			defaultType = schema.ValueTypeList
+			defaultType = ValueTypeList
 		}
-	case schema.ValueTypeNumber:
+	case ValueTypeNumber:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_NumberValue); ok {
-			defaultType = schema.ValueTypeNumber
+			defaultType = ValueTypeNumber
 		}
-	case schema.ValueTypeString:
+	case ValueTypeString:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = schema.ValueTypeString
+			defaultType = ValueTypeString
 		}
-	case schema.ValueTypeStruct:
+	case ValueTypeStruct:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_StructValue); ok {
-			defaultType = schema.ValueTypeStruct
+			defaultType = ValueTypeStruct
 		}
 	default:
 		return fmt.Errorf("unsupported type: %v", input.Type)
@@ -151,7 +150,7 @@ func (input *inputCompiler) verifyDefaultValueMatchesType(protoInput *proto.Spec
 	return nil
 }
 
-type outputCompiler schema.Output
+type outputCompiler Output
 
 func (output *outputCompiler) compile() (*proto.Spec_Content_Output, error) {
 	output.defaultTypeToRawString()
@@ -170,23 +169,23 @@ func (output *outputCompiler) defaultTypeToRawString() {
 	if output.Type != "" {
 		return
 	}
-	output.Type = schema.ValueTypeRawString
+	output.Type = ValueTypeRawString
 }
 
 func (output *outputCompiler) compileToProto() (*proto.Spec_Content_Output, error) {
 	protoOutput := &proto.Spec_Content_Output{}
 	switch output.Type {
-	case schema.ValueTypeBool:
+	case ValueTypeBool:
 		protoOutput.Type = proto.ValueType_boolean
-	case schema.ValueTypeList:
+	case ValueTypeList:
 		protoOutput.Type = proto.ValueType_array
-	case schema.ValueTypeNumber:
+	case ValueTypeNumber:
 		protoOutput.Type = proto.ValueType_number
-	case schema.ValueTypeRawString:
+	case ValueTypeRawString:
 		protoOutput.Type = proto.ValueType_raw_string
-	case schema.ValueTypeString:
+	case ValueTypeString:
 		protoOutput.Type = proto.ValueType_string
-	case schema.ValueTypeStruct:
+	case ValueTypeStruct:
 		protoOutput.Type = proto.ValueType_struct
 	default:
 		return nil, fmt.Errorf("unsupported output type: %v", output.Type)
@@ -206,31 +205,31 @@ func (output *outputCompiler) verifyDefaultValueMatchesType(protoOutput *proto.S
 	if output.Default == nil || protoOutput.Default == nil {
 		return nil
 	}
-	var defaultType schema.ValueType
+	var defaultType ValueType
 	switch output.Type {
-	case schema.ValueTypeBool:
+	case ValueTypeBool:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_BoolValue); ok {
-			defaultType = schema.ValueTypeBool
+			defaultType = ValueTypeBool
 		}
-	case schema.ValueTypeList:
+	case ValueTypeList:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_ListValue); ok {
-			defaultType = schema.ValueTypeList
+			defaultType = ValueTypeList
 		}
-	case schema.ValueTypeNumber:
+	case ValueTypeNumber:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_NumberValue); ok {
-			defaultType = schema.ValueTypeNumber
+			defaultType = ValueTypeNumber
 		}
-	case schema.ValueTypeString:
+	case ValueTypeString:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = schema.ValueTypeString
+			defaultType = ValueTypeString
 		}
-	case schema.ValueTypeRawString:
+	case ValueTypeRawString:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = schema.ValueTypeRawString
+			defaultType = ValueTypeRawString
 		}
-	case schema.ValueTypeStruct:
+	case ValueTypeStruct:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StructValue); ok {
-			defaultType = schema.ValueTypeStruct
+			defaultType = ValueTypeStruct
 		}
 	default:
 		return fmt.Errorf("unsupported type: %v", output.Type)
@@ -241,7 +240,7 @@ func (output *outputCompiler) verifyDefaultValueMatchesType(protoOutput *proto.S
 	return nil
 }
 
-type definitionCompiler schema.Definition
+type definitionCompiler Definition
 
 func (def *definitionCompiler) compile() (*proto.Definition, error) {
 	err := def.verifyOneTypeProvided()
@@ -307,7 +306,7 @@ func (def *definitionCompiler) compileToProto() (*proto.Definition, error) {
 	return protoDef, nil
 }
 
-type stepCompiler schema.Step
+type stepCompiler Step
 
 func (step *stepCompiler) compile(i int) (*proto.Step, error) {
 	err := step.compileScriptKeywordToStep()
@@ -336,7 +335,7 @@ func (step *stepCompiler) compileScriptKeywordToStep() error {
 	if len(step.Inputs) != 0 {
 		return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 	}
-	step.Step = schema.Reference{
+	step.Step = Reference{
 		Short: scriptStep,
 	}
 	step.Inputs = map[string]any{
@@ -357,7 +356,7 @@ func (step *stepCompiler) compileActionKeywordToStep() error {
 	if step.Script != "" {
 		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
 	}
-	step.Step = schema.Reference{
+	step.Step = Reference{
 		Short: actionStep,
 	}
 	step.Inputs = map[string]any{
@@ -395,7 +394,7 @@ func (step *stepCompiler) compileToProto() (*proto.Step, error) {
 	return protoStep, nil
 }
 
-type referenceCompiler schema.Reference
+type referenceCompiler Reference
 
 func (reference *referenceCompiler) compile() (*proto.Step_Reference, error) {
 	if strings.HasPrefix(reference.Short, ".") {

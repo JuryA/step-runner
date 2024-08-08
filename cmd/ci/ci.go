@@ -13,7 +13,6 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
@@ -30,7 +29,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", steps, err)
 	}
-	protoStepDef, err := step.CompileSteps(stepDef)
+	protoStepDef, err := schema.CompileSteps(stepDef)
 	if err != nil {
 		return fmt.Errorf("compiling STEPS: %w", err)
 	}
