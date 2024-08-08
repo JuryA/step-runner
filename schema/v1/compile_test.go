@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 	protobuf "google.golang.org/protobuf/proto"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -304,7 +303,7 @@ steps:
 				require.Nil(t, protoStepDef)
 			} else {
 				require.NoError(t, err)
-				wantSpecDef, err := step.ReadProto(c.wantCompiled, "")
+				wantSpecDef, err := readProto(c.wantCompiled, "")
 				require.NoError(t, err)
 				if !protobuf.Equal(wantSpecDef, protoStepDef) {
 					t.Errorf("wanted:\n%+v\ngot:\n%+v", wantSpecDef, protoStepDef)

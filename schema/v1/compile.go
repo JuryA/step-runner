@@ -8,7 +8,6 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/step"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -30,7 +29,7 @@ func CompileSteps(steps *StepDefinition) (*proto.SpecDefinition, error) {
 		}
 		protoStepDef.Definition = protoDef
 	}
-	if err := step.ValidateStepDefinition(protoStepDef); err != nil {
+	if err := validateStepDefinition(protoStepDef); err != nil {
 		return nil, err
 	}
 	return protoStepDef, nil
