@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/syncmap"
 	"gitlab.com/gitlab-org/step-runner/pkg/variables"

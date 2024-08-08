@@ -22,7 +22,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/test"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/jobs"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
