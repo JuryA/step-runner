@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/test"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/proto"
