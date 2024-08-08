@@ -1,24 +1,32 @@
 package test
 
 import (
+	"bytes"
+	"math/rand"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
-	"golang.org/x/exp/rand"
-
+	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
+
+var r *rand.Rand
+
+func init() {
+	r = rand.New(rand.NewSource(time.Now().UnixNano()))
+}
 
 func TestDirName(t *testing.T) string {
 	return path.Join(os.TempDir(), strings.ReplaceAll(t.Name(), "/", "-"))
 }
 
-func RandJobID() string { return strconv.Itoa(rand.Intn(999)) }
+func RandJobID() string { return strconv.Itoa(r.Intn(9999)) }
 
-func MakeRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
+func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
 	testDir := TestDirName(t)
 	runReq := proto.RunRequest{
 		Id:    RandJobID(),
@@ -33,4 +41,29 @@ func MakeRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
 	}
 
 	return &runReq
+}
+
+type ClosableBuf struct{ bytes.Buffer }
+
+func (*ClosableBuf) Close() error { return nil }
+
+type StepResultWriteCloser []*proto.StepResult
+
+func (w *StepResultWriteCloser) Write(sr *proto.StepResult) error {
+	*w = append(*w, sr)
+	return nil
+}
+
+func (w *StepResultWriteCloser) Close() error { return nil }
+
+func RunRequest(t *testing.T, step string, env map[string]string, vars []client.Variable) *client.RunRequest {
+	return &client.RunRequest{
+		Id: RandJobID(),
+		Steps: `spec: {}
+---
+` + step,
+		WorkDir:   TestDirName(t),
+		Env:       env,
+		Variables: vars,
+	}
 }
