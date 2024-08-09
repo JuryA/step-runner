@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/test"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
 )
 
 var data = [][]byte{
