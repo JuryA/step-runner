@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
@@ -78,26 +79,20 @@ func run(cmd *cobra.Command, args []string) error {
 		globalCtx.Job[k] = v
 	}
 
-	result, err := execution.Run(ctx.Background(), globalCtx, params, protoStepDef)
-	writeResults := func() error {
-		bytes, err := protojson.Marshal(result)
-		if err != nil {
-			return fmt.Errorf("error marshaling step results: %w", err)
-		}
-		outputFile := "step-results.json"
-		err = os.WriteFile(outputFile, bytes, 0640)
-		if err != nil {
-			return fmt.Errorf("writing step results to %v: %w", outputFile, err)
-		}
-		fmt.Printf("trace written to %v\n", outputFile)
-		return nil
-	}
+	step, err := schema.NewParser(defs, execution.Run).Parse(protoStepDef)
+
 	if err != nil {
-		_ = writeResults()
-		fmt.Printf("unable to write results: %v", err)
-		return fmt.Errorf("running execution: %w", err)
+		return fmt.Errorf("failed to run steps: %w", err)
 	}
-	return writeResults()
+
+	result, err := execution.Run(ctx.Background(), globalCtx, params, step, protoStepDef)
+	writeResultToFile(result)
+
+	if err != nil {
+		return fmt.Errorf("failed to run steps: %w", err)
+	}
+
+	return nil
 }
 
 func wrapStepsInSpecDef(steps string) (*schema.StepDefinition, error) {
@@ -112,4 +107,23 @@ func wrapStepsInSpecDef(steps string) (*schema.StepDefinition, error) {
 	runningSteps, _ := yaml.Marshal(specDef)
 	fmt.Printf("running steps:\n%v", string(runningSteps))
 	return specDef, nil
+}
+
+func writeResultToFile(result *proto.StepResult) {
+	bytes, err := protojson.Marshal(result)
+
+	if err != nil {
+		fmt.Println(fmt.Errorf("failed to write step results to file: %w", err))
+		return
+	}
+
+	outputFile := "step-results.json"
+	err = os.WriteFile(outputFile, bytes, 0640)
+
+	if err != nil {
+		fmt.Println(fmt.Errorf("failed to write step results to file: %w", err))
+		return
+	}
+
+	fmt.Printf("step results written to %v\n", outputFile)
 }

@@ -1,13 +1,22 @@
-package runner
+package runner_test
 
 import (
+	"bytes"
+	ctx "context"
 	"errors"
 	"fmt"
+	"maps"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	protobuf "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 func TestRun(t *testing.T) {
@@ -412,5 +421,64 @@ steps:
 
 	for _, c := range cases {
 		t.Run(c.name, runTest(c))
+	}
+}
+
+type runnerTest struct {
+	name        string
+	yaml        string
+	globalEnv   map[string]string
+	wantLog     string
+	wantResults func(*testing.T, *proto.StepResult)
+	wantErr     error
+}
+
+func requireStringEqualValue(t *testing.T, str string, got *structpb.Value) {
+	want := structpb.NewStringValue(str)
+	require.True(t, protobuf.Equal(want, got), "want %+v. got %+v", want, got)
+}
+
+func runTest(testCase runnerTest) func(*testing.T) {
+	return func(t *testing.T) {
+		stepDef, err := schema.ReadSteps(testCase.yaml, "")
+		require.NoError(t, err)
+		protoStepDef, err := schema.CompileSteps(stepDef)
+		require.NoError(t, err)
+		protoStepDef.Dir, _ = os.Getwd()
+
+		defs, err := cache.New()
+		require.NoError(t, err)
+		executor, err := runner.New(defs)
+		require.NoError(t, err)
+
+		var log bytes.Buffer
+
+		globalCtx, err := runner.NewGlobalContext()
+		require.NoError(t, err)
+		defer globalCtx.Cleanup()
+		maps.Copy(globalCtx.Env, testCase.globalEnv)
+		globalCtx.Stdout = &log
+		globalCtx.Stderr = &log
+		globalCtx.WorkDir, _ = os.UserHomeDir()
+
+		params := &runner.Params{}
+
+		step, err := schema.NewParser(defs, executor.Run).Parse(protoStepDef)
+		require.NoError(t, err)
+
+		result, err := executor.Run(ctx.Background(), globalCtx, params, step, protoStepDef)
+		if testCase.wantErr != nil {
+			require.Error(t, err)
+			require.Equal(t, testCase.wantErr.Error(), err.Error())
+			if testCase.wantResults != nil {
+				testCase.wantResults(t, result)
+			}
+		} else {
+			require.NoError(t, err)
+			if testCase.wantLog != "" {
+				require.Equal(t, testCase.wantLog, log.String())
+			}
+			testCase.wantResults(t, result)
+		}
 	}
 }

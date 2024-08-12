@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -35,10 +36,13 @@ func run(cmd *cobra.Command, args []string) error {
 		grpcServer.GracefulStop()
 	}()
 
-	srv, err := service.New()
+	stepCache, err := cache.New()
+
 	if err != nil {
-		return fmt.Errorf("failed to create step-runner request handler: %w", err)
+		return fmt.Errorf("failed to run service: %w", err)
 	}
+
+	srv := service.New(stepCache)
 
 	listener, err := net.Listen("unix", api.DefaultSocketPath())
 	if err != nil {

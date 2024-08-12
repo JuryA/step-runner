@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -51,8 +52,10 @@ func makeBashStep(cmd string) string {
 const bufSize = 1024 * 1024
 
 func startService(t *testing.T) (*StepRunnerService, proto.StepRunnerClient, func()) {
-	srs, err := New()
+	stepCache, err := cache.New()
 	require.NoError(t, err)
+
+	srs := New(stepCache)
 
 	lis := bufconn.Listen(bufSize)
 	srv := grpc.NewServer()

@@ -1,6 +1,6 @@
 //go:build integration
 
-package runner
+package runner_test
 
 import (
 	"testing"
