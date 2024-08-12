@@ -50,7 +50,7 @@ generate:
 
 .PHONY: test
 test: generate
-	go test ./...
+	go test -race ./...
 	@git --no-pager diff --compact-summary --exit-code -- go.mod go.sum && echo 'Go modules are tidy and complete!'
 	@git --no-pager diff --compact-summary --exit-code -- ./internal/plugin/proto && echo 'proto code is up-to-date!'
 
