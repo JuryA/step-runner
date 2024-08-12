@@ -31,7 +31,7 @@ type (
 	}
 
 	FollowOutput struct {
-		Logs        io.WriteCloser
+		Logs        io.Writer
 		StepResults StepResultWriteCloser
 
 		readLogs, readStepResults int64
@@ -110,8 +110,6 @@ func (c *StepRunnerClient) Follow(ctx context.Context, jobID string, out *Follow
 
 	if out.Logs != nil {
 		eg.Go(func() error {
-			// TODO: do we want to close this here?
-			defer out.Logs.Close()
 			// TODO: add reconnection
 			n, err := c.FollowLogs(ctx, jobID, out.readLogs, out.Logs)
 			out.readLogs += n
