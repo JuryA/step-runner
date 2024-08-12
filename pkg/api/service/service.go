@@ -9,7 +9,6 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/variables"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/syncmap"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -22,20 +21,16 @@ func (e *errBadJobID) Error() string { return fmt.Sprintf("no job with id %q", e
 
 type StepRunnerService struct {
 	proto.StepRunnerServer
-	cache cache.Cache
+	cache runner.Cache
 
 	jobs *syncmap.SyncMap[string, *jobs.Job]
 }
 
-func New() (*StepRunnerService, error) {
-	c, err := cache.New()
-	if err != nil {
-		return nil, fmt.Errorf("creating step-runner-service: %w", err)
-	}
+func New(stepCache runner.Cache) *StepRunnerService {
 	return &StepRunnerService{
-		cache: c,
+		cache: stepCache,
 		jobs:  syncmap.New[string, *jobs.Job](),
-	}, nil
+	}
 }
 
 // Run parses, prepares, and initiates execution of a RunRequest.
@@ -48,6 +43,12 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	steps, err := s.loadSteps(request.Steps)
 	if err != nil {
 		return nil, fmt.Errorf("loading step: %w", err)
+	}
+
+	step, err := schema.NewParser(s.cache, execution.Run).Parse(steps)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}
 
 	job, err := jobs.New(request)
@@ -73,7 +74,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 
 	// actually execute the steps request
 	s.jobs.Put(request.Id, job)
-	go s.run(execution, job, steps)
+	go s.run(execution, job, step, steps)
 	return &proto.RunResponse{}, nil
 }
 
@@ -92,9 +93,9 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 }
 
 // run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
-func (s *StepRunnerService) run(execution *runner.Execution, job *jobs.Job, steps *proto.SpecDefinition) {
+func (s *StepRunnerService) run(execution *runner.Execution, job *jobs.Job, step runner.Step, steps *proto.SpecDefinition) {
 	// TODO: Add streaming of step-results as they are produced.
-	result, err := execution.Run(job.Ctx, job.GlobCtx, &runner.Params{}, steps)
+	result, err := execution.Run(job.Ctx, job.GlobCtx, &runner.Params{}, step, steps)
 	job.Finish(result, err)
 	if err != nil {
 		// TODO: better logging

@@ -18,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -40,8 +41,10 @@ var dialer *testDialer
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 
-	stepsService, err := service.New()
+	stepCache, err := cache.New()
 	must(err)
+
+	stepsService := service.New(stepCache)
 
 	buflis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()

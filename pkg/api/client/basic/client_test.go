@@ -18,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -34,8 +35,10 @@ var conn *grpc.ClientConn
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 
-	stepService, err := service.New()
+	stepCache, err := cache.New()
 	must(err)
+
+	stepService := service.New(stepCache)
 
 	buflis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()

@@ -7,7 +7,6 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -15,14 +14,16 @@ import (
 
 // SequenceOfSteps is a step that executes many steps.
 type SequenceOfSteps struct {
-	resourceLoader cache.Cache
-	runStep        func(ctx ctx.Context, globalCtx *GlobalContext, params *Params, specDefinition *proto.SpecDefinition) (*proto.StepResult, error)
+	resourceLoader Cache
+	runStep        LegacyRunStepFn
+	parser         StepParser
 }
 
-func NewSequenceOfSteps(resourceLoader cache.Cache, runStep func(ctx ctx.Context, globalCtx *GlobalContext, params *Params, specDefinition *proto.SpecDefinition) (*proto.StepResult, error)) *SequenceOfSteps {
+func NewSequenceOfSteps(resourceLoader Cache, parser StepParser, runStep LegacyRunStepFn) *SequenceOfSteps {
 	return &SequenceOfSteps{
 		resourceLoader: resourceLoader,
 		runStep:        runStep,
+		parser:         parser,
 	}
 }
 
@@ -142,8 +143,14 @@ func (s *SequenceOfSteps) runSubStep(
 		params.Env[k] = res
 	}
 
+	step, err := s.parser.Parse(subStepSpecDefinition)
+
+	if err != nil {
+		return nil, err
+	}
+
 	// Run the step definition with the global context and expanded parameters
-	result, err := s.runStep(ctx, stepsCtx.GlobalContext, params, subStepSpecDefinition)
+	result, err := s.runStep(ctx, stepsCtx.GlobalContext, params, step, subStepSpecDefinition)
 	if err != nil {
 		return result, err
 	}

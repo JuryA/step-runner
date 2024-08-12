@@ -6,14 +6,15 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
+type LegacyRunStepFn func(ctx.Context, *GlobalContext, *Params, Step, *proto.SpecDefinition) (*proto.StepResult, error)
+
 // Execution is the execution of a single step.
 type Execution struct {
-	defs cache.Cache
+	defs Cache
 }
 
 // Params are the input and environment parameters for an execution.
@@ -23,7 +24,7 @@ type Params struct {
 }
 
 // New creates a new execution using a shared cache.
-func New(defs cache.Cache) (*Execution, error) {
+func New(defs Cache) (*Execution, error) {
 	return &Execution{
 		defs: defs,
 	}, nil
@@ -54,6 +55,7 @@ func (e *Execution) Run(
 	ctx ctx.Context,
 	globalCtx *GlobalContext,
 	params *Params,
+	step Step,
 	specDefinition *proto.SpecDefinition,
 ) (*proto.StepResult, error) {
 	if err := validateInputs(specDefinition.Spec, params.Inputs); err != nil {
@@ -68,11 +70,7 @@ func (e *Execution) Run(
 	inputs := e.valueOrDefault(params.Inputs, specDefinition.Spec.Spec.Inputs)
 	stepsCtx := NewStepsContext(globalCtx, specDefinition.Dir, inputs, env)
 
-	if specDefinition.Definition.Type == proto.DefinitionType_exec {
-		return NewExecutableStep().Run(ctx, stepsCtx, specDefinition)
-	}
-
-	return NewSequenceOfSteps(e.defs, e.Run).Run(ctx, stepsCtx, specDefinition)
+	return step.Run(ctx, stepsCtx, specDefinition)
 }
 
 func validateInputs(spec *proto.Spec, inputs map[string]*context.Variable) error {

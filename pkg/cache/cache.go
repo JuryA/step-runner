@@ -7,15 +7,12 @@ import (
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	schema "gitlab.com/gitlab-org/step-runner/schema/v1"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
-type Cache interface {
-	Get(ctx context.Context, parentDir string, step *proto.Step_Reference) (*proto.SpecDefinition, error)
-}
-
-var _ Cache = &cache{}
+var _ runner.Cache = &cache{}
 
 type cache struct {
 	cacheDir string
@@ -23,7 +20,7 @@ type cache struct {
 	gitFetcher *git.GitFetcher
 }
 
-func New() (Cache, error) {
+func New() (runner.Cache, error) {
 	cacheDir := filepath.Join(os.TempDir(), "step-runner-cache")
 	if err := os.MkdirAll(cacheDir, 0o750); err != nil {
 		return nil, fmt.Errorf("making cache dir %q: %w", cacheDir, err)
