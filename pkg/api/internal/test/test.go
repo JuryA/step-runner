@@ -7,6 +7,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -43,7 +44,30 @@ func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest 
 	return &runReq
 }
 
-type ClosableBuf struct{ bytes.Buffer }
+type SyncBuff struct {
+	b bytes.Buffer
+	sync.RWMutex
+}
+
+func (b *SyncBuff) Write(p []byte) (n int, err error) {
+	b.Lock()
+	defer b.Unlock()
+	return b.b.Write(p)
+}
+
+func (b *SyncBuff) Len() int {
+	b.RLock()
+	defer b.RUnlock()
+	return b.b.Len()
+}
+
+func (b *SyncBuff) String() string {
+	b.RLock()
+	defer b.RUnlock()
+	return b.b.String()
+}
+
+type ClosableBuf struct{ SyncBuff }
 
 func (*ClosableBuf) Close() error { return nil }
 
