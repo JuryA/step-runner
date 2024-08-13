@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"bytes"
 	"io"
 	"net"
 	"sync"
@@ -12,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
 )
 
 // Starts a dead-simple echoing server that listens on a socket
@@ -41,7 +41,7 @@ func Test_Proxy(t *testing.T) {
 
 	// use a pipe for the pr and pw to pass to the proxy
 	pr, pw := io.Pipe()
-	buf := bytes.Buffer{}
+	buf := test.SyncBuff{}
 
 	// start the proxy...
 	go func() {
@@ -63,7 +63,6 @@ func Test_Proxy(t *testing.T) {
 	}
 	// wait for the above stuff to be written into the receiving buffer...
 	assert.Eventually(t, func() bool { return buf.String() == "aaaabbbbcccc" }, time.Second, time.Millisecond*100)
-
 	// Close the server connection; this will exit the writing loop in the proxy
 	cancel()
 	time.Sleep(time.Millisecond)
