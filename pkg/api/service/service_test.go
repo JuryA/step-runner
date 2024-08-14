@@ -108,6 +108,27 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	assert.NoDirExists(t, job.TmpDir)
 }
 
+func Test_StepRunnerService_Run_RequestCancelled(t *testing.T) {
+	defer os.RemoveAll(test.TestDirName(t))
+
+	stepCache, err := cache.New()
+	require.NoError(t, err)
+	srs := New(stepCache)
+
+	rr := test.ProtoRunRequest(t, helloStep, false)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	cancel()
+	_, err = srs.Run(ctx, rr)
+	require.Error(t, err)
+	require.ErrorContains(t, err, context.Canceled.Error())
+
+	_, ok := srs.jobs.Get(rr.Id)
+	require.False(t, ok)
+
+	assert.NoDirExists(t, path.Join(os.TempDir(), "step-runner-output-"+rr.Id))
+}
+
 func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 	defer os.RemoveAll(test.TestDirName(t))
 	bg := context.Background()
