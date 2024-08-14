@@ -7,6 +7,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,17 +15,13 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-var r *rand.Rand
-
-func init() {
-	r = rand.New(rand.NewSource(time.Now().UnixNano()))
-}
-
 func TestDirName(t *testing.T) string {
 	return path.Join(os.TempDir(), strings.ReplaceAll(t.Name(), "/", "-"))
 }
 
-func RandJobID() string { return strconv.Itoa(r.Intn(9999)) }
+func RandJobID() string {
+	return strconv.Itoa(rand.New(rand.NewSource(time.Now().UnixNano())).Intn(9999))
+}
 
 func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
 	testDir := TestDirName(t)
@@ -43,7 +40,30 @@ func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest 
 	return &runReq
 }
 
-type ClosableBuf struct{ bytes.Buffer }
+type SyncBuff struct {
+	b bytes.Buffer
+	sync.RWMutex
+}
+
+func (b *SyncBuff) Write(p []byte) (n int, err error) {
+	b.Lock()
+	defer b.Unlock()
+	return b.b.Write(p)
+}
+
+func (b *SyncBuff) Len() int {
+	b.RLock()
+	defer b.RUnlock()
+	return b.b.Len()
+}
+
+func (b *SyncBuff) String() string {
+	b.RLock()
+	defer b.RUnlock()
+	return b.b.String()
+}
+
+type ClosableBuf struct{ SyncBuff }
 
 func (*ClosableBuf) Close() error { return nil }
 

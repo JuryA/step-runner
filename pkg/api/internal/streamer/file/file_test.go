@@ -25,7 +25,7 @@ type testSpec struct {
 	writer      func(*testSpec, []byte) (int, error)
 	validate    func(*testSpec, error)
 	offset      int64
-	buf         bytes.Buffer
+	buf         test.SyncBuff
 	wantWritten []byte
 	ctx         context.Context
 	ctxCancel   func()
@@ -144,7 +144,7 @@ func Test_Streamer_StopBeforeFollow(t *testing.T) {
 	defer os.Remove(filename)
 	defer s.Close()
 
-	buf := bytes.Buffer{}
+	buf := test.SyncBuff{}
 
 	for _, p := range data {
 		_, err := s.Write(p)
@@ -173,13 +173,13 @@ func Test_Streamer_MultipleFollowers(t *testing.T) {
 	defer s.Close()
 
 	numFollowers := 5
-	bufs := []*bytes.Buffer{}
+	bufs := []*test.SyncBuff{}
 	errs := errgroup.Group{}
 
 	for i := 0; i < numFollowers; i++ {
+		b := test.SyncBuff{}
+		bufs = append(bufs, &b)
 		errs.Go(func() error {
-			b := bytes.Buffer{}
-			bufs = append(bufs, &b)
 			return s.Follow(context.Background(), 0, &b)
 		})
 	}
