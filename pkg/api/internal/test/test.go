@@ -15,17 +15,13 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-var r *rand.Rand
-
-func init() {
-	r = rand.New(rand.NewSource(time.Now().UnixNano()))
-}
-
 func TestDirName(t *testing.T) string {
 	return path.Join(os.TempDir(), strings.ReplaceAll(t.Name(), "/", "-"))
 }
 
-func RandJobID() string { return strconv.Itoa(r.Intn(9999)) }
+func RandJobID() string {
+	return strconv.Itoa(rand.New(rand.NewSource(time.Now().UnixNano())).Intn(9999))
+}
 
 func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
 	testDir := TestDirName(t)
