@@ -45,11 +45,6 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	defer globalCtx.Cleanup()
 
-	execution, err := runner.New(defs)
-	if err != nil {
-		return fmt.Errorf("creating execution: %w", err)
-	}
-
 	params := &runner.Params{}
 
 	// Step runner should have no concept of "CI_BUILDS_DIR".
@@ -79,13 +74,17 @@ func run(cmd *cobra.Command, args []string) error {
 		globalCtx.Job[k] = v
 	}
 
-	step, err := schema.NewParser(defs, execution.Run).Parse(protoStepDef)
+	step, err := schema.NewParser(globalCtx, defs).Parse(protoStepDef, params)
 
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)
 	}
 
-	result, err := execution.Run(ctx.Background(), globalCtx, params, step, protoStepDef)
+	env := globalCtx.NewEnvMergedFrom(params.Env)
+	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
+	stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
+
+	result, err := step.Run(ctx.Background(), stepsCtx, protoStepDef)
 	writeResultToFile(result)
 
 	if err != nil {
