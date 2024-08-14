@@ -35,20 +35,9 @@ func New(stepCache runner.Cache) *StepRunnerService {
 
 // Run parses, prepares, and initiates execution of a RunRequest.
 func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) (*proto.RunResponse, error) {
-	execution, err := runner.New(s.cache)
-	if err != nil {
-		return nil, fmt.Errorf("creating execution: %w", err)
-	}
-
-	steps, err := s.loadSteps(request.Steps)
+	specDef, err := s.loadSteps(request.Steps)
 	if err != nil {
 		return nil, fmt.Errorf("loading step: %w", err)
-	}
-
-	step, err := schema.NewParser(s.cache, execution.Run).Parse(steps)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}
 
 	job, err := jobs.New(request)
@@ -66,6 +55,18 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		job.GlobCtx.Env = request.Env
 	}
 
+	step, err := schema.NewParser(job.GlobCtx, s.cache).Parse(specDef, &runner.Params{})
+
+	if err != nil {
+		job.Close()
+		return nil, fmt.Errorf("failed to start step runner service: %w", err)
+	}
+
+	params := &runner.Params{}
+	env := job.GlobCtx.NewEnvMergedFrom(params.Env)
+	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
+	stepsCtx := runner.NewStepsContext(job.GlobCtx, specDef.Dir, inputs, env)
+
 	// last chance to bail...
 	if ctx.Err() != nil {
 		job.Close()
@@ -74,7 +75,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 
 	// actually execute the steps request
 	s.jobs.Put(request.Id, job)
-	go s.run(execution, job, step, steps)
+	go s.run(job, stepsCtx, step, specDef)
 	return &proto.RunResponse{}, nil
 }
 
@@ -93,9 +94,9 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 }
 
 // run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
-func (s *StepRunnerService) run(execution *runner.Execution, job *jobs.Job, step runner.Step, steps *proto.SpecDefinition) {
+func (s *StepRunnerService) run(job *jobs.Job, stepsCtx *runner.StepsContext, step runner.Step, specDef *proto.SpecDefinition) {
 	// TODO: Add streaming of step-results as they are produced.
-	result, err := execution.Run(job.Ctx, job.GlobCtx, &runner.Params{}, step, steps)
+	result, err := step.Run(job.Ctx, stepsCtx, specDef)
 	job.Finish(result, err)
 	if err != nil {
 		// TODO: better logging

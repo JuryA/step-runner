@@ -448,8 +448,6 @@ func runTest(testCase runnerTest) func(*testing.T) {
 
 		defs, err := cache.New()
 		require.NoError(t, err)
-		executor, err := runner.New(defs)
-		require.NoError(t, err)
 
 		var log bytes.Buffer
 
@@ -463,10 +461,14 @@ func runTest(testCase runnerTest) func(*testing.T) {
 
 		params := &runner.Params{}
 
-		step, err := schema.NewParser(defs, executor.Run).Parse(protoStepDef)
+		step, err := schema.NewParser(globalCtx, defs).Parse(protoStepDef, params)
 		require.NoError(t, err)
 
-		result, err := executor.Run(ctx.Background(), globalCtx, params, step, protoStepDef)
+		env := globalCtx.NewEnvMergedFrom(params.Env)
+		inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
+		stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
+		result, err := step.Run(ctx.Background(), stepsCtx, protoStepDef)
+
 		if testCase.wantErr != nil {
 			require.Error(t, err)
 			require.Equal(t, testCase.wantErr.Error(), err.Error())

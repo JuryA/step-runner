@@ -14,15 +14,15 @@ import (
 
 // SequenceOfSteps is a step that executes many steps.
 type SequenceOfSteps struct {
+	globalCtx      *GlobalContext
 	resourceLoader Cache
-	runStep        LegacyRunStepFn
 	parser         StepParser
 }
 
-func NewSequenceOfSteps(resourceLoader Cache, parser StepParser, runStep LegacyRunStepFn) *SequenceOfSteps {
+func NewSequenceOfSteps(globalCtx *GlobalContext, resourceLoader Cache, parser StepParser) *SequenceOfSteps {
 	return &SequenceOfSteps{
+		globalCtx:      globalCtx,
 		resourceLoader: resourceLoader,
-		runStep:        runStep,
 		parser:         parser,
 	}
 }
@@ -105,7 +105,7 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 // into params in preparation for a recursive call to Run.
 func (s *SequenceOfSteps) runSubStep(
 	ctx ctx.Context,
-	stepsCtx *StepsContext,
+	parentStepsCtx *StepsContext,
 	specDefinition *proto.SpecDefinition,
 	stepReference *proto.Step,
 ) (*proto.StepResult, error) {
@@ -120,7 +120,7 @@ func (s *SequenceOfSteps) runSubStep(
 	params.Inputs = buildInputVars(stepReference, subStepSpecDefinition)
 
 	for name, v := range params.Inputs {
-		res, resErr := expression.Expand(stepsCtx, v.Value)
+		res, resErr := expression.Expand(parentStepsCtx, v.Value)
 
 		if resErr != nil {
 			return nil, fmt.Errorf("Cannot assign input %q due to error: %w", name, resErr)
@@ -134,23 +134,27 @@ func (s *SequenceOfSteps) runSubStep(
 	}
 
 	// Clone environment and add step reference environment
-	params.Env = maps.Clone(stepsCtx.Env)
+	params.Env = maps.Clone(parentStepsCtx.Env)
 	for k, v := range stepReference.Env {
-		res, resErr := expression.ExpandString(stepsCtx, v)
+		res, resErr := expression.ExpandString(parentStepsCtx, v)
 		if resErr != nil {
 			return nil, fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
 		}
 		params.Env[k] = res
 	}
 
-	step, err := s.parser.Parse(subStepSpecDefinition)
+	step, err := s.parser.Parse(subStepSpecDefinition, params)
 
 	if err != nil {
 		return nil, err
 	}
 
+	env := s.globalCtx.NewEnvMergedFrom(params.Env)
+	inputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
+	stepsCtx := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir, inputs, env)
+
 	// Run the step definition with the global context and expanded parameters
-	result, err := s.runStep(ctx, stepsCtx.GlobalContext, params, step, subStepSpecDefinition)
+	result, err := step.Run(ctx, stepsCtx, subStepSpecDefinition)
 	if err != nil {
 		return result, err
 	}
@@ -162,7 +166,7 @@ func (s *SequenceOfSteps) runSubStep(
 		Inputs: mapValue(params.Inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
 		Env:    params.Env,
 	}
-	stepsCtx.Steps[stepReference.Name] = result
+	parentStepsCtx.Steps[stepReference.Name] = result
 	return result, nil
 }
 
