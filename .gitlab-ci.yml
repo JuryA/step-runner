@@ -33,13 +33,7 @@ go-test:
   stage: test
   image: $GO_IMAGE
   script:
-    - go test ./...
-
-go-test-race:
-  stage: test
-  image: $GO_IMAGE
-  script:
-    - make test-race
+    - go test -race ./...
 
 go-integration:
   stage: test

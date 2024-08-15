@@ -34,7 +34,7 @@ func New(stepCache runner.Cache) *StepRunnerService {
 }
 
 // Run parses, prepares, and initiates execution of a RunRequest.
-func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) (*proto.RunResponse, error) {
+func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) (response *proto.RunResponse, err error) {
 	specDef, err := s.loadSteps(request.Steps)
 	if err != nil {
 		return nil, fmt.Errorf("loading step: %w", err)
@@ -44,6 +44,12 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	if err != nil {
 		return nil, fmt.Errorf("initializing request: %w", err)
 	}
+
+	defer func() {
+		if err != nil {
+			job.Close()
+		}
+	}()
 
 	jobVars, err := variables.Prepare(request.Job, job.TmpDir)
 	if err != nil {
@@ -56,9 +62,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	}
 
 	step, err := schema.NewParser(job.GlobCtx, s.cache).Parse(specDef, &runner.Params{})
-
 	if err != nil {
-		job.Close()
 		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}
 
@@ -69,7 +73,6 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 
 	// last chance to bail...
 	if ctx.Err() != nil {
-		job.Close()
 		return nil, ctx.Err()
 	}
 
