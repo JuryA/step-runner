@@ -107,7 +107,7 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 
 	ctx := context.Background()
 
-	logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+	logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 	out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -146,7 +146,7 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+	logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 	out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -178,7 +178,7 @@ func Test_StepRunnerClient_RunAndFollow_Fail(t *testing.T) {
 
 	ctx := context.Background()
 
-	logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+	logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 	out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -211,7 +211,7 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 		rr.Id = rr.Id + "-1"
 		rr.WorkDir = path.Join(rr.WorkDir, "1")
 
-		logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+		logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 		out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 		status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -240,7 +240,7 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 		rr.Id = rr.Id + "-2"
 		rr.WorkDir = path.Join(rr.WorkDir, "2")
 
-		logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+		logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 		out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 		status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -320,7 +320,7 @@ func Test_StepRunnerClient_RunAndFollow_StepResultsOnly(t *testing.T) {
 
 	ctx := context.Background()
 
-	stepResults := test.StepResultWriteCloser{}
+	stepResults := test.StepResultWriter{}
 	out := FollowOutput{StepResults: &stepResults}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 

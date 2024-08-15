@@ -127,7 +127,7 @@ func Test_StepRunnerClient_FollowSteps_Success(t *testing.T) {
 
 	assert.NoError(t, srClient.Run(ctx, rr))
 
-	stepResultWriteCloser := test.StepResultWriteCloser{}
+	stepResultWriteCloser := test.StepResultWriter{}
 
 	n, err := srClient.FollowSteps(ctx, rr.Id, 0, &stepResultWriteCloser)
 

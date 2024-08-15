@@ -67,14 +67,12 @@ type ClosableBuf struct{ SyncBuff }
 
 func (*ClosableBuf) Close() error { return nil }
 
-type StepResultWriteCloser []*proto.StepResult
+type StepResultWriter []*proto.StepResult
 
-func (w *StepResultWriteCloser) Write(sr *proto.StepResult) error {
+func (w *StepResultWriter) Write(sr *proto.StepResult) error {
 	*w = append(*w, sr)
 	return nil
 }
-
-func (w *StepResultWriteCloser) Close() error { return nil }
 
 func RunRequest(t *testing.T, step string, env map[string]string, vars []client.Variable) *client.RunRequest {
 	return &client.RunRequest{

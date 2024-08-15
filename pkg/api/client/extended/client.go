@@ -25,14 +25,9 @@ import (
 )
 
 type (
-	StepResultWriteCloser interface {
-		basic.StepResultWriter
-		Close() error
-	}
-
 	FollowOutput struct {
 		Logs        io.Writer
-		StepResults StepResultWriteCloser
+		StepResults basic.StepResultWriter
 
 		readLogs, readStepResults int64
 	}
@@ -96,8 +91,6 @@ func (c *StepRunnerClient) Follow(ctx context.Context, jobID string, out *Follow
 
 	if out.StepResults != nil {
 		eg.Go(func() error {
-			// TODO: do we want to close this here?
-			defer out.StepResults.Close()
 			// TODO: add reconnection
 			n, err := c.FollowSteps(ctx, jobID, out.readStepResults, out.StepResults)
 			out.readStepResults += n
