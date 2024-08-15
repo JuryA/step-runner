@@ -103,7 +103,7 @@ steps:
     step: ./test_steps/greeting
     inputs:
       name: ${{steps.greet_sponge_bob.outputs.name}}`,
-		wantErr: errors.New(`Cannot assign input "name" due to error: steps.greet_sponge_bob.outputs.name: the "greet_sponge_bob" was not found`),
+		wantErr: errors.New(`failed to run lazily-evaluated step "greet_previous": failed to load: expand input "name": steps.greet_sponge_bob.outputs.name: the "greet_sponge_bob" was not found`),
 	}, {
 		name: "complex steps",
 		yaml: `
@@ -186,7 +186,7 @@ steps:
     inputs:
       name: ${{ env.NAME }}
 `,
-		wantErr: errors.New("Cannot assign input \"name\" due to error: env.NAME: the \"NAME\" was not found"),
+		wantErr: errors.New(`failed to run lazily-evaluated step "greet_steppy": failed to load: expand input "name": env.NAME: the "NAME" was not found`),
 	}, {
 		name: "individual step invocation environment can be referenced by step",
 		yaml: `
@@ -394,7 +394,7 @@ steps:
   - name: bang
     script: exit 1
 `,
-		wantErr: fmt.Errorf(`failed step "bang": exec: exit status 1, `),
+		wantErr: fmt.Errorf(`failed to run sequence of steps: failed to run lazily-evaluated step "bang": exec: exit status 1, `),
 		wantResults: func(t *testing.T, results *proto.StepResult) {
 			require.NotNil(t, results)
 			require.Equal(t, proto.StepResult_failure, results.Status)
@@ -415,8 +415,8 @@ steps:
     inputs:
       name: look, a secret! ${{ steps.secret_factory.outputs.secret }}
 `,
-		wantErr: fmt.Errorf("Cannot assign input \"name\" due to error: non-sensitive input cannot derive " +
-			"value using sensitive value(s) \"steps.secret_factory.outputs.secret\""),
+		wantErr: fmt.Errorf(`failed to run lazily-evaluated step "greeting": failed to load: assign input "name":` +
+			` non-sensitive input cannot derive value using sensitive value(s) "steps.secret_factory.outputs.secret"`),
 	}}
 
 	for _, c := range cases {
