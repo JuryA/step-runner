@@ -4,6 +4,7 @@ import (
 	ctx "context"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -13,10 +14,17 @@ import (
 
 // ExecutableStep is a step that executes a command.
 type ExecutableStep struct {
+	specDef *proto.SpecDefinition
 }
 
-func NewExecutableStep() *ExecutableStep {
-	return &ExecutableStep{}
+func NewExecutableStep(specDef *proto.SpecDefinition) *ExecutableStep {
+	return &ExecutableStep{
+		specDef: specDef,
+	}
+}
+
+func (s *ExecutableStep) Describe() string {
+	return fmt.Sprintf("executable step %q", strings.Join(s.specDef.Definition.Exec.Command, " "))
 }
 
 func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error) {

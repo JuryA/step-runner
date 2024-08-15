@@ -36,11 +36,17 @@ func (p *Parser) Parse(specDef *proto.SpecDefinition, params *runner.Params) (ru
 
 func (p *Parser) parseStepType(specDef *proto.SpecDefinition) (runner.Step, error) {
 	if specDef.Definition.Type == proto.DefinitionType_exec {
-		return runner.NewExecutableStep(), nil
+		return runner.NewExecutableStep(specDef), nil
 	}
 
 	if specDef.Definition.Type == proto.DefinitionType_steps {
-		return runner.NewSequenceOfSteps(p.globalCtx, p.stepCache, p), nil
+		var steps []runner.Step
+
+		for _, stepReference := range specDef.Definition.Steps {
+			steps = append(steps, runner.NewLazilyLoadedStep(p.globalCtx, p.stepCache, p, stepReference))
+		}
+
+		return runner.NewSequenceOfSteps(steps...), nil
 	}
 
 	return nil, fmt.Errorf("unknown step definition type: %s", specDef.Definition.Type)

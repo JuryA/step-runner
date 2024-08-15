@@ -3,28 +3,30 @@ package runner
 import (
 	ctx "context"
 	"fmt"
-	"maps"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 // SequenceOfSteps is a step that executes many steps.
 type SequenceOfSteps struct {
-	globalCtx      *GlobalContext
-	resourceLoader Cache
-	parser         StepParser
+	steps []Step
 }
 
-func NewSequenceOfSteps(globalCtx *GlobalContext, resourceLoader Cache, parser StepParser) *SequenceOfSteps {
+func NewSequenceOfSteps(steps ...Step) *SequenceOfSteps {
 	return &SequenceOfSteps{
-		globalCtx:      globalCtx,
-		resourceLoader: resourceLoader,
-		parser:         parser,
+		steps: steps,
 	}
+}
+
+func (s *SequenceOfSteps) Describe() string {
+	if len(s.steps) < 2 {
+		return "sequence of steps"
+	}
+
+	return fmt.Sprintf("sequence of %d steps", len(s.steps))
 }
 
 func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error) {
@@ -38,7 +40,7 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 	err := stepsCtx.ExpandAndApplyEnv(specDefinition.Definition.Env)
 
 	if err != nil {
-		return result, fmt.Errorf("failed to run sequence of steps: %w", err)
+		return result, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
 	}
 
 	result.Env = stepsCtx.GetEnvs()
@@ -52,15 +54,19 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 
 	defer files.Cleanup()
 
-	for _, step := range specDefinition.Definition.Steps {
-		stepResult, err := s.runSubStep(ctx, stepsCtx, specDefinition, step)
+	for _, step := range s.steps {
+		stepResult, err := step.Run(ctx, stepsCtx, specDefinition)
 
 		// Capture results even if there was an error
 		if stepResult != nil {
 			result.SubStepResults = append(result.SubStepResults, stepResult)
 
+			if stepResult.Step != nil {
+				stepsCtx.Steps[stepResult.Step.Name] = stepResult
+			}
+
 			if stepResult.Status == proto.StepResult_failure {
-				return result, fmt.Errorf("failed step %q: %w", step.Name, err)
+				return result, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
 			}
 		}
 
@@ -98,96 +104,6 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 
 	result.Status = proto.StepResult_success
 	return result, nil
-}
-
-// runSubStep executes a single sub-step. The step reference inputs
-// and environment are expanded. And the current environment is cloned
-// into params in preparation for a recursive call to Run.
-func (s *SequenceOfSteps) runSubStep(
-	ctx ctx.Context,
-	parentStepsCtx *StepsContext,
-	specDefinition *proto.SpecDefinition,
-	stepReference *proto.Step,
-) (*proto.StepResult, error) {
-	params := &Params{}
-
-	// Load the step spec and definition from the cache
-	subStepSpecDefinition, err := s.resourceLoader.Get(ctx, specDefinition.Dir, stepReference.Step)
-	if err != nil {
-		return nil, fmt.Errorf("getting step %q definition: %w", stepReference.Name, err)
-	}
-
-	params.Inputs = buildInputVars(stepReference, subStepSpecDefinition)
-
-	for name, v := range params.Inputs {
-		res, resErr := expression.Expand(parentStepsCtx, v.Value)
-
-		if resErr != nil {
-			return nil, fmt.Errorf("Cannot assign input %q due to error: %w", name, resErr)
-		}
-
-		err := params.Inputs[name].Assign(res)
-
-		if err != nil {
-			return nil, fmt.Errorf("Cannot assign input %q due to error: %w", name, err)
-		}
-	}
-
-	// Clone environment and add step reference environment
-	params.Env = maps.Clone(parentStepsCtx.Env)
-	for k, v := range stepReference.Env {
-		res, resErr := expression.ExpandString(parentStepsCtx, v)
-		if resErr != nil {
-			return nil, fmt.Errorf("Cannot assign env %q due to error: %s", k, resErr.Error())
-		}
-		params.Env[k] = res
-	}
-
-	step, err := s.parser.Parse(subStepSpecDefinition, params)
-
-	if err != nil {
-		return nil, err
-	}
-
-	env := s.globalCtx.NewEnvMergedFrom(params.Env)
-	inputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
-	stepsCtx := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir, inputs, env)
-
-	// Run the step definition with the global context and expanded parameters
-	result, err := step.Run(ctx, stepsCtx, subStepSpecDefinition)
-	if err != nil {
-		return result, err
-	}
-
-	// Record expanded step in results
-	result.Step = &proto.Step{
-		Name:   stepReference.Name,
-		Step:   stepReference.Step,
-		Inputs: mapValue(params.Inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
-		Env:    params.Env,
-	}
-	parentStepsCtx.Steps[stepReference.Name] = result
-	return result, nil
-}
-
-func mapValue[Key comparable, Value any, NewValue any](value map[Key]Value, f func(v Value) NewValue) map[Key]NewValue {
-	result := make(map[Key]NewValue, len(value))
-
-	for k, v := range value {
-		result[k] = f(v)
-	}
-
-	return result
-}
-
-func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) map[string]*context.Variable {
-	inputs := make(map[string]*context.Variable)
-
-	for name, val := range stepReference.Inputs {
-		inputs[name] = context.NewVariable(val, stepSpecDef.Spec.Spec.Inputs[name].Sensitive)
-	}
-
-	return inputs
 }
 
 // mergeDelegateOutput copies outputs from the designated delegate sub-step.
