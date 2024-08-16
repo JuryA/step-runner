@@ -38,7 +38,7 @@ func TestMain(m *testing.M) {
 	stepCache, err := cache.New()
 	must(err)
 
-	stepService := service.New(stepCache)
+	stepsService := service.New(stepCache)
 
 	buflis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()
@@ -53,7 +53,6 @@ func TestMain(m *testing.M) {
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	must(err)
-
 	defer func() { conn.Close() }()
 
 	code := m.Run()
