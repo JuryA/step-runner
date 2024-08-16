@@ -38,12 +38,12 @@ func TestMain(m *testing.M) {
 	stepCache, err := cache.New()
 	must(err)
 
-	stepService := service.New(stepCache)
+	stepsService := service.New(stepCache)
 
 	buflis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()
+	proto.RegisterStepRunnerServer(server, stepsService)
 	go func() { must(server.Serve(buflis)) }()
-	proto.RegisterStepRunnerServer(server, stepService)
 	defer func() { server.GracefulStop() }()
 
 	bufDialer := func(context.Context, string) (net.Conn, error) { return buflis.Dial() }
@@ -53,7 +53,6 @@ func TestMain(m *testing.M) {
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	must(err)
-
 	defer func() { conn.Close() }()
 
 	code := m.Run()
