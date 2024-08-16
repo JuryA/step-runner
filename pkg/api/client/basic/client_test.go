@@ -42,8 +42,8 @@ func TestMain(m *testing.M) {
 
 	buflis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()
+	proto.RegisterStepRunnerServer(server, stepsService)
 	go func() { must(server.Serve(buflis)) }()
-	proto.RegisterStepRunnerServer(server, stepService)
 	defer func() { server.GracefulStop() }()
 
 	bufDialer := func(context.Context, string) (net.Conn, error) { return buflis.Dial() }
