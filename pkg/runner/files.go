@@ -3,7 +3,6 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,24 +49,28 @@ func NewFiles(
 	}, nil
 }
 
-func (f *Files) OutputTo(result *proto.StepResult) error {
-
-	// Delegates take over step execution including reading and
-	// validating outputs.
+func (f *Files) Outputs() (map[string]*structpb.Value, *proto.StepResult, error) {
+	// Delegates take over step execution including reading and validating outputs.
 	if f.outputMethod == proto.OutputMethod_delegate {
-		return f.mergeDelegateOutput(result)
+		delegateResult, err := f.loadStepResultFromOutputFile()
+
+		if err != nil {
+			return nil, nil, fmt.Errorf("reading outputs: %w", err)
+		}
+
+		return delegateResult.Outputs, delegateResult, nil
 	}
 
 	outputs, err := readFile(f.outputFile)
 	if err != nil {
-		return fmt.Errorf("reading outputs: %w", err)
+		return nil, nil, fmt.Errorf("reading outputs: %w", err)
 	}
 
 	protoOutputs := map[string]*structpb.Value{}
 	for k, v := range outputs {
 		outputSpec, ok := f.specOutputs[k]
 		if !ok {
-			return fmt.Errorf("output %q received from step is not declared in spec", k)
+			return nil, nil, fmt.Errorf("output %q received from step is not declared in spec", k)
 		}
 		if outputSpec.Type == proto.ValueType_raw_string {
 			protoOutputs[k] = structpb.NewStringValue(v)
@@ -76,15 +79,15 @@ func (f *Files) OutputTo(result *proto.StepResult) error {
 		var outputJSON any
 		err := json.Unmarshal([]byte(v), &outputJSON)
 		if err != nil {
-			return fmt.Errorf("unmarshaling output %q as json: %w", k, err)
+			return nil, nil, fmt.Errorf("unmarshaling output %q as json: %w", k, err)
 		}
 		protoV, err := structpb.NewValue(outputJSON)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		err = checkOutputType(outputSpec.Type, protoV)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		protoOutputs[k] = protoV
 	}
@@ -96,44 +99,25 @@ func (f *Files) OutputTo(result *proto.StepResult) error {
 			protoOutputs[k] = o.Default
 			continue
 		}
-		return fmt.Errorf("output %q was declared by spec but not received from step", k)
+		return nil, nil, fmt.Errorf("output %q was declared by spec but not received from step", k)
 	}
-	result.Outputs = protoOutputs
-	return nil
+
+	return protoOutputs, nil, nil
 }
 
-// mergeDelegateOutput reifies the delegate output as a step result
-// and merges with the given step result.
-func (f *Files) mergeDelegateOutput(result *proto.StepResult) error {
-
-	// Delegate return a full step result in the output file.
-	delegateResult := &proto.StepResult{}
+func (f *Files) loadStepResultFromOutputFile() (*proto.StepResult, error) {
 	data, err := os.ReadFile(f.outputFile)
+
 	if err != nil {
-		return fmt.Errorf("reading file %v: %w", f.outputFile, err)
-	}
-	if err := json.Unmarshal(data, delegateResult); err != nil {
-		return fmt.Errorf("reading output_file as a step result: %w", err)
+		return nil, fmt.Errorf("reading file %v: %w", f.outputFile, err)
 	}
 
-	// Merge outputs only. Environment variables should be written
-	// to the environment file and will be exported by ExportTo in
-	// the usual way.
-	if result.Outputs == nil {
-		result.Outputs = map[string]*structpb.Value{}
+	stepResult := &proto.StepResult{}
+	if err := json.Unmarshal(data, stepResult); err != nil {
+		return nil, fmt.Errorf("reading output_file as a step result: %w", err)
 	}
 
-	// Outputs are taken as-is. They will not match the
-	// outputs declared by the calling step. The delegate
-	// step has already verified the outputs when
-	// producing the step result.
-	maps.Copy(result.Outputs, delegateResult.Outputs)
-
-	// Merge the delegate step result as a sub-step to give an
-	// accurate representation of the execution trace.
-	result.SubStepResults = append(result.SubStepResults, delegateResult)
-
-	return nil
+	return stepResult, nil
 }
 
 func checkOutputType(want proto.ValueType, have *structpb.Value) error {
