@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
-
-	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 const (
@@ -61,24 +59,21 @@ func (g *GlobalContext) InheritEnv(envs ...string) {
 	}
 }
 
-func (g *GlobalContext) ExportTo(result *proto.StepResult) error {
+func (g *GlobalContext) Exports() (map[string]string, error) {
 	exports, err := godotenv.Read(g.ExportFile)
 	if err != nil {
-		return fmt.Errorf("reading exports: %w", err)
+		return nil, fmt.Errorf("reading exports: %w", err)
 	}
-	if result.Exports == nil {
-		result.Exports = map[string]string{}
-	}
+
 	for k, v := range exports {
 		g.Env[k] = v
-		result.Exports[k] = v
 	}
 	err = os.Remove(g.ExportFile)
 	if err != nil {
-		return fmt.Errorf("clearing export file: %w", err)
+		return nil, fmt.Errorf("clearing export file: %w", err)
 	}
 	_, err = os.Create(g.ExportFile)
-	return err
+	return exports, err
 }
 
 func (g *GlobalContext) Cleanup() {

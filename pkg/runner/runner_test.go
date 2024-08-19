@@ -394,7 +394,7 @@ steps:
   - name: bang
     script: exit 1
 `,
-		wantErr: fmt.Errorf(`failed to run sequence of steps: failed to run lazily-evaluated step "bang": exec: exit status 1, `),
+		wantErr: fmt.Errorf(`failed to run sequence of steps: failed to run lazily-evaluated step "bang": exec: exit status 1`),
 		wantResults: func(t *testing.T, results *proto.StepResult) {
 			require.NotNil(t, results)
 			require.Equal(t, proto.StepResult_failure, results.Status)

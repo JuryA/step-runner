@@ -6,8 +6,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"google.golang.org/protobuf/types/known/structpb"
-
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -27,94 +25,87 @@ func (s *ExecutableStep) Describe() string {
 	return fmt.Sprintf("executable step %q", strings.Join(s.specDef.Definition.Exec.Command, " "))
 }
 
-func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error) {
-	result := &proto.StepResult{
-		SpecDefinition: specDefinition,
-		Status:         proto.StepResult_failure,
-		Outputs:        make(map[string]*structpb.Value),
-		Exports:        make(map[string]string),
-		ExecResult:     &proto.StepResult_ExecResult{},
-	}
-
-	execDefinition := specDefinition.Definition.Exec
-	outputs := specDefinition.Spec.Spec.Outputs
-	outputMethod := specDefinition.Spec.Spec.OutputMethod
-
-	// Create output and export files and add to context
-	files, err := NewFiles(stepsCtx, outputMethod, outputs)
+func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *proto.SpecDefinition) (*proto.StepResult, error) {
+	result := NewStepResultBuilder(specDef)
+	files, err := NewFiles(stepsCtx, specDef.Spec.Spec.OutputMethod, specDef.Spec.Spec.Outputs)
 
 	if err != nil {
-		return result, err
+		return result.BuildFailure(), err
 	}
 
 	defer files.Cleanup()
 
-	err = stepsCtx.ExpandAndApplyEnv(specDefinition.Definition.Env)
+	err = stepsCtx.ExpandAndApplyEnv(specDef.Definition.Env)
+	result.WithEnv(stepsCtx.GetEnvs())
 
 	if err != nil {
-		return result, fmt.Errorf("failed to run executable step: %w", err)
+		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
 	}
 
+	executedCmd, err := s.execCommand(ctx, stepsCtx, specDef.Definition.Exec)
+	result.WithExecResult(executedCmd)
+
+	if err != nil {
+		return result.BuildFailure(), err
+	}
+
+	outputs, delegateToResult, err := files.Outputs()
+	result.WithMergedOutputs(outputs).WithSubStepResult(delegateToResult)
+
+	if err != nil {
+		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
+	}
+
+	exports, err := stepsCtx.GlobalContext.Exports()
+	result.WithExports(exports)
+
+	if err != nil {
+		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
+	}
+
+	return result.Build(), nil
+}
+
+func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext, execDef *proto.Definition_Exec) (*ExecResult, error) {
 	// Expand args
 	cmdArgs := []string{}
-	for _, arg := range execDefinition.Command {
-		res, resErr := expression.ExpandString(stepsCtx, arg)
 
-		if resErr != nil {
-			return result, fmt.Errorf("Cannot interpolate command argument %q due to err: %s", arg, resErr.Error())
+	for _, arg := range execDef.Command {
+		res, err := expression.ExpandString(stepsCtx, arg)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to interpolate command argument %q: %w", execDef.WorkDir, err)
 		}
 
 		cmdArgs = append(cmdArgs, res)
 	}
+
 	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
-	result.ExecResult.Command = cmd.Args
+	cmd.Dir = stepsCtx.WorkDir
 
-	// Expand working directory if present. Otherwise fall back to
-	// the working directory defined globally.
-	if execDefinition.WorkDir != "" {
-		res, resErr := expression.ExpandString(stepsCtx, execDefinition.WorkDir)
+	// Expand working directory if present. Otherwise, fall back to the working directory defined globally.
+	if execDef.WorkDir != "" {
+		res, err := expression.ExpandString(stepsCtx, execDef.WorkDir)
 
-		if resErr != nil {
-			return result, fmt.Errorf("Cannot interpolate command workdir %q due to err: %s", execDefinition.WorkDir, resErr.Error())
+		if err != nil {
+			return nil, fmt.Errorf("failed to interpolate workdir %q: %w", execDef.WorkDir, err)
 		}
 
 		cmd.Dir = res
-	} else {
-		cmd.Dir = stepsCtx.WorkDir
 	}
-	result.ExecResult.WorkDir = cmd.Dir
 
-	// Provide only environment variables from the steps
-	// context. Not from the step runner's environment.
+	// Provide only environment variables from the steps context. Not from the step runner's environment.
 	cmd.Env = stepsCtx.GetEnvList()
-	result.Env = stepsCtx.GetEnvs()
 	// TODO: Use multi-writer
 	cmd.Stdout = stepsCtx.GlobalContext.Stdout
 	cmd.Stderr = stepsCtx.GlobalContext.Stderr
 
-	// Capture results of execution
-	err = cmd.Run()
-	result.ExecResult.ExitCode = int32(cmd.ProcessState.ExitCode())
+	err := cmd.Run()
+	execResult := NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode())
 
 	if err != nil {
-		return result, fmt.Errorf("exec: %w, ", err)
+		return execResult, fmt.Errorf("exec: %w", err)
 	}
 
-	err = files.OutputTo(result)
-
-	if err != nil {
-		return result, fmt.Errorf("outputting: %w", err)
-	}
-
-	err = stepsCtx.GlobalContext.ExportTo(result)
-
-	if err != nil {
-		return result, fmt.Errorf("exporting: %w", err)
-	}
-
-	if result.ExecResult.ExitCode == 0 {
-		result.Status = proto.StepResult_success
-	}
-
-	return result, nil
+	return execResult, nil
 }

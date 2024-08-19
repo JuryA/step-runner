@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
@@ -15,17 +16,18 @@ import (
 
 func TestOutput(t *testing.T) {
 	cases := []struct {
-		name          string
-		outputMethod  proto.OutputMethod
-		outputs       map[string]*proto.Spec_Content_Output
-		writeToOutput string
-		want          *proto.StepResult
-		wantErr       bool
+		name              string
+		outputMethod      proto.OutputMethod
+		outputs           map[string]*proto.Spec_Content_Output
+		writeToOutput     string
+		wantOutput        map[string]*structpb.Value
+		wantSubStepResult *proto.StepResult
+		wantErr           bool
 	}{{
 		name:         "no outputs",
 		outputMethod: proto.OutputMethod_outputs,
 		outputs:      map[string]*proto.Spec_Content_Output{},
-		want:         &proto.StepResult{},
+		wantOutput:   map[string]*structpb.Value{},
 	}, {
 		name:         "single output",
 		outputMethod: proto.OutputMethod_outputs,
@@ -33,10 +35,8 @@ func TestOutput(t *testing.T) {
 			"value": {Type: proto.ValueType_raw_string},
 		},
 		writeToOutput: `value=foo`,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewStringValue("foo"),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
 		},
 	}, {
 		name:         "multiple outputs",
@@ -46,11 +46,9 @@ func TestOutput(t *testing.T) {
 			"food":  {Type: proto.ValueType_raw_string},
 		},
 		writeToOutput: "value=foo\nfood=apple",
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewStringValue("foo"),
-				"food":  structpb.NewStringValue("apple"),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
+			"food":  structpb.NewStringValue("apple"),
 		},
 	}, {
 		name:         "outputs with extra white space",
@@ -66,11 +64,9 @@ value=foo
 food=apple
 
 `,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewStringValue("foo"),
-				"food":  structpb.NewStringValue("apple"),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
+			"food":  structpb.NewStringValue("apple"),
 		},
 	}, {
 		name:         "json string output",
@@ -79,10 +75,8 @@ food=apple
 			"value": {Type: proto.ValueType_string},
 		},
 		writeToOutput: `value="foo"`,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewStringValue("foo"),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
 		},
 	}, {
 		name:         "json number output",
@@ -91,10 +85,8 @@ food=apple
 			"value": {Type: proto.ValueType_number},
 		},
 		writeToOutput: `value=12.34`,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewNumberValue(12.34),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewNumberValue(12.34),
 		},
 	}, {
 		name:         "json bool output",
@@ -103,10 +95,8 @@ food=apple
 			"value": {Type: proto.ValueType_boolean},
 		},
 		writeToOutput: `value=true`,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewBoolValue(true),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewBoolValue(true),
 		},
 	}, {
 		name:         "json empty struct output",
@@ -115,10 +105,8 @@ food=apple
 			"value": {Type: proto.ValueType_struct},
 		},
 		writeToOutput: `value={}`,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{}}),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{}}),
 		},
 	}, {
 		name:         "json full struct output",
@@ -127,15 +115,13 @@ food=apple
 			"value": {Type: proto.ValueType_struct},
 		},
 		writeToOutput: `value={"string":"bar","number":12.34,"bool":true,"null":null}`,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
-					"string": structpb.NewStringValue("bar"),
-					"number": structpb.NewNumberValue(12.34),
-					"bool":   structpb.NewBoolValue(true),
-					"null":   structpb.NewNullValue(),
-				}}),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
+				"string": structpb.NewStringValue("bar"),
+				"number": structpb.NewNumberValue(12.34),
+				"bool":   structpb.NewBoolValue(true),
+				"null":   structpb.NewNullValue(),
+			}}),
 		},
 	}, {
 		name:         "json empty list output",
@@ -144,10 +130,8 @@ food=apple
 			"value": {Type: proto.ValueType_array},
 		},
 		writeToOutput: `value=[]`,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{}}),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{}}),
 		},
 	}, {
 		name:         "json full list output",
@@ -156,15 +140,13 @@ food=apple
 			"value": {Type: proto.ValueType_array},
 		},
 		writeToOutput: `value=["bar",12.34,true,null]`,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
-					structpb.NewStringValue("bar"),
-					structpb.NewNumberValue(12.34),
-					structpb.NewBoolValue(true),
-					structpb.NewNullValue(),
-				}}),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
+				structpb.NewStringValue("bar"),
+				structpb.NewNumberValue(12.34),
+				structpb.NewBoolValue(true),
+				structpb.NewNullValue(),
+			}}),
 		},
 	}, {
 		name:         "default output",
@@ -176,10 +158,8 @@ food=apple
 			},
 		},
 		// No output written
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
-				"value": structpb.NewStringValue("foo"),
-			},
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
 		},
 	}, {
 		name:         "invalid format",
@@ -228,36 +208,34 @@ food=apple
 		outputMethod:  proto.OutputMethod_delegate,
 		outputs:       nil,
 		writeToOutput: `{"outputs":{"name":"steppy"}}`,
-		want: &proto.StepResult{
+		wantOutput: map[string]*structpb.Value{
+			"name": structpb.NewStringValue("steppy"),
+		},
+		wantSubStepResult: &proto.StepResult{
 			Outputs: map[string]*structpb.Value{
 				"name": structpb.NewStringValue("steppy"),
 			},
-			SubStepResults: []*proto.StepResult{{
-				Outputs: map[string]*structpb.Value{
-					"name": structpb.NewStringValue("steppy"),
-				},
-			}},
 		},
-	}, {
-		name:          "delegate output struct",
-		outputMethod:  proto.OutputMethod_delegate,
-		outputs:       nil,
-		writeToOutput: `{"outputs":{"favorites":{"food":"hamburger"}}}`,
-		want: &proto.StepResult{
-			Outputs: map[string]*structpb.Value{
+	},
+		{
+			name:          "delegate output struct",
+			outputMethod:  proto.OutputMethod_delegate,
+			outputs:       nil,
+			writeToOutput: `{"outputs":{"favorites":{"food":"hamburger"}}}`,
+			wantOutput: map[string]*structpb.Value{
 				"favorites": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
 					"food": structpb.NewStringValue("hamburger"),
 				}}),
 			},
-			SubStepResults: []*proto.StepResult{{
+			wantSubStepResult: &proto.StepResult{
 				Outputs: map[string]*structpb.Value{
 					"favorites": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
 						"food": structpb.NewStringValue("hamburger"),
 					}}),
 				},
-			}},
+			},
 		},
-	}}
+	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -274,13 +252,19 @@ food=apple
 			err = outputFile.Close()
 			require.NoError(t, err)
 
-			got := &proto.StepResult{}
-			err = files.OutputTo(got)
+			gotOutput, gotSubStepResult, err := files.Outputs()
 			if tc.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.True(t, protobuf.Equal(tc.want, got), "wanted %+v. got %+v", tc.want, got)
+			}
+
+			if tc.wantOutput != nil {
+				require.Equal(t, fmt.Sprintf("%v", tc.wantOutput), fmt.Sprintf("%v", gotOutput))
+			}
+
+			if tc.wantSubStepResult != nil {
+				require.True(t, protobuf.Equal(tc.wantSubStepResult, gotSubStepResult), "wanted %+v. got %+v", tc.wantSubStepResult, gotSubStepResult)
 			}
 		})
 	}
@@ -357,10 +341,9 @@ foo=baz
 			err = exportFile.Close()
 			require.NoError(t, err)
 
-			got := &proto.StepResult{}
-			err = ctx.ExportTo(got)
+			exports, err := ctx.Exports()
 			require.NoError(t, err)
-			require.True(t, maps.Equal(tc.wantExports, got.Exports), "want %+v. got %+v", tc.wantExports, got.Exports)
+			require.True(t, maps.Equal(tc.wantExports, exports), "want %+v. got %+v", tc.wantExports, exports)
 			require.True(t, maps.Equal(tc.wantGlobalEnv, ctx.Env), "want %+v. got %+v", tc.wantGlobalEnv, ctx.Env)
 		})
 	}
