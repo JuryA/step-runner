@@ -24,14 +24,7 @@
 		},
 		"step": {
 		    "description": "Step is a reference to another step to invoke.",
-		    "oneOf": [
-			{
-			    "type": "string"
-			},
-			{
-			    "$ref": "#/definitions/reference"
-			}
-		    ]
+		    "$ref": "#/definitions/stringReferenceUnion"
 		},
 		"run": {
 		    "type": "array",
@@ -57,6 +50,17 @@
 		    "description": "Delegate selects a step by name which will produce the outputs a run."
 		}
 	    }
+	},
+	"stringReferenceUnion": {
+	    "description": "StringReferenceUnion is the union type of a string and a Reference.",
+	    "oneOf": [
+		{
+		    "type": "string"
+		},
+		{
+		    "$ref": "#/definitions/reference"
+		}
+	    ]
 	},
 	"reference": {
 	    "type": "object",

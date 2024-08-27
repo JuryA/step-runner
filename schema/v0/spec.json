@@ -24,7 +24,7 @@
 			    ]
 			},
 			"default": {
-			    "type": [ "string", "number", "boolean", "array", "object" ],
+			    "$ref": "#/definitions/inputDefault",
 			    "description": "Default is the default input value. Its type must match `type`."
 			},
 			"sensitive": {
@@ -35,19 +35,42 @@
 		    }
 		},
 		"outputs": {
-		    "oneOf": [
-			{
-			    "type": "string"
-			},
-			{
-			    "$ref": "#/definitions/outputs"
-			}
-		    ]
+		    "$ref": "#/definitions/stringOutputsUnion"
 		}
 	    }
 	}
     },
     "definitions": {
+	"inputDefault": {
+	    "oneOf": [
+		{ "type": "string" },
+		{ "type": "number" },
+		{ "type": "boolean" },
+		{ "type": "array" },
+		{ "type": "object" }
+	    ]
+	},
+	"outputDefault": {
+	    "oneOf": [
+		{ "type": "raw_string" },
+		{ "type": "string" },
+		{ "type": "number" },
+		{ "type": "boolean" },
+		{ "type": "array" },
+		{ "type": "object" },
+		{ "type": "step_result" }
+	    ]
+	},
+	"stringOutputsUnion": {
+	    "oneOf": [
+		{
+		    "type": "string"
+		},
+		{
+		    "$ref": "#/definitions/outputs"
+		}
+	    ]
+	},
 	"outputs": {
 	    "type": "object",
 	    "description": "Output describes a single step output.",
@@ -66,7 +89,7 @@
 		    ]
 		},
 		"default": {
-		    "type": [ "string", "number", "boolean", "array", "object" ],
+		    "$ref": "#/definitions/outputDefault",
 		    "description": "Default is the default output value."
 		},
 		"sensitive": {

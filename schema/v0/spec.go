@@ -6,10 +6,14 @@ import "encoding/json"
 import "fmt"
 import "reflect"
 
+type InputDefault interface{}
+
+type OutputDefault interface{}
+
 // Output describes a single step output.
 type Outputs struct {
 	// Default is the default output value.
-	Default interface{} `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
+	Default OutputsDefault `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
 	// Sensitive implies the output is of sensitive nature and effort should be made
 	// to prevent accidental disclosure.
@@ -18,6 +22,9 @@ type Outputs struct {
 	// Type is the value type of the output.
 	Type *OutputsType `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
 }
+
+// Default is the default output value.
+type OutputsDefault interface{}
 
 type OutputsType string
 
@@ -71,13 +78,13 @@ type SpecJsonSpec struct {
 	Inputs *SpecJsonSpecInputs `json:"inputs,omitempty" yaml:"inputs,omitempty" mapstructure:"inputs,omitempty"`
 
 	// Outputs corresponds to the JSON schema field "outputs".
-	Outputs interface{} `json:"outputs,omitempty" yaml:"outputs,omitempty" mapstructure:"outputs,omitempty"`
+	Outputs SpecJsonSpecOutputs `json:"outputs,omitempty" yaml:"outputs,omitempty" mapstructure:"outputs,omitempty"`
 }
 
 // Input describes a single step input.
 type SpecJsonSpecInputs struct {
 	// Default is the default input value. Its type must match `type`.
-	Default interface{} `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
+	Default SpecJsonSpecInputsDefault `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
 	// Sensitive implies the input is of sensitive nature and effort should be made to
 	// prevent accidental disclosure.
@@ -86,6 +93,9 @@ type SpecJsonSpecInputs struct {
 	// Type is the value type of the input.
 	Type *SpecJsonSpecInputsType `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
 }
+
+// Default is the default input value. Its type must match `type`.
+type SpecJsonSpecInputsDefault interface{}
 
 type SpecJsonSpecInputsType string
 
@@ -122,3 +132,7 @@ func (j *SpecJsonSpecInputsType) UnmarshalJSON(b []byte) error {
 	*j = SpecJsonSpecInputsType(v)
 	return nil
 }
+
+type SpecJsonSpecOutputs interface{}
+
+type StringOutputsUnion interface{}
