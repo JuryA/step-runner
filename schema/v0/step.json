@@ -67,19 +67,22 @@
 	    "description": "Git a reference to a step in a Git repository.",
 	    "properties": {
 		"git": {
-		    "type": "object",
-		    "description": "GitReference is a reference to a step in a Git repository containing the full set of configuration options.",
-		    "properties": {
-			"url": {
-			    "type": "string"
-			},
-			"dir": {
-			    "type": "string"
-			},
-			"rev": {
-			    "type": "string"
-			}
-		    }
+		    "$ref": "#/definitions/gitReference"
+		}
+	    }
+	},
+	"gitReference": {
+	    "type": "object",
+	    "description": "GitReference is a reference to a step in a Git repository containing the full set of configuration options.",
+	    "properties": {
+		"url": {
+		    "type": "string"
+		},
+		"dir": {
+		    "type": "string"
+		},
+		"rev": {
+		    "type": "string"
 		}
 	    }
 	},

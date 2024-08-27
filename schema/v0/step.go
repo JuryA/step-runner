@@ -10,16 +10,9 @@ type Exec struct {
 	WorkDir *string `json:"work_dir,omitempty" yaml:"work_dir,omitempty" mapstructure:"work_dir,omitempty"`
 }
 
-// Git a reference to a step in a Git repository.
-type Reference struct {
-	// GitReference is a reference to a step in a Git repository containing the full
-	// set of configuration options.
-	Git *ReferenceGit `json:"git,omitempty" yaml:"git,omitempty" mapstructure:"git,omitempty"`
-}
-
 // GitReference is a reference to a step in a Git repository containing the full
 // set of configuration options.
-type ReferenceGit struct {
+type GitReference struct {
 	// Dir corresponds to the JSON schema field "dir".
 	Dir *string `json:"dir,omitempty" yaml:"dir,omitempty" mapstructure:"dir,omitempty"`
 
@@ -28,6 +21,12 @@ type ReferenceGit struct {
 
 	// Url corresponds to the JSON schema field "url".
 	Url *string `json:"url,omitempty" yaml:"url,omitempty" mapstructure:"url,omitempty"`
+}
+
+// Git a reference to a step in a Git repository.
+type Reference struct {
+	// Git corresponds to the JSON schema field "git".
+	Git *GitReference `json:"git,omitempty" yaml:"git,omitempty" mapstructure:"git,omitempty"`
 }
 
 // Step is a unit of execution.
