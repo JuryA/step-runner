@@ -1,0 +1,80 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v1",
+    "type": "object",
+    "description": "Spec is a document describing the interface of the step.",
+    "properties": {
+	"spec": {
+	    "type": "object",
+	    "description": "Spec contains the inputs and outputs of the step.",
+	    "properties": {
+		"inputs": {
+		    "type": "object",
+		    "description": "Input describes a single step input.",
+		    "properties": {
+			"type": {
+			    "type": "string",
+			    "description": "Type is the value type of the input.",
+			    "enum": [
+				"string",
+				"number",
+				"boolean",
+				"struct",
+				"array"
+			    ]
+			},
+			"default": {
+			    "type": [ "string", "number", "boolean", "array", "object" ],
+			    "description": "Default is the default input value. Its type must match `type`."
+			},
+			"sensitive": {
+			    "type": "boolean",
+
+			    "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
+			}
+		    }
+		},
+		"outputs": {
+		    "oneOf": [
+			{
+			    "type": "string"
+			},
+			{
+			    "$ref": "#/definitions/outputs"
+			}
+		    ]
+		}
+	    }
+	}
+    },
+    "definitions": {
+	"outputs": {
+	    "type": "object",
+	    "description": "Output describes a single step output.",
+	    "properties": {
+		"type": {
+		    "type": "string",
+		    "description": "Type is the value type of the output.",
+		    "enum": [
+			"raw_string",
+			"string",
+			"number",
+			"boolean",
+			"struct",
+			"array",
+			"step_result"
+		    ]
+		},
+		"default": {
+		    "type": [ "string", "number", "boolean", "array", "object" ],
+		    "description": "Default is the default output value."
+		},
+		"sensitive": {
+		    "type": "boolean",
+
+		    "description": "Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure."
+		}
+	    }
+	}
+    }
+}
