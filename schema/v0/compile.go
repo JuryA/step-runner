@@ -15,32 +15,32 @@ func (spec *Spec) Compile() (*proto.Spec, error) {
 	protoSpec := &proto.Spec{Spec: &proto.Spec_Content{}}
 	inputs := map[string]*proto.Spec_Content_Input{}
 	for k, v := range spec.Spec.Inputs {
-		protoV, err := (*inputCompiler)(&v).compile()
+		protoV, err := v.compile()
 		if err != nil {
 			return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
 		}
 		inputs[k] = protoV
 	}
-	outputs := map[string]*proto.Spec_Content_Output{}
-	for k, v := range spec.Spec.Outputs.Outputs {
-		protoV, err := (*outputCompiler)(&v).compile()
-		if err != nil {
-			return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
-		}
-		outputs[k] = protoV
-	}
-	switch {
-	case spec.Spec.Outputs.Delegate:
-		protoSpec.Spec.OutputMethod = proto.OutputMethod_delegate
-	default:
-		protoSpec.Spec.OutputMethod = proto.OutputMethod_outputs
-	}
 	protoSpec.Spec.Inputs = inputs
+	outputs := map[string]*proto.Spec_Content_Output{}
+	switch o := spec.Spec.Outputs.(type) {
+	case string:
+		protoSpec.Spec.OutputMethod = proto.OutputMethod_delegate
+	case map[string]Outputs:
+		protoSpec.Spec.OutputMethod = proto.OutputMethod_outputs
+		for k, v := range o {
+			protoV, err := v.compile()
+			if err != nil {
+				return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
+			}
+			outputs[k] = protoV
+		}
+	default:
+		return nil, fmt.Errorf("unsupported type: %T", spec.Spec.Outputs)
+	}
 	protoSpec.Spec.Outputs = outputs
 	return protoSpec, nil
 }
-
-type inputCompiler Input
 
 func (input *inputCompiler) compile() (*proto.Spec_Content_Input, error) {
 	input.defaultTypeToString()

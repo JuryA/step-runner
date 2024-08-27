@@ -14,26 +14,29 @@
 			"inputs": {
 			    "type": "object",
 			    "description": "Input describes a single step input.",
-			    "properties": {
-				"type": {
-				    "type": "string",
-				    "description": "Type is the value type of the input.",
-				    "enum": [
-					"string",
-					"number",
-					"boolean",
-					"struct",
-					"array"
-				    ]
-				},
-				"default": {
-				    "$ref": "#/definitions/inputDefault",
-				    "description": "Default is the default input value. Its type must match `type`."
-				},
-				"sensitive": {
-				    "type": "boolean",
+			    "additionalProperties": {
+				"type": "object",
+				"properties": {
+				    "type": {
+					"type": "string",
+					"description": "Type is the value type of the input.",
+					"enum": [
+					    "string",
+					    "number",
+					    "boolean",
+					    "struct",
+					    "array"
+					]
+				    },
+				    "default": {
+					"$ref": "#/definitions/inputDefault",
+					"description": "Default is the default input value. Its type must match `type`."
+				    },
+				    "sensitive": {
+					"type": "boolean",
 
-				    "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
+					"description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
+				    }
 				}
 			    }
 			},

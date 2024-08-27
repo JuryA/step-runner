@@ -6,6 +6,9 @@ import "encoding/json"
 import "fmt"
 import "reflect"
 
+// Default is the default input value. Its type must match `type`.
+type Default interface{}
+
 type InputDefault interface{}
 
 type OutputDefault interface{}
@@ -75,37 +78,38 @@ type Spec struct {
 // Spec contains the inputs and outputs of the step.
 type SpecSpec struct {
 	// Input describes a single step input.
-	Inputs *SpecSpecInputs `json:"inputs,omitempty" yaml:"inputs,omitempty" mapstructure:"inputs,omitempty"`
+	Inputs SpecSpecInputs `json:"inputs,omitempty" yaml:"inputs,omitempty" mapstructure:"inputs,omitempty"`
 
 	// Outputs corresponds to the JSON schema field "outputs".
 	Outputs SpecSpecOutputs `json:"outputs,omitempty" yaml:"outputs,omitempty" mapstructure:"outputs,omitempty"`
 }
 
 // Input describes a single step input.
-type SpecSpecInputs struct {
+type SpecSpecInputs map[string]struct {
 	// Default is the default input value. Its type must match `type`.
-	Default SpecSpecInputsDefault `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
+	Default Default `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
 	// Sensitive implies the input is of sensitive nature and effort should be made to
 	// prevent accidental disclosure.
 	Sensitive *bool `json:"sensitive,omitempty" yaml:"sensitive,omitempty" mapstructure:"sensitive,omitempty"`
 
 	// Type is the value type of the input.
-	Type *SpecSpecInputsType `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
+	Type *Type `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
 }
 
-// Default is the default input value. Its type must match `type`.
-type SpecSpecInputsDefault interface{}
+type SpecSpecOutputs interface{}
 
-type SpecSpecInputsType string
+type StringOutputsUnion interface{}
 
-const SpecSpecInputsTypeArray SpecSpecInputsType = "array"
-const SpecSpecInputsTypeBoolean SpecSpecInputsType = "boolean"
-const SpecSpecInputsTypeNumber SpecSpecInputsType = "number"
-const SpecSpecInputsTypeString SpecSpecInputsType = "string"
-const SpecSpecInputsTypeStruct SpecSpecInputsType = "struct"
+type Type string
 
-var enumValues_SpecSpecInputsType = []interface{}{
+const TypeArray Type = "array"
+const TypeBoolean Type = "boolean"
+const TypeNumber Type = "number"
+const TypeString Type = "string"
+const TypeStruct Type = "struct"
+
+var enumValues_Type = []interface{}{
 	"string",
 	"number",
 	"boolean",
@@ -114,25 +118,21 @@ var enumValues_SpecSpecInputsType = []interface{}{
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *SpecSpecInputsType) UnmarshalJSON(b []byte) error {
+func (j *Type) UnmarshalJSON(b []byte) error {
 	var v string
 	if err := json.Unmarshal(b, &v); err != nil {
 		return err
 	}
 	var ok bool
-	for _, expected := range enumValues_SpecSpecInputsType {
+	for _, expected := range enumValues_Type {
 		if reflect.DeepEqual(v, expected) {
 			ok = true
 			break
 		}
 	}
 	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_SpecSpecInputsType, v)
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_Type, v)
 	}
-	*j = SpecSpecInputsType(v)
+	*j = Type(v)
 	return nil
 }
-
-type SpecSpecOutputs interface{}
-
-type StringOutputsUnion interface{}
