@@ -1,46 +1,49 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v1",
-    "type": "object",
-    "description": "Spec is a document describing the interface of the step.",
-    "properties": {
+    "$ref": "#/definitions/spec",
+    "definitions": {
 	"spec": {
 	    "type": "object",
-	    "description": "Spec contains the inputs and outputs of the step.",
+	    "description": "Spec is a document describing the interface of the step.",
 	    "properties": {
-		"inputs": {
+		"spec": {
 		    "type": "object",
-		    "description": "Input describes a single step input.",
+		    "description": "Spec contains the inputs and outputs of the step.",
 		    "properties": {
-			"type": {
-			    "type": "string",
-			    "description": "Type is the value type of the input.",
-			    "enum": [
-				"string",
-				"number",
-				"boolean",
-				"struct",
-				"array"
-			    ]
-			},
-			"default": {
-			    "$ref": "#/definitions/inputDefault",
-			    "description": "Default is the default input value. Its type must match `type`."
-			},
-			"sensitive": {
-			    "type": "boolean",
+			"inputs": {
+			    "type": "object",
+			    "description": "Input describes a single step input.",
+			    "properties": {
+				"type": {
+				    "type": "string",
+				    "description": "Type is the value type of the input.",
+				    "enum": [
+					"string",
+					"number",
+					"boolean",
+					"struct",
+					"array"
+				    ]
+				},
+				"default": {
+				    "$ref": "#/definitions/inputDefault",
+				    "description": "Default is the default input value. Its type must match `type`."
+				},
+				"sensitive": {
+				    "type": "boolean",
 
-			    "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
+				    "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
+				}
+			    }
+			},
+			"outputs": {
+			    "$ref": "#/definitions/stringOutputsUnion"
 			}
 		    }
-		},
-		"outputs": {
-		    "$ref": "#/definitions/stringOutputsUnion"
 		}
 	    }
-	}
-    },
-    "definitions": {
+	},
 	"inputDefault": {
 	    "oneOf": [
 		{ "type": "string" },
