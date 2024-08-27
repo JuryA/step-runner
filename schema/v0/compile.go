@@ -56,24 +56,23 @@ func (i Input) compile() (*proto.Spec_Content_Input, error) {
 }
 
 func (i Input) defaultTypeToString() {
-	if i.Type != "" {
-		return
+	if i.Type == nil || *i.Type == "" {
+		i.Type = &InputTypeString
 	}
-	i.Type = ValueTypeString
 }
 
 func (i Input) compileToProto() (*proto.Spec_Content_Input, error) {
 	protoInput := &proto.Spec_Content_Input{}
-	switch i.Type {
-	case ValueTypeBool:
+	switch *i.Type {
+	case InputTypeBoolean:
 		protoInput.Type = proto.ValueType_boolean
-	case ValueTypeList:
+	case InputTypeArray:
 		protoInput.Type = proto.ValueType_array
-	case ValueTypeNumber:
+	case InputTypeNumber:
 		protoInput.Type = proto.ValueType_number
-	case ValueTypeString:
+	case InputTypeString:
 		protoInput.Type = proto.ValueType_string
-	case ValueTypeStruct:
+	case InputTypeStruct:
 		protoInput.Type = proto.ValueType_struct
 	default:
 		return nil, fmt.Errorf("unsupported input type: %v", i.Type)
@@ -85,131 +84,138 @@ func (i Input) compileToProto() (*proto.Spec_Content_Input, error) {
 		}
 		protoInput.Default = protoV
 	}
-	protoInput.Sensitive = i.Sensitive
+	if i.Sensitive != nil && *i.Sensitive == true {
+		protoInput.Sensitive = true
+	}
 	return protoInput, nil
 }
 
 func (i Input) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Input) error {
-	if input.Default == nil || protoInput.Default == nil {
+	if i.Default == nil || protoInput.Default == nil {
 		return nil
 	}
-	var defaultType ValueType
-	switch input.Type {
-	case ValueTypeBool:
+	if i.Type == nil {
+		return nil
+	}
+	var defaultType InputType
+	switch *i.Type {
+	case InputTypeBoolean:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_BoolValue); ok {
-			defaultType = ValueTypeBool
+			defaultType = InputTypeBoolean
 		}
-	case ValueTypeList:
+	case InputTypeArray:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_ListValue); ok {
-			defaultType = ValueTypeList
+			defaultType = InputTypeArray
 		}
-	case ValueTypeNumber:
+	case InputTypeNumber:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_NumberValue); ok {
-			defaultType = ValueTypeNumber
+			defaultType = InputTypeNumber
 		}
-	case ValueTypeString:
+	case InputTypeString:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = ValueTypeString
+			defaultType = InputTypeString
 		}
-	case ValueTypeStruct:
+	case InputTypeStruct:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_StructValue); ok {
-			defaultType = ValueTypeStruct
+			defaultType = InputTypeStruct
 		}
 	default:
-		return fmt.Errorf("unsupported type: %v", input.Type)
+		return fmt.Errorf("unsupported type: %v", i.Type)
 	}
-	if defaultType != input.Type {
-		return fmt.Errorf("input type %v and default value type %v must match", input.Type, defaultType)
+	if defaultType != *i.Type {
+		return fmt.Errorf("input type %v and default value type %v must match", i.Type, defaultType)
 	}
 	return nil
 }
 
-type outputCompiler Output
-
-func (output *outputCompiler) compile() (*proto.Spec_Content_Output, error) {
-	output.defaultTypeToRawString()
-	protoOutput, err := output.compileToProto()
+func (o Output) compile() (*proto.Spec_Content_Output, error) {
+	o.defaultTypeToRawString()
+	protoOutput, err := o.compileToProto()
 	if err != nil {
 		return nil, err
 	}
-	err = output.verifyDefaultValueMatchesType(protoOutput)
+	err = o.verifyDefaultValueMatchesType(protoOutput)
 	if err != nil {
 		return nil, err
 	}
 	return protoOutput, nil
 }
 
-func (output *outputCompiler) defaultTypeToRawString() {
-	if output.Type != "" {
-		return
+func (o Output) defaultTypeToRawString() {
+	if o.Type == nil || *o.Type == "" {
+		o.Type = &ValueTypeRawString
 	}
-	output.Type = ValueTypeRawString
 }
 
-func (output *outputCompiler) compileToProto() (*proto.Spec_Content_Output, error) {
+func (o Output) compileToProto() (*proto.Spec_Content_Output, error) {
 	protoOutput := &proto.Spec_Content_Output{}
-	switch output.Type {
-	case ValueTypeBool:
+	switch *o.Type {
+	case OutputTypeBoolean:
 		protoOutput.Type = proto.ValueType_boolean
-	case ValueTypeList:
+	case OutputTypeArray:
 		protoOutput.Type = proto.ValueType_array
-	case ValueTypeNumber:
+	case OutputTypeNumber:
 		protoOutput.Type = proto.ValueType_number
-	case ValueTypeRawString:
+	case OutputTypeRawString:
 		protoOutput.Type = proto.ValueType_raw_string
-	case ValueTypeString:
+	case OutputTypeString:
 		protoOutput.Type = proto.ValueType_string
-	case ValueTypeStruct:
+	case OutputTypeStruct:
 		protoOutput.Type = proto.ValueType_struct
 	default:
-		return nil, fmt.Errorf("unsupported output type: %v", output.Type)
+		return nil, fmt.Errorf("unsupported output type: %v", o.Type)
 	}
-	if output.Default != nil {
-		protoV, err := (&valueCompiler{output.Default}).compile()
+	if o.Default != nil {
+		protoV, err := (&valueCompiler{o.Default}).compile()
 		if err != nil {
-			return nil, fmt.Errorf("compiling default %v: %w", output.Default, err)
+			return nil, fmt.Errorf("compiling default %v: %w", o.Default, err)
 		}
 		protoOutput.Default = protoV
 	}
-	protoOutput.Sensitive = output.Sensitive
+	if o.Sensitive != nil && *o.Sensitive == true {
+		protoOutput.Sensitive = true
+	}
 	return protoOutput, nil
 }
 
-func (output *outputCompiler) verifyDefaultValueMatchesType(protoOutput *proto.Spec_Content_Output) error {
-	if output.Default == nil || protoOutput.Default == nil {
+func (o Output) verifyDefaultValueMatchesType(protoOutput *proto.Spec_Content_Output) error {
+	if o.Default == nil || protoOutput.Default == nil {
 		return nil
 	}
-	var defaultType ValueType
-	switch output.Type {
-	case ValueTypeBool:
+	if o.Type == nil {
+		return nil
+	}
+	var defaultType OutputType
+	switch *o.Type {
+	case OutputTypeBoolean:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_BoolValue); ok {
-			defaultType = ValueTypeBool
+			defaultType = OutputTypeBoolean
 		}
-	case ValueTypeList:
+	case OutputTypeArray:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_ListValue); ok {
-			defaultType = ValueTypeList
+			defaultType = OutputTypeArray
 		}
-	case ValueTypeNumber:
+	case OutputTypeNumber:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_NumberValue); ok {
-			defaultType = ValueTypeNumber
+			defaultType = OutputTypeNumber
 		}
-	case ValueTypeString:
+	case OutputTypeString:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = ValueTypeString
+			defaultType = OutputTypeString
 		}
-	case ValueTypeRawString:
+	case OutputTypeRawString:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = ValueTypeRawString
+			defaultType = OutputTypeRawString
 		}
-	case ValueTypeStruct:
+	case OutputTypeStruct:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StructValue); ok {
-			defaultType = ValueTypeStruct
+			defaultType = OutputTypeStruct
 		}
 	default:
-		return fmt.Errorf("unsupported type: %v", output.Type)
+		return fmt.Errorf("unsupported type: %v", o.Type)
 	}
-	if defaultType != output.Type {
-		return fmt.Errorf("output type %v and default value type %v must match", output.Type, defaultType)
+	if defaultType != *o.Type {
+		return fmt.Errorf("output type %v and default value type %v must match", o.Type, defaultType)
 	}
 	return nil
 }
