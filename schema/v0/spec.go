@@ -6,40 +6,88 @@ import "encoding/json"
 import "fmt"
 import "reflect"
 
-// Default is the default input value. Its type must match `type`.
-type Default interface{}
+type Input struct {
+	// Default is the default input value. Its type must match `type`.
+	Default InputDefault `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
+	// Sensitive implies the input is of sensitive nature and effort should be made to
+	// prevent accidental disclosure.
+	Sensitive *bool `json:"sensitive,omitempty" yaml:"sensitive,omitempty" mapstructure:"sensitive,omitempty"`
+
+	// Type is the value type of the input.
+	Type *InputType `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
+}
+
+// Default is the default input value. Its type must match `type`.
 type InputDefault interface{}
 
-type OutputDefault interface{}
+type InputDefaultTypes interface{}
+
+type InputType string
+
+const InputTypeArray InputType = "array"
+const InputTypeBoolean InputType = "boolean"
+const InputTypeNumber InputType = "number"
+const InputTypeString InputType = "string"
+const InputTypeStruct InputType = "struct"
+
+var enumValues_InputType = []interface{}{
+	"string",
+	"number",
+	"boolean",
+	"struct",
+	"array",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *InputType) UnmarshalJSON(b []byte) error {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_InputType {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_InputType, v)
+	}
+	*j = InputType(v)
+	return nil
+}
 
 // Output describes a single step output.
-type Outputs struct {
+type Output struct {
 	// Default is the default output value.
-	Default OutputsDefault `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
+	Default OutputDefault `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
 	// Sensitive implies the output is of sensitive nature and effort should be made
 	// to prevent accidental disclosure.
 	Sensitive *bool `json:"sensitive,omitempty" yaml:"sensitive,omitempty" mapstructure:"sensitive,omitempty"`
 
 	// Type is the value type of the output.
-	Type *OutputsType `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
+	Type *OutputType `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
 }
 
 // Default is the default output value.
-type OutputsDefault interface{}
+type OutputDefault interface{}
 
-type OutputsType string
+type OutputDefaultTypes interface{}
 
-const OutputsTypeArray OutputsType = "array"
-const OutputsTypeBoolean OutputsType = "boolean"
-const OutputsTypeNumber OutputsType = "number"
-const OutputsTypeRawString OutputsType = "raw_string"
-const OutputsTypeStepResult OutputsType = "step_result"
-const OutputsTypeString OutputsType = "string"
-const OutputsTypeStruct OutputsType = "struct"
+type OutputType string
 
-var enumValues_OutputsType = []interface{}{
+const OutputTypeArray OutputType = "array"
+const OutputTypeBoolean OutputType = "boolean"
+const OutputTypeNumber OutputType = "number"
+const OutputTypeRawString OutputType = "raw_string"
+const OutputTypeStepResult OutputType = "step_result"
+const OutputTypeString OutputType = "string"
+const OutputTypeStruct OutputType = "struct"
+
+var enumValues_OutputType = []interface{}{
 	"raw_string",
 	"string",
 	"number",
@@ -50,89 +98,45 @@ var enumValues_OutputsType = []interface{}{
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *OutputsType) UnmarshalJSON(b []byte) error {
+func (j *OutputType) UnmarshalJSON(b []byte) error {
 	var v string
 	if err := json.Unmarshal(b, &v); err != nil {
 		return err
 	}
 	var ok bool
-	for _, expected := range enumValues_OutputsType {
+	for _, expected := range enumValues_OutputType {
 		if reflect.DeepEqual(v, expected) {
 			ok = true
 			break
 		}
 	}
 	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_OutputsType, v)
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_OutputType, v)
 	}
-	*j = OutputsType(v)
+	*j = OutputType(v)
 	return nil
 }
 
-// Spec is a document describing the interface of the step.
-type Spec struct {
-	// Spec contains the inputs and outputs of the step.
-	Spec *SpecSpec `json:"spec,omitempty" yaml:"spec,omitempty" mapstructure:"spec,omitempty"`
-}
+type Outputs map[string]Output
 
-// Spec contains the inputs and outputs of the step.
-type SpecSpec struct {
+// Signature contains the inputs and outputs of the step.
+type Signature struct {
 	// Input describes a single step input.
-	Inputs SpecSpecInputs `json:"inputs,omitempty" yaml:"inputs,omitempty" mapstructure:"inputs,omitempty"`
+	Inputs SignatureInputs `json:"inputs,omitempty" yaml:"inputs,omitempty" mapstructure:"inputs,omitempty"`
 
 	// Outputs corresponds to the JSON schema field "outputs".
-	Outputs SpecSpecOutputs `json:"outputs,omitempty" yaml:"outputs,omitempty" mapstructure:"outputs,omitempty"`
+	Outputs SignatureOutputs `json:"outputs,omitempty" yaml:"outputs,omitempty" mapstructure:"outputs,omitempty"`
 }
 
 // Input describes a single step input.
-type SpecSpecInputs map[string]struct {
-	// Default is the default input value. Its type must match `type`.
-	Default Default `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
+type SignatureInputs map[string]Input
 
-	// Sensitive implies the input is of sensitive nature and effort should be made to
-	// prevent accidental disclosure.
-	Sensitive *bool `json:"sensitive,omitempty" yaml:"sensitive,omitempty" mapstructure:"sensitive,omitempty"`
+type SignatureOutputs interface{}
 
-	// Type is the value type of the input.
-	Type *Type `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
+// Spec is a document describing the interface of a step.
+type Spec struct {
+	// Spec corresponds to the JSON schema field "spec".
+	Spec *Signature `json:"spec,omitempty" yaml:"spec,omitempty" mapstructure:"spec,omitempty"`
 }
-
-type SpecSpecOutputs interface{}
 
 type StringOutputsUnion interface{}
-
-type Type string
-
-const TypeArray Type = "array"
-const TypeBoolean Type = "boolean"
-const TypeNumber Type = "number"
-const TypeString Type = "string"
-const TypeStruct Type = "struct"
-
-var enumValues_Type = []interface{}{
-	"string",
-	"number",
-	"boolean",
-	"struct",
-	"array",
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *Type) UnmarshalJSON(b []byte) error {
-	var v string
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	var ok bool
-	for _, expected := range enumValues_Type {
-		if reflect.DeepEqual(v, expected) {
-			ok = true
-			break
-		}
-	}
-	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_Type, v)
-	}
-	*j = Type(v)
-	return nil
-}

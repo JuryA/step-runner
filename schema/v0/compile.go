@@ -26,7 +26,7 @@ func (spec *Spec) Compile() (*proto.Spec, error) {
 	switch o := spec.Spec.Outputs.(type) {
 	case string:
 		protoSpec.Spec.OutputMethod = proto.OutputMethod_delegate
-	case map[string]Outputs:
+	case Outputs:
 		protoSpec.Spec.OutputMethod = proto.OutputMethod_outputs
 		for k, v := range o {
 			protoV, err := v.compile()
@@ -42,29 +42,29 @@ func (spec *Spec) Compile() (*proto.Spec, error) {
 	return protoSpec, nil
 }
 
-func (input *inputCompiler) compile() (*proto.Spec_Content_Input, error) {
-	input.defaultTypeToString()
-	protoInput, err := input.compileToProto()
+func (i Input) compile() (*proto.Spec_Content_Input, error) {
+	i.defaultTypeToString()
+	protoInput, err := i.compileToProto()
 	if err != nil {
 		return nil, err
 	}
-	err = input.verifyDefaultValueMatchesType(protoInput)
+	err = i.verifyDefaultValueMatchesType(protoInput)
 	if err != nil {
 		return nil, err
 	}
 	return protoInput, nil
 }
 
-func (input *inputCompiler) defaultTypeToString() {
-	if input.Type != "" {
+func (i Input) defaultTypeToString() {
+	if i.Type != "" {
 		return
 	}
-	input.Type = ValueTypeString
+	i.Type = ValueTypeString
 }
 
-func (input *inputCompiler) compileToProto() (*proto.Spec_Content_Input, error) {
+func (i Input) compileToProto() (*proto.Spec_Content_Input, error) {
 	protoInput := &proto.Spec_Content_Input{}
-	switch input.Type {
+	switch i.Type {
 	case ValueTypeBool:
 		protoInput.Type = proto.ValueType_boolean
 	case ValueTypeList:
@@ -76,20 +76,20 @@ func (input *inputCompiler) compileToProto() (*proto.Spec_Content_Input, error) 
 	case ValueTypeStruct:
 		protoInput.Type = proto.ValueType_struct
 	default:
-		return nil, fmt.Errorf("unsupported input type: %v", input.Type)
+		return nil, fmt.Errorf("unsupported input type: %v", i.Type)
 	}
-	if input.Default != nil {
-		protoV, err := (&valueCompiler{input.Default}).compile()
+	if i.Default != nil {
+		protoV, err := (&valueCompiler{i.Default}).compile()
 		if err != nil {
-			return nil, fmt.Errorf("compiling default %v: %w", input.Default, err)
+			return nil, fmt.Errorf("compiling default %v: %w", i.Default, err)
 		}
 		protoInput.Default = protoV
 	}
-	protoInput.Sensitive = input.Sensitive
+	protoInput.Sensitive = i.Sensitive
 	return protoInput, nil
 }
 
-func (input *inputCompiler) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Input) error {
+func (i Input) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Input) error {
 	if input.Default == nil || protoInput.Default == nil {
 		return nil
 	}

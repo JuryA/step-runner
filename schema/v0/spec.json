@@ -5,49 +5,55 @@
     "definitions": {
 	"spec": {
 	    "type": "object",
-	    "description": "Spec is a document describing the interface of the step.",
+	    "description": "Spec is a document describing the interface of a step.",
 	    "properties": {
 		"spec": {
-		    "type": "object",
-		    "description": "Spec contains the inputs and outputs of the step.",
-		    "properties": {
-			"inputs": {
-			    "type": "object",
-			    "description": "Input describes a single step input.",
-			    "additionalProperties": {
-				"type": "object",
-				"properties": {
-				    "type": {
-					"type": "string",
-					"description": "Type is the value type of the input.",
-					"enum": [
-					    "string",
-					    "number",
-					    "boolean",
-					    "struct",
-					    "array"
-					]
-				    },
-				    "default": {
-					"$ref": "#/definitions/inputDefault",
-					"description": "Default is the default input value. Its type must match `type`."
-				    },
-				    "sensitive": {
-					"type": "boolean",
-
-					"description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
-				    }
-				}
-			    }
-			},
-			"outputs": {
-			    "$ref": "#/definitions/stringOutputsUnion"
-			}
-		    }
+		    "$ref": "#/definitions/signature"
 		}
 	    }
 	},
-	"inputDefault": {
+	"signature": {
+	    "type": "object",
+	    "description": "Signature contains the inputs and outputs of the step.",
+	    "properties": {
+		"inputs": {
+		    "type": "object",
+		    "description": "Input describes a single step input.",
+		    "additionalProperties": {
+			"$ref": "#/definitions/input"
+		    }
+		},
+		"outputs": {
+		    "$ref": "#/definitions/stringOutputsUnion"
+		}
+	    }
+	},
+	"input": {
+	    "type": "object",
+	    "properties": {
+		"type": {
+		    "type": "string",
+		    "description": "Type is the value type of the input.",
+		    "enum": [
+			"string",
+			"number",
+			"boolean",
+			"struct",
+			"array"
+		    ]
+		},
+		"default": {
+		    "$ref": "#/definitions/inputDefaultTypes",
+		    "description": "Default is the default input value. Its type must match `type`."
+		},
+		"sensitive": {
+		    "type": "boolean",
+
+		    "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
+		}
+	    }
+	},
+	"inputDefaultTypes": {
 	    "oneOf": [
 		{ "type": "string" },
 		{ "type": "number" },
@@ -56,7 +62,7 @@
 		{ "type": "object" }
 	    ]
 	},
-	"outputDefault": {
+	"outputDefaultTypes": {
 	    "oneOf": [
 		{ "type": "raw_string" },
 		{ "type": "string" },
@@ -79,6 +85,12 @@
 	},
 	"outputs": {
 	    "type": "object",
+	    "additionalProperties": {
+		"$ref": "#/definitions/output"
+	    }
+	},
+	"output": {
+	    "type": "object",
 	    "description": "Output describes a single step output.",
 	    "properties": {
 		"type": {
@@ -95,7 +107,7 @@
 		    ]
 		},
 		"default": {
-		    "$ref": "#/definitions/outputDefault",
+		    "$ref": "#/definitions/outputDefaultTypes",
 		    "description": "Default is the default output value."
 		},
 		"sensitive": {
