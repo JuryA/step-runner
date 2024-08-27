@@ -21,8 +21,8 @@ PROTO_GEN := $(wildcard proto/*.pb.go)
 GO_JSONSCHEMA := $(localBin)/go-jsonschema
 GO_JSONSCHEMA_VERSION := v0.16.0
 
-SCHEMA_SRC := $(shell find schema/v1 -name "*.go")
-SCHEMA_GEN := $(wildcard schema/v1/*.json)
+SCHEMA_SRC := $(shell find schema/* -name "*.go")
+SCHEMA_GEN := $(wildcard schema/*/*.json)
 
 GOIMPORTS := goimports
 GOIMPORTS_VERSION := v0.23.0
@@ -40,9 +40,9 @@ $(SCHEMA_GEN): $(SCHEMA_SRC)
 .PHONY: .generate-schema
 .generate-schema: V0 = ./schema/v0
 .generate-schema: $(GO_JSONSCHEMA)
-	go run ./schema/v1/generate
 	$(GO_JSONSCHEMA) -p schema $(V0)/step.json -o $(V0)/step.go
 	$(GO_JSONSCHEMA) -p schema $(V0)/spec.json -o $(V0)/spec.go
+	go run ./schema/v1/generate
 
 .PHONY: .generate-proto
 .generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
