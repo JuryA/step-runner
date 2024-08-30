@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -295,18 +296,25 @@ steps:
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			stepDef, err := ReadSteps(c.steps, "")
+			spec, step, err := ReadSteps(c.steps, "")
 			require.NoError(t, err)
-			protoStepDef, err := CompileSteps(stepDef)
+			protoSpec, err := spec.Compile()
+			require.NoError(t, err)
+			protoDef, err := step.compileDefinition()
+			require.NoError(t, err)
+			protoSpecDef := &proto.SpecDefinition{
+				Spec:       protoSpec,
+				Definition: protoDef,
+			}
 			if c.wantErr {
 				require.Error(t, err)
-				require.Nil(t, protoStepDef)
+				require.Nil(t, protoSpecDef)
 			} else {
 				require.NoError(t, err)
 				wantSpecDef, err := readProto(c.wantCompiled, "")
 				require.NoError(t, err)
-				if !protobuf.Equal(wantSpecDef, protoStepDef) {
-					t.Errorf("wanted:\n%+v\ngot:\n%+v", wantSpecDef, protoStepDef)
+				if !protobuf.Equal(wantSpecDef, protoSpecDef) {
+					t.Errorf("wanted:\n%+v\ngot:\n%+v", wantSpecDef, protoSpecDef)
 				}
 			}
 		})
@@ -434,15 +442,17 @@ git:
 
 	for _, c := range cases {
 		t.Run(c.ref, func(t *testing.T) {
-			ref := Reference{}
-			err := unmarshalSchema(c.ref, &ref)
+			stepStr := fmt.Sprintf("-step: %s", c.ref)
+			step := &Step{}
+			err := unmarshalSchema(stepStr, step)
 			require.NoError(t, err)
-			got, err := (*referenceCompiler)(&ref).compile()
+			got, err := step.CompileStep(0)
 			if c.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.True(t, protobuf.Equal(c.want, got), "want %v. got %v", c.want, got)
+				require.NotNil(t, got)
+				require.True(t, protobuf.Equal(c.want, got.Step), "want %v. got %v", c.want, got.Step)
 			}
 		})
 	}

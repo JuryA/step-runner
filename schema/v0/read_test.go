@@ -80,14 +80,15 @@ exec:
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			stepDef, err := ReadSteps(c.yaml, "")
+			spec, step, err := ReadSteps(c.yaml, "")
 			if c.wantErr {
 				require.Error(t, err)
-				require.Nil(t, stepDef)
+				require.Nil(t, spec)
+				require.Nil(t, step)
 			} else {
 				require.NoError(t, err)
 				// Assert that the whole step is preserved round-trip
-				got, err := WriteSteps(stepDef)
+				got, err := WriteSteps(spec, step)
 				require.NoError(t, err)
 				want := strings.TrimSpace(c.yaml)
 				got = strings.TrimSpace(got)

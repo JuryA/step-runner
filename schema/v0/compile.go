@@ -268,7 +268,7 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 		for i, ss := range s.Steps {
 			protoStep, err := (&ss).CompileStep(i)
 			if err != nil {
-				return nil, fmt.Errorf("compiling steps[%v]: %q: %w", i, s.Name, err)
+				return nil, fmt.Errorf("compiling steps[%v]: %v: %w", i, s.Name, err)
 			}
 			protoDef.Steps[i] = protoStep
 		}
@@ -441,7 +441,7 @@ func defaultHTTPS(stepUrl *string) (string, error) {
 	}
 	parsedURL, err := url.Parse(*stepUrl)
 	if err != nil {
-		return "", fmt.Errorf("invalid step reference url %q: %w", stepUrl, err)
+		return "", fmt.Errorf("invalid step reference url %v: %w", stepUrl, err)
 	}
 	switch parsedURL.Scheme {
 	case "http", "https":
@@ -449,7 +449,7 @@ func defaultHTTPS(stepUrl *string) (string, error) {
 	case "":
 		parsedURL.Scheme = "https"
 	default:
-		return "", fmt.Errorf("unsupported scheme %q in reference %q", parsedURL.Scheme, stepUrl)
+		return "", fmt.Errorf("unsupported scheme %q in reference %v", parsedURL.Scheme, stepUrl)
 	}
 	return parsedURL.String(), nil
 }

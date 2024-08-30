@@ -30,11 +30,9 @@ spec:
     name: {}
 `,
 		wantSpec: Spec{
-			Spec: Signature{
+			Spec: &Signature{
 				Outputs: Outputs{
-					Outputs: map[string]Output{
-						"name": {},
-					},
+					"name": {},
 				},
 			},
 		},
@@ -46,10 +44,8 @@ spec:
   outputs: delegate
 `,
 		wantSpec: Spec{
-			Spec: Signature{
-				Outputs: Outputs{
-					Delegate: true,
-				},
+			Spec: &Signature{
+				Outputs: "delegate",
 			},
 		},
 	}}

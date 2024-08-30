@@ -14,15 +14,13 @@ func TestReferenceCustomMethods(t *testing.T) {
 		name          string
 		json          string
 		yaml          string
-		wantRef       Reference
+		wantRef       any
 		wantSchemaErr bool
 	}{{
-		name: "short reference",
-		json: `"gitlab.com/components/script@v1"`,
-		yaml: `gitlab.com/components/script@v1`,
-		wantRef: Reference{
-			Short: "gitlab.com/components/script@v1",
-		},
+		name:    "short reference",
+		json:    `"gitlab.com/components/script@v1"`,
+		yaml:    `gitlab.com/components/script@v1`,
+		wantRef: stringRef("gitlab.com/components/script@v1"),
 	}, {
 		name: "long simple git reference",
 		json: `
@@ -37,10 +35,10 @@ git:
   url:    gitlab.com/components/script
   rev: v1
 `,
-		wantRef: Reference{
-			Git: GitReference{
-				Url: "gitlab.com/components/script",
-				Rev: "v1",
+		wantRef: &Reference{
+			Git: &GitReference{
+				Url: stringRef("gitlab.com/components/script"),
+				Rev: stringRef("v1"),
 			},
 		},
 	}, {
@@ -61,10 +59,10 @@ git:
   rev: v1
 `,
 		wantRef: Reference{
-			Git: GitReference{
-				Url: "gitlab.com/components/script",
-				Dir: "bash",
-				Rev: "v1",
+			Git: &GitReference{
+				Url: stringRef("gitlab.com/components/script"),
+				Dir: stringRef("bash"),
+				Rev: stringRef("v1"),
 			},
 		},
 	}, {
@@ -72,10 +70,10 @@ git:
 		json: `{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}`,
 		yaml: `git: {url: gitlab.com/components/script, dir: bash, rev: v1}`,
 		wantRef: Reference{
-			Git: GitReference{
-				Url: "gitlab.com/components/script",
-				Dir: "bash",
-				Rev: "v1",
+			Git: &GitReference{
+				Url: stringRef("gitlab.com/components/script"),
+				Dir: stringRef("bash"),
+				Rev: stringRef("v1"),
 			},
 		},
 	}}
