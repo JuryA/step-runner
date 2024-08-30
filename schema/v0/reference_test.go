@@ -20,7 +20,7 @@ func TestReferenceCustomMethods(t *testing.T) {
 		name:    "short reference",
 		json:    `"gitlab.com/components/script@v1"`,
 		yaml:    `gitlab.com/components/script@v1`,
-		wantRef: stringRef("gitlab.com/components/script@v1"),
+		wantRef: "gitlab.com/components/script@v1",
 	}, {
 		name: "long simple git reference",
 		json: `
