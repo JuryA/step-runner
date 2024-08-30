@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -324,14 +323,14 @@ steps:
 
 func TestReferenceCompiler(t *testing.T) {
 	cases := []struct {
-		ref     string
+		step    string
 		want    *proto.Step_Reference
 		wantErr bool
 	}{{
-		ref:     "invalid",
+		step:    "step: invalid",
 		wantErr: true,
 	}, {
-		ref: ".",
+		step: "step: .",
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_local,
 			Url:      "",
@@ -340,7 +339,7 @@ func TestReferenceCompiler(t *testing.T) {
 			Version:  "",
 		},
 	}, {
-		ref: "./path/to/my/file",
+		step: "step: ./path/to/my/file",
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_local,
 			Url:      "",
@@ -349,7 +348,7 @@ func TestReferenceCompiler(t *testing.T) {
 			Version:  "",
 		},
 	}, {
-		ref: "gitlab.com/components/script@v1",
+		step: "step: gitlab.com/components/script@v1",
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
 			Url:      "https://gitlab.com/components/script",
@@ -358,7 +357,7 @@ func TestReferenceCompiler(t *testing.T) {
 			Version:  "v1",
 		},
 	}, {
-		ref: "https://gitlab.com/components/script@v1",
+		step: "step: https://gitlab.com/components/script@v1",
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
 			Url:      "https://gitlab.com/components/script",
@@ -367,11 +366,12 @@ func TestReferenceCompiler(t *testing.T) {
 			Version:  "v1",
 		},
 	}, {
-		ref: `
-git:
-    url:     gitlab.com/components/script
-    dir:     bash
-    rev:  v1
+		step: `
+step:
+    git:
+        url:     gitlab.com/components/script
+        dir:     bash
+        rev:  v1
 `,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
@@ -381,10 +381,11 @@ git:
 			Version:  "v1",
 		},
 	}, {
-		ref: `
-git:
-    url:    http://bad.idea.com/my-step
-    rev: v1
+		step: `
+step:
+    git:
+        url:    http://bad.idea.com/my-step
+        rev: v1
 `,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
@@ -394,10 +395,11 @@ git:
 			Version:  "v1",
 		},
 	}, {
-		ref: `
-git:
-    url:    gitlab.com/components/script
-    rev: v2.1
+		step: `
+step:
+    git:
+        url:    gitlab.com/components/script
+        rev: v2.1
 `,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
@@ -407,10 +409,11 @@ git:
 			Version:  "v2.1",
 		},
 	}, {
-		ref: `
-git:
-    url:    gitlab.com/components/script
-    rev: 20e9c40c
+		step: `
+step:
+    git:
+        url:    gitlab.com/components/script
+        rev: 20e9c40c
 `,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
@@ -420,10 +423,11 @@ git:
 			Version:  "20e9c40c",
 		},
 	}, {
-		ref: `
-git:
-    url:    gitlab.com/components/script
-    rev: 20e9c40c9213f2a044e4a81906956a779af3da4b
+		step: `
+step:
+    git:
+        url:    gitlab.com/components/script
+        rev: 20e9c40c9213f2a044e4a81906956a779af3da4b
 `,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
@@ -433,18 +437,17 @@ git:
 			Version:  "20e9c40c9213f2a044e4a81906956a779af3da4b",
 		},
 	}, {
-		ref:     "ftp://gitlab.com/components/script@v1", // unsupported
+		step:    "step: ftp://gitlab.com/components/script@v1", // unsupported
 		wantErr: true,
 	}, {
-		ref:     "notavalidscheme://gitlab.com/components/script@v1",
+		step:    "step: notavalidscheme://gitlab.com/components/script@v1",
 		wantErr: true,
 	}}
 
 	for _, c := range cases {
-		t.Run(c.ref, func(t *testing.T) {
-			stepStr := fmt.Sprintf("-step: %s", c.ref)
+		t.Run(c.step, func(t *testing.T) {
 			step := &Step{}
-			err := unmarshalSchema(stepStr, step)
+			err := unmarshalSchema(c.step, step)
 			require.NoError(t, err)
 			got, err := step.CompileStep(0)
 			if c.wantErr {

@@ -418,6 +418,7 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 		Protocol: proto.StepReferenceProtocol_git,
 		Url:      url,
 		Version:  rev,
+		Filename: "step.yml",
 	}, nil
 }
 
