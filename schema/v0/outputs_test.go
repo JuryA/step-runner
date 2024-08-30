@@ -31,7 +31,7 @@ spec:
 `,
 		wantSpec: Spec{
 			Spec: &Signature{
-				Outputs: Outputs{
+				Outputs: &Outputs{
 					"name": {},
 				},
 			},

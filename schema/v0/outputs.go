@@ -47,7 +47,7 @@ func (s *Signature) unmarshalOutputs() error {
 		if err != nil {
 			return fmt.Errorf("reifying outputs: %w", err)
 		}
-		outputs := Outputs{}
+		outputs := &Outputs{}
 		err = json.Unmarshal(data, outputs)
 		if err != nil {
 			return fmt.Errorf("reifying outputs: %w", err)
