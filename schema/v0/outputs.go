@@ -43,8 +43,13 @@ func (s *Signature) unmarshalOutputs() error {
 		if err != nil {
 			return fmt.Errorf("reifying outputs: %w", err)
 		}
-		err = json.Unmarshal(data, &s.Outputs)
-		return err
+		outputs := Outputs{}
+		err = json.Unmarshal(data, outputs)
+		if err != nil {
+			return fmt.Errorf("reifying outputs: %w", err)
+		}
+		s.Outputs = outputs
+		return nil
 	default:
 		return fmt.Errorf("unsupported type: %T", v)
 	}

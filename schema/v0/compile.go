@@ -57,7 +57,8 @@ func (i Input) compile() (*proto.Spec_Content_Input, error) {
 
 func (i Input) defaultTypeToString() {
 	if i.Type == nil || *i.Type == "" {
-		i.Type = &InputTypeString
+		t := InputTypeString
+		i.Type = &t
 	}
 }
 
@@ -143,7 +144,8 @@ func (o Output) compile() (*proto.Spec_Content_Output, error) {
 
 func (o Output) defaultTypeToRawString() {
 	if o.Type == nil || *o.Type == "" {
-		o.Type = &OutputTypeRawString
+		t := OutputTypeRawString
+		o.Type = &t
 	}
 }
 
@@ -225,7 +227,7 @@ func (s *Step) compileDefinition() (*proto.Definition, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.compileToProto()
+	return s.compileToDefinitionProto()
 }
 
 func (s *Step) verifyOneTypeProvided() error {
@@ -264,7 +266,7 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 		protoDef.Type = proto.DefinitionType_steps
 		protoDef.Steps = make([]*proto.Step, len(s.Steps))
 		for i, ss := range s.Steps {
-			protoStep, err := (&ss).compile(i)
+			protoStep, err := (&ss).CompileStep(i)
 			if err != nil {
 				return nil, fmt.Errorf("compiling steps[%v]: %q: %w", i, s.Name, err)
 			}
@@ -298,7 +300,7 @@ func (s *Step) CompileStep(i int) (*proto.Step, error) {
 		return nil, err
 	}
 	s.defaultName(i)
-	return s.compileToProto()
+	return s.compileToStepProto()
 }
 
 func (s *Step) compileScriptKeywordToStep() error {
@@ -394,7 +396,7 @@ func (sr shortReference) compile() (*proto.Step_Reference, error) {
 }
 
 func (sr shortReference) compileLocal() (*proto.Step_Reference, error) {
-	path, filename := pathFilename(string(sr))
+	path, filename := pathFilename((*string)(&sr))
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_local,
 		Path:     path,
@@ -420,17 +422,24 @@ func (gr *GitReference) compile() (*proto.Step_Reference, error) {
 		return nil, fmt.Errorf("parsing url as url: %w", err)
 	}
 	path, filename := pathFilename(gr.Dir)
+	version := ""
+	if gr.Rev != nil {
+		version = *gr.Rev
+	}
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,
 		Url:      url,
 		Path:     path,
 		Filename: filename,
-		Version:  gr.Rev,
+		Version:  version,
 	}, nil
 }
 
-func defaultHTTPS(stepUrl string) (string, error) {
-	parsedURL, err := url.Parse(stepUrl)
+func defaultHTTPS(stepUrl *string) (string, error) {
+	if stepUrl == nil {
+		return "", nil
+	}
+	parsedURL, err := url.Parse(*stepUrl)
 	if err != nil {
 		return "", fmt.Errorf("invalid step reference url %q: %w", stepUrl, err)
 	}
@@ -445,12 +454,15 @@ func defaultHTTPS(stepUrl string) (string, error) {
 	return parsedURL.String(), nil
 }
 
-func pathFilename(pathStr string) (path []string, filename string) {
+func pathFilename(pathStr *string) (path []string, filename string) {
+	if pathStr == nil {
+		return nil, ""
+	}
 	filename = "step.yml"
-	if pathStr == "" {
+	if *pathStr == "" {
 		return nil, filename
 	}
-	path = strings.Split(pathStr, "/")
+	path = strings.Split(*pathStr, "/")
 	return path, filename
 }
 

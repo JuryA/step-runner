@@ -7,44 +7,47 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func (ss StepStep) UnmarshalYAML(value *yaml.Node) error {
-	switch value.Tag {
-	case yamlStringTag:
-		s := ""
-		ss = &s
-		return value.Decode(ss)
-	case yamlMapTag:
-		ref := &GitReference{}
-		err := value.Decode(ref)
-		if err != nil {
-			return err
-		}
-		ss = ref
-		return nil
-	default:
-		return fmt.Errorf("unsupported reference type: %q", value.Tag)
-	}
-}
+var (
+	_ yaml.Unmarshaler = &Step{}
+	_ json.Unmarshaler = &Step{}
+)
 
-func (ss StepStep) UnmarshalJSON(data []byte) error {
-	var untyped any
-	err := json.Unmarshal(data, &untyped)
+func (s *Step) UnmarshalYAML(value *yaml.Node) error {
+	err := value.Decode(s)
 	if err != nil {
 		return err
 	}
-	switch t := untyped.(type) {
-	case string:
-		ss = &t
+	return s.unmarshalStep()
+}
+
+func (s *Step) UnmarshalJSON(data []byte) error {
+	err := json.Unmarshal(data, s)
+	if err != nil {
+		return err
+	}
+	return s.unmarshalStep()
+}
+
+func (s *Step) unmarshalStep() error {
+	if s.Step == nil {
+		return nil
+	}
+	switch v := s.Step.(type) {
+	case *string:
 		return nil
 	case map[string]any:
-		ref := &Reference{}
-		err := json.Unmarshal(data, ref)
+		data, err := json.Marshal(v)
 		if err != nil {
-			return err
+			return fmt.Errorf("reifying step: %w", err)
 		}
-		ss = ref
+		step := &Step{}
+		err = json.Unmarshal(data, step)
+		if err != nil {
+			return fmt.Errorf("reifying step: %w", err)
+		}
+		s.Step = step
 		return nil
 	default:
-		return fmt.Errorf("unsupported type: %T", untyped)
+		return fmt.Errorf("unsupported type: %T", v)
 	}
 }
