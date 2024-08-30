@@ -13,15 +13,20 @@ var (
 )
 
 func (s *Step) UnmarshalYAML(value *yaml.Node) error {
-	err := value.Decode(s)
+	type Default Step
+	d := &Default{}
+	err := value.Decode(d)
 	if err != nil {
 		return err
 	}
+	s = (*Step)(d)
 	return s.unmarshalStep()
 }
 
 func (s *Step) UnmarshalJSON(data []byte) error {
-	err := json.Unmarshal(data, s)
+	type Default Step
+	d := &Default{}
+	err := json.Unmarshal(data, d)
 	if err != nil {
 		return err
 	}

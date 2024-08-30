@@ -14,6 +14,9 @@ import (
 func (spec *Spec) Compile() (*proto.Spec, error) {
 	protoSpec := &proto.Spec{Spec: &proto.Spec_Content{}}
 	inputs := map[string]*proto.Spec_Content_Input{}
+	if spec.Spec == nil {
+		spec.Spec = &Signature{}
+	}
 	for k, v := range spec.Spec.Inputs {
 		protoV, err := v.compile()
 		if err != nil {

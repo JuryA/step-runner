@@ -13,18 +13,24 @@ var (
 )
 
 func (s *Signature) UnmarshalYAML(value *yaml.Node) error {
-	err := value.Decode(s)
+	type Default Signature
+	d := &Default{}
+	err := value.Decode(d)
 	if err != nil {
 		return err
 	}
+	s = (*Signature)(d)
 	return s.unmarshalOutputs()
 }
 
 func (s *Signature) UnmarshalJSON(data []byte) error {
-	err := json.Unmarshal(data, s)
+	type Default Signature
+	d := &Default{}
+	err := json.Unmarshal(data, d)
 	if err != nil {
 		return err
 	}
+	s = (*Signature)(d)
 	return s.unmarshalOutputs()
 }
 
