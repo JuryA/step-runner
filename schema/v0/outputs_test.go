@@ -17,10 +17,12 @@ func TestOutputsCustomMethods(t *testing.T) {
 		wantSpec      Spec
 		wantSchemaErr bool
 	}{{
-		name:     "empty outputs",
-		json:     `{"spec":{}}`,
-		yaml:     `spec: {}`,
-		wantSpec: Spec{},
+		name: "empty outputs",
+		json: `{"spec":{}}`,
+		yaml: `spec: {}`,
+		wantSpec: Spec{
+			Spec: &Signature{},
+		},
 	}, {
 		name: "outputs map",
 		json: `{"spec":{"outputs":{"name":{}}}}`,

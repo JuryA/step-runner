@@ -62,15 +62,15 @@ steps:
 spec:
     inputs:
         age:
-            type: number
             default: 12
+            type: number
         favorites:
-            type: struct
             default:
                 food: apple
+            type: struct
         name:
-            type: string
             default: foo
+            type: string
 ---
 exec:
     command:
