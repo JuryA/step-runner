@@ -58,7 +58,7 @@ git:
   dir:    bash
   rev: v1
 `,
-		wantRef: Reference{
+		wantRef: &Reference{
 			Git: &GitReference{
 				Url: stringRef("gitlab.com/components/script"),
 				Dir: stringRef("bash"),
@@ -69,7 +69,7 @@ git:
 		name: "long one-line git reference with dir",
 		json: `{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}`,
 		yaml: `git: {url: gitlab.com/components/script, dir: bash, rev: v1}`,
-		wantRef: Reference{
+		wantRef: &Reference{
 			Git: &GitReference{
 				Url: stringRef("gitlab.com/components/script"),
 				Dir: stringRef("bash"),
@@ -86,11 +86,17 @@ git:
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			step := Step{
-				Step: tc.wantRef,
+			step := Step{}
+			switch v := tc.wantRef.(type) {
+			case string:
+				step.Step = v
+				check(t, json.Marshal, json.Unmarshal, []byte(tc.json), v, stepsSchema, step)
+				check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), v, stepsSchema, step)
+			case *Reference:
+				step.Step = v
+				check(t, json.Marshal, json.Unmarshal, []byte(tc.json), v, stepsSchema, step)
+				check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), v, stepsSchema, step)
 			}
-			check(t, json.Marshal, json.Unmarshal, []byte(tc.json), tc.wantRef, stepsSchema, step)
-			check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), tc.wantRef, stepsSchema, step)
 		})
 	}
 }
