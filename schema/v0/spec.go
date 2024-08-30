@@ -125,18 +125,14 @@ type Signature struct {
 	Inputs SignatureInputs `json:"inputs,omitempty" yaml:"inputs,omitempty" mapstructure:"inputs,omitempty"`
 
 	// Outputs corresponds to the JSON schema field "outputs".
-	Outputs SignatureOutputs `json:"outputs,omitempty" yaml:"outputs,omitempty" mapstructure:"outputs,omitempty"`
+	Outputs interface{} `json:"outputs,omitempty" yaml:"outputs,omitempty" mapstructure:"outputs,omitempty"`
 }
 
 // Input describes a single step input.
 type SignatureInputs map[string]Input
-
-type SignatureOutputs interface{}
 
 // Spec is a document describing the interface of a step.
 type Spec struct {
 	// Spec corresponds to the JSON schema field "spec".
 	Spec *Signature `json:"spec,omitempty" yaml:"spec,omitempty" mapstructure:"spec,omitempty"`
 }
-
-type StringOutputsUnion interface{}

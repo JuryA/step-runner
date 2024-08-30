@@ -57,7 +57,7 @@ type Step struct {
 	Script *string `json:"script,omitempty" yaml:"script,omitempty" mapstructure:"script,omitempty"`
 
 	// Step is a reference to another step to invoke.
-	Step StepStep `json:"step,omitempty" yaml:"step,omitempty" mapstructure:"step,omitempty"`
+	Step interface{} `json:"step,omitempty" yaml:"step,omitempty" mapstructure:"step,omitempty"`
 
 	// Steps is a list of sub-steps to run.
 	Steps []Step `json:"steps,omitempty" yaml:"steps,omitempty" mapstructure:"steps,omitempty"`
@@ -72,9 +72,3 @@ type StepInputs map[string]interface{}
 // Outputs are the output values for a sequence. They can reference the outputs of
 // sub-steps.
 type StepOutputs map[string]interface{}
-
-// Step is a reference to another step to invoke.
-type StepStep interface{}
-
-// StringReferenceUnion is the union type of a string and a Reference.
-type StringReferenceUnion interface{}

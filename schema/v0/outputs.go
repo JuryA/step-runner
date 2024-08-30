@@ -7,46 +7,45 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// var (
-// 	_ yaml.Unmarshaler = SignatureOutputs(nil)
-// 	_ json.Unmarshaler = SignatureOutputs(nil)
-// )
+var (
+	_ yaml.Unmarshaler = &Signature{}
+	_ json.Unmarshaler = &Signature{}
+)
 
-func (so SignatureOutputs) UnmarshalYAML(value *yaml.Node) error {
-	switch value.Tag {
-	case yamlStringTag:
-		var v string
-		err := value.Decode(&v)
-		if err != nil {
-			return err
-		}
-		if v != delegate {
-			return fmt.Errorf("invalid output method option: %q", v)
-		}
-		so = "delegate"
-		return nil
-	case yamlMapTag:
-		o := &Outputs{}
-		return value.Decode(o)
-	default:
-		return fmt.Errorf("unsupported output method type: %q", value.Tag)
-	}
-}
-
-func (so SignatureOutputs) UnmarshalJSON(data []byte) error {
-	var untyped any
-	err := json.Unmarshal(data, &untyped)
+func (s *Signature) UnmarshalYAML(value *yaml.Node) error {
+	err := value.Decode(s)
 	if err != nil {
 		return err
 	}
-	switch v := untyped.(type) {
-	case string:
-		so = v
+	return s.unmarshalOutputs()
+}
+
+func (s *Signature) UnmarshalJSON(data []byte) error {
+	err := json.Unmarshal(data, s)
+	if err != nil {
+		return err
+	}
+	return s.unmarshalOutputs()
+}
+
+func (s *Signature) unmarshalOutputs() error {
+	if s.Outputs == nil {
+		return nil
+	}
+	switch v := s.Outputs.(type) {
+	case *string:
+		if *v != "delegate" {
+			return fmt.Errorf("unsupported value: %v", *v)
+		}
 		return nil
 	case map[string]any:
-		so = &Outputs{}
-		return json.Unmarshal(data, so)
+		data, err := json.Marshal(v)
+		if err != nil {
+			return fmt.Errorf("reifying outputs: %w", err)
+		}
+		err = json.Unmarshal(data, &s.Outputs)
+		return err
 	default:
-		return fmt.Errorf("unsupported type: %T", untyped)
+		return fmt.Errorf("unsupported type: %T", v)
 	}
 }

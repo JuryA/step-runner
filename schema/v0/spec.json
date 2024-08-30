@@ -24,7 +24,14 @@
 		    }
 		},
 		"outputs": {
-		    "$ref": "#/definitions/stringOutputsUnion"
+		    "oneOf": [
+			{
+			    "type": "string"
+			},
+			{
+			    "$ref": "#/definitions/outputs"
+			}
+		    ]
 		}
 	    }
 	},
@@ -71,16 +78,6 @@
 		{ "type": "array" },
 		{ "type": "object" },
 		{ "type": "step_result" }
-	    ]
-	},
-	"stringOutputsUnion": {
-	    "oneOf": [
-		{
-		    "type": "string"
-		},
-		{
-		    "$ref": "#/definitions/outputs"
-		}
 	    ]
 	},
 	"outputs": {
