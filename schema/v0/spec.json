@@ -71,13 +71,11 @@
 	},
 	"outputDefaultTypes": {
 	    "oneOf": [
-		{ "type": "raw_string" },
 		{ "type": "string" },
 		{ "type": "number" },
 		{ "type": "boolean" },
 		{ "type": "array" },
-		{ "type": "object" },
-		{ "type": "step_result" }
+		{ "type": "object" }
 	    ]
 	},
 	"outputs": {

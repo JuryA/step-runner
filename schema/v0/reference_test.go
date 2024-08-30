@@ -78,19 +78,19 @@ git:
 		},
 	}}
 
-	data, err := os.ReadFile("steps.json")
+	data, err := os.ReadFile("step.json")
 	if err != nil {
 		panic(err)
 	}
-	stepsSchema := jsonschema.MustCompileString("steps.json", string(data))
+	stepsSchema := jsonschema.MustCompileString("step.json", string(data))
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			steps := []Step{{
+			step := Step{
 				Step: tc.wantRef,
-			}}
-			check(t, json.Marshal, json.Unmarshal, []byte(tc.json), tc.wantRef, stepsSchema, steps)
-			check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), tc.wantRef, stepsSchema, steps)
+			}
+			check(t, json.Marshal, json.Unmarshal, []byte(tc.json), tc.wantRef, stepsSchema, step)
+			check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), tc.wantRef, stepsSchema, step)
 		})
 	}
 }
