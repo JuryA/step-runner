@@ -40,6 +40,9 @@ type Step struct {
 	// Env is a map of environment variable names to string values.
 	Env StepEnv `json:"env,omitempty" yaml:"env,omitempty" mapstructure:"env,omitempty"`
 
+	// Exec is a command to run.
+	Exec *Exec `json:"exec,omitempty" yaml:"exec,omitempty" mapstructure:"exec,omitempty"`
+
 	// Inputs is a map of step input names to structured values.
 	Inputs StepInputs `json:"inputs,omitempty" yaml:"inputs,omitempty" mapstructure:"inputs,omitempty"`
 
@@ -50,14 +53,14 @@ type Step struct {
 	// sub-steps.
 	Outputs StepOutputs `json:"outputs,omitempty" yaml:"outputs,omitempty" mapstructure:"outputs,omitempty"`
 
-	// Run is a list of sub-steps to run.
-	Run []Step `json:"run,omitempty" yaml:"run,omitempty" mapstructure:"run,omitempty"`
-
 	// Script is a shell script to evaluate.
 	Script *string `json:"script,omitempty" yaml:"script,omitempty" mapstructure:"script,omitempty"`
 
 	// Step is a reference to another step to invoke.
 	Step StepStep `json:"step,omitempty" yaml:"step,omitempty" mapstructure:"step,omitempty"`
+
+	// Steps is a list of sub-steps to run.
+	Steps []Step `json:"steps,omitempty" yaml:"steps,omitempty" mapstructure:"steps,omitempty"`
 }
 
 // Env is a map of environment variable names to string values.

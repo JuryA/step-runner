@@ -230,7 +230,7 @@ func (s *Step) compileDefinition() (*proto.Definition, error) {
 
 func (s *Step) verifyOneTypeProvided() error {
 	have := 0
-	if len(s.Exec.Command) > 0 || s.Exec.WorkDir != "" {
+	if len(s.Exec.Command) > 0 || (s.Exec.WorkDir != nil && *s.Exec.WorkDir != "") {
 		// Exec type step
 		have++
 	}
@@ -247,7 +247,7 @@ func (s *Step) verifyOneTypeProvided() error {
 	return nil
 }
 
-func (s *Step) compileToProto() (*proto.Definition, error) {
+func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 	protoDef := &proto.Definition{}
 	switch {
 	case len(s.Exec.Command) > 0:
@@ -255,14 +255,16 @@ func (s *Step) compileToProto() (*proto.Definition, error) {
 		protoDef.Type = proto.DefinitionType_exec
 		protoDef.Exec = &proto.Definition_Exec{
 			Command: s.Exec.Command,
-			WorkDir: s.Exec.WorkDir,
+		}
+		if s.Exec.WorkDir != nil {
+			protoDef.Exec.WorkDir = *s.Exec.WorkDir
 		}
 	case s.Steps != nil:
 		// Steps type step
 		protoDef.Type = proto.DefinitionType_steps
 		protoDef.Steps = make([]*proto.Step, len(s.Steps))
 		for i, ss := range s.Steps {
-			protoStep, err := ss.compile(i)
+			protoStep, err := (&ss).compile(i)
 			if err != nil {
 				return nil, fmt.Errorf("compiling steps[%v]: %q: %w", i, s.Name, err)
 			}
@@ -280,7 +282,9 @@ func (s *Step) compileToProto() (*proto.Definition, error) {
 		return nil, fmt.Errorf("could not determine step type")
 	}
 	protoDef.Env = s.Env
-	protoDef.Delegate = s.Delegate
+	if s.Delegate != nil {
+		protoDef.Delegate = *s.Delegate
+	}
 	return protoDef, nil
 }
 
@@ -346,7 +350,7 @@ func (s *Step) defaultName(i int) {
 	}
 }
 
-func (s *Step) compileToProto() (*proto.Step, error) {
+func (s *Step) compileToStepProto() (*proto.Step, error) {
 	protoStep := &proto.Step{}
 	protoInputs := map[string]*structpb.Value{}
 	for k, v := range s.Inputs {

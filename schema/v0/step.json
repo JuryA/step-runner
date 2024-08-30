@@ -26,9 +26,13 @@
 		    "description": "Step is a reference to another step to invoke.",
 		    "$ref": "#/definitions/stringReferenceUnion"
 		},
-		"run": {
+		"exec": {
+		    "description": "Exec is a command to run.",
+		    "$ref": "#/definitions/exec"
+		},
+		"steps": {
 		    "type": "array",
-		    "description": "Run is a list of sub-steps to run.",
+		    "description": "Steps is a list of sub-steps to run.",
 		    "items": {
 			"$ref": "#/definitions/step"
 		    }

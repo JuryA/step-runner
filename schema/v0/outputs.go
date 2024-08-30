@@ -7,14 +7,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	_ yaml.Unmarshaler = SpecJsonSpecOutputs(nil)
-	_ yaml.Marshaler   = SpecJsonSpecOutputs(nil)
-	_ json.Unmarshaler = SpecJsonSpecOutputs(nil)
-	_ json.Marshaler   = SpecJsonSpecOutputs(nil)
-)
+// var (
+// 	_ yaml.Unmarshaler = SignatureOutputs(nil)
+// 	_ json.Unmarshaler = SignatureOutputs(nil)
+// )
 
-func (o SpecJsonSpecOutputs) UnmarshalYAML(value *yaml.Node) error {
+func (so SignatureOutputs) UnmarshalYAML(value *yaml.Node) error {
 	switch value.Tag {
 	case yamlStringTag:
 		var v string
@@ -25,7 +23,7 @@ func (o SpecJsonSpecOutputs) UnmarshalYAML(value *yaml.Node) error {
 		if v != delegate {
 			return fmt.Errorf("invalid output method option: %q", v)
 		}
-		o = "delegate"
+		so = "delegate"
 		return nil
 	case yamlMapTag:
 		o := &Outputs{}
@@ -35,7 +33,7 @@ func (o SpecJsonSpecOutputs) UnmarshalYAML(value *yaml.Node) error {
 	}
 }
 
-func (o SpecJsonSpecOutputs) UnmarshalJSON(data []byte) error {
+func (so SignatureOutputs) UnmarshalJSON(data []byte) error {
 	var untyped any
 	err := json.Unmarshal(data, &untyped)
 	if err != nil {
@@ -43,11 +41,11 @@ func (o SpecJsonSpecOutputs) UnmarshalJSON(data []byte) error {
 	}
 	switch v := untyped.(type) {
 	case string:
-		o = v
+		so = v
 		return nil
 	case map[string]any:
-		o = &Outputs{}
-		return json.Unmarshal(data, o)
+		so = &Outputs{}
+		return json.Unmarshal(data, so)
 	default:
 		return fmt.Errorf("unsupported type: %T", untyped)
 	}
