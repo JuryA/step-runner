@@ -374,7 +374,7 @@ func (s *Step) compileToStepProto() (*proto.Step, error) {
 	switch v := s.Step.(type) {
 	case string:
 		ref, err = shortReference(v).compile()
-	case *GitReference:
+	case *Reference:
 		ref, err = v.compile()
 	default:
 		err = fmt.Errorf("unsupported type: %T", v)
@@ -426,15 +426,18 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 	}, nil
 }
 
-func (gr *GitReference) compile() (*proto.Step_Reference, error) {
-	url, err := defaultHTTPS(gr.Url)
+func (r *Reference) compile() (*proto.Step_Reference, error) {
+	if r.Git == nil {
+		return nil, fmt.Errorf("git is required")
+	}
+	url, err := defaultHTTPS(r.Git.Url)
 	if err != nil {
 		return nil, fmt.Errorf("parsing url as url: %w", err)
 	}
-	path, filename := pathFilename(gr.Dir)
+	path, filename := pathFilename(r.Git.Dir)
 	version := ""
-	if gr.Rev != nil {
-		version = *gr.Rev
+	if r.Git.Rev != nil {
+		version = *r.Git.Rev
 	}
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,
@@ -465,10 +468,10 @@ func defaultHTTPS(stepUrl *string) (string, error) {
 }
 
 func pathFilename(pathStr *string) (path []string, filename string) {
-	if pathStr == nil {
-		return nil, ""
-	}
 	filename = "step.yml"
+	if pathStr == nil {
+		return nil, filename
+	}
 	if *pathStr == "" {
 		return nil, filename
 	}

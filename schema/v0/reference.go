@@ -44,12 +44,12 @@ func (s *Step) unmarshalStep() error {
 		if err != nil {
 			return fmt.Errorf("reifying step: %w", err)
 		}
-		step := &Step{}
-		err = json.Unmarshal(data, step)
+		ref := &Reference{}
+		err = json.Unmarshal(data, ref)
 		if err != nil {
 			return fmt.Errorf("reifying step: %w", err)
 		}
-		s.Step = step
+		s.Step = ref
 		return nil
 	default:
 		return fmt.Errorf("unsupported type: %T", v)
