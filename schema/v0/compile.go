@@ -414,6 +414,10 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 	if !ok {
 		return nil, fmt.Errorf("expecting url@rev. got %q", sr)
 	}
+	url, err := defaultHTTPS(&url)
+	if err != nil {
+		return nil, fmt.Errorf("parsing reference %q: %w", string(sr), err)
+	}
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,
 		Url:      url,
