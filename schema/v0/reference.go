@@ -14,18 +14,17 @@ var (
 
 func (s *Step) UnmarshalYAML(value *yaml.Node) error {
 	type Default Step
-	d := &Default{}
+	d := (*Default)(s)
 	err := value.Decode(d)
 	if err != nil {
 		return err
 	}
-	s = (*Step)(d)
 	return s.unmarshalStep()
 }
 
 func (s *Step) UnmarshalJSON(data []byte) error {
 	type Default Step
-	d := &Default{}
+	d := (*Default)(s)
 	err := json.Unmarshal(data, d)
 	if err != nil {
 		return err
@@ -38,7 +37,7 @@ func (s *Step) unmarshalStep() error {
 		return nil
 	}
 	switch v := s.Step.(type) {
-	case *string:
+	case string:
 		return nil
 	case map[string]any:
 		data, err := json.Marshal(v)

@@ -14,23 +14,21 @@ var (
 
 func (s *Signature) UnmarshalYAML(value *yaml.Node) error {
 	type Default Signature
-	d := &Default{}
+	d := (*Default)(s)
 	err := value.Decode(d)
 	if err != nil {
 		return err
 	}
-	s = (*Signature)(d)
 	return s.unmarshalOutputs()
 }
 
 func (s *Signature) UnmarshalJSON(data []byte) error {
 	type Default Signature
-	d := &Default{}
+	d := (*Default)(s)
 	err := json.Unmarshal(data, d)
 	if err != nil {
 		return err
 	}
-	s = (*Signature)(d)
 	return s.unmarshalOutputs()
 }
 
@@ -39,9 +37,9 @@ func (s *Signature) unmarshalOutputs() error {
 		return nil
 	}
 	switch v := s.Outputs.(type) {
-	case *string:
-		if *v != "delegate" {
-			return fmt.Errorf("unsupported value: %v", *v)
+	case string:
+		if v != "delegate" {
+			return fmt.Errorf("unsupported value: %v", v)
 		}
 		return nil
 	case map[string]any:

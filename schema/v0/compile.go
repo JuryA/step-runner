@@ -38,6 +38,8 @@ func (spec *Spec) Compile() (*proto.Spec, error) {
 			}
 			outputs[k] = protoV
 		}
+	case nil:
+		protoSpec.Spec.OutputMethod = proto.OutputMethod_outputs
 	default:
 		return nil, fmt.Errorf("unsupported type: %T", spec.Spec.Outputs)
 	}
@@ -45,7 +47,7 @@ func (spec *Spec) Compile() (*proto.Spec, error) {
 	return protoSpec, nil
 }
 
-func (i Input) compile() (*proto.Spec_Content_Input, error) {
+func (i *Input) compile() (*proto.Spec_Content_Input, error) {
 	i.defaultTypeToString()
 	protoInput, err := i.compileToProto()
 	if err != nil {
@@ -58,14 +60,14 @@ func (i Input) compile() (*proto.Spec_Content_Input, error) {
 	return protoInput, nil
 }
 
-func (i Input) defaultTypeToString() {
+func (i *Input) defaultTypeToString() {
 	if i.Type == nil || *i.Type == "" {
 		t := InputTypeString
 		i.Type = &t
 	}
 }
 
-func (i Input) compileToProto() (*proto.Spec_Content_Input, error) {
+func (i *Input) compileToProto() (*proto.Spec_Content_Input, error) {
 	protoInput := &proto.Spec_Content_Input{}
 	switch *i.Type {
 	case InputTypeBoolean:
@@ -94,7 +96,7 @@ func (i Input) compileToProto() (*proto.Spec_Content_Input, error) {
 	return protoInput, nil
 }
 
-func (i Input) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Input) error {
+func (i *Input) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Input) error {
 	if i.Default == nil || protoInput.Default == nil {
 		return nil
 	}
@@ -132,7 +134,7 @@ func (i Input) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Inpu
 	return nil
 }
 
-func (o Output) compile() (*proto.Spec_Content_Output, error) {
+func (o *Output) compile() (*proto.Spec_Content_Output, error) {
 	o.defaultTypeToRawString()
 	protoOutput, err := o.compileToProto()
 	if err != nil {
@@ -145,14 +147,14 @@ func (o Output) compile() (*proto.Spec_Content_Output, error) {
 	return protoOutput, nil
 }
 
-func (o Output) defaultTypeToRawString() {
+func (o *Output) defaultTypeToRawString() {
 	if o.Type == nil || *o.Type == "" {
 		t := OutputTypeRawString
 		o.Type = &t
 	}
 }
 
-func (o Output) compileToProto() (*proto.Spec_Content_Output, error) {
+func (o *Output) compileToProto() (*proto.Spec_Content_Output, error) {
 	protoOutput := &proto.Spec_Content_Output{}
 	switch *o.Type {
 	case OutputTypeBoolean:
@@ -183,7 +185,7 @@ func (o Output) compileToProto() (*proto.Spec_Content_Output, error) {
 	return protoOutput, nil
 }
 
-func (o Output) verifyDefaultValueMatchesType(protoOutput *proto.Spec_Content_Output) error {
+func (o *Output) verifyDefaultValueMatchesType(protoOutput *proto.Spec_Content_Output) error {
 	if o.Default == nil || protoOutput.Default == nil {
 		return nil
 	}
@@ -235,7 +237,7 @@ func (s *Step) compileDefinition() (*proto.Definition, error) {
 
 func (s *Step) verifyOneTypeProvided() error {
 	have := 0
-	if len(s.Exec.Command) > 0 || (s.Exec.WorkDir != nil && *s.Exec.WorkDir != "") {
+	if s.Exec != nil {
 		// Exec type step
 		have++
 	}
@@ -255,7 +257,7 @@ func (s *Step) verifyOneTypeProvided() error {
 func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 	protoDef := &proto.Definition{}
 	switch {
-	case len(s.Exec.Command) > 0:
+	case s.Exec != nil:
 		// Exec type step
 		protoDef.Type = proto.DefinitionType_exec
 		protoDef.Exec = &proto.Definition_Exec{
