@@ -11,11 +11,13 @@ import (
 	proxyapi "gitlab.com/gitlab-org/step-runner/pkg/api/proxy"
 )
 
-var Cmd = &cobra.Command{
-	Use:   "proxy",
-	Short: "Tunnel gRPC requests/responses from stdin/stdout to the service listening on a local socket",
-	Args:  cobra.ExactArgs(0),
-	RunE:  run,
+func NewCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "proxy",
+		Short: "Tunnel gRPC requests/responses from stdin/stdout to the service listening on a local socket",
+		Args:  cobra.ExactArgs(0),
+		RunE:  run,
+	}
 }
 
 func run(cmd *cobra.Command, args []string) error {
