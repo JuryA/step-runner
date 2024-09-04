@@ -11,7 +11,8 @@ import (
 )
 
 func TestCICmd(t *testing.T) {
-	steps := `
+	t.Run("runs steps", func(t *testing.T) {
+		steps := `
 - name: secret_factory_a
   step: ../../pkg/runner/test_steps/secret_factory
 - name: secret_factory_b
@@ -19,21 +20,84 @@ func TestCICmd(t *testing.T) {
   inputs:
     secret_override: ${{ steps.secret_factory_a.outputs.secret }}
 `
+		require.NoError(t, os.Setenv("STEPS", steps))
+		defer func() { _ = os.Unsetenv("STEPS") }()
 
-	require.NoError(t, os.Setenv("STEPS", steps))
-	defer func() { _ = os.Unsetenv("STEPS") }()
+		cmd := NewCmd()
+		cmd.SetArgs([]string{"--write-steps-results"})
+		err := cmd.Execute()
+		require.NoError(t, err)
 
-	err := run(nil, nil)
-	require.NoError(t, err)
+		file, err := os.ReadFile(StepResultsFile)
+		require.NoError(t, err)
 
-	file, err := os.ReadFile("step-results.json")
-	require.NoError(t, err)
+		var msg proto.StepResult
+		err = protojson.Unmarshal(file, &msg)
+		require.NoError(t, err)
+		require.Equal(t, proto.StepResult_success, msg.Status)
 
-	var msg proto.StepResult
-	err = protojson.Unmarshal(file, &msg)
-	require.NoError(t, err)
-	require.Equal(t, proto.StepResult_success, msg.Status)
+		require.Len(t, msg.SubStepResults, 2)
+		require.Equal(t, msg.SubStepResults[0].Outputs["secret"], msg.SubStepResults[1].Outputs["secret"])
+	})
 
-	require.Len(t, msg.SubStepResults, 2)
-	require.Equal(t, msg.SubStepResults[0].Outputs["secret"], msg.SubStepResults[1].Outputs["secret"])
+	t.Run("generates step-results file", func(t *testing.T) {
+		tests := []struct {
+			name             string
+			env              map[string]string
+			args             []string
+			expectFileExists bool
+		}{
+			{
+				name:             "generates step file when CLI arg used",
+				args:             []string{"--write-steps-results"},
+				expectFileExists: true,
+			},
+			{
+				name:             "generates step file when env variable set",
+				env:              map[string]string{"CI_STEPS_DEBUG": "true"},
+				expectFileExists: true,
+			},
+			{
+				name:             "does not generate step file when env variable not set and CLI arg not used",
+				env:              map[string]string{},
+				args:             []string{},
+				expectFileExists: false,
+			},
+			{
+				name:             "does not generate step file when env variable set to false",
+				env:              map[string]string{"CI_STEPS_DEBUG": "false"},
+				expectFileExists: false,
+			},
+			{
+				name:             "does not generate step file when env variable not valid bool",
+				env:              map[string]string{"CI_STEPS_DEBUG": "invalid.bool"},
+				expectFileExists: false,
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				_ = os.Remove(StepResultsFile)
+
+				require.NoError(t, os.Setenv("STEPS", `- step: ../../pkg/runner/test_steps/secret_factory`))
+				defer func() { _ = os.Unsetenv("STEPS") }()
+
+				for key, value := range test.env {
+					defer func() { _ = os.Unsetenv(key) }()
+					require.NoError(t, os.Setenv(key, value))
+				}
+
+				cmd := NewCmd()
+				cmd.SetArgs(test.args)
+				err := cmd.Execute()
+				require.NoError(t, err)
+
+				if test.expectFileExists {
+					require.FileExists(t, StepResultsFile)
+				} else {
+					require.NoFileExists(t, StepResultsFile)
+				}
+			})
+		}
+	})
 }

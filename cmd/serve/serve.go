@@ -18,11 +18,13 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-var Cmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Start the step-runner gRPC service",
-	Args:  cobra.ExactArgs(0),
-	RunE:  run,
+func NewCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "serve",
+		Short: "Start the step-runner gRPC service",
+		Args:  cobra.ExactArgs(0),
+		RunE:  run,
+	}
 }
 
 func run(cmd *cobra.Command, args []string) error {

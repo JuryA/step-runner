@@ -10,10 +10,11 @@ import (
 )
 
 func main() {
-	cmd.RootCmd.AddCommand(ci.Cmd)
-	cmd.RootCmd.AddCommand(serve.Cmd)
-	cmd.RootCmd.AddCommand(proxy.Cmd)
-	err := cmd.RootCmd.Execute()
+	rootCmd := cmd.NewRootCmd()
+	rootCmd.AddCommand(ci.NewCmd())
+	rootCmd.AddCommand(serve.NewCmd())
+	rootCmd.AddCommand(proxy.NewCmd())
+	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

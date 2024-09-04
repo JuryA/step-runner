@@ -57,6 +57,7 @@ run-e2e:
   script:
     - /step-runner ci
   variables:
+    CI_STEPS_DEBUG: "true"
     STEPS:
       expand: false
       value: |

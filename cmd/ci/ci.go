@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -17,19 +18,41 @@ import (
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
-var Cmd = &cobra.Command{
-	Use:   "ci",
-	Short: "Run steps in a CI environment variable STEPS",
-	Args:  cobra.ExactArgs(0),
-	RunE:  run,
+var StepResultsFile = "step-results.json"
+
+type Options struct {
+	WriteStepResultsFile bool
+	Steps                string
+	WorkDir              string
+	JobVariables         map[string]string
 }
 
-func run(cmd *cobra.Command, args []string) error {
-	steps := os.Getenv("STEPS")
-	stepDef, err := wrapStepsInSpecDef(steps)
-	if err != nil {
-		return fmt.Errorf("reading STEPS %q: %w", steps, err)
+func NewCmd() *cobra.Command {
+	options := &Options{
+		Steps:        os.Getenv("STEPS"),
+		WorkDir:      findWorkDir(),
+		JobVariables: findJobVariables(),
 	}
+
+	cmd := &cobra.Command{
+		Use:   "ci",
+		Short: "Run steps in a CI environment variable STEPS",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return run(options)
+		},
+	}
+
+	defaultWriteStepsFile, _ := strconv.ParseBool(os.Getenv("CI_STEPS_DEBUG"))
+	cmd.Flags().BoolVar(&options.WriteStepResultsFile, "write-steps-results", defaultWriteStepsFile, "write step-results.json file, note this file may contain secrets")
+	return cmd
+}
+
+func run(options *Options) error {
+	stepDef, err := wrapStepsInSpecDef(options.Steps)
+	if err != nil {
+		return fmt.Errorf("reading STEPS %q: %w", options.Steps, err)
+	}
+
 	protoStepDef, err := schema.CompileSteps(stepDef)
 	if err != nil {
 		return fmt.Errorf("compiling STEPS: %w", err)
@@ -39,6 +62,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("creating cache: %w", err)
 	}
+
 	globalCtx, err := runner.NewGlobalContext()
 	if err != nil {
 		return fmt.Errorf("creating global context: %w", err)
@@ -53,26 +77,12 @@ func run(cmd *cobra.Command, args []string) error {
 	// steps from runner over gRPC we will receive "work_dir"
 	// explicitly (set to CI_BUILDS_DIR by runner). Then we can
 	// delete this whole command.
-	workDir := os.Getenv("CI_BUILDS_DIR")
-	if workDir == "" {
-		workDir, _ = os.Getwd()
-	}
-	globalCtx.WorkDir = workDir
+	globalCtx.WorkDir = options.WorkDir
 
 	// Add all CI_, GITLAB_ and DOCKER_ environment variables as a
 	// workaround until we get an explicit list in the Run gRPC
 	// call.
-	globalCtx.Job = map[string]string{}
-	prefixes := []string{"CI_", "GITLAB_", "DOCKER_"}
-	for _, e := range os.Environ() {
-		k, v, ok := strings.Cut(e, "=")
-		if !ok || !slices.ContainsFunc(prefixes, func(prefix string) bool {
-			return strings.HasPrefix(k, prefix)
-		}) {
-			continue
-		}
-		globalCtx.Job[k] = v
-	}
+	globalCtx.Job = options.JobVariables
 
 	step, err := schema.NewParser(globalCtx, defs).Parse(protoStepDef, params)
 
@@ -85,7 +95,10 @@ func run(cmd *cobra.Command, args []string) error {
 	stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
 
 	result, err := step.Run(ctx.Background(), stepsCtx, protoStepDef)
-	writeResultToFile(result)
+
+	if options.WriteStepResultsFile {
+		writeResultToFile(result)
+	}
 
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)
@@ -116,13 +129,40 @@ func writeResultToFile(result *proto.StepResult) {
 		return
 	}
 
-	outputFile := "step-results.json"
-	err = os.WriteFile(outputFile, bytes, 0640)
+	err = os.WriteFile(StepResultsFile, bytes, 0640)
 
 	if err != nil {
 		fmt.Println(fmt.Errorf("failed to write step results to file: %w", err))
 		return
 	}
 
-	fmt.Printf("step results written to %v\n", outputFile)
+	fmt.Printf("step results written to %v\n", StepResultsFile)
+}
+
+func findWorkDir() string {
+	workDir := os.Getenv("CI_BUILDS_DIR")
+
+	if workDir == "" {
+		workDir, _ = os.Getwd()
+	}
+
+	return workDir
+}
+
+func findJobVariables() map[string]string {
+	variables := map[string]string{}
+
+	prefixes := []string{"CI_", "GITLAB_", "DOCKER_"}
+
+	for _, e := range os.Environ() {
+		k, v, ok := strings.Cut(e, "=")
+
+		if !ok || !slices.ContainsFunc(prefixes, func(prefix string) bool { return strings.HasPrefix(k, prefix) }) {
+			continue
+		}
+
+		variables[k] = v
+	}
+
+	return variables
 }
