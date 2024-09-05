@@ -84,7 +84,7 @@ func run(options *Options) error {
 	// call.
 	globalCtx.Job = options.JobVariables
 
-	step, err := schema.NewParser(globalCtx, defs).Parse(protoStepDef, params)
+	step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params)
 
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)
