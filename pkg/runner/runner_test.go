@@ -461,7 +461,7 @@ func runTest(testCase runnerTest) func(*testing.T) {
 
 		params := &runner.Params{}
 
-		step, err := schema.NewParser(globalCtx, defs).Parse(protoStepDef, params)
+		step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params)
 		require.NoError(t, err)
 
 		env := globalCtx.NewEnvMergedFrom(params.Env)
