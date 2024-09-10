@@ -62,11 +62,5 @@ func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Var
 		}
 	}
 
-	for key := range inputs {
-		if spec.Spec.Inputs[key] == nil {
-			return fmt.Errorf("input %q not found", key)
-		}
-	}
-
 	return nil
 }

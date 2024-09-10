@@ -71,7 +71,11 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, wor
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
 	}
 
-	inputs := buildInputVars(s.stepReference, specDef)
+	inputs, err := buildInputVars(s.stepReference, specDef)
+
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
+	}
 
 	for name, v := range inputs {
 		res, err := expression.Expand(stepsCtx, v.Value)
@@ -124,12 +128,18 @@ func mapValue[Key comparable, Value any, NewValue any](value map[Key]Value, f fu
 	return result
 }
 
-func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) map[string]*context.Variable {
+func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) (map[string]*context.Variable, error) {
 	inputs := make(map[string]*context.Variable)
 
 	for name, val := range stepReference.Inputs {
-		inputs[name] = context.NewVariable(val, stepSpecDef.Spec.Spec.Inputs[name].Sensitive)
+		input, ok := stepSpecDef.Spec.Spec.Inputs[name]
+
+		if !ok {
+			return inputs, fmt.Errorf("step does not accept input with name %q", name)
+		}
+
+		inputs[name] = context.NewVariable(val, input.Sensitive)
 	}
 
-	return inputs
+	return inputs, nil
 }
