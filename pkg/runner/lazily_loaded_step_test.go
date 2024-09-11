@@ -62,6 +62,6 @@ type FixedStepParser struct {
 	step Step
 }
 
-func (c *FixedStepParser) Parse(_ *proto.SpecDefinition, _ *Params) (Step, error) {
+func (c *FixedStepParser) Parse(_ *proto.SpecDefinition, _ *Params, _ StepReference) (Step, error) {
 	return c.step, nil
 }

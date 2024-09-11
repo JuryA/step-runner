@@ -8,7 +8,7 @@ import (
 )
 
 type StepParser interface {
-	Parse(*proto.SpecDefinition, *Params) (Step, error)
+	Parse(specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error)
 }
 
 type Parser struct {
@@ -23,12 +23,12 @@ func NewParser(globalCtx *GlobalContext, stepCache Cache) *Parser {
 	}
 }
 
-func (p *Parser) Parse(specDef *proto.SpecDefinition, params *Params) (Step, error) {
+func (p *Parser) Parse(specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
 	if err := p.validateInputs(specDef.Spec, params.Inputs); err != nil {
 		return nil, fmt.Errorf("failed to parse spec definition: %w", err)
 	}
 
-	step, err := p.parseStepType(specDef)
+	step, err := p.parseStepType(specDef, params, loadedFrom)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse spec definition: %w", err)
@@ -37,9 +37,9 @@ func (p *Parser) Parse(specDef *proto.SpecDefinition, params *Params) (Step, err
 	return step, nil
 }
 
-func (p *Parser) parseStepType(specDef *proto.SpecDefinition) (Step, error) {
+func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
 	if specDef.Definition.Type == proto.DefinitionType_exec {
-		return NewExecutableStep(specDef), nil
+		return NewExecutableStep(loadedFrom, params, specDef), nil
 	}
 
 	if specDef.Definition.Type == proto.DefinitionType_steps {
@@ -49,7 +49,7 @@ func (p *Parser) parseStepType(specDef *proto.SpecDefinition) (Step, error) {
 			steps = append(steps, NewLazilyLoadedStep(p.globalCtx, p.stepCache, p, stepReference))
 		}
 
-		return NewSequenceOfSteps(steps...), nil
+		return NewSequenceOfSteps(loadedFrom, params, steps...), nil
 	}
 
 	return nil, fmt.Errorf("unknown step definition type: %s", specDef.Definition.Type)

@@ -32,6 +32,6 @@ func TestExecutableStep_Describe(t *testing.T) {
 		Dir: "",
 	}
 
-	step := NewExecutableStep(specDef)
+	step := NewExecutableStep(StepDefinedInGitLabJob, &Params{}, specDef)
 	require.Equal(t, `executable step "go run ."`, step.Describe())
 }

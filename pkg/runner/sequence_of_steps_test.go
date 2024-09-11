@@ -14,14 +14,14 @@ import (
 )
 
 func TestSequenceOfSteps_Describe(t *testing.T) {
-	steps := NewSequenceOfSteps(nil, nil)
+	steps := NewSequenceOfSteps(StepDefinedInGitLabJob, &Params{}, nil, nil)
 	require.Equal(t, "sequence of 2 steps", steps.Describe())
 }
 
 func TestSequenceOfSteps_Run(t *testing.T) {
 	t.Run("sub-step succeeds", func(t *testing.T) {
 		specDef := buildSpecDef()
-		steps := NewSequenceOfSteps(NewFixedResultStep(buildStepResult(specDef, proto.StepResult_success)))
+		steps := NewSequenceOfSteps(StepDefinedInGitLabJob, &Params{}, NewFixedResultStep(buildStepResult(specDef, proto.StepResult_success)))
 
 		result, err := steps.Run(context.Background(), buildStepsCtx(), specDef)
 		require.NoError(t, err)
@@ -34,7 +34,7 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 	t.Run("sub-step fails", func(t *testing.T) {
 		specDef := buildSpecDef()
 		err := fmt.Errorf("simulated.error")
-		steps := NewSequenceOfSteps(NewFixedResultStepWithErr(buildStepResult(specDef, proto.StepResult_failure), err))
+		steps := NewSequenceOfSteps(StepDefinedInGitLabJob, &Params{}, NewFixedResultStepWithErr(buildStepResult(specDef, proto.StepResult_failure), err))
 
 		result, err := steps.Run(context.Background(), buildStepsCtx(), specDef)
 		require.Error(t, err)

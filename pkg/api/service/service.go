@@ -61,7 +61,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		job.GlobCtx.Env = request.Env
 	}
 
-	step, err := runner.NewParser(job.GlobCtx, s.cache).Parse(specDef, &runner.Params{})
+	step, err := runner.NewParser(job.GlobCtx, s.cache).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}
