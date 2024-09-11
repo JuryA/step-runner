@@ -12,12 +12,16 @@ import (
 
 // ExecutableStep is a step that executes a command.
 type ExecutableStep struct {
-	specDef *proto.SpecDefinition
+	loadedFrom StepReference
+	params     *Params
+	specDef    *proto.SpecDefinition
 }
 
-func NewExecutableStep(specDef *proto.SpecDefinition) *ExecutableStep {
+func NewExecutableStep(loadedFrom StepReference, params *Params, specDef *proto.SpecDefinition) *ExecutableStep {
 	return &ExecutableStep{
-		specDef: specDef,
+		loadedFrom: loadedFrom,
+		params:     params,
+		specDef:    specDef,
 	}
 }
 
@@ -26,7 +30,7 @@ func (s *ExecutableStep) Describe() string {
 }
 
 func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *proto.SpecDefinition) (*proto.StepResult, error) {
-	result := NewStepResultBuilder(specDef)
+	result := NewStepResultBuilder(s.loadedFrom, s.params, specDef)
 	files, err := NewFiles(stepsCtx, specDef.Spec.Spec.OutputMethod, specDef.Spec.Spec.Outputs)
 
 	if err != nil {

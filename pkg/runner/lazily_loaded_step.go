@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"maps"
 
-	"google.golang.org/protobuf/types/known/structpb"
-
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -51,14 +49,6 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext, sp
 
 	if err != nil {
 		return result, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
-	}
-
-	// Record expanded step in results
-	result.Step = &proto.Step{
-		Name:   s.stepReference.Name,
-		Step:   s.stepReference.Step,
-		Inputs: mapValue(params.Inputs, func(v *context.Variable) *structpb.Value { return v.Value }),
-		Env:    params.Env,
 	}
 
 	return result, nil
@@ -109,23 +99,13 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, wor
 		Env:    env,
 	}
 
-	step, err := s.parser.Parse(specDef, params)
+	step, err := s.parser.Parse(specDef, params, NewNamedStepReference(s.stepReference.Name, s.stepReference.Step))
 
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
 	}
 
 	return step, params, specDef, nil
-}
-
-func mapValue[Key comparable, Value any, NewValue any](value map[Key]Value, f func(v Value) NewValue) map[Key]NewValue {
-	result := make(map[Key]NewValue, len(value))
-
-	for k, v := range value {
-		result[k] = f(v)
-	}
-
-	return result
 }
 
 func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) (map[string]*context.Variable, error) {
