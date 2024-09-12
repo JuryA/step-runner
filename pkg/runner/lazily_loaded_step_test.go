@@ -1,4 +1,4 @@
-package runner
+package runner_test
 
 import (
 	"context"
@@ -7,14 +7,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 func TestLazilyLoadedStep(t *testing.T) {
 	t.Run("loads and executes step", func(t *testing.T) {
-		specDef := buildSpecDef()
+		specDef := bldr.ProtoSpecDef().Build()
 		resourceLoader := &FixedSpecDefCache{specDef: specDef}
-		parser := &FixedStepParser{step: &FixedResultStep{stepResult: buildStepResult(specDef, proto.StepResult_success)}}
+
+		stepResult := bldr.StepResult().WithSpecDef(specDef).WithSuccessStatus().Build()
+		parser := &FixedStepParser{step: bldr.Step().WithRunReturnsStepResult(stepResult).Build()}
+
 		stepRef := &proto.Step{
 			Name:   "step-name",
 			Step:   &proto.Step_Reference{Filename: "step.yml"},
@@ -22,17 +27,21 @@ func TestLazilyLoadedStep(t *testing.T) {
 			Inputs: map[string]*structpb.Value{},
 		}
 
-		step := NewLazilyLoadedStep(buildGlobalCtx(), resourceLoader, parser, stepRef)
-		stepResult, err := step.Run(context.Background(), buildStepsCtx(), specDef)
+		globalCtx := bldr.GlobalContext().Build()
+		stepsCtx := bldr.StepsContext().Build()
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef)
+		stepResult, err := step.Run(context.Background(), stepsCtx, specDef)
 
 		require.NoError(t, err)
 		require.Equal(t, proto.StepResult_success, stepResult.Status)
 	})
 
 	t.Run("errors when inputs are provided that are not defined", func(t *testing.T) {
-		specDef := buildSpecDef()
+		specDef := bldr.ProtoSpecDef().Build()
 		resourceLoader := &FixedSpecDefCache{specDef: specDef}
-		parser := &FixedStepParser{step: &FixedResultStep{stepResult: buildStepResult(specDef, proto.StepResult_success)}}
+
+		stepResult := bldr.StepResult().WithSpecDef(specDef).WithSuccessStatus().Build()
+		parser := &FixedStepParser{step: bldr.Step().WithRunReturnsStepResult(stepResult).Build()}
 		stepRef := &proto.Step{
 			Name: "step-name",
 			Step: &proto.Step_Reference{Filename: "step.yml"},
@@ -42,8 +51,10 @@ func TestLazilyLoadedStep(t *testing.T) {
 			},
 		}
 
-		step := NewLazilyLoadedStep(buildGlobalCtx(), resourceLoader, parser, stepRef)
-		_, err := step.Run(context.Background(), buildStepsCtx(), specDef)
+		globalCtx := bldr.GlobalContext().Build()
+		stepsCtx := bldr.StepsContext().Build()
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef)
+		_, err := step.Run(context.Background(), stepsCtx, specDef)
 
 		require.Error(t, err)
 		require.Equal(t, `failed to run lazily-evaluated step "step-name": failed to load: step does not accept input with name "not.defined"`, err.Error())
@@ -59,9 +70,9 @@ func (c *FixedSpecDefCache) Get(_ context.Context, _ string, _ *proto.Step_Refer
 }
 
 type FixedStepParser struct {
-	step Step
+	step runner.Step
 }
 
-func (c *FixedStepParser) Parse(_ *proto.SpecDefinition, _ *Params, _ StepReference) (Step, error) {
+func (c *FixedStepParser) Parse(_ *proto.SpecDefinition, _ *runner.Params, _ runner.StepReference) (runner.Step, error) {
 	return c.step, nil
 }

@@ -5,46 +5,30 @@ import (
 	"testing"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type GlobalContext struct {
-	Job map[string]string `json:"job"`
-}
-
-type StepContext struct {
-	*GlobalContext
-	Env    map[string]string          `json:"env"`
-	Inputs map[string]*structpb.Value `json:"inputs"`
-}
-
-func textContextSteps() *StepContext {
-	return &StepContext{
-		GlobalContext: &GlobalContext{
-			Job: map[string]string{
-				"job_id": "1982",
-			},
-		},
-		Env: map[string]string{
-			"MOVIE": "tron",
-			"WHERE": "inside",
-		},
-		Inputs: map[string]*structpb.Value{
-			"name": structpb.NewStringValue("Kevin Flynn"),
-			"light_cycle": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
-				"color":  structpb.NewStringValue("yellow"),
-				"number": structpb.NewNumberValue(3),
-			}}),
-			"team_members": structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
-				structpb.NewStringValue("tron"),
-				structpb.NewStringValue("ram"),
-				structpb.NewStringValue("flynn"),
-			}}),
-		},
-	}
+func textContextSteps() *runner.StepsContext {
+	return bldr.StepsContext().
+		WithGlobalContext(bldr.GlobalContext().WithJob("job_id", "1982").Build()).
+		WithEnv("MOVIE", "tron").
+		WithEnv("WHERE", "inside").
+		WithInput("name", structpb.NewStringValue("Kevin Flynn")).
+		WithInput("light_cycle", structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
+			"color":  structpb.NewStringValue("yellow"),
+			"number": structpb.NewNumberValue(3),
+		}})).
+		WithInput("team_members", structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
+			structpb.NewStringValue("tron"),
+			structpb.NewStringValue("ram"),
+			structpb.NewStringValue("flynn"),
+		}})).
+		Build()
 }
 
 func TestExpandString(t *testing.T) {
