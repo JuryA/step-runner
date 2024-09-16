@@ -29,12 +29,12 @@ type GlobalContext struct {
 func NewGlobalContext() (*GlobalContext, error) {
 	dir, err := os.MkdirTemp("", "step-runner-export-*")
 	if err != nil {
-		return nil, fmt.Errorf("making export directory: %w", err)
+		return nil, fmt.Errorf("failed to create global context: failed to make export directory: %w", err)
 	}
 	exportFile := filepath.Join(dir, exportFilename)
 	_, err = os.Create(exportFile)
 	if err != nil {
-		return nil, fmt.Errorf("creating export file: %w", err)
+		return nil, fmt.Errorf("failed to create global context: failed to create export file: %w", err)
 	}
 
 	return &GlobalContext{

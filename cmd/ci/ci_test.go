@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/report"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
@@ -28,16 +29,16 @@ func TestCICmd(t *testing.T) {
 		err := cmd.Execute()
 		require.NoError(t, err)
 
-		file, err := os.ReadFile(StepResultsFile)
+		file, err := os.ReadFile(report.StepResultsFile)
 		require.NoError(t, err)
 
-		var msg proto.StepResult
-		err = protojson.Unmarshal(file, &msg)
+		var result proto.StepResult
+		err = protojson.Unmarshal(file, &result)
 		require.NoError(t, err)
-		require.Equal(t, proto.StepResult_success, msg.Status)
+		require.Equal(t, proto.StepResult_success, result.Status)
 
-		require.Len(t, msg.SubStepResults, 2)
-		require.Equal(t, msg.SubStepResults[0].Outputs["secret"], msg.SubStepResults[1].Outputs["secret"])
+		require.Len(t, result.SubStepResults, 2)
+		require.Equal(t, result.SubStepResults[0].Outputs["secret"], result.SubStepResults[1].Outputs["secret"])
 	})
 
 	t.Run("generates step-results file", func(t *testing.T) {
@@ -77,7 +78,7 @@ func TestCICmd(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				_ = os.Remove(StepResultsFile)
+				_ = os.Remove(report.StepResultsFile)
 
 				require.NoError(t, os.Setenv("STEPS", `- step: ../../pkg/runner/test_steps/secret_factory`))
 				defer func() { _ = os.Unsetenv("STEPS") }()
@@ -93,11 +94,36 @@ func TestCICmd(t *testing.T) {
 				require.NoError(t, err)
 
 				if test.expectFileExists {
-					require.FileExists(t, StepResultsFile)
+					require.FileExists(t, report.StepResultsFile)
 				} else {
-					require.NoFileExists(t, StepResultsFile)
+					require.NoFileExists(t, report.StepResultsFile)
 				}
 			})
 		}
+	})
+
+	t.Run("failed step returns error", func(t *testing.T) {
+		steps := `
+- name: exit
+  step: ../../pkg/runner/test_steps/exit
+  inputs:
+    exit_code: 99
+`
+		require.NoError(t, os.Setenv("STEPS", steps))
+		defer func() { _ = os.Unsetenv("STEPS") }()
+
+		cmd := NewCmd()
+		cmd.SetArgs([]string{"--write-steps-results"})
+		err := cmd.Execute()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "exec: exit status 99")
+
+		file, err := os.ReadFile(report.StepResultsFile)
+		require.NoError(t, err)
+
+		var result proto.StepResult
+		err = protojson.Unmarshal(file, &result)
+		require.NoError(t, err)
+		require.Equal(t, proto.StepResult_failure, result.Status)
 	})
 }
