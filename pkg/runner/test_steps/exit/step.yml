@@ -1,0 +1,8 @@
+spec:
+  inputs:
+    exit_code:
+      type: number
+      default: 0
+---
+steps:
+  - script: exit ${{inputs.exit_code}}
