@@ -14,6 +14,11 @@ func ProtoSpecDef() *ProtoSpecDefinitionBuilder {
 	}
 }
 
+func (bldr *ProtoSpecDefinitionBuilder) WithSpec(spec *proto.Spec) *ProtoSpecDefinitionBuilder {
+	bldr.spec = spec
+	return bldr
+}
+
 func (bldr *ProtoSpecDefinitionBuilder) WithDefinition(definition *proto.Definition) *ProtoSpecDefinitionBuilder {
 	bldr.definition = definition
 	return bldr

@@ -20,6 +20,11 @@ func StepResult() *StepResultBuilder {
 	}
 }
 
+func (bldr *StepResultBuilder) WithOutput(name string, value *structpb.Value) *StepResultBuilder {
+	bldr.outputs[name] = value
+	return bldr
+}
+
 func (bldr *StepResultBuilder) WithSpecDef(specDef *proto.SpecDefinition) *StepResultBuilder {
 	bldr.specDef = specDef
 	return bldr

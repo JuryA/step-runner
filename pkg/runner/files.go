@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -113,7 +114,7 @@ func (f *Files) loadStepResultFromOutputFile() (*proto.StepResult, error) {
 	}
 
 	stepResult := &proto.StepResult{}
-	if err := json.Unmarshal(data, stepResult); err != nil {
+	if err := protojson.Unmarshal(data, stepResult); err != nil {
 		return nil, fmt.Errorf("reading output_file as a step result: %w", err)
 	}
 
