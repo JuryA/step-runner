@@ -9,6 +9,7 @@ import (
 type StepResultBuilder struct {
 	specDef *proto.SpecDefinition
 	status  proto.StepResult_Status
+	step    *proto.Step
 	outputs map[string]*structpb.Value
 }
 
@@ -16,6 +17,7 @@ func StepResult() *StepResultBuilder {
 	return &StepResultBuilder{
 		specDef: ProtoSpecDef().Build(),
 		status:  proto.StepResult_success,
+		step:    nil,
 		outputs: map[string]*structpb.Value{},
 	}
 }
@@ -42,10 +44,13 @@ func (bldr *StepResultBuilder) WithSuccessStatus() *StepResultBuilder {
 
 func (bldr *StepResultBuilder) Build() *proto.StepResult {
 	return &proto.StepResult{
+		Step:           bldr.step,
 		SpecDefinition: bldr.specDef,
 		Status:         bldr.status,
 		Outputs:        bldr.outputs,
 		Exports:        make(map[string]string),
+		Env:            nil,
 		ExecResult:     &proto.StepResult_ExecResult{},
+		SubStepResults: nil,
 	}
 }
