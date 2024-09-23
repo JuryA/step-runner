@@ -74,7 +74,7 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 	}
 
 	return &expression.InterpolationContext{
-		Env:         s.Env,
+		Env:         s.GetEnvs(),
 		ExportFile:  s.ExportFile,
 		Inputs:      s.Inputs,
 		Job:         s.Job,

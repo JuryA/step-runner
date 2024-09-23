@@ -37,4 +37,12 @@ func TestStepsContext_View(t *testing.T) {
 		require.Equal(t, "step_a", view.StepResults["step.a"].Outputs["name"].GetStringValue())
 		require.Equal(t, "step_b", view.StepResults["step.b"].Outputs["name"].GetStringValue())
 	})
+
+	t.Run("includes environment variables from global context", func(t *testing.T) {
+		globalCtx := bldr.GlobalContext().WithEnv("VALUE_1", "A").Build()
+		stepsCtx := bldr.StepsContext().WithGlobalContext(globalCtx).WithEnv("VALUE_2", "B").Build()
+		view := stepsCtx.View()
+
+		require.Equal(t, map[string]string{"VALUE_1": "A", "VALUE_2": "B"}, view.Env)
+	})
 }

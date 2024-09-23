@@ -9,12 +9,14 @@ import (
 )
 
 type GlobalContextBuilder struct {
+	env        map[string]string
 	job        map[string]string
 	exportFile string
 }
 
 func GlobalContext() *GlobalContextBuilder {
 	return &GlobalContextBuilder{
+		env:        map[string]string{},
 		job:        map[string]string{},
 		exportFile: "export",
 	}
@@ -22,6 +24,11 @@ func GlobalContext() *GlobalContextBuilder {
 
 func (bldr *GlobalContextBuilder) WithJob(name, value string) *GlobalContextBuilder {
 	bldr.job[name] = value
+	return bldr
+}
+
+func (bldr *GlobalContextBuilder) WithEnv(name, value string) *GlobalContextBuilder {
+	bldr.env[name] = value
 	return bldr
 }
 
@@ -42,7 +49,7 @@ func (bldr *GlobalContextBuilder) Build() *runner.GlobalContext {
 		WorkDir:    ".",
 		Job:        bldr.job,
 		ExportFile: bldr.exportFile,
-		Env:        map[string]string{},
+		Env:        bldr.env,
 		Stdout:     &bytes.Buffer{},
 		Stderr:     &bytes.Buffer{},
 	}
