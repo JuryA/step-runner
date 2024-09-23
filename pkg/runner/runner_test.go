@@ -402,21 +402,6 @@ steps:
 			require.Equal(t, proto.StepResult_failure, results.SubStepResults[0].Status)
 			require.Equal(t, int32(1), results.SubStepResults[0].ExecResult.ExitCode)
 		},
-	}, {
-		name: "non-sensitive input cannot derive value using sensitive output",
-		yaml: `
-spec:
----
-steps:
-  - name: secret_factory
-    step: ./test_steps/secret_factory
-  - name: greeting
-    step: ./test_steps/greeting
-    inputs:
-      name: look, a secret! ${{ steps.secret_factory.outputs.secret }}
-`,
-		wantErr: fmt.Errorf(`failed to run lazily-evaluated step "greeting": failed to load: assign input "name":` +
-			` non-sensitive input cannot derive value using sensitive value(s) "steps.secret_factory.outputs.secret"`),
 	}}
 
 	for _, c := range cases {

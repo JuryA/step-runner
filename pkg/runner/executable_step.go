@@ -75,7 +75,7 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext, ex
 	cmdArgs := []string{}
 
 	for _, arg := range execDef.Command {
-		res, err := expression.ExpandString(stepsCtx, arg)
+		res, err := expression.ExpandString(stepsCtx.View(), arg)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to interpolate command argument %q: %w", execDef.WorkDir, err)
@@ -89,7 +89,7 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext, ex
 
 	// Expand working directory if present. Otherwise, fall back to the working directory defined globally.
 	if execDef.WorkDir != "" {
-		res, err := expression.ExpandString(stepsCtx, execDef.WorkDir)
+		res, err := expression.ExpandString(stepsCtx.View(), execDef.WorkDir)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to interpolate workdir %q: %w", execDef.WorkDir, err)

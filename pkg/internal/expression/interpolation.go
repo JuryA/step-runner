@@ -14,7 +14,7 @@ const InterpolateClose = "}}"
 
 var interpolateRegex = regexp.MustCompile(regexp.QuoteMeta(InterpolateOpen) + "|" + regexp.QuoteMeta(InterpolateClose))
 
-func interpolateString(obj any, value string) (*context.Value, error) {
+func interpolateString(obj *InterpolationContext, value string) (*context.Value, error) {
 	output := []*structpb.Value{}
 	depth := 0
 	prev_idx := 0
@@ -92,7 +92,7 @@ func interpolateString(obj any, value string) (*context.Value, error) {
 	return context.NewStringValue(res, sensitive, sensitiveReasons...), nil
 }
 
-func expandStruct(obj any, value *structpb.Struct) (*context.Value, error) {
+func expandStruct(obj *InterpolationContext, value *structpb.Struct) (*context.Value, error) {
 	res := &structpb.Struct{Fields: make(map[string]*structpb.Value, len(value.Fields))}
 
 	for fieldKey, fieldValue := range value.Fields {
@@ -105,7 +105,7 @@ func expandStruct(obj any, value *structpb.Struct) (*context.Value, error) {
 	return context.NewNonSensitiveValue(structpb.NewStructValue(res)), nil
 }
 
-func expandList(obj any, value *structpb.ListValue) (*context.Value, error) {
+func expandList(obj *InterpolationContext, value *structpb.ListValue) (*context.Value, error) {
 	res := &structpb.ListValue{Values: make([]*structpb.Value, len(value.Values))}
 
 	for listIndex, listValue := range value.Values {
@@ -119,7 +119,7 @@ func expandList(obj any, value *structpb.ListValue) (*context.Value, error) {
 }
 
 // The Expand rewrites struct/list/string mutating data structure
-func Expand(obj any, value *structpb.Value) (*context.Value, error) {
+func Expand(obj *InterpolationContext, value *structpb.Value) (*context.Value, error) {
 	switch value.Kind.(type) {
 	case *structpb.Value_StringValue:
 		return interpolateString(obj, value.GetStringValue())
@@ -136,7 +136,7 @@ func Expand(obj any, value *structpb.Value) (*context.Value, error) {
 }
 
 // The ExpandString rewrites string and returns string
-func ExpandString(obj any, value string) (string, error) {
+func ExpandString(obj *InterpolationContext, value string) (string, error) {
 	res, err := interpolateString(obj, value)
 	if err != nil {
 		return "", err

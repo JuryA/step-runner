@@ -93,7 +93,7 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 	expandedOutputs := make(map[string]*structpb.Value)
 
 	for k, v := range specDefinition.Definition.Outputs {
-		res, resErr := expression.Expand(stepsCtx, v)
+		res, resErr := expression.Expand(stepsCtx.View(), v)
 		if resErr == nil {
 			expandedOutputs[k] = res.Value
 		} else {

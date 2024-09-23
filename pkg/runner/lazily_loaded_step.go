@@ -68,7 +68,7 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, wor
 	}
 
 	for name, v := range inputs {
-		res, err := expression.Expand(stepsCtx, v.Value)
+		res, err := expression.Expand(stepsCtx.View(), v.Value)
 
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to load: expand input %q: %w", name, err)
@@ -85,7 +85,7 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, wor
 	env := maps.Clone(stepsCtx.Env)
 
 	for k, v := range s.stepReference.Env {
-		res, err := expression.ExpandString(stepsCtx, v)
+		res, err := expression.ExpandString(stepsCtx.View(), v)
 
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to load: env %q: %w", k, err)

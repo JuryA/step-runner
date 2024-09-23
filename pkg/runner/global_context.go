@@ -16,12 +16,12 @@ const (
 )
 
 type GlobalContext struct {
-	WorkDir    string            `json:"work_dir"`
-	Job        map[string]string `json:"job"`
-	ExportFile string            `json:"export_file"`
-	Env        map[string]string `json:"-"`
-	Stdout     io.Writer         `json:"-"`
-	Stderr     io.Writer         `json:"-"`
+	WorkDir    string
+	Job        map[string]string
+	ExportFile string
+	Env        map[string]string
+	Stdout     io.Writer
+	Stderr     io.Writer
 
 	dir string
 }
