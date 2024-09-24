@@ -29,9 +29,9 @@ func (spec *Spec) Compile() (*proto.Spec, error) {
 	switch o := spec.Spec.Outputs.(type) {
 	case string:
 		protoSpec.Spec.OutputMethod = proto.OutputMethod_delegate
-	case Outputs:
+	case *Outputs:
 		protoSpec.Spec.OutputMethod = proto.OutputMethod_outputs
-		for k, v := range o {
+		for k, v := range *o {
 			protoV, err := v.compile()
 			if err != nil {
 				return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
