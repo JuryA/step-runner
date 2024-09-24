@@ -484,8 +484,13 @@ type valueCompiler struct {
 }
 
 func (value *valueCompiler) compile() (*structpb.Value, error) {
+	var v any = value.v
+	if s, ok := v.(*string); ok && s != nil {
+		// Dereference strings.
+		v = *s
+	}
 	// We let structpb do all the heavy lifting
 	// and verify the type matches our
 	// expectations later.
-	return structpb.NewValue(value.v)
+	return structpb.NewValue(v)
 }
