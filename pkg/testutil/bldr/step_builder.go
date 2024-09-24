@@ -2,7 +2,6 @@ package bldr
 
 import (
 	"context"
-	"fmt"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -43,7 +42,7 @@ type FixedResultStep struct {
 }
 
 func (s *FixedResultStep) Describe() string {
-	return fmt.Sprintf("fixed result step")
+	return "fixed result step"
 }
 
 func (s *FixedResultStep) Run(_ context.Context, _ *runner.StepsContext, _ *proto.SpecDefinition) (*runner.StepResult, error) {
