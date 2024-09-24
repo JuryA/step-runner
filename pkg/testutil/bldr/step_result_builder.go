@@ -3,6 +3,7 @@ package bldr
 import (
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -42,8 +43,8 @@ func (bldr *StepResultBuilder) WithSuccessStatus() *StepResultBuilder {
 	return bldr
 }
 
-func (bldr *StepResultBuilder) Build() *proto.StepResult {
-	return &proto.StepResult{
+func (bldr *StepResultBuilder) Build() *runner.StepResult {
+	protoStepResult := &proto.StepResult{
 		Step:           bldr.step,
 		SpecDefinition: bldr.specDef,
 		Status:         bldr.status,
@@ -53,4 +54,6 @@ func (bldr *StepResultBuilder) Build() *proto.StepResult {
 		ExecResult:     &proto.StepResult_ExecResult{},
 		SubStepResults: nil,
 	}
+
+	return runner.NewStepResult(protoStepResult)
 }

@@ -73,8 +73,8 @@ func TestExecutableStep_Run(t *testing.T) {
 				step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
 				execStepResult, err := step.Run(context.Background(), stepsCtx, specDef)
 				require.NoError(t, err)
-				require.Equal(t, proto.StepResult_success, execStepResult.Status)
-				require.Equal(t, test.expected, test.extractValueFn(execStepResult.Outputs["value"]))
+				require.Equal(t, proto.StepResult_success, execStepResult.ProtoStepResult().Status)
+				require.Equal(t, test.expected, test.extractValueFn(execStepResult.ProtoStepResult().Outputs["value"]))
 			})
 		}
 	})
@@ -84,7 +84,7 @@ func TestExecutableStep_Run(t *testing.T) {
 			WithOutput("name", structpb.NewStringValue("amanda")).
 			WithSuccessStatus().
 			Build()
-		jsonStepResult, err := protojson.Marshal(stepResult)
+		jsonStepResult, err := protojson.Marshal(stepResult.ProtoStepResult())
 		require.NoError(t, err)
 
 		protoSpec := bldr.ProtoSpec().WithOutputMethod(proto.OutputMethod_delegate).Build()
@@ -100,8 +100,8 @@ func TestExecutableStep_Run(t *testing.T) {
 		step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
 		execStepResult, err := step.Run(context.Background(), stepsCtx, specDef)
 		require.NoError(t, err)
-		require.Equal(t, proto.StepResult_success, execStepResult.Status)
-		require.Equal(t, "amanda", execStepResult.Outputs["name"].GetStringValue())
+		require.Equal(t, proto.StepResult_success, execStepResult.ProtoStepResult().Status)
+		require.Equal(t, "amanda", execStepResult.ProtoStepResult().Outputs["name"].GetStringValue())
 	})
 }
 

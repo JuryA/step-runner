@@ -100,7 +100,13 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 func (s *StepRunnerService) run(job *jobs.Job, stepsCtx *runner.StepsContext, step runner.Step, specDef *proto.SpecDefinition) {
 	// TODO: Add streaming of step-results as they are produced.
 	result, err := step.Run(job.Ctx, stepsCtx, specDef)
-	job.Finish(result, err)
+
+	var protoResult *proto.StepResult
+	if result != nil {
+		protoResult = result.ProtoStepResult()
+	}
+
+	job.Finish(protoResult, err)
 	if err != nil {
 		// TODO: better logging
 		log.Printf("an error occurred executing the job: %s", err)

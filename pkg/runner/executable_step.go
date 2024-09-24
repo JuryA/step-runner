@@ -29,7 +29,7 @@ func (s *ExecutableStep) Describe() string {
 	return fmt.Sprintf("executable step %q", strings.Join(s.specDef.Definition.Exec.Command, " "))
 }
 
-func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *proto.SpecDefinition) (*proto.StepResult, error) {
+func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *proto.SpecDefinition) (*StepResult, error) {
 	result := NewStepResultBuilder(s.loadedFrom, s.params, specDef)
 	files, err := NewFiles(stepsCtx, specDef.Spec.Spec.OutputMethod, specDef.Spec.Spec.Outputs)
 

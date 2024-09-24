@@ -31,9 +31,9 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		result, err := steps.Run(context.Background(), stepsCtx, specDef)
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		require.Equal(t, proto.StepResult_success, result.Status)
-		require.Len(t, result.SubStepResults, 1)
-		require.Equal(t, proto.StepResult_success, result.SubStepResults[0].Status)
+		require.Equal(t, proto.StepResult_success, result.ProtoStepResult().Status)
+		require.Len(t, result.ProtoStepResult().SubStepResults, 1)
+		require.Equal(t, proto.StepResult_success, result.ProtoStepResult().SubStepResults[0].Status)
 	})
 
 	t.Run("sub-step fails", func(t *testing.T) {
@@ -48,8 +48,8 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "failed to run sequence of steps: simulated.error", err.Error())
 		require.NotNil(t, result)
-		require.Equal(t, proto.StepResult_failure, result.Status)
-		require.Len(t, result.SubStepResults, 1)
-		require.Equal(t, proto.StepResult_failure, result.SubStepResults[0].Status)
+		require.Equal(t, proto.StepResult_failure, result.ProtoStepResult().Status)
+		require.Len(t, result.ProtoStepResult().SubStepResults, 1)
+		require.Equal(t, proto.StepResult_failure, result.ProtoStepResult().SubStepResults[0].Status)
 	})
 }

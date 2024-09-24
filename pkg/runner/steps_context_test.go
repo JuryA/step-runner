@@ -8,7 +8,6 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
-	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 func TestStepsContext_ExpandAndApplyEnv(t *testing.T) {
@@ -25,7 +24,7 @@ func TestStepsContext_ExpandAndApplyEnv(t *testing.T) {
 
 func TestStepsContext_View(t *testing.T) {
 	t.Run("can access step outputs", func(t *testing.T) {
-		stepResults := map[string]*proto.StepResult{
+		stepResults := map[string]*runner.StepResult{
 			"step.a": bldr.StepResult().WithOutput("name", structpb.NewStringValue("step_a")).Build(),
 			"step.b": bldr.StepResult().WithOutput("name", structpb.NewStringValue("step_b")).Build(),
 		}

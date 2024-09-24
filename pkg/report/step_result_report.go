@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 )
 
 var StepResultsFile = "step-results.json"
@@ -17,8 +17,8 @@ func NewStepResultReport() *StepResultReport {
 	return &StepResultReport{}
 }
 
-func (r *StepResultReport) Write(result *proto.StepResult) error {
-	json, err := protojson.Marshal(result)
+func (r *StepResultReport) Write(result *runner.StepResult) error {
+	json, err := protojson.Marshal(result.ProtoStepResult())
 
 	if err != nil {
 		return fmt.Errorf("failed to write step results report: %w", err)

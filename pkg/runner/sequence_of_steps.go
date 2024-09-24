@@ -33,7 +33,7 @@ func (s *SequenceOfSteps) Describe() string {
 	return fmt.Sprintf("sequence of %d steps", len(s.steps))
 }
 
-func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error) {
+func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*StepResult, error) {
 	result := NewStepResultBuilder(s.loadedFrom, s.params, specDefinition)
 
 	err := stepsCtx.ExpandAndApplyEnv(specDefinition.Definition.Env)
@@ -58,11 +58,11 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 
 		// Capture results even if there was an error
 		if stepResult != nil {
-			if stepResult.Step != nil {
-				stepsCtx.Steps[stepResult.Step.Name] = stepResult
+			if hasStep, name := stepResult.StepName(); hasStep {
+				stepsCtx.Steps[name] = stepResult.ProtoStepResult()
 			}
 
-			if stepResult.Status == proto.StepResult_failure {
+			if stepResult.Failed() {
 				return result.BuildFailure(), fmt.Errorf("failed to run %s: %w", s.Describe(), err)
 			}
 		}
@@ -76,7 +76,7 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 	// the delegation mechanism "disappear" from the execution
 	// context.
 	if specDefinition.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		outputs, err := findOutputsWithName(specDefinition.Definition.Delegate, result.subStepResults)
+		outputs, err := result.BuildSubStepResults().FindOutputsForStepName(specDefinition.Definition.Delegate)
 		result.WithMergedOutputs(outputs)
 
 		if err != nil {
@@ -103,15 +103,4 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 
 	result.WithMergedOutputs(expandedOutputs)
 	return result.Build(), nil
-}
-
-// findOutputsWithName finds the output results for the step by step name
-func findOutputsWithName(name string, results []*proto.StepResult) (map[string]*structpb.Value, error) {
-	for _, s := range results {
-		if s.Step != nil && s.Step.Name == name {
-			return s.Outputs, nil
-		}
-	}
-
-	return nil, fmt.Errorf("delegating outputs to %q: could not find substep", name)
 }

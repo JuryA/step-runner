@@ -33,7 +33,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 		stepResult, err := step.Run(context.Background(), stepsCtx, specDef)
 
 		require.NoError(t, err)
-		require.Equal(t, proto.StepResult_success, stepResult.Status)
+		require.Equal(t, proto.StepResult_success, stepResult.ProtoStepResult().Status)
 	})
 
 	t.Run("errors when inputs are provided that are not defined", func(t *testing.T) {

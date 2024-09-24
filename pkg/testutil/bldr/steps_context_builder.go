@@ -15,7 +15,7 @@ type StepsContextBuilder struct {
 	env         map[string]string
 	inputs      map[string]*structpb.Value
 	outputFile  string
-	stepResults map[string]*proto.StepResult
+	stepResults map[string]*runner.StepResult
 }
 
 func StepsContext() *StepsContextBuilder {
@@ -24,7 +24,7 @@ func StepsContext() *StepsContextBuilder {
 		env:         map[string]string{},
 		inputs:      map[string]*structpb.Value{},
 		outputFile:  "output",
-		stepResults: map[string]*proto.StepResult{},
+		stepResults: map[string]*runner.StepResult{},
 	}
 }
 
@@ -55,18 +55,24 @@ func (bldr *StepsContextBuilder) WithTempOutputFile(tempDir string) *StepsContex
 	return bldr
 }
 
-func (bldr *StepsContextBuilder) WithStepResults(stepResults map[string]*proto.StepResult) *StepsContextBuilder {
+func (bldr *StepsContextBuilder) WithStepResults(stepResults map[string]*runner.StepResult) *StepsContextBuilder {
 	bldr.stepResults = stepResults
 	return bldr
 }
 
 func (bldr *StepsContextBuilder) Build() *runner.StepsContext {
+	protoStepResults := make(map[string]*proto.StepResult, len(bldr.stepResults))
+
+	for name, value := range bldr.stepResults {
+		protoStepResults[name] = value.ProtoStepResult()
+	}
+
 	return &runner.StepsContext{
 		GlobalContext: bldr.globalCtx,
 		StepDir:       ".",
 		OutputFile:    bldr.outputFile,
 		Env:           bldr.env,
 		Inputs:        bldr.inputs,
-		Steps:         bldr.stepResults,
+		Steps:         protoStepResults,
 	}
 }

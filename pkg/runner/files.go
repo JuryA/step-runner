@@ -50,7 +50,7 @@ func NewFiles(
 	}, nil
 }
 
-func (f *Files) Outputs() (map[string]*structpb.Value, *proto.StepResult, error) {
+func (f *Files) Outputs() (map[string]*structpb.Value, *StepResult, error) {
 	// Delegates take over step execution including reading and validating outputs.
 	if f.outputMethod == proto.OutputMethod_delegate {
 		delegateResult, err := f.loadStepResultFromOutputFile()
@@ -59,7 +59,7 @@ func (f *Files) Outputs() (map[string]*structpb.Value, *proto.StepResult, error)
 			return nil, nil, fmt.Errorf("reading outputs: %w", err)
 		}
 
-		return delegateResult.Outputs, delegateResult, nil
+		return delegateResult.Outputs(), delegateResult, nil
 	}
 
 	outputs, err := readFile(f.outputFile)
@@ -106,7 +106,7 @@ func (f *Files) Outputs() (map[string]*structpb.Value, *proto.StepResult, error)
 	return protoOutputs, nil, nil
 }
 
-func (f *Files) loadStepResultFromOutputFile() (*proto.StepResult, error) {
+func (f *Files) loadStepResultFromOutputFile() (*StepResult, error) {
 	data, err := os.ReadFile(f.outputFile)
 
 	if err != nil {
@@ -118,7 +118,7 @@ func (f *Files) loadStepResultFromOutputFile() (*proto.StepResult, error) {
 		return nil, fmt.Errorf("reading output_file as a step result: %w", err)
 	}
 
-	return stepResult, nil
+	return NewStepResult(stepResult), nil
 }
 
 func checkOutputType(want proto.ValueType, have *structpb.Value) error {

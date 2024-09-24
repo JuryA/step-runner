@@ -8,5 +8,5 @@ import (
 
 type Step interface {
 	Describer
-	Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error)
+	Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*StepResult, error)
 }

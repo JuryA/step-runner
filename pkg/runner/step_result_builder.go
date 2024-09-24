@@ -16,7 +16,7 @@ type StepResultBuilder struct {
 	outputs        map[string]*structpb.Value
 	params         *Params
 	specDef        *proto.SpecDefinition
-	subStepResults []*proto.StepResult
+	subStepResults []*StepResult
 }
 
 func NewStepResultBuilder(loadedFrom StepReference, params *Params, specDef *proto.SpecDefinition) *StepResultBuilder {
@@ -28,7 +28,7 @@ func NewStepResultBuilder(loadedFrom StepReference, params *Params, specDef *pro
 		outputs:        make(map[string]*structpb.Value),
 		params:         params,
 		specDef:        specDef,
-		subStepResults: make([]*proto.StepResult, 0),
+		subStepResults: make([]*StepResult, 0),
 	}
 }
 
@@ -50,7 +50,7 @@ func (bldr *StepResultBuilder) WithMergedOutputs(outputs map[string]*structpb.Va
 	return bldr
 }
 
-func (bldr *StepResultBuilder) WithSubStepResult(result *proto.StepResult) *StepResultBuilder {
+func (bldr *StepResultBuilder) WithSubStepResult(result *StepResult) *StepResultBuilder {
 	if result != nil {
 		bldr.subStepResults = append(bldr.subStepResults, result)
 	}
@@ -62,16 +62,16 @@ func (bldr *StepResultBuilder) WithExports(exports map[string]string) *StepResul
 	return bldr
 }
 
-func (bldr *StepResultBuilder) BuildFailure() *proto.StepResult {
+func (bldr *StepResultBuilder) BuildFailure() *StepResult {
 	return bldr.buildResult(proto.StepResult_failure)
 }
 
-func (bldr *StepResultBuilder) Build() *proto.StepResult {
+func (bldr *StepResultBuilder) Build() *StepResult {
 	return bldr.buildResult(proto.StepResult_success)
 }
 
-func (bldr *StepResultBuilder) buildResult(status proto.StepResult_Status) *proto.StepResult {
-	return &proto.StepResult{
+func (bldr *StepResultBuilder) buildResult(status proto.StepResult_Status) *StepResult {
+	protoStepResult := &proto.StepResult{
 		Step:           bldr.loadedFrom.ToProtoStep(bldr.params),
 		SpecDefinition: bldr.specDef,
 		Status:         status,
@@ -79,6 +79,12 @@ func (bldr *StepResultBuilder) buildResult(status proto.StepResult_Status) *prot
 		Exports:        bldr.exports,
 		Env:            bldr.env,
 		ExecResult:     bldr.execResult,
-		SubStepResults: bldr.subStepResults,
+		SubStepResults: bldr.BuildSubStepResults().ToProtoStepResults(),
 	}
+
+	return NewStepResult(protoStepResult)
+}
+
+func (bldr *StepResultBuilder) BuildSubStepResults() *StepResults {
+	return NewStepResults(bldr.subStepResults)
 }

@@ -10,7 +10,7 @@ import (
 
 type StepBuilder struct {
 	err        error
-	stepResult *proto.StepResult
+	stepResult *runner.StepResult
 }
 
 func Step() *StepBuilder {
@@ -20,7 +20,7 @@ func Step() *StepBuilder {
 	}
 }
 
-func (bldr *StepBuilder) WithRunReturnsStepResult(stepResult *proto.StepResult) *StepBuilder {
+func (bldr *StepBuilder) WithRunReturnsStepResult(stepResult *runner.StepResult) *StepBuilder {
 	bldr.stepResult = stepResult
 	return bldr
 }
@@ -38,14 +38,14 @@ func (bldr *StepBuilder) Build() *FixedResultStep {
 }
 
 type FixedResultStep struct {
-	stepResult *proto.StepResult
+	stepResult *runner.StepResult
 	err        error
 }
 
 func (s *FixedResultStep) Describe() string {
-	return fmt.Sprintf("fixed result step %s", s.stepResult.Status)
+	return fmt.Sprintf("fixed result step")
 }
 
-func (s *FixedResultStep) Run(_ context.Context, _ *runner.StepsContext, _ *proto.SpecDefinition) (*proto.StepResult, error) {
+func (s *FixedResultStep) Run(_ context.Context, _ *runner.StepsContext, _ *proto.SpecDefinition) (*runner.StepResult, error) {
 	return s.stepResult, s.err
 }

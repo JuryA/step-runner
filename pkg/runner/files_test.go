@@ -264,7 +264,7 @@ food=apple
 			}
 
 			if tc.wantSubStepResult != nil {
-				require.True(t, protobuf.Equal(tc.wantSubStepResult, gotSubStepResult), "wanted %+v. got %+v", tc.wantSubStepResult, gotSubStepResult)
+				require.True(t, protobuf.Equal(tc.wantSubStepResult, gotSubStepResult.ProtoStepResult()), "wanted %+v. got %+v", tc.wantSubStepResult, gotSubStepResult)
 			}
 		})
 	}

@@ -458,14 +458,14 @@ func runTest(testCase runnerTest) func(*testing.T) {
 			require.Error(t, err)
 			require.Equal(t, testCase.wantErr.Error(), err.Error())
 			if testCase.wantResults != nil {
-				testCase.wantResults(t, result)
+				testCase.wantResults(t, result.ProtoStepResult())
 			}
 		} else {
 			require.NoError(t, err)
 			if testCase.wantLog != "" {
 				require.Equal(t, testCase.wantLog, log.String())
 			}
-			testCase.wantResults(t, result)
+			testCase.wantResults(t, result.ProtoStepResult())
 		}
 	}
 }

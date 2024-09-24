@@ -34,7 +34,7 @@ func (s *LazilyLoadedStep) Describe() string {
 // Run fetches a step definition, parses the step, and executes it.
 // The step reference inputs and environment are expanded.
 // The current environment is cloned into params in preparation for a recursive call to Run.
-func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error) {
+func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*StepResult, error) {
 	step, params, subStepSpecDefinition, err := s.loadStep(ctx, parentStepsCtx, specDefinition.Dir)
 
 	if err != nil {
