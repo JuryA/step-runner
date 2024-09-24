@@ -33,6 +33,11 @@ func (bldr *StepResultBuilder) WithSpecDef(specDef *proto.SpecDefinition) *StepR
 	return bldr
 }
 
+func (bldr *StepResultBuilder) WithStep(step *proto.Step) *StepResultBuilder {
+	bldr.step = step
+	return bldr
+}
+
 func (bldr *StepResultBuilder) WithFailedStatus() *StepResultBuilder {
 	bldr.status = proto.StepResult_failure
 	return bldr

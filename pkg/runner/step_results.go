@@ -12,7 +12,7 @@ type StepResults struct {
 	values []*StepResult
 }
 
-func NewStepResults(values []*StepResult) *StepResults {
+func NewStepResults(values ...*StepResult) *StepResults {
 	return &StepResults{values: values}
 }
 

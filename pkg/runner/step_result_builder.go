@@ -86,5 +86,5 @@ func (bldr *StepResultBuilder) buildResult(status proto.StepResult_Status) *Step
 }
 
 func (bldr *StepResultBuilder) BuildSubStepResults() *StepResults {
-	return NewStepResults(bldr.subStepResults)
+	return NewStepResults(bldr.subStepResults...)
 }
