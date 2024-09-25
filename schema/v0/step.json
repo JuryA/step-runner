@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v1",
+    "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v0",
     "$ref": "#/definitions/step",
     "definitions": {
 	"step": {
