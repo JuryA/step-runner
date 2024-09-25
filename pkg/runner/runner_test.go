@@ -16,7 +16,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	"gitlab.com/gitlab-org/step-runner/schema/v1"
+	"gitlab.com/gitlab-org/step-runner/schema/v0"
 )
 
 func TestRun(t *testing.T) {
@@ -425,9 +425,16 @@ func requireStringEqualValue(t *testing.T, str string, got *structpb.Value) {
 
 func runTest(testCase runnerTest) func(*testing.T) {
 	return func(t *testing.T) {
-		stepDef, err := schema.ReadSteps(testCase.yaml, "")
+		schemaSpec, schemaStep, err := schema.ReadSteps(testCase.yaml, "")
 		require.NoError(t, err)
-		protoStepDef, err := schema.CompileSteps(stepDef)
+		protoSpec, err := schemaSpec.Compile()
+		require.NoError(t, err)
+		protoDef, err := schemaStep.CompileDefinition()
+		require.NoError(t, err)
+		protoStepDef := &proto.SpecDefinition{
+			Spec:       protoSpec,
+			Definition: protoDef,
+		}
 		require.NoError(t, err)
 		protoStepDef.Dir, _ = os.Getwd()
 
