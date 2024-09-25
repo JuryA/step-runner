@@ -9,7 +9,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	"gitlab.com/gitlab-org/step-runner/schema/v1"
+	"gitlab.com/gitlab-org/step-runner/schema/v0"
 )
 
 var _ runner.Cache = &cache{}
@@ -36,13 +36,21 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepRef *proto.Step_R
 	load := func(dir string) (*proto.SpecDefinition, error) {
 		path := filepath.Join(stepRef.Path...)
 		filename := filepath.Join(dir, path, stepRef.Filename)
-		stepDef, err := schema.LoadSteps(filename)
+		spec, step, err := schema.LoadSteps(filename)
 		if err != nil {
 			return nil, fmt.Errorf("loading file %q: %w", filename, err)
 		}
-		protoStepDef, err := schema.CompileSteps(stepDef)
+		protoSpec, err := spec.Compile()
 		if err != nil {
 			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
+		}
+		protoDef, err := step.CompileDefinition()
+		if err != nil {
+			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
+		}
+		protoStepDef := &proto.SpecDefinition{
+			Spec:       protoSpec,
+			Definition: protoDef,
 		}
 		protoStepDef.Dir = filepath.Join(dir, path)
 		return protoStepDef, nil

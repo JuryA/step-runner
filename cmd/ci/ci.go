@@ -14,7 +14,8 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/report"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/schema/v1"
+	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/schema/v0"
 )
 
 type Options struct {
@@ -45,14 +46,20 @@ func NewCmd() *cobra.Command {
 }
 
 func run(options *Options) error {
-	stepDef, err := wrapStepsInSpecDef(options.Steps)
+	def, err := wrapStepsInSpecDef(options.Steps)
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", options.Steps, err)
 	}
 
-	protoStepDef, err := schema.CompileSteps(stepDef)
+	protoDef, err := def.CompileDefinition()
 	if err != nil {
 		return fmt.Errorf("compiling STEPS: %w", err)
+	}
+	protoStepDef := &proto.SpecDefinition{
+		Spec: &proto.Spec{
+			Spec: &proto.Spec_Content{},
+		},
+		Definition: protoDef,
 	}
 
 	defs, err := cache.New()
@@ -108,18 +115,15 @@ func run(options *Options) error {
 	return nil
 }
 
-func wrapStepsInSpecDef(steps string) (*schema.StepDefinition, error) {
-	specDef := &schema.StepDefinition{
-		Spec:       &schema.Spec{},
-		Definition: &schema.Definition{},
-	}
-	err := yaml.Unmarshal([]byte(steps), &specDef.Definition.Steps)
+func wrapStepsInSpecDef(steps string) (*schema.Step, error) {
+	def := &schema.Step{}
+	err := yaml.Unmarshal([]byte(steps), &def.Steps)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshalling steps: %w", err)
 	}
-	runningSteps, _ := yaml.Marshal(specDef)
+	runningSteps, _ := yaml.Marshal(def)
 	fmt.Printf("running steps:\n%v", string(runningSteps))
-	return specDef, nil
+	return def, nil
 }
 
 func findWorkDir() string {
