@@ -90,7 +90,7 @@ func (i *Input) compileToProto() (*proto.Spec_Content_Input, error) {
 		}
 		protoInput.Default = protoV
 	}
-	if i.Sensitive != nil && *i.Sensitive == true {
+	if i.Sensitive != nil && *i.Sensitive {
 		protoInput.Sensitive = true
 	}
 	return protoInput, nil
@@ -179,7 +179,7 @@ func (o *Output) compileToProto() (*proto.Spec_Content_Output, error) {
 		}
 		protoOutput.Default = protoV
 	}
-	if o.Sensitive != nil && *o.Sensitive == true {
+	if o.Sensitive != nil && *o.Sensitive {
 		protoOutput.Sensitive = true
 	}
 	return protoOutput, nil

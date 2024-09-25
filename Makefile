@@ -98,6 +98,7 @@ $(GO_JSONSCHEMA): DOWNLOAD_URL = https://github.com/omissis/go-jsonschema/releas
 $(GO_JSONSCHEMA): OUT_DIR = $(shell dirname $(GO_JSONSCHEMA))
 $(GO_JSONSCHEMA):
 	# Installing $(DOWNLOAD_URL) as $(GO_JSONSCHEMA)
+	@mkdir -p "$(localBin)"
 	@curl -sL "$(DOWNLOAD_URL)" -o "$(local)/go-jsonschema.tar.gz"
 	@tar -zxf "$(local)/go-jsonschema.tar.gz" -C "$(OUT_DIR)"
 	@chmod +x "$(GO_JSONSCHEMA)"
@@ -121,6 +122,6 @@ $(GOIMPORTS):
 	@go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
 
 .PHONY: go-fmt
-go-fmt: DIRECTORY := .
+go-fmt: DIRECTORY := ./pkg
 go-fmt: $(GOIMPORTS)
 	goimports -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
