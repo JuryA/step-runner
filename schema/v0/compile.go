@@ -414,7 +414,7 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 	if !ok {
 		return nil, fmt.Errorf("expecting url@rev. got %q", sr)
 	}
-	url, err := defaultHTTPS(&url)
+	url, err := defaultHTTPS(url)
 	if err != nil {
 		return nil, fmt.Errorf("parsing reference %q: %w", string(sr), err)
 	}
@@ -427,18 +427,13 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 }
 
 func (r *Reference) compile() (*proto.Step_Reference, error) {
-	if r.Git == nil {
-		return nil, fmt.Errorf("git is required")
-	}
 	url, err := defaultHTTPS(r.Git.Url)
 	if err != nil {
 		return nil, fmt.Errorf("parsing url as url: %w", err)
 	}
 	path, filename := pathFilename(r.Git.Dir)
 	version := ""
-	if r.Git.Rev != nil {
-		version = *r.Git.Rev
-	}
+	version = r.Git.Rev
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,
 		Url:      url,
@@ -448,11 +443,8 @@ func (r *Reference) compile() (*proto.Step_Reference, error) {
 	}, nil
 }
 
-func defaultHTTPS(stepUrl *string) (string, error) {
-	if stepUrl == nil {
-		return "", nil
-	}
-	parsedURL, err := url.Parse(*stepUrl)
+func defaultHTTPS(stepUrl string) (string, error) {
+	parsedURL, err := url.Parse(stepUrl)
 	if err != nil {
 		return "", fmt.Errorf("invalid step reference url %v: %w", stepUrl, err)
 	}

@@ -36,9 +36,9 @@ git:
   rev: v1
 `,
 		wantRef: &Reference{
-			Git: &GitReference{
-				Url: stringRef("gitlab.com/components/script"),
-				Rev: stringRef("v1"),
+			Git: GitReference{
+				Url: "gitlab.com/components/script",
+				Rev: "v1",
 			},
 		},
 	}, {
@@ -59,10 +59,10 @@ git:
   rev: v1
 `,
 		wantRef: &Reference{
-			Git: &GitReference{
-				Url: stringRef("gitlab.com/components/script"),
+			Git: GitReference{
+				Url: "gitlab.com/components/script",
 				Dir: stringRef("bash"),
-				Rev: stringRef("v1"),
+				Rev: "v1",
 			},
 		},
 	}, {
@@ -70,10 +70,10 @@ git:
 		json: `{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}`,
 		yaml: `git: {url: gitlab.com/components/script, dir: bash, rev: v1}`,
 		wantRef: &Reference{
-			Git: &GitReference{
-				Url: stringRef("gitlab.com/components/script"),
+			Git: GitReference{
+				Url: "gitlab.com/components/script",
 				Dir: stringRef("bash"),
-				Rev: stringRef("v1"),
+				Rev: "v1",
 			},
 		},
 	}}

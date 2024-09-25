@@ -2,12 +2,36 @@
 
 package schema
 
+import "encoding/json"
+import "fmt"
+
 type Exec struct {
 	// Command are the parameters to the system exec API. It does not invoke a shell.
-	Command []string `json:"command,omitempty" yaml:"command,omitempty" mapstructure:"command,omitempty"`
+	Command []string `json:"command" yaml:"command" mapstructure:"command"`
 
 	// WorkDir is the working directly in which `command` will be exec'ed.
 	WorkDir *string `json:"work_dir,omitempty" yaml:"work_dir,omitempty" mapstructure:"work_dir,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *Exec) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["command"]; raw != nil && !ok {
+		return fmt.Errorf("field command in Exec: required")
+	}
+	type Plain Exec
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	if plain.Command != nil && len(plain.Command) < 1 {
+		return fmt.Errorf("field %s length: must be >= %d", "command", 1)
+	}
+	*j = Exec(plain)
+	return nil
 }
 
 // GitReference is a reference to a step in a Git repository containing the full
@@ -17,16 +41,55 @@ type GitReference struct {
 	Dir *string `json:"dir,omitempty" yaml:"dir,omitempty" mapstructure:"dir,omitempty"`
 
 	// Rev corresponds to the JSON schema field "rev".
-	Rev *string `json:"rev,omitempty" yaml:"rev,omitempty" mapstructure:"rev,omitempty"`
+	Rev string `json:"rev" yaml:"rev" mapstructure:"rev"`
 
 	// Url corresponds to the JSON schema field "url".
-	Url *string `json:"url,omitempty" yaml:"url,omitempty" mapstructure:"url,omitempty"`
+	Url string `json:"url" yaml:"url" mapstructure:"url"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *GitReference) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["rev"]; raw != nil && !ok {
+		return fmt.Errorf("field rev in GitReference: required")
+	}
+	if _, ok := raw["url"]; raw != nil && !ok {
+		return fmt.Errorf("field url in GitReference: required")
+	}
+	type Plain GitReference
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = GitReference(plain)
+	return nil
 }
 
 // Git a reference to a step in a Git repository.
 type Reference struct {
 	// Git corresponds to the JSON schema field "git".
-	Git *GitReference `json:"git,omitempty" yaml:"git,omitempty" mapstructure:"git,omitempty"`
+	Git GitReference `json:"git" yaml:"git" mapstructure:"git"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *Reference) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["git"]; raw != nil && !ok {
+		return fmt.Errorf("field git in Reference: required")
+	}
+	type Plain Reference
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = Reference(plain)
+	return nil
 }
 
 // Step is a unit of execution.
@@ -62,6 +125,9 @@ type Step struct {
 	// Steps is a list of sub-steps to run.
 	Steps []Step `json:"steps,omitempty" yaml:"steps,omitempty" mapstructure:"steps,omitempty"`
 }
+
+// Any of these step usecase is valid.
+type StepAnyof interface{}
 
 // Env is a map of environment variable names to string values.
 type StepEnv map[string]string
