@@ -11,252 +11,237 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-func CompileSteps(steps *StepDefinition) (*proto.SpecDefinition, error) {
-	protoStepDef := &proto.SpecDefinition{
-		Dir: steps.Dir,
-	}
-	if steps.Spec != nil {
-		protoSpec, err := (*specCompiler)(steps.Spec).compile()
-		if err != nil {
-			return nil, fmt.Errorf("compiling spec: %w", err)
-		}
-		protoStepDef.Spec = protoSpec
-	}
-	if steps.Definition != nil {
-		protoDef, err := (*definitionCompiler)(steps.Definition).compile()
-		if err != nil {
-			return nil, fmt.Errorf("compiling definition: %w", err)
-		}
-		protoStepDef.Definition = protoDef
-	}
-	if err := validateStepDefinition(protoStepDef); err != nil {
-		return nil, err
-	}
-	return protoStepDef, nil
-}
-
-type specCompiler Spec
-
-func (spec *specCompiler) compile() (*proto.Spec, error) {
+func (spec *Spec) Compile() (*proto.Spec, error) {
 	protoSpec := &proto.Spec{Spec: &proto.Spec_Content{}}
 	inputs := map[string]*proto.Spec_Content_Input{}
+	if spec.Spec == nil {
+		spec.Spec = &Signature{}
+	}
 	for k, v := range spec.Spec.Inputs {
-		protoV, err := (*inputCompiler)(&v).compile()
+		protoV, err := v.compile()
 		if err != nil {
 			return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
 		}
 		inputs[k] = protoV
 	}
-	outputs := map[string]*proto.Spec_Content_Output{}
-	for k, v := range spec.Spec.Outputs.Outputs {
-		protoV, err := (*outputCompiler)(&v).compile()
-		if err != nil {
-			return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
-		}
-		outputs[k] = protoV
-	}
-	switch {
-	case spec.Spec.Outputs.Delegate:
-		protoSpec.Spec.OutputMethod = proto.OutputMethod_delegate
-	default:
-		protoSpec.Spec.OutputMethod = proto.OutputMethod_outputs
-	}
 	protoSpec.Spec.Inputs = inputs
+	outputs := map[string]*proto.Spec_Content_Output{}
+	switch o := spec.Spec.Outputs.(type) {
+	case string:
+		protoSpec.Spec.OutputMethod = proto.OutputMethod_delegate
+	case *Outputs:
+		protoSpec.Spec.OutputMethod = proto.OutputMethod_outputs
+		for k, v := range *o {
+			protoV, err := v.compile()
+			if err != nil {
+				return nil, fmt.Errorf("compiling input[%q]: %v: %w", k, v, err)
+			}
+			outputs[k] = protoV
+		}
+	case nil:
+		protoSpec.Spec.OutputMethod = proto.OutputMethod_outputs
+	default:
+		return nil, fmt.Errorf("unsupported type: %T", spec.Spec.Outputs)
+	}
 	protoSpec.Spec.Outputs = outputs
 	return protoSpec, nil
 }
 
-type inputCompiler Input
-
-func (input *inputCompiler) compile() (*proto.Spec_Content_Input, error) {
-	input.defaultTypeToString()
-	protoInput, err := input.compileToProto()
+func (i *Input) compile() (*proto.Spec_Content_Input, error) {
+	i.defaultTypeToString()
+	protoInput, err := i.compileToProto()
 	if err != nil {
 		return nil, err
 	}
-	err = input.verifyDefaultValueMatchesType(protoInput)
+	err = i.verifyDefaultValueMatchesType(protoInput)
 	if err != nil {
 		return nil, err
 	}
 	return protoInput, nil
 }
 
-func (input *inputCompiler) defaultTypeToString() {
-	if input.Type != "" {
-		return
+func (i *Input) defaultTypeToString() {
+	if i.Type == nil || *i.Type == "" {
+		t := InputTypeString
+		i.Type = &t
 	}
-	input.Type = ValueTypeString
 }
 
-func (input *inputCompiler) compileToProto() (*proto.Spec_Content_Input, error) {
+func (i *Input) compileToProto() (*proto.Spec_Content_Input, error) {
 	protoInput := &proto.Spec_Content_Input{}
-	switch input.Type {
-	case ValueTypeBool:
+	switch *i.Type {
+	case InputTypeBoolean:
 		protoInput.Type = proto.ValueType_boolean
-	case ValueTypeList:
+	case InputTypeArray:
 		protoInput.Type = proto.ValueType_array
-	case ValueTypeNumber:
+	case InputTypeNumber:
 		protoInput.Type = proto.ValueType_number
-	case ValueTypeString:
+	case InputTypeString:
 		protoInput.Type = proto.ValueType_string
-	case ValueTypeStruct:
+	case InputTypeStruct:
 		protoInput.Type = proto.ValueType_struct
 	default:
-		return nil, fmt.Errorf("unsupported input type: %v", input.Type)
+		return nil, fmt.Errorf("unsupported input type: %v", i.Type)
 	}
-	if input.Default != nil {
-		protoV, err := (&valueCompiler{input.Default}).compile()
+	if i.Default != nil {
+		protoV, err := (&valueCompiler{i.Default}).compile()
 		if err != nil {
-			return nil, fmt.Errorf("compiling default %v: %w", input.Default, err)
+			return nil, fmt.Errorf("compiling default %v: %w", i.Default, err)
 		}
 		protoInput.Default = protoV
 	}
-	protoInput.Sensitive = input.Sensitive
+	if i.Sensitive != nil && *i.Sensitive == true {
+		protoInput.Sensitive = true
+	}
 	return protoInput, nil
 }
 
-func (input *inputCompiler) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Input) error {
-	if input.Default == nil || protoInput.Default == nil {
+func (i *Input) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Input) error {
+	if i.Default == nil || protoInput.Default == nil {
 		return nil
 	}
-	var defaultType ValueType
-	switch input.Type {
-	case ValueTypeBool:
+	if i.Type == nil {
+		return nil
+	}
+	var defaultType InputType
+	switch *i.Type {
+	case InputTypeBoolean:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_BoolValue); ok {
-			defaultType = ValueTypeBool
+			defaultType = InputTypeBoolean
 		}
-	case ValueTypeList:
+	case InputTypeArray:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_ListValue); ok {
-			defaultType = ValueTypeList
+			defaultType = InputTypeArray
 		}
-	case ValueTypeNumber:
+	case InputTypeNumber:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_NumberValue); ok {
-			defaultType = ValueTypeNumber
+			defaultType = InputTypeNumber
 		}
-	case ValueTypeString:
+	case InputTypeString:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = ValueTypeString
+			defaultType = InputTypeString
 		}
-	case ValueTypeStruct:
+	case InputTypeStruct:
 		if _, ok := protoInput.Default.Kind.(*structpb.Value_StructValue); ok {
-			defaultType = ValueTypeStruct
+			defaultType = InputTypeStruct
 		}
 	default:
-		return fmt.Errorf("unsupported type: %v", input.Type)
+		return fmt.Errorf("unsupported type: %v", i.Type)
 	}
-	if defaultType != input.Type {
-		return fmt.Errorf("input type %v and default value type %v must match", input.Type, defaultType)
+	if defaultType != *i.Type {
+		return fmt.Errorf("input type %v and default value type %v must match", i.Type, defaultType)
 	}
 	return nil
 }
 
-type outputCompiler Output
-
-func (output *outputCompiler) compile() (*proto.Spec_Content_Output, error) {
-	output.defaultTypeToRawString()
-	protoOutput, err := output.compileToProto()
+func (o *Output) compile() (*proto.Spec_Content_Output, error) {
+	o.defaultTypeToRawString()
+	protoOutput, err := o.compileToProto()
 	if err != nil {
 		return nil, err
 	}
-	err = output.verifyDefaultValueMatchesType(protoOutput)
+	err = o.verifyDefaultValueMatchesType(protoOutput)
 	if err != nil {
 		return nil, err
 	}
 	return protoOutput, nil
 }
 
-func (output *outputCompiler) defaultTypeToRawString() {
-	if output.Type != "" {
-		return
+func (o *Output) defaultTypeToRawString() {
+	if o.Type == nil || *o.Type == "" {
+		t := OutputTypeRawString
+		o.Type = &t
 	}
-	output.Type = ValueTypeRawString
 }
 
-func (output *outputCompiler) compileToProto() (*proto.Spec_Content_Output, error) {
+func (o *Output) compileToProto() (*proto.Spec_Content_Output, error) {
 	protoOutput := &proto.Spec_Content_Output{}
-	switch output.Type {
-	case ValueTypeBool:
+	switch *o.Type {
+	case OutputTypeBoolean:
 		protoOutput.Type = proto.ValueType_boolean
-	case ValueTypeList:
+	case OutputTypeArray:
 		protoOutput.Type = proto.ValueType_array
-	case ValueTypeNumber:
+	case OutputTypeNumber:
 		protoOutput.Type = proto.ValueType_number
-	case ValueTypeRawString:
+	case OutputTypeRawString:
 		protoOutput.Type = proto.ValueType_raw_string
-	case ValueTypeString:
+	case OutputTypeString:
 		protoOutput.Type = proto.ValueType_string
-	case ValueTypeStruct:
+	case OutputTypeStruct:
 		protoOutput.Type = proto.ValueType_struct
 	default:
-		return nil, fmt.Errorf("unsupported output type: %v", output.Type)
+		return nil, fmt.Errorf("unsupported output type: %v", o.Type)
 	}
-	if output.Default != nil {
-		protoV, err := (&valueCompiler{output.Default}).compile()
+	if o.Default != nil {
+		protoV, err := (&valueCompiler{o.Default}).compile()
 		if err != nil {
-			return nil, fmt.Errorf("compiling default %v: %w", output.Default, err)
+			return nil, fmt.Errorf("compiling default %v: %w", o.Default, err)
 		}
 		protoOutput.Default = protoV
 	}
-	protoOutput.Sensitive = output.Sensitive
+	if o.Sensitive != nil && *o.Sensitive == true {
+		protoOutput.Sensitive = true
+	}
 	return protoOutput, nil
 }
 
-func (output *outputCompiler) verifyDefaultValueMatchesType(protoOutput *proto.Spec_Content_Output) error {
-	if output.Default == nil || protoOutput.Default == nil {
+func (o *Output) verifyDefaultValueMatchesType(protoOutput *proto.Spec_Content_Output) error {
+	if o.Default == nil || protoOutput.Default == nil {
 		return nil
 	}
-	var defaultType ValueType
-	switch output.Type {
-	case ValueTypeBool:
+	if o.Type == nil {
+		return nil
+	}
+	var defaultType OutputType
+	switch *o.Type {
+	case OutputTypeBoolean:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_BoolValue); ok {
-			defaultType = ValueTypeBool
+			defaultType = OutputTypeBoolean
 		}
-	case ValueTypeList:
+	case OutputTypeArray:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_ListValue); ok {
-			defaultType = ValueTypeList
+			defaultType = OutputTypeArray
 		}
-	case ValueTypeNumber:
+	case OutputTypeNumber:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_NumberValue); ok {
-			defaultType = ValueTypeNumber
+			defaultType = OutputTypeNumber
 		}
-	case ValueTypeString:
+	case OutputTypeString:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = ValueTypeString
+			defaultType = OutputTypeString
 		}
-	case ValueTypeRawString:
+	case OutputTypeRawString:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = ValueTypeRawString
+			defaultType = OutputTypeRawString
 		}
-	case ValueTypeStruct:
+	case OutputTypeStruct:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StructValue); ok {
-			defaultType = ValueTypeStruct
+			defaultType = OutputTypeStruct
 		}
 	default:
-		return fmt.Errorf("unsupported type: %v", output.Type)
+		return fmt.Errorf("unsupported type: %v", o.Type)
 	}
-	if defaultType != output.Type {
-		return fmt.Errorf("output type %v and default value type %v must match", output.Type, defaultType)
+	if defaultType != *o.Type {
+		return fmt.Errorf("output type %v and default value type %v must match", o.Type, defaultType)
 	}
 	return nil
 }
 
-type definitionCompiler Definition
-
-func (def *definitionCompiler) compile() (*proto.Definition, error) {
-	err := def.verifyOneTypeProvided()
+func (s *Step) CompileDefinition() (*proto.Definition, error) {
+	err := s.verifyOneTypeProvided()
 	if err != nil {
 		return nil, err
 	}
-	return def.compileToProto()
+	return s.compileToDefinitionProto()
 }
 
-func (def *definitionCompiler) verifyOneTypeProvided() error {
+func (s *Step) verifyOneTypeProvided() error {
 	have := 0
-	if len(def.Exec.Command) > 0 || def.Exec.WorkDir != "" {
+	if s.Exec != nil {
 		// Exec type step
 		have++
 	}
-	if def.Steps != nil {
+	if s.Steps != nil {
 		// Steps type step
 		have++
 	}
@@ -269,29 +254,31 @@ func (def *definitionCompiler) verifyOneTypeProvided() error {
 	return nil
 }
 
-func (def *definitionCompiler) compileToProto() (*proto.Definition, error) {
+func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 	protoDef := &proto.Definition{}
 	switch {
-	case len(def.Exec.Command) > 0:
+	case s.Exec != nil:
 		// Exec type step
 		protoDef.Type = proto.DefinitionType_exec
 		protoDef.Exec = &proto.Definition_Exec{
-			Command: def.Exec.Command,
-			WorkDir: def.Exec.WorkDir,
+			Command: s.Exec.Command,
 		}
-	case def.Steps != nil:
+		if s.Exec.WorkDir != nil {
+			protoDef.Exec.WorkDir = *s.Exec.WorkDir
+		}
+	case s.Steps != nil:
 		// Steps type step
 		protoDef.Type = proto.DefinitionType_steps
-		protoDef.Steps = make([]*proto.Step, len(def.Steps))
-		for i, s := range def.Steps {
-			protoStep, err := (*stepCompiler)(s).compile(i)
+		protoDef.Steps = make([]*proto.Step, len(s.Steps))
+		for i, ss := range s.Steps {
+			protoStep, err := (&ss).CompileStep(i)
 			if err != nil {
-				return nil, fmt.Errorf("compiling steps[%v]: %q: %w", i, s.Name, err)
+				return nil, fmt.Errorf("compiling steps[%v]: %v: %w", i, s.Name, err)
 			}
 			protoDef.Steps[i] = protoStep
 		}
 		protoDef.Outputs = map[string]*structpb.Value{}
-		for k, v := range def.Outputs {
+		for k, v := range s.Outputs {
 			protoV, err := (&valueCompiler{v}).compile()
 			if err != nil {
 				return nil, fmt.Errorf("compiling output[%q]: %v: %w", k, v, err)
@@ -301,114 +288,120 @@ func (def *definitionCompiler) compileToProto() (*proto.Definition, error) {
 	default:
 		return nil, fmt.Errorf("could not determine step type")
 	}
-	protoDef.Env = def.Env
-	protoDef.Delegate = def.Delegate
+	protoDef.Env = s.Env
+	if s.Delegate != nil {
+		protoDef.Delegate = *s.Delegate
+	}
 	return protoDef, nil
 }
 
-type stepCompiler Step
-
-func (step *stepCompiler) compile(i int) (*proto.Step, error) {
-	err := step.compileScriptKeywordToStep()
+func (s *Step) CompileStep(i int) (*proto.Step, error) {
+	err := s.compileScriptKeywordToStep()
 	if err != nil {
 		return nil, err
 	}
-	err = step.compileActionKeywordToStep()
+	err = s.compileActionKeywordToStep()
 	if err != nil {
 		return nil, err
 	}
-	step.defaultName(i)
-	return step.compileToProto()
+	s.defaultName(i)
+	return s.compileToStepProto()
 }
 
-func (step *stepCompiler) compileScriptKeywordToStep() error {
-	if step.Script == "" {
+func (s *Step) compileScriptKeywordToStep() error {
+	if s.Script == nil || *s.Script == "" {
 		return nil
 	}
 	// TODO replace these checks with JSON schema validation
-	if !step.Step.IsEmpty() {
+	if s.Step != nil {
 		return fmt.Errorf("the `script` keyword cannot be used with the `step` keyword")
 	}
-	if step.Action != "" {
+	if s.Action != nil && *s.Action != "" {
 		return fmt.Errorf("the `script` keyword cannot be used with the `action` keyword")
 	}
-	if len(step.Inputs) != 0 {
+	if len(s.Inputs) != 0 {
 		return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 	}
-	step.Step = Reference{
-		Short: scriptStep,
+	s.Step = scriptStep
+	s.Inputs = map[string]any{
+		"script": s.Script,
 	}
-	step.Inputs = map[string]any{
-		"script": step.Script,
-	}
-	step.Script = ""
+	s.Script = nil
 	return nil
 }
 
-func (step *stepCompiler) compileActionKeywordToStep() error {
-	if step.Action == "" {
+func (s *Step) compileActionKeywordToStep() error {
+	if s.Action == nil || *s.Action == "" {
 		return nil
 	}
 	// TODO replace these checks with JSON schema validation
-	if !step.Step.IsEmpty() {
+	if s.Step != nil {
 		return fmt.Errorf("the `action` keyword cannot be used with the `step` keyword")
 	}
-	if step.Script != "" {
+	if s.Script != nil && *s.Script != "" {
 		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
 	}
-	step.Step = Reference{
-		Short: actionStep,
+	s.Step = actionStep
+	s.Inputs = map[string]any{
+		"action": s.Action,
+		"inputs": s.Inputs,
 	}
-	step.Inputs = map[string]any{
-		"action": step.Action,
-		"inputs": step.Inputs,
-	}
-	step.Action = ""
+	s.Action = nil
 	return nil
 }
 
-func (step *stepCompiler) defaultName(i int) {
-	if step.Name == "" {
-		step.Name = strconv.Itoa(i)
+func (s *Step) defaultName(i int) {
+	if s.Name == nil || *s.Name == "" {
+		n := strconv.Itoa(i)
+		s.Name = &n
 	}
 }
 
-func (step *stepCompiler) compileToProto() (*proto.Step, error) {
+func (s *Step) compileToStepProto() (*proto.Step, error) {
 	protoStep := &proto.Step{}
 	protoInputs := map[string]*structpb.Value{}
-	for k, v := range step.Inputs {
+	for k, v := range (map[string]any)(s.Inputs) {
 		protoValue, err := (&valueCompiler{v}).compile()
 		if err != nil {
 			return nil, err
 		}
 		protoInputs[k] = protoValue
 	}
-	ref, err := (*referenceCompiler)(&step.Step).compile()
+	var (
+		ref *proto.Step_Reference
+		err error
+	)
+	switch v := s.Step.(type) {
+	case string:
+		ref, err = shortReference(v).compile()
+	case *Reference:
+		ref, err = v.compile()
+	default:
+		err = fmt.Errorf("unsupported type: %T", v)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("compiling reference: %w", err)
 	}
-	protoStep.Name = step.Name
-	protoStep.Env = step.Env
+	if s.Name != nil {
+		protoStep.Name = *s.Name
+	}
+	protoStep.Env = s.Env
 	protoStep.Step = ref
 	protoStep.Inputs = protoInputs
 	return protoStep, nil
 }
 
-type referenceCompiler Reference
+type shortReference string
 
-func (reference *referenceCompiler) compile() (*proto.Step_Reference, error) {
-	if strings.HasPrefix(reference.Short, ".") {
-		return reference.compileLocal()
+func (sr shortReference) compile() (*proto.Step_Reference, error) {
+	if strings.HasPrefix(string(sr), ".") {
+		return sr.compileLocal()
 	}
-	err := reference.expandShortReference()
-	if err != nil {
-		return nil, fmt.Errorf("expanding short reference %q: %w", reference.Short, err)
-	}
-	return reference.compileToProto()
+	return sr.compileRemote()
 }
 
-func (reference *referenceCompiler) compileLocal() (*proto.Step_Reference, error) {
-	path, filename := pathFilename(reference.Short)
+func (sr shortReference) compileLocal() (*proto.Step_Reference, error) {
+	path, filename := pathFilename((*string)(&sr))
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_local,
 		Path:     path,
@@ -416,45 +409,44 @@ func (reference *referenceCompiler) compileLocal() (*proto.Step_Reference, error
 	}, nil
 }
 
-func (reference *referenceCompiler) expandShortReference() error {
-	if reference.Short == "" {
-		return nil
-	}
-	url, rev, ok := strings.Cut(reference.Short, "@")
+func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
+	url, rev, ok := strings.Cut(string(sr), "@")
 	if !ok {
-		return fmt.Errorf("expecting url@rev. got %q", reference.Short)
+		return nil, fmt.Errorf("expecting url@rev. got %q", sr)
 	}
-	reference.Git.Url = url
-	reference.Git.Rev = rev
-	reference.Git.Dir = ""
-	reference.Short = ""
-	return nil
+	url, err := defaultHTTPS(url)
+	if err != nil {
+		return nil, fmt.Errorf("parsing reference %q: %w", string(sr), err)
+	}
+	return &proto.Step_Reference{
+		Protocol: proto.StepReferenceProtocol_git,
+		Url:      url,
+		Version:  rev,
+		Filename: "step.yml",
+	}, nil
 }
 
-func (reference *referenceCompiler) compileToProto() (*proto.Step_Reference, error) {
-	switch {
-	case !reference.Git.IsEmpty():
-		url, err := defaultHTTPS(reference.Git.Url)
-		if err != nil {
-			return nil, fmt.Errorf("parsing url as url: %w", err)
-		}
-		path, filename := pathFilename(reference.Git.Dir)
-		return &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_git,
-			Url:      url,
-			Path:     path,
-			Filename: filename,
-			Version:  reference.Git.Rev,
-		}, nil
-	default:
-		return nil, fmt.Errorf("unhandled step reference type: %+v", reference)
+func (r *Reference) compile() (*proto.Step_Reference, error) {
+	url, err := defaultHTTPS(r.Git.Url)
+	if err != nil {
+		return nil, fmt.Errorf("parsing url as url: %w", err)
 	}
+	path, filename := pathFilename(r.Git.Dir)
+	version := ""
+	version = r.Git.Rev
+	return &proto.Step_Reference{
+		Protocol: proto.StepReferenceProtocol_git,
+		Url:      url,
+		Path:     path,
+		Filename: filename,
+		Version:  version,
+	}, nil
 }
 
 func defaultHTTPS(stepUrl string) (string, error) {
 	parsedURL, err := url.Parse(stepUrl)
 	if err != nil {
-		return "", fmt.Errorf("invalid step reference url %q: %w", stepUrl, err)
+		return "", fmt.Errorf("invalid step reference url %v: %w", stepUrl, err)
 	}
 	switch parsedURL.Scheme {
 	case "http", "https":
@@ -462,17 +454,20 @@ func defaultHTTPS(stepUrl string) (string, error) {
 	case "":
 		parsedURL.Scheme = "https"
 	default:
-		return "", fmt.Errorf("unsupported scheme %q in reference %q", parsedURL.Scheme, stepUrl)
+		return "", fmt.Errorf("unsupported scheme %q in reference %v", parsedURL.Scheme, stepUrl)
 	}
 	return parsedURL.String(), nil
 }
 
-func pathFilename(pathStr string) (path []string, filename string) {
+func pathFilename(pathStr *string) (path []string, filename string) {
 	filename = "step.yml"
-	if pathStr == "" {
+	if pathStr == nil {
 		return nil, filename
 	}
-	path = strings.Split(pathStr, "/")
+	if *pathStr == "" {
+		return nil, filename
+	}
+	path = strings.Split(*pathStr, "/")
 	return path, filename
 }
 
@@ -481,8 +476,26 @@ type valueCompiler struct {
 }
 
 func (value *valueCompiler) compile() (*structpb.Value, error) {
+	var simplifyTypes func(any) any
+	simplifyTypes = func(v any) any {
+		// Map a few types from our model to ones that
+		// structpb can handle.
+		switch v := v.(type) {
+		case *string:
+			if v != nil {
+				return *v
+			}
+		case StepInputs:
+			simpleMap := map[string]any{}
+			for k, v := range v {
+				simpleMap[k] = simplifyTypes(v)
+			}
+			return simpleMap
+		}
+		return v
+	}
 	// We let structpb do all the heavy lifting
 	// and verify the type matches our
 	// expectations later.
-	return structpb.NewValue(value.v)
+	return structpb.NewValue(simplifyTypes(value.v))
 }

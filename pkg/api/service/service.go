@@ -12,7 +12,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/syncmap"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	"gitlab.com/gitlab-org/step-runner/schema/v0"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 type errBadJobID struct{ id string }
