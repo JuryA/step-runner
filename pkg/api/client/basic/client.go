@@ -34,9 +34,8 @@ func toProto(r *client.RunRequest) *proto.RunRequest {
 		Steps:   r.Steps,
 	}
 
+	rr.Job = &proto.Job{BuildDir: r.WorkDir}
 	if len(r.Variables) != 0 {
-		rr.Job = &proto.Job{BuildDir: r.WorkDir}
-
 		for _, v := range r.Variables {
 			rr.Job.Variables = append(rr.Job.Variables, &proto.Variable{
 				Key:    v.Key,
