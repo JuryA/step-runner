@@ -7,6 +7,10 @@ import "fmt"
 import "reflect"
 
 type Input struct {
+	// AdditionalProperties corresponds to the JSON schema field
+	// "additionalProperties".
+	AdditionalProperties interface{} `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty" mapstructure:"additionalProperties,omitempty"`
+
 	// Default is the default input value. Its type must match `type`.
 	Default InputDefault `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
