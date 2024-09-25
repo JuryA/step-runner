@@ -100,7 +100,8 @@
 		    "type": "string",
 		    "description": "WorkDir is the working directly in which `command` will be exec'ed."
 		}
-	    }
+	    },
+	    "required": [ "command" ]
 	},
 	"step_anyof": {
 	    "anyOf": [
