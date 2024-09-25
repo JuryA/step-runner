@@ -227,7 +227,7 @@ func (o *Output) verifyDefaultValueMatchesType(protoOutput *proto.Spec_Content_O
 	return nil
 }
 
-func (s *Step) compileDefinition() (*proto.Definition, error) {
+func (s *Step) CompileDefinition() (*proto.Definition, error) {
 	err := s.verifyOneTypeProvided()
 	if err != nil {
 		return nil, err

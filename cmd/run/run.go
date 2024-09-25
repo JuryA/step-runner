@@ -15,7 +15,8 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/report"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/schema/v1"
+	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/schema/v0"
 )
 
 type Options struct {
@@ -62,14 +63,20 @@ func run(options *Options) error {
 		return err
 	}
 
-	stepDef, err := wrapStepsInSpecDef(yml)
+	def, err := wrapStepsInSingleStep(yml)
 	if err != nil {
 		return err
 	}
 
-	specDef, err := schema.CompileSteps(stepDef)
+	protoDef, err := def.CompileDefinition()
 	if err != nil {
 		return err
+	}
+	specDef := &proto.SpecDefinition{
+		Spec: &proto.Spec{
+			Spec: &proto.Spec_Content{},
+		},
+		Definition: protoDef,
 	}
 
 	stepCache, err := cache.New()
@@ -120,15 +127,15 @@ func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
 	return globalCtx, nil
 }
 
-func wrapStepsInSpecDef(ymlSteps []byte) (*schema.StepDefinition, error) {
-	specDef := &schema.StepDefinition{Spec: &schema.Spec{}, Definition: &schema.Definition{}}
-	err := yaml.Unmarshal(ymlSteps, &specDef.Definition.Steps)
+func wrapStepsInSingleStep(ymlSteps []byte) (*schema.Step, error) {
+	def := &schema.Step{}
+	err := yaml.Unmarshal(ymlSteps, &def.Steps)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal step: %w", err)
 	}
 
-	return specDef, nil
+	return def, nil
 }
 
 func yamlStep(options *Options) ([]byte, error) {
