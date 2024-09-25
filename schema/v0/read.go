@@ -29,6 +29,15 @@ func ReadSteps(content, dir string) (*Spec, *Step, error) {
 		return nil, nil, fmt.Errorf("unmarshaling: %w", err)
 	}
 
+	err := validateSpec(spec)
+	if err != nil {
+		return nil, nil, fmt.Errorf("validating spec: %w", err)
+	}
+	err = validateStep(step)
+	if err != nil {
+		return nil, nil, fmt.Errorf("validating step: %w", err)
+	}
+
 	return &spec, &step, nil
 }
 

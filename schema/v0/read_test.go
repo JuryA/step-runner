@@ -112,9 +112,6 @@ func readProto(content, dir string) (*proto.SpecDefinition, error) {
 		Definition: &definition,
 		Dir:        dir,
 	}
-	if err := validateStepDefinition(stepDef); err != nil {
-		return nil, err
-	}
 	return stepDef, nil
 }
 
