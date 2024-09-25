@@ -8,13 +8,6 @@ import (
 )
 
 func TestStepSchemaValidate(t *testing.T) {
-
-	// step
-	// script
-	// action
-	// exec
-	// steps
-
 	cases := []struct {
 		name    string
 		step    string
@@ -25,9 +18,61 @@ func TestStepSchemaValidate(t *testing.T) {
 step: ./my-step
 `,
 	}, {
+		name: "remote step",
+		step: `
+step: gitlab.com/my-org/my-step@v1
+`,
+	}, {
+		name: "remote nested step",
+		step: `
+step:
+  git:
+    url: gitlab.com/my-org/my-step
+    rev: v1
+`,
+	}, {
+		name:    "remote nested step missing rev",
+		wantErr: true,
+		step: `
+step:
+  git:
+    url: gitlab.com/my-org/my-step
+`,
+	}, {
+		name:    "remote nested step missing url",
+		wantErr: true,
+		step: `
+step:
+  git:
+    rev: v1
+`,
+	}, {
+		name: "remote nested step with dir",
+		step: `
+step:
+  git:
+    url: gitlab.com/my-org/my-step
+    rev: v1
+    dir: sub-dir
+`,
+	}, {
+		name:    "remote nested step with additional properties",
+		wantErr: true,
+		step: `
+step:
+  git:
+    additional: property
+`,
+	}, {
 		name: "script step",
 		step: `
 script: my-script
+`,
+	}, {
+		name:    "empty script step",
+		wantErr: true,
+		step: `
+script: ""
 `,
 	}, {
 		name: "remote action",
@@ -47,7 +92,21 @@ exec:
 exec: {}
 `,
 	}, {
-		name:    "empty invalid",
+		name:    "exec with empty command",
+		wantErr: true,
+		step: `
+exec:
+  command: []
+`,
+	}, {
+		name: "exec with work dir",
+		step: `
+exec: 
+  command: [ my-binary ]
+  work_dir: sub-dir
+`,
+	}, {
+		name:    "empty step invalid",
 		wantErr: true,
 		step:    "",
 	}, {
@@ -78,8 +137,55 @@ exec:
 		step: `
 step: ./my-step
 steps:
-  - name: my_step
-    step: ./my-step
+  - step: ./my-step
+`,
+	}, {
+		name:    "script mutually exclusive with action",
+		wantErr: true,
+		step: `
+script: echo hello world
+action: my-action@v1
+`,
+	}, {
+		name:    "script mutually exclusive with exec",
+		wantErr: true,
+		step: `
+script: echo hello world
+exec:
+  command: [ my-binary ]
+`,
+	}, {
+		name:    "script mutually exclusive with steps",
+		wantErr: true,
+		step: `
+script: echo hello world
+steps:
+  - step: ./my-step
+`,
+	}, {
+		name:    "action mutually exclusive with exec",
+		wantErr: true,
+		step: `
+action: my-action@v1
+exec:
+  command: [ my-binary ]
+`,
+	}, {
+		name:    "action mutually exclusive with steps",
+		wantErr: true,
+		step: `
+action: my-action@v1
+steps:
+  - step: ./my-step
+`,
+	}, {
+		name:    "exec mutually exclusive with steps",
+		wantErr: true,
+		step: `
+exec:
+  command: [ my-binary ]
+steps:
+  - step: ./my-step
 `,
 	}}
 	for _, c := range cases {

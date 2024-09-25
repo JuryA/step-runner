@@ -65,6 +65,8 @@
 	"reference": {
 	    "type": "object",
 	    "description": "Git a reference to a step in a Git repository.",
+	    "additionalProperties": false,
+	    "required": [ "git" ],
 	    "properties": {
 		"git": {
 		    "$ref": "#/definitions/gitReference"
@@ -74,6 +76,8 @@
 	"gitReference": {
 	    "type": "object",
 	    "description": "GitReference is a reference to a step in a Git repository containing the full set of configuration options.",
+	    "additionalProperties": false,
+	    "required": [ "url", "rev" ],
 	    "properties": {
 		"url": {
 		    "type": "string"
@@ -88,27 +92,30 @@
 	},
 	"exec": {
 	    "type": "object",
+	    "additionalProperties": false,
+	    "required": [ "command" ],
 	    "properties": {
 		"command": {
 		    "type": "array",
 		    "description": "Command are the parameters to the system exec API. It does not invoke a shell.",
 		    "items": {
 			"type": "string"
-		    }
+		    },
+		    "minItems": 1
 		},
 		"work_dir": {
 		    "type": "string",
 		    "description": "WorkDir is the working directly in which `command` will be exec'ed."
 		}
-	    },
-	    "required": [ "command" ]
+	    }
 	},
 	"step_anyof": {
+	    "description": "Any of these step usecase is valid.",
 	    "anyOf": [
 		{
-		    "description": "Run a referenced step",
-		    "additionalProperties": false,
+		    "description": "Run a referenced step.",
 		    "type": "object",
+		    "additionalProperties": false,
 		    "properties": {
 			"name": {
 			    "type": "string"
@@ -135,9 +142,9 @@
 		    }
 		},
 		{
-		    "description": "Run a sequence of steps",
-		    "additionalProperties": false,
+		    "description": "Run a sequence of steps.",
 		    "type": "object",
+		    "additionalProperties": false,
 		    "properties": {
 			"env": {
 			    "type": "object",
@@ -160,9 +167,9 @@
 		    }
 		},
 		{
-		    "description": "Run an action",
-		    "additionalProperties": false,
+		    "description": "Run an action.",
 		    "type": "object",
+		    "additionalProperties": false,
 		    "properties": {
 			"name": {
 			    "type": "string"
@@ -177,14 +184,15 @@
 			    "type": "object"
 			},
 			"action": {
-			    "type": "string"
+			    "type": "string",
+			    "minLength": 1
 			}
 		    }
 		},
 		{
-		    "description": "Run a script",
-		    "additionalProperties": false,
+		    "description": "Run a script.",
 		    "type": "object",
+		    "additionalProperties": false,
 		    "properties": {
 			"name": {
 			    "type": "string"
@@ -196,14 +204,15 @@
 			    }
 			},
 			"script": {
-			    "type": "string"
+			    "type": "string",
+			    "minLength": 1
 			}
 		    }
 		},
 		{
-		    "description": "Exec a binary",
-		    "additionalProperties": false,
+		    "description": "Exec a binary.",
 		    "type": "object",
+		    "additionalProperties": false,
 		    "properties": {
 			"env": {
 			    "type": "object",
