@@ -1,7 +1,7 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v0",
-    "$ref": "#/definitions/step",
+    "$ref": "#/definitions/step_anyof",
     "definitions": {
 	"step": {
 	    "type": "object",
@@ -101,6 +101,123 @@
 		    "description": "WorkDir is the working directly in which `command` will be exec'ed."
 		}
 	    }
+	},
+	"step_anyof": {
+	    "anyOf": [
+		{
+		    "description": "Run a referenced step",
+		    "additionalProperties": false,
+		    "type": "object",
+		    "properties": {
+			"name": {
+			    "type": "string"
+			},
+			"env": {
+			    "type": "object",
+			    "additionalProperties": {
+				"type": "string"
+			    }
+			},
+			"inputs": {
+			    "type": "object"
+			},
+			"step": {
+			    "oneOf": [
+				{
+				    "type": "string"
+				},
+				{
+				    "$ref": "#/definitions/reference"
+				}
+			    ]
+			}
+		    }
+		},
+		{
+		    "description": "Run a sequence of steps",
+		    "additionalProperties": false,
+		    "type": "object",
+		    "properties": {
+			"env": {
+			    "type": "object",
+			    "additionalProperties": {
+				"type": "string"
+			    }
+			},
+			"steps": {
+			    "type": "array",
+			    "items": {
+				"$ref": "#/definitions/step"
+			    }
+			},
+			"outputs": {
+			    "type": "object"
+			},
+			"delegate": {
+			    "type": "string"
+			}
+		    }
+		},
+		{
+		    "description": "Run an action",
+		    "additionalProperties": false,
+		    "type": "object",
+		    "properties": {
+			"name": {
+			    "type": "string"
+			},
+			"env": {
+			    "type": "object",
+			    "additionalProperties": {
+				"type": "string"
+			    }
+			},
+			"inputs": {
+			    "type": "object"
+			},
+			"action": {
+			    "type": "string"
+			}
+		    }
+		},
+		{
+		    "description": "Run a script",
+		    "additionalProperties": false,
+		    "type": "object",
+		    "properties": {
+			"name": {
+			    "type": "string"
+			},
+			"env": {
+			    "type": "object",
+			    "additionalProperties": {
+				"type": "string"
+			    }
+			},
+			"script": {
+			    "type": "string"
+			}
+		    }
+		},
+		{
+		    "description": "Exec a binary",
+		    "additionalProperties": false,
+		    "type": "object",
+		    "properties": {
+			"env": {
+			    "type": "object",
+			    "description": "Env is a map of environment variable names to string values.",
+			    "additionalProperties": {
+				"type": "string"
+			    }
+			},
+			"exec": {
+			    "description": "Exec is a command to run.",
+			    "$ref": "#/definitions/exec"
+			}
+		    }
+		}
+	    ]
 	}
     }
 }
