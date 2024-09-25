@@ -360,7 +360,7 @@ func (s *Step) defaultName(i int) {
 func (s *Step) compileToStepProto() (*proto.Step, error) {
 	protoStep := &proto.Step{}
 	protoInputs := map[string]*structpb.Value{}
-	for k, v := range s.Inputs {
+	for k, v := range (map[string]any)(s.Inputs) {
 		protoValue, err := (&valueCompiler{v}).compile()
 		if err != nil {
 			return nil, err
@@ -484,13 +484,26 @@ type valueCompiler struct {
 }
 
 func (value *valueCompiler) compile() (*structpb.Value, error) {
-	var v any = value.v
-	if s, ok := v.(*string); ok && s != nil {
-		// Dereference strings.
-		v = *s
+	var simplifyTypes func(any) any
+	simplifyTypes = func(v any) any {
+		// Map a few types from our model to ones that
+		// structpb can handle.
+		switch v := v.(type) {
+		case *string:
+			if v != nil {
+				return *v
+			}
+		case StepInputs:
+			simpleMap := map[string]any{}
+			for k, v := range v {
+				simpleMap[k] = simplifyTypes(v)
+			}
+			return simpleMap
+		}
+		return v
 	}
 	// We let structpb do all the heavy lifting
 	// and verify the type matches our
 	// expectations later.
-	return structpb.NewValue(v)
+	return structpb.NewValue(simplifyTypes(value.v))
 }
