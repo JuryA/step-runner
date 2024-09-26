@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net"
 	"os"
-	"path"
 	"testing"
 	"time"
 
@@ -60,8 +59,6 @@ func TestMain(m *testing.M) {
 }
 
 func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
-
 	ctx := context.Background()
 	srClient := New(conn)
 
@@ -71,7 +68,6 @@ func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
     inputs: {}
 `, nil, nil)
 	rr1.Id = rr1.Id + "-1"
-	rr1.WorkDir = path.Join(rr1.WorkDir, "1")
 
 	rr2 := test.RunRequest(t, `steps:
   - name: blabla
@@ -80,7 +76,6 @@ func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
         script: echo "bla bla bla"
 `, nil, nil)
 	rr1.Id = rr1.Id + "-2"
-	rr2.WorkDir = path.Join(rr2.WorkDir, "2")
 
 	assert.NoError(t, srClient.Run(ctx, rr1))
 	assert.NoError(t, srClient.Run(ctx, rr2))
@@ -113,8 +108,6 @@ func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
 const lorem = `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`
 
 func Test_StepRunnerClient_FollowSteps_Success(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
-
 	ctx := context.Background()
 	srClient := New(conn)
 
@@ -138,8 +131,6 @@ func Test_StepRunnerClient_FollowSteps_Success(t *testing.T) {
 }
 
 func Test_StepRunnerClient_FollowLogs_Success(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
-
 	ctx := context.Background()
 	srClient := New(conn)
 
@@ -165,8 +156,6 @@ type toWriter func([]byte) (int, error)
 func (t toWriter) Write(p []byte) (int, error) { return t(p) }
 
 func Test_StepRunnerClient_FollowLogs_Again(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
-
 	ctx := context.Background()
 	srClient := New(conn)
 

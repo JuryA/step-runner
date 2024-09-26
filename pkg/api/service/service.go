@@ -40,6 +40,11 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("loading step: %w", err)
 	}
 
+	specDef.Dir = request.WorkDir
+	if request.Job != nil && request.Job.BuildDir != "" {
+		specDef.Dir = request.Job.BuildDir
+	}
+
 	job, err := jobs.New(request)
 	if err != nil {
 		return nil, fmt.Errorf("initializing request: %w", err)
