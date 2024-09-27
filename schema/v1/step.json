@@ -110,7 +110,7 @@
 	    }
 	},
 	"step_anyof": {
-	    "description": "Any of these step usecase is valid.",
+	    "description": "Any of these step use cases are valid.",
 	    "anyOf": [
 		{
 		    "description": "Run a referenced step.",
