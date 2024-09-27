@@ -187,6 +187,18 @@ exec:
 steps:
   - step: ./my-step
 `,
+	}, {
+		name:    "mutual exclusion recursively",
+		wantErr: true,
+		step: `
+
+steps:
+  - step: gitlab.com/components/my-step
+    exec:
+      command: [echo, "hello world"]
+    steps:
+      - step: gitlab.com/components/another-step
+`,
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

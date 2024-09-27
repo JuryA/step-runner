@@ -1,8 +1,20 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v1/step",
-    "$ref": "#/definitions/step_anyof",
+    "$ref": "#/definitions/valid_step",
     "definitions": {
+	"valid_step": {
+	    "allOf": [
+		{
+		    "description": "The overall step structure.",
+		    "$ref": "#/definitions/step"
+		},
+		{
+		    "description": "Validation per usecase",
+		    "$ref": "#/definitions/step_usecases"
+		}
+	    ]
+	},
         "step": {
             "type": "object",
             "description": "Step is a unit of execution.",
@@ -116,7 +128,7 @@
                 }
             }
         },
-        "step_anyof": {
+        "step_usecases": {
             "description": "Any of these step use cases are valid.",
             "anyOf": [
                 {
@@ -162,7 +174,7 @@
                         "steps": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/step"
+                                "$ref": "#/definitions/valid_step"
                             }
                         },
                         "outputs": {
