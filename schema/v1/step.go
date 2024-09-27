@@ -126,9 +126,6 @@ type Step struct {
 	Steps []Step `json:"steps,omitempty" yaml:"steps,omitempty" mapstructure:"steps,omitempty"`
 }
 
-// Any of these step usecase is valid.
-type StepAnyof interface{}
-
 // Env is a map of environment variable names to string values.
 type StepEnv map[string]string
 
@@ -138,3 +135,8 @@ type StepInputs map[string]interface{}
 // Outputs are the output values for a sequence. They can reference the outputs of
 // sub-steps.
 type StepOutputs map[string]interface{}
+
+// Any of these step use cases are valid.
+type StepUsecases interface{}
+
+type ValidStep interface{}

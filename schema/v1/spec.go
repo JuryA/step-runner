@@ -87,7 +87,6 @@ const OutputTypeArray OutputType = "array"
 const OutputTypeBoolean OutputType = "boolean"
 const OutputTypeNumber OutputType = "number"
 const OutputTypeRawString OutputType = "raw_string"
-const OutputTypeStepResult OutputType = "step_result"
 const OutputTypeString OutputType = "string"
 const OutputTypeStruct OutputType = "struct"
 
@@ -98,7 +97,6 @@ var enumValues_OutputType = []interface{}{
 	"boolean",
 	"struct",
 	"array",
-	"step_result",
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
