@@ -130,11 +130,12 @@
         },
         "step_usecases": {
             "description": "Any of these step use cases are valid.",
-            "anyOf": [
+            "oneOf": [
                 {
                     "description": "Run a referenced step.",
                     "type": "object",
                     "additionalProperties": false,
+		    "required": [ "step" ],
                     "properties": {
                         "name": {
                             "type": "string"
@@ -164,6 +165,7 @@
                     "description": "Run a sequence of steps.",
                     "type": "object",
                     "additionalProperties": false,
+		    "required": [ "steps" ],
                     "properties": {
                         "env": {
                             "type": "object",
@@ -189,6 +191,7 @@
                     "description": "Run an action.",
                     "type": "object",
                     "additionalProperties": false,
+		    "required": [ "action" ],
                     "properties": {
                         "name": {
                             "type": "string"
@@ -212,6 +215,7 @@
                     "description": "Run a script.",
                     "type": "object",
                     "additionalProperties": false,
+		    "required": [ "script" ],
                     "properties": {
                         "name": {
                             "type": "string"
@@ -232,6 +236,7 @@
                     "description": "Exec a binary.",
                     "type": "object",
                     "additionalProperties": false,
+		    "required": [ "exec" ],
                     "properties": {
                         "env": {
                             "type": "object",
