@@ -3,119 +3,138 @@
     "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v1/spec",
     "$ref": "#/definitions/spec",
     "definitions": {
-	"spec": {
-	    "type": "object",
-	    "description": "Spec is a document describing the interface of a step.",
-	    "additionalProperties": false,
-	    "properties": {
-		"spec": {
-		    "$ref": "#/definitions/signature"
-		}
-	    }
-	},
-	"signature": {
-	    "type": "object",
-	    "description": "Signature contains the inputs and outputs of the step.",
-	    "additionalProperties": false,
-	    "properties": {
-		"inputs": {
-		    "type": "object",
-		    "description": "Input describes a single step input.",
-		    "additionalProperties": {
-			"$ref": "#/definitions/input"
-		    }
-		},
-		"outputs": {
-		    "oneOf": [
-			{
-			    "type": "string",
-			    "enum": [
-				"delegate"
-			    ]
-			},
-			{
-			    "$ref": "#/definitions/outputs"
-			}
-		    ]
-		}
-	    }
-	},
-	"input": {
-	    "type": "object",
-	    "properties": {
-		"additionalProperties": false,
-		"type": {
-		    "type": "string",
-		    "description": "Type is the value type of the input.",
-		    "enum": [
-			"string",
-			"number",
-			"boolean",
-			"struct",
-			"array"
-		    ]
-		},
-		"default": {
-		    "$ref": "#/definitions/inputDefaultTypes",
-		    "description": "Default is the default input value. Its type must match `type`."
-		},
-		"sensitive": {
-		    "type": "boolean",
-		    "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
-		}
-	    }
-	},
-	"inputDefaultTypes": {
-	    "oneOf": [
-		{ "type": "string" },
-		{ "type": "number" },
-		{ "type": "boolean" },
-		{ "type": "array" },
-		{ "type": "object" }
-	    ]
-	},
-	"outputDefaultTypes": {
-	    "oneOf": [
-		{ "type": "string" },
-		{ "type": "number" },
-		{ "type": "boolean" },
-		{ "type": "array" },
-		{ "type": "object" }
-	    ]
-	},
-	"outputs": {
-	    "type": "object",
-	    "additionalProperties": {
-		"$ref": "#/definitions/output"
-	    }
-	},
-	"output": {
-	    "type": "object",
-	    "description": "Output describes a single step output.",
-	    "additionalProperties": false,
-	    "properties": {
-		"type": {
-		    "type": "string",
-		    "description": "Type is the value type of the output.",
-		    "enum": [
-			"raw_string",
-			"string",
-			"number",
-			"boolean",
-			"struct",
-			"array"
-		    ]
-		},
-		"default": {
-		    "$ref": "#/definitions/outputDefaultTypes",
-		    "description": "Default is the default output value."
-		},
-		"sensitive": {
-		    "type": "boolean",
-
-		    "description": "Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure."
-		}
-	    }
-	}
+        "spec": {
+            "type": "object",
+            "description": "Spec is a document describing the interface of a step.",
+            "additionalProperties": false,
+            "properties": {
+                "spec": {
+                    "$ref": "#/definitions/signature"
+                }
+            }
+        },
+        "signature": {
+            "type": "object",
+            "description": "Signature contains the inputs and outputs of the step.",
+            "additionalProperties": false,
+            "properties": {
+                "inputs": {
+                    "type": "object",
+                    "description": "Input describes a single step input.",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/input"
+                    }
+                },
+                "outputs": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "enum": [
+                                "delegate"
+                            ]
+                        },
+                        {
+                            "$ref": "#/definitions/outputs"
+                        }
+                    ]
+                }
+            }
+        },
+        "input": {
+            "type": "object",
+            "properties": {
+                "additionalProperties": false,
+                "type": {
+                    "type": "string",
+                    "description": "Type is the value type of the input.",
+                    "enum": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "struct",
+                        "array"
+                    ]
+                },
+                "default": {
+                    "$ref": "#/definitions/inputDefaultTypes",
+                    "description": "Default is the default input value. Its type must match `type`."
+                },
+                "sensitive": {
+                    "type": "boolean",
+                    "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
+                }
+            }
+        },
+        "inputDefaultTypes": {
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "number"
+                },
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "array"
+                },
+                {
+                    "type": "object"
+                }
+            ]
+        },
+        "outputDefaultTypes": {
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "number"
+                },
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "array"
+                },
+                {
+                    "type": "object"
+                }
+            ]
+        },
+        "outputs": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/output"
+            }
+        },
+        "output": {
+            "type": "object",
+            "description": "Output describes a single step output.",
+            "additionalProperties": false,
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "Type is the value type of the output.",
+                    "enum": [
+                        "raw_string",
+                        "string",
+                        "number",
+                        "boolean",
+                        "struct",
+                        "array"
+                    ]
+                },
+                "default": {
+                    "$ref": "#/definitions/outputDefaultTypes",
+                    "description": "Default is the default output value."
+                },
+                "sensitive": {
+                    "type": "boolean",
+                    "description": "Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure."
+                }
+            }
+        }
     }
 }
