@@ -116,6 +116,6 @@ $(GOIMPORTS):
 	@go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
 
 .PHONY: go-fmt
-go-fmt: DIRECTORY := ./pkg
+go-fmt: DIRECTORY := ./pkg ./cmd main.go
 go-fmt: $(GOIMPORTS)
-	goimports -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
+	$(GOIMPORTS) -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
