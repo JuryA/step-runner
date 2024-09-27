@@ -322,7 +322,7 @@ func (s *Step) compileScriptKeywordToStep() error {
 	if len(s.Inputs) != 0 {
 		return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 	}
-	s.Step = scriptStep
+	s.Step = "https://gitlab.com/components/script@main"
 	s.Inputs = map[string]any{
 		"script": s.Script,
 	}
@@ -341,7 +341,7 @@ func (s *Step) compileActionKeywordToStep() error {
 	if s.Script != nil && *s.Script != "" {
 		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
 	}
-	s.Step = actionStep
+	s.Step = "https://gitlab.com/components/action-runner@main"
 	s.Inputs = map[string]any{
 		"action": s.Action,
 		"inputs": s.Inputs,
