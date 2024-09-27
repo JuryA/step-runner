@@ -299,7 +299,7 @@ steps:
 			require.NoError(t, err)
 			protoSpec, err := spec.Compile()
 			require.NoError(t, err)
-			protoDef, err := step.CompileDefinition()
+			protoDef, err := step.Compile()
 			require.NoError(t, err)
 			protoSpecDef := &proto.SpecDefinition{
 				Spec:       protoSpec,

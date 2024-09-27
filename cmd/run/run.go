@@ -68,7 +68,7 @@ func run(options *Options) error {
 		return err
 	}
 
-	protoDef, err := def.CompileDefinition()
+	protoDef, err := def.Compile()
 	if err != nil {
 		return err
 	}

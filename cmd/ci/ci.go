@@ -51,7 +51,7 @@ func run(options *Options) error {
 		return fmt.Errorf("reading STEPS %q: %w", options.Steps, err)
 	}
 
-	protoDef, err := def.CompileDefinition()
+	protoDef, err := def.Compile()
 	if err != nil {
 		return fmt.Errorf("compiling STEPS: %w", err)
 	}

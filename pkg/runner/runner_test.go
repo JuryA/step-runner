@@ -429,7 +429,7 @@ func runTest(testCase runnerTest) func(*testing.T) {
 		require.NoError(t, err)
 		protoSpec, err := schemaSpec.Compile()
 		require.NoError(t, err)
-		protoDef, err := schemaStep.CompileDefinition()
+		protoDef, err := schemaStep.Compile()
 		require.NoError(t, err)
 		protoStepDef := &proto.SpecDefinition{
 			Spec:       protoSpec,

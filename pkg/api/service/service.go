@@ -91,7 +91,7 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 	if err != nil {
 		return nil, fmt.Errorf("compiling steps: %w", err)
 	}
-	protoDef, err := step.CompileDefinition()
+	protoDef, err := step.Compile()
 	if err != nil {
 		return nil, fmt.Errorf("compiling steps: %w", err)
 	}

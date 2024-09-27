@@ -44,7 +44,7 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepRef *proto.Step_R
 		if err != nil {
 			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
 		}
-		protoDef, err := step.CompileDefinition()
+		protoDef, err := step.Compile()
 		if err != nil {
 			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
 		}
