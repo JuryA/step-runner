@@ -103,8 +103,7 @@
 			"number",
 			"boolean",
 			"struct",
-			"array",
-			"step_result"
+			"array"
 		    ]
 		},
 		"default": {
