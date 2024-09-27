@@ -38,10 +38,10 @@ $(SCHEMA_GEN): $(SCHEMA_SRC)
 	$(MAKE) .generate-schema
 
 .PHONY: .generate-schema
-.generate-schema: V0 = ./schema/v1
+.generate-schema: V1 = ./schema/v1
 .generate-schema: $(GO_JSONSCHEMA)
-	$(GO_JSONSCHEMA) -p schema $(V0)/step.json -o $(V0)/step.go
-	$(GO_JSONSCHEMA) -p schema $(V0)/spec.json -o $(V0)/spec.go
+	$(GO_JSONSCHEMA) -p schema $(V1)/step.json -o $(V1)/step.go
+	$(GO_JSONSCHEMA) -p schema $(V1)/spec.json -o $(V1)/spec.go
 
 .PHONY: .generate-proto
 .generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
