@@ -2,9 +2,11 @@
 
 package schema
 
-import "encoding/json"
-import "fmt"
-import "reflect"
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+)
 
 type Input struct {
 	// AdditionalProperties corresponds to the JSON schema field

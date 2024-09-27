@@ -36,11 +36,12 @@ $(PROTO_GEN): $(PROTO_SRC)
 .generate-schema: $(GO_JSONSCHEMA)
 	$(GO_JSONSCHEMA) -p schema $(V1)/step.json -o $(V1)/step.go
 	$(GO_JSONSCHEMA) -p schema $(V1)/spec.json -o $(V1)/spec.go
+	$(MAKE) DIRECTORY=$(V1) go-fmt
 
 .PHONY: .generate-proto
 .generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
 	go generate ./proto
-	@$(MAKE) DIRECTORY=./proto go-fmt
+	$(MAKE) DIRECTORY=./proto go-fmt
 
 .PHONY: generate
 generate:

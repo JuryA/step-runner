@@ -2,8 +2,10 @@
 
 package schema
 
-import "encoding/json"
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type Exec struct {
 	// Command are the parameters to the system exec API. It does not invoke a shell.
