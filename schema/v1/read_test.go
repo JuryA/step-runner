@@ -80,7 +80,7 @@ exec:
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			spec, step, err := ReadSteps(c.yaml, "")
+			spec, step, err := ReadSteps(c.yaml)
 			if c.wantErr {
 				require.Error(t, err)
 				require.Nil(t, spec)

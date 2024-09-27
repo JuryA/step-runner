@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -16,10 +15,10 @@ func LoadSteps(filename string) (*Spec, *Step, error) {
 		return nil, nil, fmt.Errorf("reading file: %w", err)
 	}
 
-	return ReadSteps(string(buf), filepath.Dir(filename))
+	return ReadSteps(string(buf))
 }
 
-func ReadSteps(content, dir string) (*Spec, *Step, error) {
+func ReadSteps(content string) (*Spec, *Step, error) {
 	var (
 		spec Spec
 		step Step

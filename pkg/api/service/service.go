@@ -83,7 +83,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 }
 
 func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, error) {
-	spec, step, err := schema.ReadSteps(stepsStr, "")
+	spec, step, err := schema.ReadSteps(stepsStr)
 	if err != nil {
 		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
 	}

@@ -295,7 +295,7 @@ steps:
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			spec, step, err := ReadSteps(c.steps, "")
+			spec, step, err := ReadSteps(c.steps)
 			require.NoError(t, err)
 			protoSpec, err := spec.Compile()
 			require.NoError(t, err)
