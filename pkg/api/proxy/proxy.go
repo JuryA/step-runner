@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -19,9 +20,11 @@ func Proxy(source io.Reader, sink io.Writer, conn *net.UnixConn) error {
 	eg := errgroup.Group{}
 
 	// pipe source to the connection
-	eg.Go(func() error {
-		defer conn.Close() // ensure the writing loop exits too...
-		_, err := io.Copy(conn, source)
+	eg.Go(func() (err error) {
+		defer func() {
+			err = errors.Join(err, conn.CloseRead()) // ensure the writing loop exits too...
+		}()
+		_, err = io.Copy(conn, source)
 		if err != nil {
 			return fmt.Errorf("proxying stdin to %q: %w", conn.RemoteAddr().String(), err)
 		}
@@ -29,9 +32,11 @@ func Proxy(source io.Reader, sink io.Writer, conn *net.UnixConn) error {
 	})
 
 	// pipe the connection to sink
-	eg.Go(func() error {
-		defer conn.Close() // ensure the reading loop exists too...
-		_, err := io.Copy(sink, conn)
+	eg.Go(func() (err error) {
+		defer func() {
+			err = errors.Join(err, conn.CloseWrite()) // ensure the reading loop exists too...
+		}()
+		_, err = io.Copy(sink, conn)
 		if err != nil {
 			return fmt.Errorf("proxying %q to stdout: %w", conn.RemoteAddr().String(), err)
 		}
