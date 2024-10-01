@@ -18,22 +18,26 @@ func TestReferenceCustomMethods(t *testing.T) {
 		wantSchemaErr bool
 	}{{
 		name:    "short reference",
-		json:    `"gitlab.com/components/script@v1"`,
-		yaml:    `gitlab.com/components/script@v1`,
+		json:    `{"step":"gitlab.com/components/script@v1"}`,
+		yaml:    `step: gitlab.com/components/script@v1`,
 		wantRef: "gitlab.com/components/script@v1",
 	}, {
 		name: "long simple git reference",
 		json: `
 {
-  "git": {
-    "url":"gitlab.com/components/script",
-    "rev":"v1"
+  "step": {
+    "git": {
+      "url":"gitlab.com/components/script",
+      "rev":"v1"
+    }
   }
-}`,
+}
+`,
 		yaml: `
-git:
-  url:    gitlab.com/components/script
-  rev: v1
+step:
+  git:
+    url:    gitlab.com/components/script
+    rev: v1
 `,
 		wantRef: &Reference{
 			Git: GitReference{
@@ -45,18 +49,21 @@ git:
 		name: "long git reference with dir",
 		json: `
 {
-  "git": {
-    "url":"gitlab.com/components/script",
-    "dir":"bash",
-    "rev":"v1"
+  "step": {
+    "git": {
+       "url":"gitlab.com/components/script",
+      "dir":"bash",
+      "rev":"v1"
+    }
   }
 }
 `,
 		yaml: `
-git:
-  url:    gitlab.com/components/script
-  dir:    bash
-  rev: v1
+step:
+  git:
+    url:    gitlab.com/components/script
+    dir:    bash
+    rev: v1
 `,
 		wantRef: &Reference{
 			Git: GitReference{
@@ -67,8 +74,8 @@ git:
 		},
 	}, {
 		name: "long one-line git reference with dir",
-		json: `{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}`,
-		yaml: `git: {url: gitlab.com/components/script, dir: bash, rev: v1}`,
+		json: `{"step":{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}}`,
+		yaml: `step: {git: {url: gitlab.com/components/script, dir: bash, rev: v1}}`,
 		wantRef: &Reference{
 			Git: GitReference{
 				Url: "gitlab.com/components/script",
@@ -86,16 +93,18 @@ git:
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			step := Step{}
+			step := Step{
+				Step: tc.wantRef,
+			}
 			switch v := tc.wantRef.(type) {
 			case string:
 				step.Step = v
-				check(t, json.Marshal, json.Unmarshal, []byte(tc.json), v, stepsSchema, step)
-				check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), v, stepsSchema, step)
+				check(t, json.Marshal, json.Unmarshal, []byte(tc.json), step, stepsSchema)
+				check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), step, stepsSchema)
 			case *Reference:
 				step.Step = v
-				check(t, json.Marshal, json.Unmarshal, []byte(tc.json), v, stepsSchema, step)
-				check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), v, stepsSchema, step)
+				check(t, json.Marshal, json.Unmarshal, []byte(tc.json), step, stepsSchema)
+				check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), step, stepsSchema)
 			}
 		})
 	}

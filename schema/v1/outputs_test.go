@@ -60,8 +60,8 @@ spec:
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			check(t, json.Marshal, json.Unmarshal, []byte(tc.json), tc.wantSpec, specSchema, tc.wantSpec)
-			check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), tc.wantSpec, specSchema, tc.wantSpec)
+			check(t, json.Marshal, json.Unmarshal, []byte(tc.json), tc.wantSpec, specSchema)
+			check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), tc.wantSpec, specSchema)
 		})
 	}
 }
