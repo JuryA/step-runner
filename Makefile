@@ -18,25 +18,15 @@ PROTOVALIDATE_DIST := $(local)/protovalidate
 PROTO_SRC := proto/step.proto
 PROTO_GEN := $(wildcard proto/*.pb.go)
 
-GO_JSONSCHEMA := $(localBin)/go-jsonschema
-GO_JSONSCHEMA_VERSION := v0.16.0
-
 GOIMPORTS := goimports
 GOIMPORTS_VERSION := v0.23.0
 
 .PHONY: build
-build: $(PROTO_GEN) $(SCHEMA_GEN)
+build: $(PROTO_GEN)
 	go build .
 
 $(PROTO_GEN): $(PROTO_SRC)
 	$(MAKE) generate
-
-.PHONY: .generate-schema
-.generate-schema: V1 = ./schema/v1
-.generate-schema: $(GO_JSONSCHEMA)
-	$(GO_JSONSCHEMA) -p schema $(V1)/step.json -o $(V1)/step.go
-	$(GO_JSONSCHEMA) -p schema $(V1)/spec.json -o $(V1)/spec.go
-	$(MAKE) DIRECTORY=$(V1) go-fmt
 
 .PHONY: .generate-proto
 .generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
@@ -45,7 +35,6 @@ $(PROTO_GEN): $(PROTO_SRC)
 
 .PHONY: generate
 generate:
-	$(MAKE) .generate-schema
 	$(MAKE) .generate-proto
 
 .PHONY: test
@@ -86,18 +75,6 @@ $(PROTOVALIDATE_DIST):
 	@rm -fr "$(local)/protovalidate"
 	@mv -f "$(local)/protovalidate-$(PROTOVALIDATE_VERSION)" "$(local)/protovalidate"
 	@rm "$(local)/protovalidate.zip"
-
-$(GO_JSONSCHEMA): OS_TYPE ?= $(shell uname -s)
-$(GO_JSONSCHEMA): ARCH ?= $(shell uname -m)
-$(GO_JSONSCHEMA): DOWNLOAD_URL = https://github.com/omissis/go-jsonschema/releases/download/$(GO_JSONSCHEMA_VERSION)/go-jsonschema_$(OS_TYPE)_$(ARCH).tar.gz
-$(GO_JSONSCHEMA): OUT_DIR = $(shell dirname $(GO_JSONSCHEMA))
-$(GO_JSONSCHEMA):
-	# Installing $(DOWNLOAD_URL) as $(GO_JSONSCHEMA)
-	@mkdir -p "$(localBin)"
-	@curl -sL "$(DOWNLOAD_URL)" -o "$(local)/go-jsonschema.tar.gz"
-	@tar -zxf "$(local)/go-jsonschema.tar.gz" -C "$(OUT_DIR)"
-	@chmod +x "$(GO_JSONSCHEMA)"
-	@rm "$(local)/go-jsonschema.tar.gz"
 
 .PHONY: clean
 clean:

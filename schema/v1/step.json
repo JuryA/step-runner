@@ -1,78 +1,142 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v1/step",
-    "$ref": "#/definitions/valid_step",
+    "$ref": "#/definitions/step",
     "definitions": {
-	"valid_step": {
-	    "allOf": [
-		{
-		    "description": "The overall step structure.",
-		    "$ref": "#/definitions/step"
-		},
-		{
-		    "description": "Validation per usecase",
-		    "$ref": "#/definitions/step_usecases"
-		}
-	    ]
-	},
         "step": {
-            "type": "object",
-            "description": "Step is a unit of execution.",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Name is a unique identifier for this step."
-                },
-                "env": {
+            "description": "Any of these step use cases are valid.",
+            "oneOf": [
+                {
+                    "description": "Run a referenced step.",
                     "type": "object",
-                    "description": "Env is a map of environment variable names to string values.",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "inputs": {
-                    "type": "object",
-                    "description": "Inputs is a map of step input names to structured values."
-                },
-                "step": {
-                    "description": "Step is a reference to another step to invoke.",
-                    "oneOf": [
-                        {
+                    "additionalProperties": false,
+                    "required": [
+                        "step"
+                    ],
+                    "properties": {
+                        "name": {
                             "type": "string"
                         },
-                        {
-                            "$ref": "#/definitions/reference"
+                        "env": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        "inputs": {
+                            "type": "object"
+                        },
+                        "step": {
+                            "oneOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "$ref": "#/definitions/reference"
+                                }
+                            ]
                         }
-                    ]
-                },
-                "exec": {
-                    "description": "Exec is a command to run.",
-                    "$ref": "#/definitions/exec"
-                },
-                "steps": {
-                    "type": "array",
-                    "description": "Steps is a list of sub-steps to run.",
-                    "items": {
-                        "$ref": "#/definitions/step"
                     }
                 },
-                "script": {
-                    "type": "string",
-                    "description": "Script is a shell script to evaluate."
-                },
-                "action": {
-                    "type": "string",
-                    "description": "Action is a GitHub action to run."
-                },
-                "outputs": {
+                {
+                    "description": "Run a sequence of steps.",
                     "type": "object",
-                    "description": "Outputs are the output values for a sequence. They can reference the outputs of sub-steps."
+                    "additionalProperties": false,
+                    "required": [
+                        "steps"
+                    ],
+                    "properties": {
+                        "env": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        "steps": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/step"
+                            }
+                        },
+                        "outputs": {
+                            "type": "object"
+                        },
+                        "delegate": {
+                            "type": "string"
+                        }
+                    }
                 },
-                "delegate": {
-                    "type": "string",
-                    "description": "Delegate selects a step by name which will produce the outputs a run."
+                {
+                    "description": "Run an action.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "action"
+                    ],
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "env": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        "inputs": {
+                            "type": "object"
+                        },
+                        "action": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    }
+                },
+                {
+                    "description": "Run a script.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "script"
+                    ],
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "env": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        "script": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    }
+                },
+                {
+                    "description": "Exec a binary.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "exec"
+                    ],
+                    "properties": {
+                        "env": {
+                            "type": "object",
+                            "description": "Env is a map of environment variable names to string values.",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        "exec": {
+                            "description": "Exec is a command to run.",
+                            "$ref": "#/definitions/exec"
+                        }
+                    }
                 }
-            }
+            ]
         },
         "reference": {
             "type": "object",
@@ -127,131 +191,6 @@
                     "description": "WorkDir is the working directly in which `command` will be exec'ed."
                 }
             }
-        },
-        "step_usecases": {
-            "description": "Any of these step use cases are valid.",
-            "oneOf": [
-                {
-                    "description": "Run a referenced step.",
-                    "type": "object",
-                    "additionalProperties": false,
-		    "required": [ "step" ],
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "env": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        },
-                        "inputs": {
-                            "type": "object"
-                        },
-                        "step": {
-                            "oneOf": [
-                                {
-                                    "type": "string"
-                                },
-                                {
-                                    "$ref": "#/definitions/reference"
-                                }
-                            ]
-                        }
-                    }
-                },
-                {
-                    "description": "Run a sequence of steps.",
-                    "type": "object",
-                    "additionalProperties": false,
-		    "required": [ "steps" ],
-                    "properties": {
-                        "env": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        },
-                        "steps": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/valid_step"
-                            }
-                        },
-                        "outputs": {
-                            "type": "object"
-                        },
-                        "delegate": {
-                            "type": "string"
-                        }
-                    }
-                },
-                {
-                    "description": "Run an action.",
-                    "type": "object",
-                    "additionalProperties": false,
-		    "required": [ "action" ],
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "env": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        },
-                        "inputs": {
-                            "type": "object"
-                        },
-                        "action": {
-                            "type": "string",
-                            "minLength": 1
-                        }
-                    }
-                },
-                {
-                    "description": "Run a script.",
-                    "type": "object",
-                    "additionalProperties": false,
-		    "required": [ "script" ],
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "env": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        },
-                        "script": {
-                            "type": "string",
-                            "minLength": 1
-                        }
-                    }
-                },
-                {
-                    "description": "Exec a binary.",
-                    "type": "object",
-                    "additionalProperties": false,
-		    "required": [ "exec" ],
-                    "properties": {
-                        "env": {
-                            "type": "object",
-                            "description": "Env is a map of environment variable names to string values.",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        },
-                        "exec": {
-                            "description": "Exec is a command to run.",
-                            "$ref": "#/definitions/exec"
-                        }
-                    }
-                }
-            ]
         }
     }
 }
