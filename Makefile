@@ -18,34 +18,23 @@ PROTOVALIDATE_DIST := $(local)/protovalidate
 PROTO_SRC := proto/step.proto
 PROTO_GEN := $(wildcard proto/*.pb.go)
 
-SCHEMA_SRC := $(shell find schema/v1 -name "*.go")
-SCHEMA_GEN := $(wildcard schema/v1/*.json)
-
 GOIMPORTS := goimports
 GOIMPORTS_VERSION := v0.23.0
 
 .PHONY: build
-build: $(PROTO_GEN) $(SCHEMA_GEN)
+build: $(PROTO_GEN)
 	go build .
 
 $(PROTO_GEN): $(PROTO_SRC)
 	$(MAKE) generate
 
-$(SCHEMA_GEN): $(SCHEMA_SRC)
-	$(MAKE) .generate-schema
-
-.PHONY: .generate-schema
-.generate-schema:
-	go run ./schema/v1/generate
-
 .PHONY: .generate-proto
 .generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
 	go generate ./proto
-	@$(MAKE) DIRECTORY=./proto go-fmt
+	$(MAKE) DIRECTORY=./proto go-fmt
 
 .PHONY: generate
 generate:
-	$(MAKE) .generate-schema
 	$(MAKE) .generate-proto
 
 .PHONY: test
@@ -105,6 +94,6 @@ $(GOIMPORTS):
 	@go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
 
 .PHONY: go-fmt
-go-fmt: DIRECTORY := .
+go-fmt: DIRECTORY := ./pkg ./cmd main.go
 go-fmt: $(GOIMPORTS)
-	goimports -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
+	$(GOIMPORTS) -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)

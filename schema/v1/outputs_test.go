@@ -17,10 +17,12 @@ func TestOutputsCustomMethods(t *testing.T) {
 		wantSpec      Spec
 		wantSchemaErr bool
 	}{{
-		name:     "empty outputs",
-		json:     `{"spec":{}}`,
-		yaml:     `spec: {}`,
-		wantSpec: Spec{},
+		name: "empty outputs",
+		json: `{"spec":{}}`,
+		yaml: `spec: {}`,
+		wantSpec: Spec{
+			Spec: &Signature{},
+		},
 	}, {
 		name: "outputs map",
 		json: `{"spec":{"outputs":{"name":{}}}}`,
@@ -30,11 +32,9 @@ spec:
     name: {}
 `,
 		wantSpec: Spec{
-			Spec: Signature{
-				Outputs: Outputs{
-					Outputs: map[string]Output{
-						"name": {},
-					},
+			Spec: &Signature{
+				Outputs: &Outputs{
+					"name": {},
 				},
 			},
 		},
@@ -46,10 +46,8 @@ spec:
   outputs: delegate
 `,
 		wantSpec: Spec{
-			Spec: Signature{
-				Outputs: Outputs{
-					Delegate: true,
-				},
+			Spec: &Signature{
+				Outputs: "delegate",
 			},
 		},
 	}}
@@ -62,8 +60,8 @@ spec:
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			check(t, json.Marshal, json.Unmarshal, []byte(tc.json), tc.wantSpec, specSchema, tc.wantSpec)
-			check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), tc.wantSpec, specSchema, tc.wantSpec)
+			check(t, json.Marshal, json.Unmarshal, []byte(tc.json), tc.wantSpec, specSchema)
+			check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), tc.wantSpec, specSchema)
 		})
 	}
 }

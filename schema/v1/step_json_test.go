@@ -1,0 +1,216 @@
+package schema
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
+)
+
+func TestStepSchemaValidate(t *testing.T) {
+	cases := []struct {
+		name    string
+		step    string
+		wantErr bool
+	}{{
+		name: "local step",
+		step: `
+step: ./my-step
+`,
+	}, {
+		name: "remote step",
+		step: `
+step: gitlab.com/my-org/my-step@v1
+`,
+	}, {
+		name: "remote nested step",
+		step: `
+step:
+  git:
+    url: gitlab.com/my-org/my-step
+    rev: v1
+`,
+	}, {
+		name:    "remote nested step missing rev",
+		wantErr: true,
+		step: `
+step:
+  git:
+    url: gitlab.com/my-org/my-step
+`,
+	}, {
+		name:    "remote nested step missing url",
+		wantErr: true,
+		step: `
+step:
+  git:
+    rev: v1
+`,
+	}, {
+		name: "remote nested step with dir",
+		step: `
+step:
+  git:
+    url: gitlab.com/my-org/my-step
+    rev: v1
+    dir: sub-dir
+`,
+	}, {
+		name:    "remote nested step with additional properties",
+		wantErr: true,
+		step: `
+step:
+  git:
+    additional: property
+`,
+	}, {
+		name: "script step",
+		step: `
+script: my-script
+`,
+	}, {
+		name:    "empty script step",
+		wantErr: true,
+		step: `
+script: ""
+`,
+	}, {
+		name: "remote action",
+		step: `
+action: my-action@v1
+`,
+	}, {
+		name: "exec",
+		step: `
+exec:
+  command: [ my-binary ]
+`,
+	}, {
+		name:    "exec without command",
+		wantErr: true,
+		step: `
+exec: {}
+`,
+	}, {
+		name:    "exec with empty command",
+		wantErr: true,
+		step: `
+exec:
+  command: []
+`,
+	}, {
+		name: "exec with work dir",
+		step: `
+exec: 
+  command: [ my-binary ]
+  work_dir: sub-dir
+`,
+	}, {
+		name:    "empty step invalid",
+		wantErr: true,
+		step:    "",
+	}, {
+		name:    "step mutually exclusive with script",
+		wantErr: true,
+		step: `
+script: echo hello world
+action: my-action@v1
+`,
+	}, {
+		name:    "step mutually exclusive with action",
+		wantErr: true,
+		step: `
+step: ./my-step
+action: my-action@v1
+`,
+	}, {
+		name:    "step mutually exclusive with exec",
+		wantErr: true,
+		step: `
+step: ./my-step
+exec:
+  command: [ bash, -c, "echo hello world" ]
+`,
+	}, {
+		name:    "step mutually exclusive with steps",
+		wantErr: true,
+		step: `
+step: ./my-step
+steps:
+  - step: ./my-step
+`,
+	}, {
+		name:    "script mutually exclusive with action",
+		wantErr: true,
+		step: `
+script: echo hello world
+action: my-action@v1
+`,
+	}, {
+		name:    "script mutually exclusive with exec",
+		wantErr: true,
+		step: `
+script: echo hello world
+exec:
+  command: [ my-binary ]
+`,
+	}, {
+		name:    "script mutually exclusive with steps",
+		wantErr: true,
+		step: `
+script: echo hello world
+steps:
+  - step: ./my-step
+`,
+	}, {
+		name:    "action mutually exclusive with exec",
+		wantErr: true,
+		step: `
+action: my-action@v1
+exec:
+  command: [ my-binary ]
+`,
+	}, {
+		name:    "action mutually exclusive with steps",
+		wantErr: true,
+		step: `
+action: my-action@v1
+steps:
+  - step: ./my-step
+`,
+	}, {
+		name:    "exec mutually exclusive with steps",
+		wantErr: true,
+		step: `
+exec:
+  command: [ my-binary ]
+steps:
+  - step: ./my-step
+`,
+	}, {
+		name:    "mutual exclusion recursively",
+		wantErr: true,
+		step: `
+
+steps:
+  - step: gitlab.com/components/my-step
+    exec:
+      command: [echo, "hello world"]
+    steps:
+      - step: gitlab.com/components/another-step
+`,
+	}}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var untyped any
+			err := yaml.Unmarshal([]byte(c.step), &untyped)
+			require.NoError(t, err)
+			if c.wantErr {
+				require.Error(t, stepSchema.Validate(untyped))
+			} else {
+				require.NoError(t, stepSchema.Validate(untyped))
+			}
+		})
+	}
+
+}

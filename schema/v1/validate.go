@@ -1,20 +1,52 @@
 package schema
 
 import (
-	"fmt"
+	"github.com/santhosh-tekuri/jsonschema/v5"
+	"gopkg.in/yaml.v3"
 
-	"github.com/bufbuild/protovalidate-go"
-
-	"gitlab.com/gitlab-org/step-runner/proto"
+	_ "embed"
 )
 
-func validateStepDefinition(stepDef *proto.SpecDefinition) error {
-	v, err := protovalidate.New()
+var (
+	//go:embed spec.json
+	specSchemaString string
+	//go:embed step.json
+	stepSchemaString string
+
+	specSchema *jsonschema.Schema
+	stepSchema *jsonschema.Schema
+)
+
+func init() {
+	specSchema = jsonschema.MustCompileString("spec.json", specSchemaString)
+	stepSchema = jsonschema.MustCompileString("step.json", stepSchemaString)
+}
+
+func validateSpec(spec Spec) error {
+	untyped, err := untype(spec)
 	if err != nil {
-		return fmt.Errorf("failed to initialize validator: %w", err)
+		return err
 	}
-	if err = v.Validate(stepDef); err != nil {
-		return fmt.Errorf("error validating step definition: %w", err)
+	return specSchema.Validate(untyped)
+}
+
+func validateStep(step Step) error {
+	untyped, err := untype(step)
+	if err != nil {
+		return err
 	}
-	return nil
+	return stepSchema.Validate(untyped)
+}
+
+func untype(v any) (any, error) {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var untyped any
+	err = yaml.Unmarshal(data, &untyped)
+	if err != nil {
+		return nil, err
+	}
+	return untyped, nil
 }

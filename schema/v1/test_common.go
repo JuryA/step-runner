@@ -14,7 +14,6 @@ func check[T any](
 	data []byte,
 	want T,
 	schema *jsonschema.Schema,
-	schemaData any,
 ) {
 
 	// Unmarshal
@@ -34,7 +33,7 @@ func check[T any](
 	require.Equal(t, want, *roundTripV)
 
 	// Validate T with schema
-	stepsData, err := marshal(schemaData)
+	stepsData, err := marshal(want)
 	require.NoError(t, err)
 	var untyped any
 	err = unmarshal(stepsData, &untyped)

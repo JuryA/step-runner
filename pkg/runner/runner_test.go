@@ -425,9 +425,16 @@ func requireStringEqualValue(t *testing.T, str string, got *structpb.Value) {
 
 func runTest(testCase runnerTest) func(*testing.T) {
 	return func(t *testing.T) {
-		stepDef, err := schema.ReadSteps(testCase.yaml, "")
+		schemaSpec, schemaStep, err := schema.ReadSteps(testCase.yaml)
 		require.NoError(t, err)
-		protoStepDef, err := schema.CompileSteps(stepDef)
+		protoSpec, err := schemaSpec.Compile()
+		require.NoError(t, err)
+		protoDef, err := schemaStep.Compile()
+		require.NoError(t, err)
+		protoStepDef := &proto.SpecDefinition{
+			Spec:       protoSpec,
+			Definition: protoDef,
+		}
 		require.NoError(t, err)
 		protoStepDef.Dir, _ = os.Getwd()
 

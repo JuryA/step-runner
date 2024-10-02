@@ -14,30 +14,32 @@ func TestReferenceCustomMethods(t *testing.T) {
 		name          string
 		json          string
 		yaml          string
-		wantRef       Reference
+		wantRef       any
 		wantSchemaErr bool
 	}{{
-		name: "short reference",
-		json: `"gitlab.com/components/script@v1"`,
-		yaml: `gitlab.com/components/script@v1`,
-		wantRef: Reference{
-			Short: "gitlab.com/components/script@v1",
-		},
+		name:    "short reference",
+		json:    `{"step":"gitlab.com/components/script@v1"}`,
+		yaml:    `step: gitlab.com/components/script@v1`,
+		wantRef: "gitlab.com/components/script@v1",
 	}, {
 		name: "long simple git reference",
 		json: `
 {
-  "git": {
-    "url":"gitlab.com/components/script",
-    "rev":"v1"
+  "step": {
+    "git": {
+      "url":"gitlab.com/components/script",
+      "rev":"v1"
+    }
   }
-}`,
-		yaml: `
-git:
-  url:    gitlab.com/components/script
-  rev: v1
+}
 `,
-		wantRef: Reference{
+		yaml: `
+step:
+  git:
+    url:    gitlab.com/components/script
+    rev: v1
+`,
+		wantRef: &Reference{
 			Git: GitReference{
 				Url: "gitlab.com/components/script",
 				Rev: "v1",
@@ -47,52 +49,63 @@ git:
 		name: "long git reference with dir",
 		json: `
 {
-  "git": {
-    "url":"gitlab.com/components/script",
-    "dir":"bash",
-    "rev":"v1"
+  "step": {
+    "git": {
+       "url":"gitlab.com/components/script",
+      "dir":"bash",
+      "rev":"v1"
+    }
   }
 }
 `,
 		yaml: `
-git:
-  url:    gitlab.com/components/script
-  dir:    bash
-  rev: v1
+step:
+  git:
+    url:    gitlab.com/components/script
+    dir:    bash
+    rev: v1
 `,
-		wantRef: Reference{
+		wantRef: &Reference{
 			Git: GitReference{
 				Url: "gitlab.com/components/script",
-				Dir: "bash",
+				Dir: stringRef("bash"),
 				Rev: "v1",
 			},
 		},
 	}, {
 		name: "long one-line git reference with dir",
-		json: `{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}`,
-		yaml: `git: {url: gitlab.com/components/script, dir: bash, rev: v1}`,
-		wantRef: Reference{
+		json: `{"step":{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}}`,
+		yaml: `step: {git: {url: gitlab.com/components/script, dir: bash, rev: v1}}`,
+		wantRef: &Reference{
 			Git: GitReference{
 				Url: "gitlab.com/components/script",
-				Dir: "bash",
+				Dir: stringRef("bash"),
 				Rev: "v1",
 			},
 		},
 	}}
 
-	data, err := os.ReadFile("steps.json")
+	data, err := os.ReadFile("step.json")
 	if err != nil {
 		panic(err)
 	}
-	stepsSchema := jsonschema.MustCompileString("steps.json", string(data))
+	stepsSchema := jsonschema.MustCompileString("step.json", string(data))
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			steps := []Step{{
+			step := Step{
 				Step: tc.wantRef,
-			}}
-			check(t, json.Marshal, json.Unmarshal, []byte(tc.json), tc.wantRef, stepsSchema, steps)
-			check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), tc.wantRef, stepsSchema, steps)
+			}
+			switch v := tc.wantRef.(type) {
+			case string:
+				step.Step = v
+				check(t, json.Marshal, json.Unmarshal, []byte(tc.json), step, stepsSchema)
+				check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), step, stepsSchema)
+			case *Reference:
+				step.Step = v
+				check(t, json.Marshal, json.Unmarshal, []byte(tc.json), step, stepsSchema)
+				check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), step, stepsSchema)
+			}
 		})
 	}
 }

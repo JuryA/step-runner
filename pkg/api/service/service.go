@@ -83,17 +83,23 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 }
 
 func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, error) {
-	stepDef, err := schema.ReadSteps(stepsStr, "")
+	spec, step, err := schema.ReadSteps(stepsStr)
 	if err != nil {
 		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
 	}
-
-	steps, err := schema.CompileSteps(stepDef)
+	protoSpec, err := spec.Compile()
 	if err != nil {
 		return nil, fmt.Errorf("compiling steps: %w", err)
 	}
-
-	return steps, nil
+	protoDef, err := step.Compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling steps: %w", err)
+	}
+	protoStepDef := &proto.SpecDefinition{
+		Spec:       protoSpec,
+		Definition: protoDef,
+	}
+	return protoStepDef, nil
 }
 
 // run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
