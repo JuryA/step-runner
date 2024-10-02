@@ -13,6 +13,13 @@ It can be tested in GitLab CI/CD jobs but should not be used for production work
 - Feedback: https://gitlab.com/gitlab-org/step-runner/-/issues/10
 - Blueprint: https://docs.gitlab.com/ee/architecture/blueprints/gitlab_steps/
 
+## Contributing
+Contributions are welcome, see [CONTRIBUTING.md](./CONTRIBUTING.md) for more details.
+
+## Project License
+
+You can view this projects license in [LICENSE](./LICENSE).
+
 ## Release
 
 During the experimental phase all changes to `main` are automatically built as a Docker image and tagged in the container repository as `v0`.
