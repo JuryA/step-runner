@@ -55,7 +55,21 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext, sp
 }
 
 func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, workingDir string) (Step, *Params, *proto.SpecDefinition, error) {
-	specDef, err := s.resourceLoader.Get(ctx, workingDir, s.stepReference.Step)
+
+	// Expand step reference URL
+	res, err := expression.ExpandString(stepsCtx.View(), s.stepReference.Step.Url)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
+	}
+	resStep := &proto.Step_Reference{
+		Url:      res,
+		Protocol: s.stepReference.Step.Protocol,
+		Path:     s.stepReference.Step.Path,
+		Filename: s.stepReference.Step.Filename,
+		Version:  s.stepReference.Step.Version,
+	}
+
+	specDef, err := s.resourceLoader.Get(ctx, workingDir, resStep)
 
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)

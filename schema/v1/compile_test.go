@@ -437,11 +437,27 @@ step:
 			Version:  "20e9c40c9213f2a044e4a81906956a779af3da4b",
 		},
 	}, {
-		step:    "step: ftp://gitlab.com/components/script@v1", // unsupported
-		wantErr: true,
+		step: `
+step: http://gitlab-ci-token:ABCDEF@gitlab.com/josephburnett/hello-private-repo.git@main
+`,
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "http://gitlab-ci-token:ABCDEF@gitlab.com/josephburnett/hello-private-repo.git",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "main",
+		},
 	}, {
-		step:    "step: notavalidscheme://gitlab.com/components/script@v1",
-		wantErr: true,
+		step: `
+step: http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/josephburnett/hello-private-repo.git@main
+`,
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/josephburnett/hello-private-repo.git",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "main",
+		},
 	}}
 
 	for _, c := range cases {
