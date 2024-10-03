@@ -122,8 +122,11 @@ type Step struct {
 	// Step is a reference to another step to invoke.
 	Step interface{} `json:"step,omitempty" yaml:"step,omitempty" mapstructure:"step,omitempty"`
 
-	// Steps is a list of sub-steps to run.
+	// Steps is a list of sub-steps to run. Deprecated. Use `run` instead.
 	Steps []Step `json:"steps,omitempty" yaml:"steps,omitempty" mapstructure:"steps,omitempty"`
+
+	// Run is a list of sub-steps to run.
+	Run []Step `json:"run,omitempty" yaml:"run,omitempty" mapstructure:"run,omitempty"`
 }
 
 // Env is a map of environment variable names to string values.
@@ -135,8 +138,3 @@ type StepInputs map[string]interface{}
 // Outputs are the output values for a sequence. They can reference the outputs of
 // sub-steps.
 type StepOutputs map[string]interface{}
-
-// Any of these step use cases are valid.
-type StepUsecases interface{}
-
-type ValidStep interface{}

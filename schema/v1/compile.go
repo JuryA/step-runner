@@ -244,20 +244,28 @@ func (s *Step) verifyOneTypeProvided() error {
 		// Steps type step
 		have++
 	}
+	if s.Run != nil {
+		// Run type step
+		have++
+	}
 	if have == 0 {
-		return fmt.Errorf("at least one of `script`, `exec` or `steps` must be provided")
+		return fmt.Errorf("at least one of `script, `action`, `run` or `exec` must be provided")
 	}
 	if have > 1 {
-		return fmt.Errorf("only one of `script`, `exec` or `steps` may be provided. have %v", have)
+		return fmt.Errorf("only one of `script`, `action`, `run` or `exec` may be provided. have %v", have)
 	}
 	return nil
 }
 
 func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 	protoDef := &proto.Definition{}
+	if s.Run == nil && s.Steps != nil {
+		s.Run = s.Steps
+		s.Steps = nil
+	}
 	switch {
 	case s.Exec != nil:
-		// Exec type step
+		// Exec step
 		protoDef.Type = proto.DefinitionType_exec
 		protoDef.Exec = &proto.Definition_Exec{
 			Command: s.Exec.Command,
@@ -265,14 +273,14 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 		if s.Exec.WorkDir != nil {
 			protoDef.Exec.WorkDir = *s.Exec.WorkDir
 		}
-	case s.Steps != nil:
-		// Steps type step
+	case s.Run != nil:
+		// Run step
 		protoDef.Type = proto.DefinitionType_steps
-		protoDef.Steps = make([]*proto.Step, len(s.Steps))
-		for i, ss := range s.Steps {
+		protoDef.Steps = make([]*proto.Step, len(s.Run))
+		for i, ss := range s.Run {
 			protoStep, err := (&ss).CompileStep(i)
 			if err != nil {
-				return nil, fmt.Errorf("compiling steps[%v]: %v: %w", i, s.Name, err)
+				return nil, fmt.Errorf("compiling run[%v]: %v: %w", i, s.Name, err)
 			}
 			protoDef.Steps[i] = protoStep
 		}
