@@ -2,7 +2,6 @@ package schema
 
 import (
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -410,10 +409,13 @@ func (sr shortReference) compileLocal() (*proto.Step_Reference, error) {
 }
 
 func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
-	url, rev, ok := strings.Cut(string(sr), "@")
-	if !ok {
+	parts := strings.Split(string(sr), "@")
+	if len(parts) < 2 {
 		return nil, fmt.Errorf("expecting url@rev. got %q", sr)
 	}
+	url := strings.Join(parts[0:len(parts)-1], "@")
+	rev := parts[len(parts)-1]
+
 	url, err := defaultHTTPS(url)
 	if err != nil {
 		return nil, fmt.Errorf("parsing reference %q: %w", string(sr), err)
@@ -444,19 +446,10 @@ func (r *Reference) compile() (*proto.Step_Reference, error) {
 }
 
 func defaultHTTPS(stepUrl string) (string, error) {
-	parsedURL, err := url.Parse(stepUrl)
-	if err != nil {
-		return "", fmt.Errorf("invalid step reference url %v: %w", stepUrl, err)
+	if strings.HasPrefix(stepUrl, "http://") || strings.HasPrefix(stepUrl, "https://") {
+		return stepUrl, nil
 	}
-	switch parsedURL.Scheme {
-	case "http", "https":
-		// Valid
-	case "":
-		parsedURL.Scheme = "https"
-	default:
-		return "", fmt.Errorf("unsupported scheme %q in reference %v", parsedURL.Scheme, stepUrl)
-	}
-	return parsedURL.String(), nil
+	return "https://" + stepUrl, nil
 }
 
 func pathFilename(pathStr *string) (path []string, filename string) {
