@@ -40,31 +40,63 @@
                 },
                 {
                     "description": "Run a sequence of steps.",
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": [
-                        "steps"
-                    ],
-                    "properties": {
-                        "env": {
+                    "oneOf": [
+                        {
                             "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
+                            "additionalProperties": false,
+                            "required": [
+                                "steps"
+                            ],
+                            "properties": {
+                                "env": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                },
+                                "steps": {
+                                    "description": "Deprecated. Use `run` instead.",
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/definitions/step"
+                                    }
+                                },
+                                "outputs": {
+                                    "type": "object"
+                                },
+                                "delegate": {
+                                    "type": "string"
+                                }
                             }
                         },
-                        "steps": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/step"
+                        {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "run"
+                            ],
+                            "properties": {
+                                "env": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                },
+                                "run": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/definitions/step"
+                                    }
+                                },
+                                "outputs": {
+                                    "type": "object"
+                                },
+                                "delegate": {
+                                    "type": "string"
+                                }
                             }
-                        },
-                        "outputs": {
-                            "type": "object"
-                        },
-                        "delegate": {
-                            "type": "string"
                         }
-                    }
+                    ]
                 },
                 {
                     "description": "Run an action.",

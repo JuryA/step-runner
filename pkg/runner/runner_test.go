@@ -25,7 +25,7 @@ func TestRun(t *testing.T) {
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_steppy
     step: ./test_steps/greeting
     inputs: {}
@@ -40,7 +40,7 @@ steps:
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_foo
     step: ./test_steps/greeting
     inputs:
@@ -56,7 +56,7 @@ steps:
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_foo
     step: ./test_steps/greeting
     inputs:
@@ -76,7 +76,7 @@ steps:
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_the_crew
     step: ./test_steps/crew
     inputs: {}
@@ -95,7 +95,7 @@ steps:
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_the_crew
     step: ./test_steps/crew
     inputs: {}
@@ -109,7 +109,7 @@ steps:
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_steppy
     step: ./test_steps/greeting
     inputs:
@@ -143,7 +143,7 @@ meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hun
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_steppy
     step: ./test_steps/greeting
     inputs:
@@ -157,13 +157,13 @@ steps:
 			requireStringEqualValue(t, "from-global", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
-		name: "steps environment can be referenced",
+		name: "run environment can be referenced",
 		yaml: `
 spec: {}
 ---
 env:
-  NAME: from-steps
-steps:
+  NAME: from-run
+run:
   - name: greet_steppy
     step: ./test_steps/greeting
     inputs:
@@ -171,14 +171,14 @@ steps:
 `,
 		wantResults: func(t *testing.T, result *proto.StepResult) {
 			require.Len(t, result.SubStepResults, 1)
-			requireStringEqualValue(t, "from-steps", result.SubStepResults[0].Outputs["name"])
+			requireStringEqualValue(t, "from-run", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "individual step invocation environment cannot be referenced during invokation",
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_steppy
     step: ./test_steps/greeting
     env:
@@ -192,7 +192,7 @@ steps:
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_steppy
     step: ./test_steps/greeting_name_from_env
     env:
@@ -208,8 +208,8 @@ steps:
 spec: {}
 ---
 env:
-  NAME: from-steps
-steps:
+  NAME: from-run
+run:
   - name: greet_steppy
     step: ./test_steps/greeting
     inputs:
@@ -220,14 +220,14 @@ steps:
 		},
 		wantResults: func(t *testing.T, result *proto.StepResult) {
 			require.Len(t, result.SubStepResults, 1)
-			requireStringEqualValue(t, "from-steps", result.SubStepResults[0].Outputs["name"])
+			requireStringEqualValue(t, "from-run", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "individual step invocation environment takes precedence over global environment",
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: greet_steppy
     step: ./test_steps/greeting_name_from_env
     env:
@@ -246,8 +246,8 @@ steps:
 spec: {}
 ---
 env:
-  NAME: from-steps
-steps:
+  NAME: from-run
+run:
   - name: greet_steppy
     step: ./test_steps/greeting_name_from_env
     env:
@@ -264,7 +264,7 @@ spec: {}
 ---
 env:
   NAME: from-${{ env.WHERE_EXACTLY }}
-steps:
+run:
   - name: greet_steppy
     step: ./test_steps/greeting_name_from_env
 `,
@@ -281,7 +281,7 @@ steps:
 spec: {}
 ---
 env:
-steps:
+run:
   - name: greet_steppy
     step: ./test_steps/greeting_name_from_env
     env:
@@ -300,8 +300,8 @@ steps:
 spec: {}
 ---
 env:
-  WHERE_EXACTLY: ${{ env.WHERE_EXACTLY }}-then-steps
-steps:
+  WHERE_EXACTLY: ${{ env.WHERE_EXACTLY }}-then-run
+run:
   - name: greet_steppy
     step: ./test_steps/greeting_name_from_env
     env:
@@ -312,7 +312,7 @@ steps:
 		},
 		wantResults: func(t *testing.T, result *proto.StepResult) {
 			require.Len(t, result.SubStepResults, 1)
-			requireStringEqualValue(t, "from-global-then-steps-then-invocation", result.SubStepResults[0].Outputs["name"])
+			requireStringEqualValue(t, "from-global-then-run-then-invocation", result.SubStepResults[0].Outputs["name"])
 		},
 	}, {
 		name: "steps and parameters are recorded both expanded and not expanded",
@@ -325,7 +325,7 @@ spec: {}
 env:
   PLEASE: ${{ env.REPLACE_ME }}
   NAME: subby
-steps:
+run:
   - name: greet_steppy
     step: ./test_steps/greeting
     inputs:
@@ -359,7 +359,7 @@ steps:
 spec:
   outputs: delegate
 ---
-steps:
+run:
   - name: exec_step
     step: ./test_steps/greeting
     inputs:
@@ -375,7 +375,7 @@ delegate: exec_step
 spec:
   outputs: delegate
 ---
-steps:
+run:
   - name: composite_step
     step: ./test_steps/greeting_delegate
     inputs:
@@ -390,7 +390,7 @@ delegate: composite_step
 		yaml: `
 spec: {}
 ---
-steps:
+run:
   - name: bang
     script: exit 1
 `,

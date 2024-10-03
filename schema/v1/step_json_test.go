@@ -132,11 +132,11 @@ exec:
   command: [ bash, -c, "echo hello world" ]
 `,
 	}, {
-		name:    "step mutually exclusive with steps",
+		name:    "step mutually exclusive with run",
 		wantErr: true,
 		step: `
 step: ./my-step
-steps:
+run:
   - step: ./my-step
 `,
 	}, {
@@ -155,11 +155,11 @@ exec:
   command: [ my-binary ]
 `,
 	}, {
-		name:    "script mutually exclusive with steps",
+		name:    "script mutually exclusive with run",
 		wantErr: true,
 		step: `
 script: echo hello world
-steps:
+run:
   - step: ./my-step
 `,
 	}, {
@@ -171,20 +171,20 @@ exec:
   command: [ my-binary ]
 `,
 	}, {
-		name:    "action mutually exclusive with steps",
+		name:    "action mutually exclusive with run",
 		wantErr: true,
 		step: `
 action: my-action@v1
-steps:
+run:
   - step: ./my-step
 `,
 	}, {
-		name:    "exec mutually exclusive with steps",
+		name:    "exec mutually exclusive with run",
 		wantErr: true,
 		step: `
 exec:
   command: [ my-binary ]
-steps:
+run:
   - step: ./my-step
 `,
 	}, {
@@ -192,12 +192,27 @@ steps:
 		wantErr: true,
 		step: `
 
-steps:
+run:
   - step: gitlab.com/components/my-step
     exec:
       command: [echo, "hello world"]
-    steps:
+    run:
       - step: gitlab.com/components/another-step
+`,
+	}, {
+		name:    "cannot provide both steps and run",
+		wantErr: true,
+		step: `
+run:
+  - step: ./my-step
+steps:
+  - step: ./my-step
+`,
+	}, {
+		name: "steps without run is still okay",
+		step: `
+steps:
+  - step: ./my-step
 `,
 	}}
 	for _, c := range cases {
