@@ -39,16 +39,15 @@ func run(cmd *cobra.Command, args []string) error {
 	}()
 
 	stepCache, err := cache.New()
-
 	if err != nil {
 		return fmt.Errorf("failed to run service: %w", err)
 	}
 
 	srv := service.New(stepCache)
 
-	listener, err := net.Listen("unix", api.DefaultSocketPath())
+	listener, err := net.ListenUnix("unix", api.ListenSocketAddr())
 	if err != nil {
-		return fmt.Errorf("failed to open open socket %q for listening: %w", api.DefaultSocketPath(), err)
+		return fmt.Errorf("failed to open open socket %q for listening: %w", api.ListenSocketPath(), err)
 	}
 
 	grpcServer = grpc.NewServer()

@@ -15,7 +15,7 @@ import (
 // The proxy should exit immediately if either of the write or read loop finish. Whether proxying was complete and
 // successful cannot be determined here and is up to the caller to determine based on the result of the data/operation
 // being proxied.
-func Proxy(source io.Reader, sink io.Writer, conn net.Conn) error {
+func Proxy(source io.Reader, sink io.Writer, conn *net.UnixConn) error {
 	eg := errgroup.Group{}
 
 	// pipe source to the connection
