@@ -1,0 +1,8 @@
+spec:
+  inputs:
+    echo:
+  outputs:
+    echo:
+---
+exec:
+  command: [ bash, -c, "echo echo=${{ inputs.echo }} | tee ${{ output_file }}" ]

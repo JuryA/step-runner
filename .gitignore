@@ -1,5 +1,6 @@
 .local/
 step-results.json
+step-results.txtpb
 step-runner
 .cache/
 .docker-env

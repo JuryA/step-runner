@@ -1,0 +1,39 @@
+type:steps
+  steps: {
+    name: "name"
+    step: {
+      protocol: local
+      path: ".."
+      path: ".."
+      path: "pkg"
+      path: "runner"
+      path: "test_steps"
+      path: "echo"
+      filename: "step.yml"
+    }
+    inputs: {
+      key: "echo"
+      value: {
+        string_value: "world"
+      }
+    }
+  }
+  steps: {
+    name: "greeting"
+    step: {
+      protocol: local
+      path: ".."
+      path: ".."
+      path: "pkg"
+      path: "runner"
+      path: "test_steps"
+      path: "echo"
+      filename: "step.yml"
+    }
+    inputs: {
+      key: "echo"
+      value: {
+        string_value: "hello ${{ steps.name.outputs.echo }}"
+      }
+    }
+  }
