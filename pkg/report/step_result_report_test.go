@@ -10,9 +10,10 @@ import (
 )
 
 func TestStepResultReport_Write(t *testing.T) {
-	t.Cleanup(func() { _ = os.Remove(StepResultsFile) })
+	stepResultsFile := "step-results.json"
+	t.Cleanup(func() { _ = os.Remove(stepResultsFile) })
 
-	err := NewStepResultReport().Write(bldr.StepResult().Build())
+	err := NewStepResultReport(stepResultsFile, FormatJSON).Write(bldr.StepResult().Build())
 	require.NoError(t, err)
-	require.FileExists(t, StepResultsFile)
+	require.FileExists(t, stepResultsFile)
 }

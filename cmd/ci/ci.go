@@ -101,7 +101,7 @@ func run(options *Options) error {
 	result, err := step.Run(ctx.Background(), stepsCtx, protoStepDef)
 
 	if options.WriteStepResultsFile {
-		reptErr := report.NewStepResultReport().Write(result)
+		reptErr := report.NewStepResultReport("", report.FormatJSON).Write(result)
 
 		if reptErr != nil {
 			fmt.Println(reptErr)

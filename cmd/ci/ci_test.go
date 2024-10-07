@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/report"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
@@ -12,6 +11,7 @@ import (
 )
 
 func TestCICmd(t *testing.T) {
+	stepResultsFile := "step-results.json"
 	t.Run("runs steps", func(t *testing.T) {
 		steps := `
 - name: secret_factory_a
@@ -29,7 +29,7 @@ func TestCICmd(t *testing.T) {
 		err := cmd.Execute()
 		require.NoError(t, err)
 
-		file, err := os.ReadFile(report.StepResultsFile)
+		file, err := os.ReadFile(stepResultsFile)
 		require.NoError(t, err)
 
 		var result proto.StepResult
@@ -78,7 +78,7 @@ func TestCICmd(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				_ = os.Remove(report.StepResultsFile)
+				_ = os.Remove(stepResultsFile)
 
 				require.NoError(t, os.Setenv("STEPS", `- step: ../../pkg/runner/test_steps/secret_factory`))
 				defer func() { _ = os.Unsetenv("STEPS") }()
@@ -94,9 +94,9 @@ func TestCICmd(t *testing.T) {
 				require.NoError(t, err)
 
 				if test.expectFileExists {
-					require.FileExists(t, report.StepResultsFile)
+					require.FileExists(t, stepResultsFile)
 				} else {
-					require.NoFileExists(t, report.StepResultsFile)
+					require.NoFileExists(t, stepResultsFile)
 				}
 			})
 		}
@@ -118,7 +118,7 @@ func TestCICmd(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "exec: exit status 99")
 
-		file, err := os.ReadFile(report.StepResultsFile)
+		file, err := os.ReadFile(stepResultsFile)
 		require.NoError(t, err)
 
 		var result proto.StepResult

@@ -5,10 +5,12 @@ import (
 	ctx "context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/types/known/structpb"
 	"gopkg.in/yaml.v3"
 
@@ -20,14 +22,17 @@ import (
 )
 
 type Options struct {
-	Step                 string
-	GitURL               string
-	GitRev               string
-	GitDir               string
-	Inputs               map[string]string
-	Env                  map[string]string
-	Job                  map[string]string
-	WriteStepResultsFile bool
+	Step              string
+	GitURL            string
+	GitRev            string
+	GitDir            string
+	Inputs            map[string]string
+	Env               map[string]string
+	Job               map[string]string
+	TextProtoStepFile string
+	WriteStepResults  bool
+	StepResultsFile   string
+	StepResultsFormat string
 }
 
 func NewCmd() *cobra.Command {
@@ -51,34 +56,62 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringToStringVar(&options.Inputs, "inputs", make(map[string]string), "provide inputs to step")
 	cmd.Flags().StringToStringVar(&options.Env, "env", make(map[string]string), "provide environment to step")
 	cmd.Flags().StringToStringVar(&options.Job, "job", make(map[string]string), "provide job variables to step")
+	cmd.Flags().StringVar(&options.TextProtoStepFile, "text-proto-step-file", "", "file containing a text protobuf definition of a step")
 
 	defaultWriteStepsFile, _ := strconv.ParseBool(os.Getenv("CI_STEPS_DEBUG"))
-	cmd.Flags().BoolVar(&options.WriteStepResultsFile, "write-steps-results", defaultWriteStepsFile, "write step-results.json file, note this file may contain secrets")
+	cmd.Flags().BoolVar(&options.WriteStepResults, "write-steps-results", defaultWriteStepsFile, "write step-results.json file, note this file may contain secrets")
+	cmd.Flags().StringVar(&options.StepResultsFile, "step-results-file", "", "file to write step results")
+	cmd.Flags().StringVar(&options.StepResultsFormat, "step-results-format", "json", "format in which to write step results (`json` or `prototext`)")
 	return cmd
 }
 
 func run(options *Options) error {
-	yml, err := yamlStep(options)
-	if err != nil {
-		return err
-	}
 
-	def, err := wrapStepsInSingleStep(yml)
-	if err != nil {
-		return err
-	}
+	var specDef *proto.SpecDefinition
 
-	protoDef, err := def.Compile()
-	if err != nil {
-		return err
-	}
-	specDef := &proto.SpecDefinition{
-		Spec: &proto.Spec{
-			Spec: &proto.Spec_Content{},
-		},
-		Definition: protoDef,
-	}
+	if options.TextProtoStepFile != "" {
 
+		data, err := os.ReadFile(options.TextProtoStepFile)
+		if err != nil {
+			return err
+		}
+
+		specDef = &proto.SpecDefinition{
+			Spec: &proto.Spec{
+				Spec: &proto.Spec_Content{},
+			},
+			Definition: &proto.Definition{},
+		}
+		err = prototext.Unmarshal(data, specDef.Definition)
+		if err != nil {
+			return err
+		}
+
+		specDef.Dir = filepath.Dir(options.TextProtoStepFile)
+
+	} else {
+
+		yml, err := yamlStep(options)
+		if err != nil {
+			return err
+		}
+
+		def, err := wrapStepsInSingleStep(yml)
+		if err != nil {
+			return err
+		}
+
+		protoDef, err := def.Compile()
+		if err != nil {
+			return err
+		}
+		specDef = &proto.SpecDefinition{
+			Spec: &proto.Spec{
+				Spec: &proto.Spec_Content{},
+			},
+			Definition: protoDef,
+		}
+	}
 	stepCache, err := cache.New()
 	if err != nil {
 		return err
@@ -99,8 +132,11 @@ func run(options *Options) error {
 	stepsCtx := runner.NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, map[string]string{})
 	result, err := step.Run(ctx.Background(), stepsCtx, specDef)
 
-	if options.WriteStepResultsFile {
-		reptErr := report.NewStepResultReport().Write(result)
+	if options.WriteStepResults || options.StepResultsFile != "" {
+		reptErr := report.NewStepResultReport(
+			options.StepResultsFile,
+			report.Format(options.StepResultsFormat),
+		).Write(result)
 		if reptErr != nil {
 			fmt.Println(reptErr)
 		}
