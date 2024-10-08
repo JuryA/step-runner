@@ -5,4 +5,5 @@ spec:
       default: 0
 ---
 steps:
-  - script: exit ${{inputs.exit_code}}
+  - name: exit
+    script: exit ${{inputs.exit_code}}

@@ -15,16 +15,19 @@ func TestStepSchemaValidate(t *testing.T) {
 	}{{
 		name: "local step",
 		step: `
+name: my_step
 step: ./my-step
 `,
 	}, {
 		name: "remote step",
 		step: `
+name: my_step
 step: gitlab.com/my-org/my-step@v1
 `,
 	}, {
 		name: "remote nested step",
 		step: `
+name: my_step
 step:
   git:
     url: gitlab.com/my-org/my-step
@@ -34,6 +37,7 @@ step:
 		name:    "remote nested step missing rev",
 		wantErr: true,
 		step: `
+name: my_step
 step:
   git:
     url: gitlab.com/my-org/my-step
@@ -42,6 +46,7 @@ step:
 		name:    "remote nested step missing url",
 		wantErr: true,
 		step: `
+name: my_step
 step:
   git:
     rev: v1
@@ -49,6 +54,7 @@ step:
 	}, {
 		name: "remote nested step with dir",
 		step: `
+name: my_step
 step:
   git:
     url: gitlab.com/my-org/my-step
@@ -59,6 +65,7 @@ step:
 		name:    "remote nested step with additional properties",
 		wantErr: true,
 		step: `
+name: my_step
 step:
   git:
     additional: property
@@ -66,17 +73,20 @@ step:
 	}, {
 		name: "script step",
 		step: `
+name: my_step
 script: my-script
 `,
 	}, {
 		name:    "empty script step",
 		wantErr: true,
 		step: `
+name: my_step
 script: ""
 `,
 	}, {
 		name: "remote action",
 		step: `
+name: my_step
 action: my-action@v1
 `,
 	}, {
@@ -212,7 +222,8 @@ steps:
 		name: "steps without run is still okay",
 		step: `
 steps:
-  - step: ./my-step
+  - name: my_step
+    step: ./my-step
 `,
 	}}
 	for _, c := range cases {
