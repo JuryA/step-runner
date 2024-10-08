@@ -71,7 +71,7 @@ exec:
 spec:
 ---
 steps:
-  - name: "my special script name"
+  - name: my_special_script_name
     script: echo hello world
 `,
 		wantCompiled: `
@@ -81,7 +81,7 @@ spec:
 ---
 type: steps
 steps:
-    - name: "my special script name"
+    - name: my_special_script_name
       step:
           protocol: git
           url: "https://gitlab.com/components/script"

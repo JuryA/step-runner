@@ -53,7 +53,7 @@ spec:
 {}
 ---
 steps:
-    - name: ""
+    - name: my_step
       script: echo hello world
 `,
 	}, {
@@ -77,6 +77,26 @@ exec:
         - echo
         - hello world
 `,
+	}, {
+		name: "must be alphanumeric",
+		yaml: `
+{}
+---
+steps:
+    - name: not allowed to have a space
+      script: echo hello world
+`,
+		wantErr: true,
+	}, {
+		name: "must be alphanumeric",
+		yaml: `
+{}
+---
+steps:
+    - name: 0_not_allowed_to_start_with_number
+      script: echo hello world
+`,
+		wantErr: true,
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
