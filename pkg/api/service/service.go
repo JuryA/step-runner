@@ -23,12 +23,14 @@ type StepRunnerService struct {
 	proto.StepRunnerServer
 	cache runner.Cache
 
+	env  *runner.Environment
 	jobs *syncmap.SyncMap[string, *jobs.Job]
 }
 
-func New(stepCache runner.Cache) *StepRunnerService {
+func New(stepCache runner.Cache, env *runner.Environment) *StepRunnerService {
 	return &StepRunnerService{
 		cache: stepCache,
+		env:   env,
 		jobs:  syncmap.New[string, *jobs.Job](),
 	}
 }
@@ -57,9 +59,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	}
 
 	job.GlobCtx.Job = variables.Expand(jobVars)
-	if request.Env != nil {
-		job.GlobCtx.Env = request.Env
-	}
+	job.GlobCtx.Env = s.env.AddLexicalScope(request.Env).Values()
 
 	step, err := runner.NewParser(job.GlobCtx, s.cache).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
 	if err != nil {

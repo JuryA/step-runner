@@ -443,7 +443,10 @@ func runTest(testCase runnerTest) func(*testing.T) {
 
 		var log bytes.Buffer
 
-		globalCtx, err := runner.NewGlobalContext()
+		osEnv, err := runner.NewEnvironmentFromOS()
+		require.NoError(t, err)
+
+		globalCtx, err := runner.NewGlobalContext(osEnv)
 		require.NoError(t, err)
 		defer globalCtx.Cleanup()
 		maps.Copy(globalCtx.Env, testCase.globalEnv)

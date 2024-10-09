@@ -26,7 +26,7 @@ type GlobalContext struct {
 	dir string
 }
 
-func NewGlobalContext() (*GlobalContext, error) {
+func NewGlobalContext(env *Environment) (*GlobalContext, error) {
 	dir, err := os.MkdirTemp("", "step-runner-export-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create global context: failed to make export directory: %w", err)
@@ -40,7 +40,7 @@ func NewGlobalContext() (*GlobalContext, error) {
 	return &GlobalContext{
 		Job:        map[string]string{},
 		ExportFile: exportFile,
-		Env:        map[string]string{},
+		Env:        env.Values(),
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,
 		dir:        dir,
@@ -84,4 +84,8 @@ func (g *GlobalContext) NewEnvMergedFrom(env map[string]string) map[string]strin
 	merged := maps.Clone(g.Env)
 	maps.Copy(merged, env)
 	return merged
+}
+
+func (g *GlobalContext) Environment() *Environment {
+	return NewEnvironment(g.Env)
 }

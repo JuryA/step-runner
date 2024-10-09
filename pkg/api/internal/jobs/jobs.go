@@ -66,7 +66,7 @@ func New(request *proto.RunRequest) (*Job, error) {
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
-	globCtx, err := runner.NewGlobalContext()
+	globCtx, err := runner.NewGlobalContext(runner.NewEmptyEnvironment())
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("creating global context: %w", err)

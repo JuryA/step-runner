@@ -67,7 +67,13 @@ func run(options *Options) error {
 		return fmt.Errorf("creating cache: %w", err)
 	}
 
-	globalCtx, err := runner.NewGlobalContext()
+	osEnv, err := runner.NewEnvironmentFromOSWithKnownVars()
+
+	if err != nil {
+		return err
+	}
+
+	globalCtx, err := runner.NewGlobalContext(osEnv)
 	if err != nil {
 		return fmt.Errorf("creating global context: %w", err)
 	}

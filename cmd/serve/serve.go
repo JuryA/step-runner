@@ -14,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -44,7 +45,13 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to run service: %w", err)
 	}
 
-	srv := service.New(stepCache)
+	env, err := runner.NewEnvironmentFromOS()
+
+	if err != nil {
+		return fmt.Errorf("failed to run service: %w", err)
+	}
+
+	srv := service.New(stepCache, env)
 
 	listener, err := net.Listen("unix", api.DefaultSocketPath())
 	if err != nil {
