@@ -68,8 +68,17 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func cleanup(t *testing.T, paths ...string) {
+	os.RemoveAll(path.Join(test.WorkDir(t), ".config"))
+	os.RemoveAll(path.Join(test.WorkDir(t), ".cache"))
+
+	for _, p := range paths {
+		os.RemoveAll(path.Join(test.WorkDir(t), p))
+	}
+}
+
 func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	srClient, err := New(dialer)
 	require.NoError(t, err)
@@ -108,7 +117,7 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 
 	ctx := context.Background()
 
-	logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+	logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 	out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -128,7 +137,7 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	srClient, err := New(dialer)
 	require.NoError(t, err)
@@ -147,7 +156,7 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+	logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 	out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -163,7 +172,7 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_Fail(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	srClient, err := New(dialer)
 	require.NoError(t, err)
@@ -179,7 +188,7 @@ func Test_StepRunnerClient_RunAndFollow_Fail(t *testing.T) {
 
 	ctx := context.Background()
 
-	logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+	logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 	out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -190,7 +199,7 @@ func Test_StepRunnerClient_RunAndFollow_Fail(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	ctx := context.Background()
 
@@ -210,9 +219,8 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
     inputs: {}
 `, nil, nil)
 		rr.Id = rr.Id + "-1"
-		rr.WorkDir = path.Join(rr.WorkDir, "1")
 
-		logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+		logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 		out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 		status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -239,9 +247,8 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 				"BAZ": "blammo",
 			}, nil)
 		rr.Id = rr.Id + "-2"
-		rr.WorkDir = path.Join(rr.WorkDir, "2")
 
-		logs, stepResults := test.ClosableBuf{}, test.StepResultWriteCloser{}
+		logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
 		out := FollowOutput{Logs: &logs, StepResults: &stepResults}
 		status, err := srClient.RunAndFollow(ctx, rr, &out)
 
@@ -260,7 +267,7 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_LogsOnly(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	srClient, err := New(dialer)
 	require.NoError(t, err)
@@ -297,7 +304,7 @@ func Test_StepRunnerClient_RunAndFollow_LogsOnly(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_StepResultsOnly(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	srClient, err := New(dialer)
 	require.NoError(t, err)
@@ -321,7 +328,7 @@ func Test_StepRunnerClient_RunAndFollow_StepResultsOnly(t *testing.T) {
 
 	ctx := context.Background()
 
-	stepResults := test.StepResultWriteCloser{}
+	stepResults := test.StepResultWriter{}
 	out := FollowOutput{StepResults: &stepResults}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 

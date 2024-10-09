@@ -93,8 +93,17 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func cleanup(t *testing.T, paths ...string) {
+	os.RemoveAll(path.Join(test.WorkDir(t), ".config"))
+	os.RemoveAll(path.Join(test.WorkDir(t), ".cache"))
+
+	for _, p := range paths {
+		os.RemoveAll(path.Join(test.WorkDir(t), p))
+	}
+}
+
 func Test_StepRunnerService_Run_Success(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	bg := context.Background()
 	rr := test.ProtoRunRequest(t, helloStep, false)
@@ -119,7 +128,7 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 }
 
 func Test_StepRunnerService_Run_RequestCancelled(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	stepCache, err := cache.New()
 	require.NoError(t, err)
@@ -140,7 +149,7 @@ func Test_StepRunnerService_Run_RequestCancelled(t *testing.T) {
 }
 
 func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 	bg := context.Background()
 
 	tests := map[string]struct {
@@ -202,7 +211,6 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 
 			job, ok := stepsService.jobs.Get(rr.Id)
 			require.True(t, ok)
-			defer os.RemoveAll(job.WorkDir)
 
 			go tt.finish(job, apiClient, &wg)
 
@@ -220,7 +228,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 }
 
 func Test_StepRunnerService_Run_Vars(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t, "blammo.txt")
 
 	tests := map[string]struct {
 		jobWorkDir bool
@@ -270,7 +278,6 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 
 			job, ok := stepsService.jobs.Get(rr.Id)
 			require.True(t, ok)
-			defer os.RemoveAll(job.WorkDir)
 
 			assert.Eventually(t, job.Finished, time.Millisecond*500, time.Millisecond*50)
 			assert.NoError(t, job.Ctx.Err())
@@ -292,7 +299,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 }
 
 func Test_StepRunnerService_FollowSteps(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	bg := context.Background()
 
@@ -314,14 +321,13 @@ func Test_StepRunnerService_FollowSteps(t *testing.T) {
 
 	job, ok := stepsService.jobs.Get(rr.Id)
 	require.True(t, ok)
-	defer os.RemoveAll(job.WorkDir)
 	want, _ := job.Result()
 
 	assert.Equal(t, want.String(), got.Result.String())
 }
 
 func Test_StepRunnerService_FollowSteps_BadID(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	bg := context.Background()
 
@@ -334,7 +340,7 @@ func Test_StepRunnerService_FollowSteps_BadID(t *testing.T) {
 }
 
 func Test_StepRunnerService_Close(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	tests := map[string]struct {
 		cmd      string
@@ -383,8 +389,6 @@ func Test_StepRunnerService_Close(t *testing.T) {
 				return ok && job != nil
 			}, 200*time.Millisecond, 25*time.Millisecond)
 
-			defer os.RemoveAll(job.WorkDir)
-
 			tt.preClose(job)
 
 			_, err = apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
@@ -408,7 +412,7 @@ func Test_StepRunnerService_Close_BadID(t *testing.T) {
 }
 
 func Test_StepRunnerService_FollowLogs(t *testing.T) {
-	defer os.RemoveAll(test.TestDirName(t))
+	defer cleanup(t)
 
 	bg := context.Background()
 
@@ -576,7 +580,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			defer os.RemoveAll(test.TestDirName(t))
+			defer cleanup(t)
 
 			rrs := tt.runRequests(t)
 			for _, rr := range rrs {

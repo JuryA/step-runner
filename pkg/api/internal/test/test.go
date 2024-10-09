@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -23,18 +25,22 @@ func RandJobID() string {
 	return strconv.Itoa(rand.New(rand.NewSource(time.Now().UnixNano())).Intn(9999))
 }
 
+func WorkDir(t *testing.T) string {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	return wd
+}
+
 func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
-	testDir := TestDirName(t)
 	runReq := proto.RunRequest{
 		Id:    RandJobID(),
 		Steps: step,
 		Env:   map[string]string{},
 	}
 
+	runReq.WorkDir = WorkDir(t)
 	if withJob {
-		runReq.Job = &proto.Job{BuildDir: testDir}
-	} else {
-		runReq.WorkDir = testDir
+		runReq.Job = &proto.Job{BuildDir: runReq.WorkDir}
 	}
 
 	return &runReq
@@ -67,14 +73,12 @@ type ClosableBuf struct{ SyncBuff }
 
 func (*ClosableBuf) Close() error { return nil }
 
-type StepResultWriteCloser []*proto.StepResult
+type StepResultWriter []*proto.StepResult
 
-func (w *StepResultWriteCloser) Write(sr *proto.StepResult) error {
+func (w *StepResultWriter) Write(sr *proto.StepResult) error {
 	*w = append(*w, sr)
 	return nil
 }
-
-func (w *StepResultWriteCloser) Close() error { return nil }
 
 func RunRequest(t *testing.T, step string, env map[string]string, vars []client.Variable) *client.RunRequest {
 	return &client.RunRequest{
@@ -82,7 +86,7 @@ func RunRequest(t *testing.T, step string, env map[string]string, vars []client.
 		Steps: `spec: {}
 ---
 ` + step,
-		WorkDir:   TestDirName(t),
+		WorkDir:   WorkDir(t),
 		Env:       env,
 		Variables: vars,
 	}

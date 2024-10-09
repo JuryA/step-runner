@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -39,11 +38,9 @@ func Test_New(t *testing.T) {
 	j, err := New(runReq)
 	require.NoError(t, err)
 	defer j.Close()
-	defer os.RemoveAll(j.WorkDir)
 
 	assert.Equal(t, runReq.Id, j.ID)
 	assert.DirExists(t, j.TmpDir)
-	assert.DirExists(t, j.WorkDir)
 }
 
 func Test_New_Job_WorkDir(t *testing.T) {
@@ -51,11 +48,9 @@ func Test_New_Job_WorkDir(t *testing.T) {
 	j, err := New(runReq)
 	require.NoError(t, err)
 	defer j.Close()
-	defer os.RemoveAll(j.WorkDir)
 
 	assert.Equal(t, runReq.Id, j.ID)
 	assert.DirExists(t, j.TmpDir)
-	assert.DirExists(t, j.WorkDir)
 }
 
 func Test_Result(t *testing.T) {
@@ -79,7 +74,6 @@ func Test_Finish(t *testing.T) {
 	j, err := New(runReq)
 	require.NoError(t, err)
 	defer j.Close()
-	defer os.RemoveAll(j.WorkDir)
 
 	sr := execStepResult(proto.StepResult_failure, 123456)
 	j.Finish(sr, nil)
@@ -99,7 +93,6 @@ func Test_Finish(t *testing.T) {
 func Test_Close_AlreadyFinished(t *testing.T) {
 	j, err := New(test.ProtoRunRequest(t, "", false))
 	require.NoError(t, err)
-	defer os.RemoveAll(j.WorkDir)
 
 	sr := execStepResult(proto.StepResult_failure, 123456)
 	j.Finish(sr, nil)
@@ -116,7 +109,6 @@ func Test_Close_AlreadyFinished(t *testing.T) {
 func Test_Close(t *testing.T) {
 	j, err := New(test.ProtoRunRequest(t, "", false))
 	require.NoError(t, err)
-	defer os.RemoveAll(j.WorkDir)
 
 	j.Close()
 
@@ -170,7 +162,6 @@ func Test_FollowLogs(t *testing.T) {
 			j, err := New(rr)
 			require.NoError(t, err)
 			defer j.Close()
-			defer os.RemoveAll(j.WorkDir)
 
 			go func() {
 				for _, d := range data {
@@ -267,7 +258,6 @@ func Test_Status(t *testing.T) {
 			j, err := New(test.ProtoRunRequest(t, "", true))
 			require.NoError(t, err)
 			defer j.Close()
-			defer os.RemoveAll(j.WorkDir)
 
 			if tt.finish {
 				j.Finish(tt.stepResults, tt.finishErr)
