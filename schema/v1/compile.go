@@ -2,7 +2,6 @@ package schema
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -311,7 +310,6 @@ func (s *Step) CompileStep(i int) (*proto.Step, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.defaultName(i)
 	return s.compileToStepProto()
 }
 
@@ -355,13 +353,6 @@ func (s *Step) compileActionKeywordToStep() error {
 	}
 	s.Action = nil
 	return nil
-}
-
-func (s *Step) defaultName(i int) {
-	if s.Name == nil || *s.Name == "" {
-		n := strconv.Itoa(i)
-		s.Name = &n
-	}
 }
 
 func (s *Step) compileToStepProto() (*proto.Step, error) {

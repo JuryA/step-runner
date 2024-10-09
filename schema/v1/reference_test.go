@@ -10,6 +10,9 @@ import (
 )
 
 func TestReferenceCustomMethods(t *testing.T) {
+
+	myStep := "my_step"
+
 	cases := []struct {
 		name          string
 		json          string
@@ -18,13 +21,14 @@ func TestReferenceCustomMethods(t *testing.T) {
 		wantSchemaErr bool
 	}{{
 		name:    "short reference",
-		json:    `{"step":"gitlab.com/components/script@v1"}`,
-		yaml:    `step: gitlab.com/components/script@v1`,
+		json:    `{"name":"my_step","step":"gitlab.com/components/script@v1"}`,
+		yaml:    `{name: my_step, step: gitlab.com/components/script@v1}`,
 		wantRef: "gitlab.com/components/script@v1",
 	}, {
 		name: "long simple git reference",
 		json: `
 {
+  "name": "my_step",
   "step": {
     "git": {
       "url":"gitlab.com/components/script",
@@ -34,6 +38,7 @@ func TestReferenceCustomMethods(t *testing.T) {
 }
 `,
 		yaml: `
+name: my_step
 step:
   git:
     url:    gitlab.com/components/script
@@ -49,9 +54,10 @@ step:
 		name: "long git reference with dir",
 		json: `
 {
+  "name": "my_step",
   "step": {
     "git": {
-       "url":"gitlab.com/components/script",
+      "url":"gitlab.com/components/script",
       "dir":"bash",
       "rev":"v1"
     }
@@ -59,6 +65,7 @@ step:
 }
 `,
 		yaml: `
+name: my_step
 step:
   git:
     url:    gitlab.com/components/script
@@ -74,8 +81,8 @@ step:
 		},
 	}, {
 		name: "long one-line git reference with dir",
-		json: `{"step":{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}}`,
-		yaml: `step: {git: {url: gitlab.com/components/script, dir: bash, rev: v1}}`,
+		json: `{"name":"my_step","step":{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}}`,
+		yaml: `{name: my_step, step: {git: {url: gitlab.com/components/script, dir: bash, rev: v1}}}`,
 		wantRef: &Reference{
 			Git: GitReference{
 				Url: "gitlab.com/components/script",
@@ -94,6 +101,7 @@ step:
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			step := Step{
+				Name: &myStep,
 				Step: tc.wantRef,
 			}
 			switch v := tc.wantRef.(type) {

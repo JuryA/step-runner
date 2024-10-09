@@ -21,7 +21,8 @@ func TestCompile(t *testing.T) {
 {}
 ---
 steps:
-- script: echo hello world
+- name: my_step
+  script: echo hello world
 `,
 		wantCompiled: `
 spec:
@@ -30,7 +31,7 @@ spec:
 ---
 type: steps
 steps:
-    - name: "0"
+    - name: my_step
       step:
           protocol: git
           url: "https://gitlab.com/components/script"
@@ -70,7 +71,7 @@ exec:
 spec:
 ---
 steps:
-  - name: "my special script name"
+  - name: my_special_script_name
     script: echo hello world
 `,
 		wantCompiled: `
@@ -80,7 +81,7 @@ spec:
 ---
 type: steps
 steps:
-    - name: "my special script name"
+    - name: my_special_script_name
       step:
           protocol: git
           url: "https://gitlab.com/components/script"
@@ -265,32 +266,6 @@ steps:
           version: v1
           filename: step.yml
 delegate: delegate_me
-`,
-	}, {
-		name: "name is optional",
-		steps: `
-spec: {}
----
-steps:
-    - step: ./one
-    - step: ./two
-`,
-		wantCompiled: `
-spec:
-    output_method: outputs
----
-type: steps
-steps:
-    - name: "0"
-      step:
-          protocol: local
-          path: [ ., one ]
-          filename: step.yml
-    - name: "1"
-      step:
-          protocol: local
-          path: [ ., two ]
-          filename: step.yml
 `,
 	}}
 	for _, c := range cases {
