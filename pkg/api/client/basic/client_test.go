@@ -19,6 +19,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -38,7 +39,7 @@ func TestMain(m *testing.M) {
 	stepCache, err := cache.New()
 	must(err)
 
-	stepsService := service.New(stepCache)
+	stepsService := service.New(stepCache, runner.NewEmptyEnvironment())
 
 	buflis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()

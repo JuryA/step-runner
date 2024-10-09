@@ -146,7 +146,13 @@ func run(options *Options) error {
 }
 
 func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
-	globalCtx, err := runner.NewGlobalContext()
+	env, err := runner.NewEnvironmentFromOS()
+
+	if err != nil {
+		return nil, err
+	}
+
+	globalCtx, err := runner.NewGlobalContext(env)
 
 	if err != nil {
 		return nil, err

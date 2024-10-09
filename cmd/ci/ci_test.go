@@ -102,6 +102,35 @@ func TestCICmd(t *testing.T) {
 		}
 	})
 
+	t.Run("can access environment variables", func(t *testing.T) {
+		steps := `
+- name: echo
+  step: ../../pkg/runner/test_steps/echo
+  inputs:
+    echo: env value is ${{env.LOGNAME}}
+`
+		require.NoError(t, os.Setenv("STEPS", steps))
+		require.NoError(t, os.Setenv("LOGNAME", "test.user"))
+		defer func() { _ = os.Unsetenv("LOGNAME") }()
+		defer func() { _ = os.Unsetenv("STEPS") }()
+
+		cmd := NewCmd()
+		cmd.SetArgs([]string{"--write-steps-results"})
+		err := cmd.Execute()
+		require.NoError(t, err)
+
+		file, err := os.ReadFile(stepResultsFile)
+		require.NoError(t, err)
+
+		var result proto.StepResult
+		err = protojson.Unmarshal(file, &result)
+		require.NoError(t, err)
+		require.Equal(t, proto.StepResult_success, result.Status)
+
+		require.Len(t, result.SubStepResults, 1)
+		require.Equal(t, "env value is test.user", result.SubStepResults[0].Outputs["echo"].GetStringValue())
+	})
+
 	t.Run("failed step returns error", func(t *testing.T) {
 		steps := `
 - name: exit

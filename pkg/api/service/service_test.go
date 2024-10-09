@@ -22,6 +22,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -69,7 +70,7 @@ func TestMain(m *testing.M) {
 	stepCache, err := cache.New()
 	must(err)
 
-	stepsService = New(stepCache)
+	stepsService = New(stepCache, runner.NewEmptyEnvironment())
 
 	buflis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()
@@ -122,7 +123,7 @@ func Test_StepRunnerService_Run_RequestCancelled(t *testing.T) {
 
 	stepCache, err := cache.New()
 	require.NoError(t, err)
-	srs := New(stepCache)
+	srs := New(stepCache, runner.NewEmptyEnvironment())
 
 	rr := test.ProtoRunRequest(t, helloStep, false)
 

@@ -239,7 +239,10 @@ food=apple
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			globalCtx, err := NewGlobalContext()
+			env, err := NewEnvironmentFromOS()
+			require.NoError(t, err)
+
+			globalCtx, err := NewGlobalContext(env)
 			require.NoError(t, err)
 			defer globalCtx.Cleanup()
 			files, err := NewFiles(NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, map[string]string{}), tc.outputMethod, tc.outputs)
@@ -278,60 +281,45 @@ func TestExport(t *testing.T) {
 		wantExports   map[string]string
 		wantGlobalEnv map[string]string
 	}{{
-		name: "no export",
+		name:          "no export",
+		globalEnv:     map[string]string{},
+		writeToExport: "",
+		wantExports:   map[string]string{},
+		wantGlobalEnv: map[string]string{},
 	}, {
-		name: "no export keeping global env",
-		globalEnv: map[string]string{
-			"foo": "bar",
-		},
-		wantGlobalEnv: map[string]string{
-			"foo": "bar",
-		},
+		name:          "no export keeping global env",
+		globalEnv:     map[string]string{"foo": "bar"},
+		wantGlobalEnv: map[string]string{"foo": "bar"},
 	}, {
-		name: "export overwriting global env",
-		globalEnv: map[string]string{
-			"foo": "bar",
-		},
+		name:          "export overwriting global env",
+		globalEnv:     map[string]string{"foo": "bar"},
 		writeToExport: "foo=baz",
-		wantExports: map[string]string{
-			"foo": "baz",
-		},
-		wantGlobalEnv: map[string]string{
-			"foo": "baz",
-		},
+		wantExports:   map[string]string{"foo": "baz"},
+		wantGlobalEnv: map[string]string{"foo": "baz"},
 	}, {
-		name: "export multiple times last value controls",
+		name:      "export multiple times last value controls",
+		globalEnv: map[string]string{},
 		writeToExport: `
 foo=bar
 foo=baz
 `,
-		wantExports: map[string]string{
-			"foo": "baz",
-		},
-		wantGlobalEnv: map[string]string{
-			"foo": "baz",
-		},
+		wantExports:   map[string]string{"foo": "baz"},
+		wantGlobalEnv: map[string]string{"foo": "baz"},
 	}, {
-		name: "re-export a value",
-		globalEnv: map[string]string{
-			"foo": "bar",
-		},
+		name:          "re-export a value",
+		globalEnv:     map[string]string{"foo": "bar"},
 		writeToExport: "foo=bar",
-		wantExports: map[string]string{
-			"foo": "bar",
-		},
-		wantGlobalEnv: map[string]string{
-			"foo": "bar",
-		},
+		wantExports:   map[string]string{"foo": "bar"},
+		wantGlobalEnv: map[string]string{"foo": "bar"},
 	}}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, err := NewGlobalContext()
+			env, err := NewEnvironmentFromOS()
 			require.NoError(t, err)
-			if tc.globalEnv != nil {
-				ctx.Env = tc.globalEnv
-			}
+			ctx, err := NewGlobalContext(env)
+			require.NoError(t, err)
+			ctx.Env = tc.globalEnv
 			defer ctx.Cleanup()
 
 			exportFile, err := os.OpenFile(filepath.Join(ctx.ExportFile), os.O_APPEND|os.O_WRONLY, 0660)
