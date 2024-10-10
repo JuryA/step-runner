@@ -5,7 +5,6 @@ import (
 	ctx "context"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"testing"
 
@@ -449,7 +448,7 @@ func runTest(testCase runnerTest) func(*testing.T) {
 		globalCtx, err := runner.NewGlobalContext(osEnv)
 		require.NoError(t, err)
 		defer globalCtx.Cleanup()
-		maps.Copy(globalCtx.Env, testCase.globalEnv)
+		globalCtx.Env = runner.NewEnvironment(testCase.globalEnv)
 		globalCtx.Stdout = &log
 		globalCtx.Stderr = &log
 		globalCtx.WorkDir, _ = os.UserHomeDir()
@@ -459,7 +458,7 @@ func runTest(testCase runnerTest) func(*testing.T) {
 		step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
 		require.NoError(t, err)
 
-		env := globalCtx.NewEnvMergedFrom(params.Env)
+		env := globalCtx.Env.AddLexicalScope(params.Env).Values()
 		inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
 		stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
 		result, err := step.Run(ctx.Background(), stepsCtx, protoStepDef)

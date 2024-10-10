@@ -317,22 +317,22 @@ foo=baz
 		t.Run(tc.name, func(t *testing.T) {
 			env, err := NewEnvironmentFromOS()
 			require.NoError(t, err)
-			ctx, err := NewGlobalContext(env)
+			globalCtx, err := NewGlobalContext(env)
 			require.NoError(t, err)
-			ctx.Env = tc.globalEnv
-			defer ctx.Cleanup()
+			globalCtx.Env = NewEnvironment(tc.globalEnv)
+			defer globalCtx.Cleanup()
 
-			exportFile, err := os.OpenFile(filepath.Join(ctx.ExportFile), os.O_APPEND|os.O_WRONLY, 0660)
+			exportFile, err := os.OpenFile(filepath.Join(globalCtx.ExportFile), os.O_APPEND|os.O_WRONLY, 0660)
 			require.NoError(t, err)
 			_, err = exportFile.Write([]byte(tc.writeToExport))
 			require.NoError(t, err)
 			err = exportFile.Close()
 			require.NoError(t, err)
 
-			exports, err := ctx.Exports()
+			exports, err := globalCtx.Exports()
 			require.NoError(t, err)
 			require.True(t, maps.Equal(tc.wantExports, exports), "want %+v. got %+v", tc.wantExports, exports)
-			require.True(t, maps.Equal(tc.wantGlobalEnv, ctx.Env), "want %+v. got %+v", tc.wantGlobalEnv, ctx.Env)
+			require.True(t, maps.Equal(tc.wantGlobalEnv, globalCtx.Env.Values()), "want %+v. got %+v", tc.wantGlobalEnv, globalCtx.Env)
 		})
 	}
 }

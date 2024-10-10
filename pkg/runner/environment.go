@@ -75,6 +75,10 @@ func NewEnvironment(vars map[string]string) *Environment {
 }
 
 func (e *Environment) AddLexicalScope(vars map[string]string) *Environment {
+	if len(vars) == 0 {
+		return e
+	}
+
 	return &Environment{vars: vars, parent: e}
 }
 

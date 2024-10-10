@@ -3,7 +3,6 @@ package runner
 import (
 	ctx "context"
 	"fmt"
-	"maps"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
@@ -41,7 +40,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext, sp
 		return nil, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
 	}
 
-	env := s.globalCtx.NewEnvMergedFrom(params.Env)
+	env := s.globalCtx.Env.AddLexicalScope(params.Env).Values()
 	inputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
 	stepsCtx := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir, inputs, env)
 
@@ -95,8 +94,7 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, wor
 		}
 	}
 
-	// Clone environment and add step reference environment
-	env := maps.Clone(stepsCtx.Env)
+	env := map[string]string{}
 
 	for k, v := range s.stepReference.Env {
 		res, err := expression.ExpandString(stepsCtx.View(), v)
@@ -110,7 +108,7 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, wor
 
 	params := &Params{
 		Inputs: inputs,
-		Env:    env,
+		Env:    stepsCtx.Env.AddLexicalScope(env).Values(),
 	}
 
 	step, err := s.parser.Parse(specDef, params, NewNamedStepReference(s.stepReference.Name, s.stepReference.Step))

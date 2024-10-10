@@ -42,7 +42,7 @@ func (bldr *GlobalContextBuilder) Build() *runner.GlobalContext {
 		WorkDir:    ".",
 		Job:        bldr.job,
 		ExportFile: bldr.exportFile,
-		Env:        map[string]string{},
+		Env:        runner.NewEmptyEnvironment(),
 		Stdout:     &bytes.Buffer{},
 		Stderr:     &bytes.Buffer{},
 	}
