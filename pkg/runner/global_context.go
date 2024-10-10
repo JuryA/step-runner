@@ -3,10 +3,8 @@ package runner
 import (
 	"fmt"
 	"io"
-	"maps"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -19,7 +17,7 @@ type GlobalContext struct {
 	WorkDir    string
 	Job        map[string]string
 	ExportFile string
-	Env        map[string]string
+	Env        *Environment
 	Stdout     io.Writer
 	Stderr     io.Writer
 
@@ -40,23 +38,11 @@ func NewGlobalContext(env *Environment) (*GlobalContext, error) {
 	return &GlobalContext{
 		Job:        map[string]string{},
 		ExportFile: exportFile,
-		Env:        env.Values(),
+		Env:        env,
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,
 		dir:        dir,
 	}, nil
-}
-
-func (g *GlobalContext) InheritEnv(envs ...string) {
-	if g.Env == nil {
-		g.Env = make(map[string]string, len(envs))
-	}
-	for _, e := range envs {
-		k, v, ok := strings.Cut(e, "=")
-		if ok {
-			g.Env[k] = v
-		}
-	}
 }
 
 func (g *GlobalContext) Exports() (map[string]string, error) {
@@ -65,9 +51,8 @@ func (g *GlobalContext) Exports() (map[string]string, error) {
 		return nil, fmt.Errorf("reading exports: %w", err)
 	}
 
-	for k, v := range exports {
-		g.Env[k] = v
-	}
+	g.Env = g.Env.AddLexicalScope(exports)
+
 	err = os.Remove(g.ExportFile)
 	if err != nil {
 		return nil, fmt.Errorf("clearing export file: %w", err)
@@ -78,14 +63,4 @@ func (g *GlobalContext) Exports() (map[string]string, error) {
 
 func (g *GlobalContext) Cleanup() {
 	os.RemoveAll(g.dir)
-}
-
-func (g *GlobalContext) NewEnvMergedFrom(env map[string]string) map[string]string {
-	merged := maps.Clone(g.Env)
-	maps.Copy(merged, env)
-	return merged
-}
-
-func (g *GlobalContext) Environment() *Environment {
-	return NewEnvironment(g.Env)
 }

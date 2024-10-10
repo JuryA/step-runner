@@ -65,7 +65,7 @@ func (bldr *StepsContextBuilder) Build() *runner.StepsContext {
 		GlobalContext: bldr.globalCtx,
 		StepDir:       ".",
 		OutputFile:    bldr.outputFile,
-		Env:           bldr.env,
+		Env:           runner.NewEnvironment(bldr.env),
 		Inputs:        bldr.inputs,
 		Steps:         bldr.stepResults,
 	}

@@ -100,7 +100,7 @@ func run(options *Options) error {
 		return fmt.Errorf("failed to run steps: %w", err)
 	}
 
-	env := globalCtx.NewEnvMergedFrom(params.Env)
+	env := globalCtx.Env.AddLexicalScope(params.Env).Values()
 	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
 	stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
 

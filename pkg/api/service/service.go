@@ -64,7 +64,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	}
 
 	job.GlobCtx.Job = variables.Expand(jobVars)
-	job.GlobCtx.Env = s.env.AddLexicalScope(request.Env).Values()
+	job.GlobCtx.Env = s.env.AddLexicalScope(request.Env)
 
 	step, err := runner.NewParser(job.GlobCtx, s.cache).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
 	if err != nil {
@@ -72,7 +72,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	}
 
 	params := &runner.Params{}
-	env := job.GlobCtx.NewEnvMergedFrom(params.Env)
+	env := job.GlobCtx.Env.AddLexicalScope(params.Env).Values()
 	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
 	stepsCtx := runner.NewStepsContext(job.GlobCtx, specDef.Dir, inputs, env)
 

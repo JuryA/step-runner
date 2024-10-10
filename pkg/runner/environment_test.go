@@ -45,4 +45,11 @@ func TestEnvironment_AddLexicalScope(t *testing.T) {
 
 		require.Equal(t, map[string]string{"foo": "qux"}, b.Values())
 	})
+
+	t.Run("does not add scope if there are no vars", func(t *testing.T) {
+		a := NewEnvironment(map[string]string{"foo": "bar"})
+		b := a.AddLexicalScope(map[string]string{})
+
+		require.Same(t, a, b)
+	})
 }
