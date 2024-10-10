@@ -317,7 +317,6 @@ func (s *Step) compileScriptKeywordToStep() error {
 	if s.Script == nil || *s.Script == "" {
 		return nil
 	}
-	// TODO replace these checks with JSON schema validation
 	if s.Step != nil {
 		return fmt.Errorf("the `script` keyword cannot be used with the `step` keyword")
 	}
@@ -339,7 +338,6 @@ func (s *Step) compileActionKeywordToStep() error {
 	if s.Action == nil || *s.Action == "" {
 		return nil
 	}
-	// TODO replace these checks with JSON schema validation
 	if s.Step != nil {
 		return fmt.Errorf("the `action` keyword cannot be used with the `step` keyword")
 	}
