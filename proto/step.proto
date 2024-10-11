@@ -8,46 +8,52 @@ option go_package = "../proto";
 
 // Step is a single step invocation.
 message Step {
+  reserved = 2; // formerly step
+
   // Name is a unique identifier for this step.
   string name = 1;
-  // Step is a reference to the step to invoke.
-  Reference step = 2;
   // Env is a map of environment variable names to string values.
   map<string,string> env = 3;
   // Inputs is a map of step input names to structured values.
   map<string,google.protobuf.Value> inputs = 4;
-  // Reference is a reference to a step. References can contain either a short or a full form.
-  message Reference {
-    // Protocol determines which step reference protocol to use when fetching the step.
-    StepReferenceProtocol protocol = 1;
-    // Url is the location of the referenced step.
-    string url = 2;
-    // Path is the location of the step spec and definition within the URL.
-    repeated string path = 3;
-    // Filename is the name of the file which contains the step spec and definition.
-    string filename = 4;
-    // Version is which version of the step to use.
-    string version = 5;
-  }
-}
 
-// StepReferenceProtocol is the method of fetching the referenced step.
-enum StepReferenceProtocol {
-  step_reference_protocol_unspecified = 0;
-  local = 1;
-  git = 2;
-  zip = 3;
-  oci = 4;
+  oneof step_oneof {
+    GitReference git_reference = 5;
+    LocalReference local_reference = 6;
+    SpecDefinition inline = 7;
+  }
+  message GitReference {
+    // Url is the location of the referenced step.
+    string url = 1;
+    // Path is the location of the step spec and definition within the URL.
+    repeated string path = 2;
+    // Filename is the name of the file which contains the step spec and definition.
+    string filename = 3;
+    // Version is which version of the step to use.
+    string version = 4;
+  }
+  message LocalReference {
+    // Path is the location of the directory containing step spec and definition.
+    repeated string path = 1;
+    // Filename is the name of the file which contains the step spec and definition.
+    string filename = 2;
+  }
 }
 
 // Definition is the implementation of a step.
 message Definition {
-  // Type is the type of this step.
-  DefinitionType type = 1;
-  // Exec is a command to run for the `exec` type.
-  Exec exec = 2;
-  // Steps is a list of sub-steps to run for the `steps` type.
-  repeated Step steps = 3;
+  reserved = 1; // formerly type
+  reserved = 3; // formerly steps
+  reserved = 6; // formerly delegate
+
+  // Env is a map of environment variable names to values for all steps
+  map<string,string> env = 5;
+
+  oneof definition_oneof {
+    // Exec is a command to run for the `exec` type.
+    Exec exec = 2;
+    Steps steps = 7;
+  }
   // Exec is the details of an exec type step.
   message Exec {
     // Command are the parameters to the system exec API. It does not invoke a shell.
@@ -55,58 +61,46 @@ message Definition {
     // WorkDir is the working directly in which `command` will be exec'ed.
     string work_dir = 2;
   }
+  message Steps {
+    // Steps is a list of sub-steps to run for the `steps` type.
+    repeated Step steps = 3;
+    // Delegate selects a step by name which will produce the outputs for this step.
+    string delegate = 6;
+  }
   // Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps.
   map<string,google.protobuf.Value> outputs = 4;
-  // Env is a map of environment variable names to values for all steps
-  map<string,string> env = 5;
-  // Delegate selects a step by name which will produce the outputs for this step.
-  string delegate = 6;
-}
-
-// Definition type is either exec or steps.
-enum DefinitionType {
-  definition_type_unspecified = 0;
-  exec = 1;
-  steps = 2;
 }
 
 // Spec is a document describing the interface of the step.
 message Spec {
-  // Content contains the inputs and outputs of the step.
-  Content spec = 1;
-  message Content {
-    // Inputs is a map of input names to their parameters.
-    map<string,Input> inputs = 1;
-    // Input describes a single step input.
-    message Input {
-      // Type is the value type of the input.
-      ValueType type = 1;
-      // Default is the default input value. Its type must match `type`.
-      google.protobuf.Value default = 2;
-      // Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure.
-      bool sensitive = 3;
-    }
-    // Outputs is a map of output names to their parameters.
-    map<string,Output> outputs = 2;
-    // Output describes a single step output.
-    message Output {  
-      // Type is the value type of the output.
-      ValueType type = 1;
-      // Default is the default output value.
-      google.protobuf.Value default = 2;
-      // Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure.
-      bool sensitive = 3;
-    }
-    // OutputMethod selects how this step will return its outputs.
-    OutputMethod output_method = 3;
-  }
-}
+  reserved = 1; // formerly content
 
-// OutputMethod is either outputs or delegate.
-enum OutputMethod {
-  output_method_unspecified = 0;
-  outputs = 1;
-  delegate = 2;
+  // Inputs is a map of input names to their parameters.
+  map<string,Input> inputs = 2;
+  // Input describes a single step input.
+  message Input {
+    // Type is the value type of the input.
+    ValueType type = 1;
+    // Default is the default input value. Its type must match `type`.
+    google.protobuf.Value default = 2;
+    // Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure.
+    bool sensitive = 3;
+  }
+  // Outputs is a map of output names to their parameters.
+  oneof output_oneof {
+    map<string,Output> outputs = 3;
+    delegate Delegate = 4;
+  }
+  // Output describes a single step output.
+  message Output {
+    // Type is the value type of the output.
+    ValueType type = 1;
+    // Default is the default output value.
+    google.protobuf.Value default = 2;
+    // Sensitive implies the output is of sensitive nature and effort should be made to prevent accidental disclosure.
+    bool sensitive = 3;
+  }
+  message Delegate {}
 }
 
 // SpecDefinition is the spec and definition from an exec.yml file.
@@ -161,10 +155,12 @@ message StepResult {
     // ExitCode is the exit code of the exec process.
     int32 exit_code = 3;
   }
-  // ExecResult is the details of an exec type step.
-  ExecResult exec_result = 8;
-  // SubStepResults are the details of a steps type step.
-  repeated StepResult sub_step_results = 9;
+  oneof result_oneof {
+    // ExecResult is the details of an exec type step.
+    ExecResult exec_result = 8;
+    // SubStepResults are the details of a steps type step.
+    repeated StepResult sub_step_results = 9;
+  }
 }
 
 service StepRunner {
