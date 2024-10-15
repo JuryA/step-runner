@@ -1,3 +1,13 @@
+ifeq ($(shell git diff --quiet --exit-code ; echo $$?), 1)
+	export STEP_RUNNER_VERSION = "UNKNOWN (uncommitted changes)"
+else
+	export STEP_RUNNER_VERSION = $(shell git rev-parse --short=8 HEAD)
+endif
+
+.PHONY: test-version
+test-version:
+	echo $(STEP_RUNNER_VERSION)
+
 local := $(PWD)/.local
 localBin := $(local)/bin
 
@@ -82,7 +92,7 @@ clean:
 
 .PHONY: image
 image:
-	docker build -t step-runner .
+	docker build --build-arg STEP_RUNNER_VERSION=$(STEP_RUNNER_VERSION) -t step-runner .
 
 .PHONY: check-generated
 check-generated: generate

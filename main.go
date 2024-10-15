@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"gitlab.com/gitlab-org/step-runner/cmd"
@@ -9,6 +10,16 @@ import (
 	"gitlab.com/gitlab-org/step-runner/cmd/run"
 	"gitlab.com/gitlab-org/step-runner/cmd/serve"
 )
+
+var stepRunnerVersion string
+
+func init() {
+	if stepRunnerVersion == "" {
+		stepRunnerVersion = "UNKNOWN (unset in build flags)"
+	}
+	fmt.Printf("\nStep Runner version: %s\n", stepRunnerVersion)
+	fmt.Printf("See https://gitlab.com/gitlab-org/step-runner/-/blob/main/CHANGELOG.md for changes.\n\n")
+}
 
 func main() {
 	rootCmd := cmd.NewRootCmd()
