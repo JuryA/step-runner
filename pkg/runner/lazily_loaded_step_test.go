@@ -29,7 +29,8 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext().Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef)
+		stepResource := bldr.FileSystemStepResource().Build()
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		stepResult, err := step.Run(context.Background(), stepsCtx, specDef)
 
 		require.NoError(t, err)
@@ -53,7 +54,8 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext().Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef)
+		stepResource := bldr.FileSystemStepResource().Build()
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		_, err := step.Run(context.Background(), stepsCtx, specDef)
 
 		require.Error(t, err)
@@ -68,33 +70,30 @@ func TestLazilyLoadedStep(t *testing.T) {
 		parser := &FixedStepParser{step: bldr.Step().WithRunReturnsStepResult(stepResult).Build()}
 
 		stepRef := &proto.Step{
-			Name: "step-name",
-			Step: &proto.Step_Reference{
-				Url:      "http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/project.git",
-				Filename: "step.yml",
-			},
+			Name:   "step-name",
 			Env:    map[string]string{},
 			Inputs: map[string]*structpb.Value{},
 		}
 
 		globalCtx := bldr.GlobalContext().WithJob("CI_JOB_TOKEN", "ABCDEF").Build()
 		stepsCtx := bldr.StepsContext().WithGlobalContext(globalCtx).Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef)
+		stepResource := bldr.GitStepResource().WithURL("http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/step").Build()
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		stepResult, err := step.Run(context.Background(), stepsCtx, specDef)
 
 		require.NoError(t, err)
 		require.Equal(t, proto.StepResult_success, stepResult.Status)
-		require.Equal(t, "http://gitlab-ci-token:ABCDEF@gitlab.com/project.git", resourceLoader.lastGet.Url)
+		require.Equal(t, "http://gitlab-ci-token:ABCDEF@gitlab.com/step@main:/step.yml", resourceLoader.lastGet.Describe())
 	})
 }
 
 type FixedSpecDefCache struct {
 	specDef *proto.SpecDefinition
-	lastGet *proto.Step_Reference
+	lastGet runner.StepResource
 }
 
-func (c *FixedSpecDefCache) Get(_ context.Context, _ string, ref *proto.Step_Reference) (*proto.SpecDefinition, error) {
-	c.lastGet = ref
+func (c *FixedSpecDefCache) Get(_ context.Context, _ string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
+	c.lastGet = stepResource
 	return c.specDef, nil
 }
 
