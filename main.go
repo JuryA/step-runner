@@ -11,7 +11,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/cmd/serve"
 )
 
-// stepRunnerVersion is set when the step runner is compiled in the Dockerfile 
+// stepRunnerVersion is set when the step runner is compiled in the Dockerfile
 var stepRunnerVersion = "UNKNOWN (unset in build flags)"
 
 func init() {
