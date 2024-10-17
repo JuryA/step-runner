@@ -54,6 +54,14 @@ docker-build:
     - docker build --build-arg STEP_RUNNER_VERSION=$CI_COMMIT_SHORT_SHA -t $IMAGE_TAG .
     - docker push $IMAGE_TAG
 
+verify-image-version:
+  stage: e2e
+  image: $IMAGE_TAG
+  script:
+    - STEP_RUNNER_HELP=$(/step-runner --help)
+    - echo "$STEP_RUNNER_HELP" | grep -q "Step Runner version:" # expect version to be printed
+    - echo "$STEP_RUNNER_HELP" | grep -q -v "UNKNOWN" # version should be known
+
 run-e2e:
   stage: e2e
   image: $IMAGE_TAG
