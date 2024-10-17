@@ -1,5 +1,7 @@
 FROM golang:1.22
 
+ARG STEP_RUNNER_VERSION="UNKNOWN (unset in Dockerfile)"
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -7,7 +9,10 @@ RUN go mod download
 
 COPY . ./
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /step-runner
+RUN CGO_ENABLED=0 GOOS=linux \
+      go build \
+      -ldflags "-X 'main.stepRunnerVersion=${STEP_RUNNER_VERSION}'" \
+      -o /step-runner
 
 # This is necessary only during the transition period while step-runner
 # is distributed as an image and not built into the CI environment.
