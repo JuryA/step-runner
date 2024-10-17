@@ -32,7 +32,9 @@ func New() (runner.Cache, error) {
 	}, nil
 }
 
-func (c *cache) Get(ctx context.Context, parentDir string, stepRef *proto.Step_Reference) (*proto.SpecDefinition, error) {
+func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
+	stepRef := stepResource.ToProtoStepRef()
+
 	load := func(dir string) (*proto.SpecDefinition, error) {
 		path := filepath.Join(stepRef.Path...)
 		filename := filepath.Join(dir, path, stepRef.Filename)

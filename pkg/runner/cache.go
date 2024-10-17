@@ -7,5 +7,5 @@ import (
 )
 
 type Cache interface {
-	Get(ctx context.Context, parentDir string, step *proto.Step_Reference) (*proto.SpecDefinition, error)
+	Get(ctx context.Context, parentDir string, stepResource StepResource) (*proto.SpecDefinition, error)
 }

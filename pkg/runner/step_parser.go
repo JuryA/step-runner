@@ -46,7 +46,13 @@ func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, lo
 		var steps []Step
 
 		for _, stepReference := range specDef.Definition.Steps {
-			steps = append(steps, NewLazilyLoadedStep(p.globalCtx, p.stepCache, p, stepReference))
+			stepResource, err := p.parseStepResource(stepReference.Step)
+
+			if err != nil {
+				return nil, err
+			}
+
+			steps = append(steps, NewLazilyLoadedStep(p.globalCtx, p.stepCache, p, stepReference, stepResource))
 		}
 
 		return NewSequenceOfSteps(loadedFrom, params, steps...), nil
@@ -63,4 +69,16 @@ func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Var
 	}
 
 	return nil
+}
+
+func (p *Parser) parseStepResource(stepRef *proto.Step_Reference) (StepResource, error) {
+	switch stepRef.Protocol {
+	case proto.StepReferenceProtocol_local:
+		return NewFileSystemStepResource(stepRef.Path, stepRef.Filename), nil
+
+	case proto.StepReferenceProtocol_git:
+		return NewGitStepResource(stepRef.Url, stepRef.Version, stepRef.Path, stepRef.Filename), nil
+	}
+
+	return nil, fmt.Errorf("unknown step reference protocol: %s", stepRef.Protocol)
 }

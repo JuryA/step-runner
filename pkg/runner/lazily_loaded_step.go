@@ -15,14 +15,16 @@ type LazilyLoadedStep struct {
 	resourceLoader Cache
 	parser         StepParser
 	stepReference  *proto.Step
+	stepResource   StepResource
 }
 
-func NewLazilyLoadedStep(globalCtx *GlobalContext, resourceLoader Cache, parser StepParser, stepReference *proto.Step) *LazilyLoadedStep {
+func NewLazilyLoadedStep(globalCtx *GlobalContext, resourceLoader Cache, parser StepParser, stepReference *proto.Step, stepResource StepResource) *LazilyLoadedStep {
 	return &LazilyLoadedStep{
 		globalCtx:      globalCtx,
 		resourceLoader: resourceLoader,
 		parser:         parser,
 		stepReference:  stepReference,
+		stepResource:   stepResource,
 	}
 }
 
@@ -54,21 +56,13 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext, sp
 }
 
 func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, workingDir string) (Step, *Params, *proto.SpecDefinition, error) {
+	stepResource, err := s.stepResource.Interpolate(stepsCtx.View())
 
-	// Expand step reference URL
-	res, err := expression.ExpandString(stepsCtx.View(), s.stepReference.Step.Url)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
 	}
-	resStep := &proto.Step_Reference{
-		Url:      res,
-		Protocol: s.stepReference.Step.Protocol,
-		Path:     s.stepReference.Step.Path,
-		Filename: s.stepReference.Step.Filename,
-		Version:  s.stepReference.Step.Version,
-	}
 
-	specDef, err := s.resourceLoader.Get(ctx, workingDir, resStep)
+	specDef, err := s.resourceLoader.Get(ctx, workingDir, stepResource)
 
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
