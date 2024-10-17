@@ -4,10 +4,6 @@ else
 	export STEP_RUNNER_VERSION = $(shell git rev-parse --short=8 HEAD)
 endif
 
-.PHONY: test-version
-test-version:
-	echo $(STEP_RUNNER_VERSION)
-
 local := $(PWD)/.local
 localBin := $(local)/bin
 
