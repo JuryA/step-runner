@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -132,24 +133,28 @@ func (w toIOWriter) Write(p []byte) (int, error) { return w(p) }
 
 func Test_FollowLogs(t *testing.T) {
 	tests := map[string]struct {
-		finishErr   error
+		runStepErr  error
 		writeErr    error
-		wantErr     error
+		wantErr     string
 		wantWritten []byte
 	}{
-		"write error": {
+		"write error, incomplete logs written, error returned": {
 			writeErr:    errors.New("POW!!!"),
-			finishErr:   errors.New("BLAMMO!!!"),
-			wantErr:     errors.New("POW!!!"),
+			runStepErr:  errors.New("BLAMMO!!!"),
+			wantErr:     `following logs for job "\d*": streaming logs: POW!!!`,
 			wantWritten: data[0][:len(data[0])-1],
 		},
-		"finish error": {
-			finishErr:   context.Canceled,
-			wantErr:     context.Canceled,
+		"step execution error, logs written successfully, no error returned": {
+			writeErr:    nil,
+			runStepErr:  context.Canceled,
+			wantErr:     "",
 			wantWritten: bytes.Join(data, nil),
 		},
 
-		"no error": {
+		"no error, logs written successfully, no error returned": {
+			writeErr:    nil,
+			runStepErr:  nil,
+			wantErr:     "",
 			wantWritten: bytes.Join(data, nil),
 		},
 	}
@@ -168,7 +173,7 @@ func Test_FollowLogs(t *testing.T) {
 					_, err := j.logs.Write(d)
 					assert.NoError(t, err)
 				}
-				j.Finish(nil, tt.finishErr)
+				j.Finish(nil, tt.runStepErr)
 			}()
 
 			gotErr := j.FollowLogs(context.Background(), 0, toIOWriter(func(p []byte) (int, error) {
@@ -177,7 +182,12 @@ func Test_FollowLogs(t *testing.T) {
 				return n, tt.writeErr
 			}))
 
-			assert.Equal(t, tt.wantErr, gotErr)
+			if tt.wantErr == "" {
+				assert.NoError(t, gotErr)
+			} else {
+				assert.Error(t, gotErr)
+				assert.Regexp(t, regexp.MustCompile(tt.wantErr), gotErr)
+			}
 			assert.Equal(t, string(tt.wantWritten), gotWritten.String())
 		})
 	}

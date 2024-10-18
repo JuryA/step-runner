@@ -147,13 +147,12 @@ func (j *Job) Close() {
 // FollowLogs will write all current and future accumulated logs written to stdout/stderr from all step sub-processes to
 // the specified writer. This function returns:
 // - a non-nil error returned by the writer.
-// - the error that terminated the job (if any)
-// - nil
+// - nil otherwise
 func (j *Job) FollowLogs(ctx context.Context, offset int64, writer io.Writer) error {
 	if err := j.logs.Follow(ctx, offset, writer); err != nil {
-		return err
+		return fmt.Errorf("following logs for job %q: %w", j.ID, err)
 	}
-	return j.err
+	return nil
 }
 
 // Status returns a proto.Status objected representing the current status of the job. If the job has not Finished, some
