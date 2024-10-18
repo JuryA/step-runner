@@ -46,6 +46,14 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
 	}
 
+	var *proto.Definition_Exec exec
+	switch specDef.Definition.Type {
+	case proto.DefinitionType_exec:
+		exec = specDef.Definition.Exec
+	case proto.DefinitionType_grpc:
+		exec = specDef.Definition.Grpc
+	}
+
 	executedCmd, err := s.execCommand(ctx, stepsCtx, specDef.Definition.Exec)
 	result.WithExecResult(executedCmd)
 
@@ -53,7 +61,21 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 		return result.BuildFailure(), err
 	}
 
-	outputs, delegateToResult, err := files.Outputs()
+	type Outputer interface {
+		func Outputs() (map[string]*structpb.Value, *proto.StepResult, error)
+	}
+	var outputer Outputer
+	switch specDef.Definition.Type {
+	case proto.DefinitionType_exec:
+		outputer = files.Outputs
+	case proto.DefinitionType_grpc:
+		outputer, err = LoadFromFile(files.outputFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	outputs, delegateToResult, err := outputer.Outputs()
 	result.WithMergedOutputs(outputs).WithSubStepResult(delegateToResult)
 
 	if err != nil {

@@ -59,6 +59,8 @@ message Definition {
   Exec exec = 2;
   // Steps is a list of sub-steps to run for the `steps` type.
   repeated Step steps = 3;
+  // GRPC is a command to run to discover a GRPC service for step results
+  Exec grpc = 7;
   // Exec is the details of an exec type step.
   message Exec {
     // Command are the parameters to the system exec API. It does not invoke a shell.
@@ -84,6 +86,7 @@ enum DefinitionType {
   definition_type_unspecified = 0;
   exec = 1;
   steps = 2;
+  grpc = 3;
 }
 
 // Spec is a document describing the interface of the step.
@@ -154,6 +157,12 @@ enum ValueType {
   boolean = 4;
   struct = 5;
   array = 6;
+}
+
+// GrpcDelegate points to a GRPC service from which delegate output may be retrieved.
+message GrpcDelegate {
+  string id = 1;
+  string socket_file = 2;
 }
 
 // StepResult is the result of executing a single step.
