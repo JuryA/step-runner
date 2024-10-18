@@ -1,11 +1,13 @@
 ifeq ($(shell git diff --quiet --exit-code ; echo $$?), 1)
-	export STEP_RUNNER_VERSION = "UNKNOWN (uncommitted changes)"
+	export STEP_RUNNER_VERSION = UNKNOWN (uncommitted changes)
 else
 	export STEP_RUNNER_VERSION = $(shell git rev-parse --short=8 HEAD)
 endif
 
 local := $(PWD)/.local
 localBin := $(local)/bin
+
+MODULE_NAME = gitlab.com/gitlab-org/step-runner
 
 export PATH := $(localBin):$(PATH)
 
@@ -29,7 +31,7 @@ GOIMPORTS_VERSION := v0.23.0
 
 .PHONY: build
 build: $(PROTO_GEN)
-	go build .
+	go build -ldflags '-X "$(MODULE_NAME)/cmd.stepRunnerVersion=$(STEP_RUNNER_VERSION)"'
 
 $(PROTO_GEN): $(PROTO_SRC)
 	$(MAKE) generate
@@ -88,7 +90,7 @@ clean:
 
 .PHONY: image
 image:
-	docker build --build-arg STEP_RUNNER_VERSION=$(STEP_RUNNER_VERSION) -t step-runner .
+	docker build --build-arg MODULE_NAME=$(MODULE_NAME) --build-arg STEP_RUNNER_VERSION="$(STEP_RUNNER_VERSION)" -t step-runner .
 
 .PHONY: check-generated
 check-generated: generate

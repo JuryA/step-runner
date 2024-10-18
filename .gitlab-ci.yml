@@ -51,14 +51,14 @@ docker-build:
     - docker:20.10.16-dind
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build --build-arg STEP_RUNNER_VERSION=$CI_COMMIT_SHORT_SHA -t $IMAGE_TAG .
+    - docker build --build-arg MODULE_NAME=$CI_PROJECT_PATH --build-arg STEP_RUNNER_VERSION=$CI_COMMIT_SHORT_SHA -t $IMAGE_TAG .
     - docker push $IMAGE_TAG
 
 verify-image-version:
   stage: e2e
   image: $IMAGE_TAG
   script:
-    - STEP_RUNNER_HELP=$(/step-runner --help)
+    - STEP_RUNNER_HELP=$(/step-runner help)
     - echo "$STEP_RUNNER_HELP" | grep -q "Step Runner version:" # expect version to be printed
     - echo "$STEP_RUNNER_HELP" | grep -q -v "UNKNOWN" # version should be known
 

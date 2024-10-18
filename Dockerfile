@@ -1,5 +1,6 @@
 FROM golang:1.22
 
+ARG MODULE_NAME=gitlab.com/gitlab-org/step-runner
 ARG STEP_RUNNER_VERSION="UNKNOWN (unset in Dockerfile)"
 
 WORKDIR /app
@@ -11,7 +12,7 @@ COPY . ./
 
 RUN CGO_ENABLED=0 GOOS=linux \
       go build \
-      -ldflags "-X 'main.stepRunnerVersion=${STEP_RUNNER_VERSION}'" \
+      -ldflags "-X '${MODULE_NAME}/cmd.stepRunnerVersion=${STEP_RUNNER_VERSION}'" \
       -o /step-runner
 
 # This is necessary only during the transition period while step-runner
