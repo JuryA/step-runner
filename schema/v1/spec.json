@@ -19,11 +19,7 @@
             "additionalProperties": false,
             "properties": {
                 "inputs": {
-                    "type": "object",
-                    "description": "Input describes a single step input.",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/input"
-                    }
+                    "$ref": "#/definitions/inputs"
                 },
                 "outputs": {
                     "oneOf": [
@@ -40,10 +36,19 @@
                 }
             }
         },
+        "inputs": {
+            "type": "object",
+            "description": "Input describes a single step input.",
+            "patternProperties": {
+                "^[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "$ref": "#/definitions/input"
+                }
+            },
+            "additionalProperties": false
+        },
         "input": {
             "type": "object",
             "properties": {
-                "additionalProperties": false,
                 "type": {
                     "type": "string",
                     "description": "Type is the value type of the input.",
@@ -63,7 +68,8 @@
                     "type": "boolean",
                     "description": "Sensitive implies the input is of sensitive nature and effort should be made to prevent accidental disclosure."
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "inputDefaultTypes": {
             "oneOf": [
@@ -105,9 +111,12 @@
         },
         "outputs": {
             "type": "object",
-            "additionalProperties": {
-                "$ref": "#/definitions/output"
-            }
+            "patternProperties": {
+                "^[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "$ref": "#/definitions/output"
+                }
+            },
+            "additionalProperties": false
         },
         "output": {
             "type": "object",

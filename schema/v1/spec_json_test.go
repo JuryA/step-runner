@@ -96,6 +96,22 @@ spec:
 spec:
   outputs: invalid
 `,
+	}, {
+		name: "input names must be alphanumeric",
+		spec: `
+spec:
+  inputs:
+    invalid name: {}
+`,
+		wantErr: true,
+	}, {
+		name: "output names must be alphanumeric",
+		spec: `
+spec:
+  outputs:
+    invalid name: {}
+`,
+		wantErr: true,
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

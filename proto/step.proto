@@ -3,7 +3,6 @@ package proto;
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
-import "buf/validate/validate.proto";
 
 option go_package = "../proto";
 
@@ -15,18 +14,8 @@ message Step {
   Reference step = 2;
   // Env is a map of environment variable names to string values.
   map<string,string> env = 3;
-  option (buf.validate.message).cel = {
-    id: "env",
-    message: "env must be alphanumeric with underscores",
-    expression: "this.env.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-  };
   // Inputs is a map of step input names to structured values.
   map<string,google.protobuf.Value> inputs = 4;
-  option (buf.validate.message).cel = {
-    id: "inputs",
-    message: "inputs must be alphanumeric with underscores",
-    expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-  };
   // Reference is a reference to a step. References can contain either a short or a full form.
   message Reference {
     // Protocol determines which step reference protocol to use when fetching the step.
@@ -68,11 +57,6 @@ message Definition {
   }
   // Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps.
   map<string,google.protobuf.Value> outputs = 4;
-  option (buf.validate.message).cel = {
-    id: "outputs",
-    message: "outputs must be alphanumeric with underscores",
-    expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-  };
   // Env is a map of environment variable names to values for all steps
   map<string,string> env = 5;
   // Delegate selects a step by name which will produce the outputs for this step.
@@ -93,11 +77,6 @@ message Spec {
   message Content {
     // Inputs is a map of input names to their parameters.
     map<string,Input> inputs = 1;
-    option (buf.validate.message).cel = {
-      id: "inputs",
-      message: "inputs must be alphanumeric with underscores",
-      expression: "this.inputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-    };
     // Input describes a single step input.
     message Input {
       // Type is the value type of the input.
@@ -109,11 +88,6 @@ message Spec {
     }
     // Outputs is a map of output names to their parameters.
     map<string,Output> outputs = 2;
-    option (buf.validate.message).cel = {
-      id: "outputs",
-      message: "outputs must be alphanumeric with underscores",
-      expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-    };
     // Output describes a single step output.
     message Output {  
       // Type is the value type of the output.
@@ -174,18 +148,8 @@ message StepResult {
   Status status = 4;
   // Outputs are the output values returned from this step.
   map<string,google.protobuf.Value> outputs = 5;
-  option (buf.validate.message).cel = {
-    id: "outputs",
-    message: "outputs must be alphanumeric with underscores",
-    expression: "this.outputs.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-  };
   // Exports are the environment variables exported from this step.
   map<string,string> exports = 6;
-  option (buf.validate.message).cel = {
-    id: "exports",
-    message: "exports must be alphanumeric with underscores",
-    expression: "this.exports.all(key, key.matches('^[a-zA-Z_][a-zA-Z0-9_]*$'))",
-  };
   // Env is the environment at the step definition level. Expressions are expanded.
   map<string,string> env = 7;
   // ExecResult contains the details of an exec call.

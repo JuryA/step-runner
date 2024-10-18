@@ -1,3 +1,15 @@
+## v0 0 2024-10-17
+
+### Breaking Changes:
+
+- **Names must be alphanumeric**. All input and environment variable
+  names must be alphanumeric. Specifically they must match the regular
+  expression `^[a-zA-Z_][a-zA-Z0-9_]*$`. This makes expression easier
+  to parse. This limitation was intended to be in place since Jan 4,
+  2024
+  (https://gitlab.com/gitlab-org/step-runner/-/commit/5a964c4ab52b71fc87a5e63e528d7024fc6043c7).
+  However it mistakenly wasn't applied to the `ci` command.
+
 ## v0 - 2024-10-15
 
 ### Added:

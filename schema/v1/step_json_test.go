@@ -225,6 +225,34 @@ steps:
   - name: my_step
     step: ./my-step
 `,
+	}, {
+		name: "name must be alphanumeric",
+		step: `
+steps:
+    - name: not allowed to have a space
+      script: echo hello world
+`,
+		wantErr: true,
+	}, {
+		name: "env names must be alphanumeric",
+		step: `
+steps:
+    - name: my_step
+      step: ./my-step
+      env:
+          invalid name: foo
+`,
+		wantErr: true,
+	}, {
+		name: "output names must be alphanumeric",
+		step: `
+steps:
+    - name: my_step
+      step: ./my-step
+outputs:
+    invalid name: foo
+`,
+		wantErr: true,
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
