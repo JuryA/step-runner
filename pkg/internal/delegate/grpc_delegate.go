@@ -1,4 +1,4 @@
-package runner
+package delegate
 
 import (
 	"fmt"
@@ -29,6 +29,6 @@ func LoadFromFile(filename string) (*GRPCOutputer, error) {
 	}, nil
 }
 
-func Outputs() (map[string]*structpb.Value, *proto.StepResult, error) {
-
+func (o *GRPCOutputer) Outputs() (map[string]*structpb.Value, *proto.StepResult, error) {
+	return nil, nil, nil
 }

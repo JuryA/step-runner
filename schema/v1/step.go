@@ -127,6 +127,9 @@ type Step struct {
 
 	// Run is a list of sub-steps to run.
 	Run []Step `json:"run,omitempty" yaml:"run,omitempty" mapstructure:"run,omitempty"`
+
+	// GRPC is a command to run in order to get a GRPC endpoint for delegation
+	GRPC *Exec `json:"grpc,omitempty" yaml:"grpc,omitempty" mapstructure:"grpc,omitempty"`
 }
 
 // Env is a map of environment variable names to string values.

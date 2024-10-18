@@ -247,11 +247,15 @@ func (s *Step) verifyOneTypeProvided() error {
 		// Run type step
 		have++
 	}
+	if s.GRPC != nil {
+		// GRPC type step
+		have++
+	}
 	if have == 0 {
-		return fmt.Errorf("at least one of `script, `action`, `run` or `exec` must be provided")
+		return fmt.Errorf("at least one of `script, `action`, `run`, `exec` or `grpc` must be provided")
 	}
 	if have > 1 {
-		return fmt.Errorf("only one of `script`, `action`, `run` or `exec` may be provided. have %v", have)
+		return fmt.Errorf("only one of `script`, `action`, `run`, `exec` or `grpc` may be provided. have %v", have)
 	}
 	return nil
 }
@@ -290,6 +294,15 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 				return nil, fmt.Errorf("compiling output[%q]: %v: %w", k, v, err)
 			}
 			protoDef.Outputs[k] = protoV
+		}
+	case s.GRPC != nil:
+		// GRPC step
+		protoDef.Type = proto.DefinitionType_grpc
+		protoDef.Grpc = &proto.Definition_Exec{
+			Command: s.GRPC.Command,
+		}
+		if s.GRPC.WorkDir != nil {
+			protoDef.Exec.WorkDir = *s.Exec.WorkDir
 		}
 	default:
 		return nil, fmt.Errorf("could not determine step type")

@@ -6,8 +6,10 @@ import (
 	"os/exec"
 	"strings"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/delegate"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // ExecutableStep is a step that executes a command.
@@ -46,7 +48,7 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
 	}
 
-	var *proto.Definition_Exec exec
+	var exec *proto.Definition_Exec
 	switch specDef.Definition.Type {
 	case proto.DefinitionType_exec:
 		exec = specDef.Definition.Exec
@@ -54,7 +56,7 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 		exec = specDef.Definition.Grpc
 	}
 
-	executedCmd, err := s.execCommand(ctx, stepsCtx, specDef.Definition.Exec)
+	executedCmd, err := s.execCommand(ctx, stepsCtx, exec)
 	result.WithExecResult(executedCmd)
 
 	if err != nil {
@@ -62,16 +64,16 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 	}
 
 	type Outputer interface {
-		func Outputs() (map[string]*structpb.Value, *proto.StepResult, error)
+		Outputs() (map[string]*structpb.Value, *proto.StepResult, error)
 	}
 	var outputer Outputer
 	switch specDef.Definition.Type {
 	case proto.DefinitionType_exec:
-		outputer = files.Outputs
+		outputer = files
 	case proto.DefinitionType_grpc:
-		outputer, err = LoadFromFile(files.outputFile)
+		outputer, err = delegate.LoadFromFile(files.outputFile)
 		if err != nil {
-			return err
+			return result.BuildFailure(), err
 		}
 	}
 

@@ -170,12 +170,33 @@
                             "$ref": "#/definitions/exec"
                         }
                     }
+                },
+                {
+                    "description": "Run a GRPC service",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "grpc"
+                    ],
+                    "properties": {
+                        "env": {
+                            "type": "object",
+                            "description": "Env is a map of environment variable names to string values.",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        "grpc": {
+                            "description": "Grpc is a command to run.",
+                            "$ref": "#/definitions/exec"
+                        }
+                    }
                 }
             ]
         },
-	"name": {
+        "name": {
             "type": "string",
-	    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
         },
         "reference": {
             "type": "object",
