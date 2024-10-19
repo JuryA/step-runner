@@ -13,7 +13,9 @@ import (
 	"google.golang.org/grpc"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 type (
@@ -177,4 +179,64 @@ func (c *StepRunnerClient) FollowLogs(ctx context.Context, jobID string, offset 
 			return written, fmt.Errorf("writing to log sink: %w", err)
 		}
 	}
+}
+
+// RunUp streams RunRequests from the server and responds with FollowStepsResponses.
+func (c *StepRunnerClient) RunUp(ctx context.Context, jobID string) error {
+	runUpClient, err := c.client.RunUp(ctx)
+	if err != nil {
+		return err
+	}
+	for {
+		req, err := runUpClient.Recv()
+		if err != nil {
+			return err
+		}
+		// This should already be complied.
+		specDef, err := loadSteps(req.Steps)
+		if err != nil {
+			return err
+		}
+
+		// TODO: create a global context for the job.
+		// TODO: make the cache a singleton that I can access.
+		step, err := runner.NewParser(job.GlobCtx, s.cache).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
+		if err != nil {
+			return err
+		}
+		// TODO: This breaks because I cannot import runner (cycle).
+		// Context should be proto anyway.
+		go func(id string, stepsCtx *runner.StepsContext) {
+			stepResult, err := step.Run(ctx, stepsCtx, specDef)
+			if err != nil {
+
+			}
+			res := &proto.FollowStepsResponse{
+				Id:     id,
+				Result: stepResult,
+			}
+			runUpClient.Send(res)
+		}(req.Id, stepsCtx)
+	}
+}
+
+// Shamelessly copied from pkg/api/service/service.go
+func loadSteps(stepsStr string) (*proto.SpecDefinition, error) {
+	spec, step, err := schema.ReadSteps(stepsStr)
+	if err != nil {
+		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
+	}
+	protoSpec, err := spec.Compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling steps: %w", err)
+	}
+	protoDef, err := step.Compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling steps: %w", err)
+	}
+	protoStepDef := &proto.SpecDefinition{
+		Spec:       protoSpec,
+		Definition: protoDef,
+	}
+	return protoStepDef, nil
 }

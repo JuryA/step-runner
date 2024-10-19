@@ -40,6 +40,10 @@ func LoadFromFile(filename string) (*GRPCOutputer, error) {
 		return nil, err
 	}
 	basicClient := basic.New(conn)
+	conn, err = grpc.Dial(grpcDelegate.SocketFile, grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
 	extendedClient, err := extended.New(&alreadyDialed{conn})
 	if err != nil {
 		return nil, err
