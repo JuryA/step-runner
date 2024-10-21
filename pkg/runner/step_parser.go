@@ -52,10 +52,10 @@ func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, lo
 				return nil, err
 			}
 
-			steps = append(steps, NewLazilyLoadedStep(p.globalCtx, p.stepCache, p, stepReference, stepResource))
+			steps = append(steps, NewLazilyLoadedStep(p.globalCtx, p.stepCache, p, stepReference, stepResource, specDef.Dir))
 		}
 
-		return NewSequenceOfSteps(loadedFrom, params, steps...), nil
+		return NewSequenceOfSteps(loadedFrom, params, specDef, steps...), nil
 	}
 
 	return nil, fmt.Errorf("unknown step definition type: %s", specDef.Definition.Type)

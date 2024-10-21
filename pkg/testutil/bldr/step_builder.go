@@ -46,6 +46,6 @@ func (s *FixedResultStep) Describe() string {
 	return fmt.Sprintf("fixed result step %s", s.stepResult.Status)
 }
 
-func (s *FixedResultStep) Run(_ context.Context, _ *runner.StepsContext, _ *proto.SpecDefinition) (*proto.StepResult, error) {
+func (s *FixedResultStep) Run(_ context.Context, _ *runner.StepsContext) (*proto.StepResult, error) {
 	return s.stepResult, s.err
 }

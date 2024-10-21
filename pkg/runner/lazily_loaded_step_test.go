@@ -30,8 +30,8 @@ func TestLazilyLoadedStep(t *testing.T) {
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext().Build()
 		stepResource := bldr.FileSystemStepResource().Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
-		stepResult, err := step.Run(context.Background(), stepsCtx, specDef)
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
+		stepResult, err := step.Run(context.Background(), stepsCtx)
 
 		require.NoError(t, err)
 		require.Equal(t, proto.StepResult_success, stepResult.Status)
@@ -55,8 +55,8 @@ func TestLazilyLoadedStep(t *testing.T) {
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext().Build()
 		stepResource := bldr.FileSystemStepResource().Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
-		_, err := step.Run(context.Background(), stepsCtx, specDef)
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
+		_, err := step.Run(context.Background(), stepsCtx)
 
 		require.Error(t, err)
 		require.Equal(t, `failed to run lazily-evaluated step "step-name": failed to load: step does not accept input with name "not.defined"`, err.Error())
@@ -78,8 +78,8 @@ func TestLazilyLoadedStep(t *testing.T) {
 		globalCtx := bldr.GlobalContext().WithJob("CI_JOB_TOKEN", "ABCDEF").Build()
 		stepsCtx := bldr.StepsContext().WithGlobalContext(globalCtx).Build()
 		stepResource := bldr.GitStepResource().WithURL("http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/step").Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
-		stepResult, err := step.Run(context.Background(), stepsCtx, specDef)
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
+		stepResult, err := step.Run(context.Background(), stepsCtx)
 
 		require.NoError(t, err)
 		require.Equal(t, proto.StepResult_success, stepResult.Status)
