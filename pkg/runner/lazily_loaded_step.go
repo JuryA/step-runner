@@ -29,7 +29,7 @@ func NewLazilyLoadedStep(globalCtx *GlobalContext, resourceLoader Cache, parser 
 }
 
 func (s *LazilyLoadedStep) Describe() string {
-	return fmt.Sprintf("lazily-evaluated step %q", s.stepReference.Name)
+	return fmt.Sprintf("step %q", s.stepReference.Name)
 }
 
 // Run fetches a step definition, parses the step, and executes it.
