@@ -50,6 +50,20 @@ func TestGitFetcher(t *testing.T) {
 					Commit("Add text file")
 			},
 		},
+		"clone using first eight-letters of commit hash": {
+			version:          "<use commit hash returned from modifyRepo>",
+			expectClonedFile: "file.txt",
+			modifyRepo: func(t *testing.T, repo *git.Repository) string {
+				worktree, err := repo.Worktree()
+				require.NoError(t, err)
+
+				commit := bldr.GitWorktree(t, worktree).
+					CreateFile("file.txt", "data").
+					Stage("file.txt").
+					Commit("Add text file")
+				return commit[:8]
+			},
+		},
 		"clone using a lightweight tag": {
 			version:          "v1.0.0",
 			expectClonedFile: "step.yml",
@@ -82,4 +96,49 @@ func TestGitFetcher(t *testing.T) {
 			require.FileExists(t, path.Join(clonedDir, test.expectClonedFile))
 		})
 	}
+}
+
+func TestGitFetcher_Caching(t *testing.T) {
+	t.Run("clone repository that has been cloned before", func(t *testing.T) {
+		repo, _ := bldr.GitRepository().InitWithFilesFromDir("../../runner/test_steps/echo").Build(t)
+
+		head, err := repo.Head()
+		require.NoError(t, err)
+
+		_, err = repo.CreateTag("main-copy", head.Hash(), nil)
+		require.NoError(t, err)
+
+		gitServerURL := bldr.StartGitSmartHTTPServer(t, repo)
+		fetcher := gitFetch.New(t.TempDir(), gitFetch.CloneOptions{Depth: 0})
+
+		for _, version := range []string{"main", "main-copy"} {
+			clonedDir, err := fetcher.Get(context.Background(), gitServerURL, version)
+			require.NoError(t, err)
+			require.FileExists(t, path.Join(clonedDir, "step.yml"))
+		}
+	})
+
+	t.Run("fetch when previously cloned repository is missing version", func(t *testing.T) {
+		repo, worktree := bldr.GitRepository().InitWithFilesFromDir("../../runner/test_steps/echo").Build(t)
+		gitServerURL := bldr.StartGitSmartHTTPServer(t, repo)
+		fetcher := gitFetch.New(t.TempDir(), gitFetch.CloneOptions{Depth: 0})
+
+		_, err := fetcher.Get(context.Background(), gitServerURL, "main")
+		require.NoError(t, err)
+
+		bldr.GitWorktree(t, worktree).
+			CreateFile("file.txt", "data").
+			Stage("file.txt").
+			Commit("Add text file")
+
+		head, err := repo.Head()
+		require.NoError(t, err)
+
+		_, err = repo.CreateTag("v1.0.0", head.Hash(), nil)
+		require.NoError(t, err)
+
+		clonedDir, err := fetcher.Get(context.Background(), gitServerURL, "v1.0.0")
+		require.NoError(t, err)
+		require.FileExists(t, path.Join(clonedDir, "file.txt"))
+	})
 }
