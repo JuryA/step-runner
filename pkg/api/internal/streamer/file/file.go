@@ -47,13 +47,13 @@ func (r toIOReader) Read(p []byte) (int, error) { return r(p) }
 func (s *Streamer) Follow(ctx context.Context, offset int64, writer io.Writer) error {
 	f, err := os.OpenFile(s.filename, os.O_RDONLY|os.O_CREATE, 0600)
 	if err != nil {
-		return err
+		return fmt.Errorf("opening log file %q: %w", s.filename, err)
 	}
 	//nolint:errcheck
 	defer f.Close()
 
 	if _, err := f.Seek(offset, 0); err != nil {
-		return err
+		return fmt.Errorf("seeking log file %q: %w", s.filename, err)
 	}
 
 	scanner := bufio.NewScanner(toIOReader(func(p []byte) (int, error) {
@@ -86,10 +86,10 @@ func (s *Streamer) Follow(ctx context.Context, offset int64, writer io.Writer) e
 			continue
 		}
 		if _, err := writer.Write(data); err != nil {
-			return err
+			return fmt.Errorf("streaming logs: %w", err)
 		}
 		if _, err := writer.Write([]byte("\n")); err != nil {
-			return err
+			return fmt.Errorf("streaming logs: %w", err)
 		}
 	}
 	// scanner.Err() returns nil instead of io.EOF even if an EOF stopped scanner.Scan().
