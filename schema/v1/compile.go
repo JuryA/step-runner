@@ -133,7 +133,7 @@ func (i *Input) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Inp
 }
 
 func (o *Output) compile() (*proto.Spec_Content_Output, error) {
-	o.defaultTypeToRawString()
+	o.defaultTypeToString()
 	protoOutput, err := o.compileToProto()
 	if err != nil {
 		return nil, err
@@ -145,9 +145,9 @@ func (o *Output) compile() (*proto.Spec_Content_Output, error) {
 	return protoOutput, nil
 }
 
-func (o *Output) defaultTypeToRawString() {
+func (o *Output) defaultTypeToString() {
 	if o.Type == nil || *o.Type == "" {
-		t := OutputTypeRawString
+		t := OutputTypeString
 		o.Type = &t
 	}
 }
@@ -161,8 +161,6 @@ func (o *Output) compileToProto() (*proto.Spec_Content_Output, error) {
 		protoOutput.Type = proto.ValueType_array
 	case OutputTypeNumber:
 		protoOutput.Type = proto.ValueType_number
-	case OutputTypeRawString:
-		protoOutput.Type = proto.ValueType_raw_string
 	case OutputTypeString:
 		protoOutput.Type = proto.ValueType_string
 	case OutputTypeStruct:
@@ -207,10 +205,6 @@ func (o *Output) verifyDefaultValueMatchesType(protoOutput *proto.Spec_Content_O
 	case OutputTypeString:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
 			defaultType = OutputTypeString
-		}
-	case OutputTypeRawString:
-		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StringValue); ok {
-			defaultType = OutputTypeRawString
 		}
 	case OutputTypeStruct:
 		if _, ok := protoOutput.Default.Kind.(*structpb.Value_StructValue); ok {

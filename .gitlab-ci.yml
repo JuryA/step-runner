@@ -38,12 +38,6 @@ go-test:
   script:
     - go test -race ./...
 
-go-integration:
-  stage: test
-  image: $GO_IMAGE
-  script:
-    - go test -tags integration ./...
-
 docker-build:
   stage: build
   image: docker:20.10.16
@@ -65,17 +59,13 @@ verify-image-version:
 run-e2e:
   stage: e2e
   image: $IMAGE_TAG
-  script:
-    - /step-runner ci
   variables:
     CI_STEPS_DEBUG: "true"
-    STEPS:
-      expand: false
-      value: |
-        - name: ci_variables
-          step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@master
-          inputs:
-            echo: "${{ job.CI_PIPELINE_ID }}"
+  run:
+    - name: ci_variables
+      step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v3
+      inputs:
+        echo: "${{ job.CI_PIPELINE_ID }}"
   artifacts:
     paths:
       - step-results.json

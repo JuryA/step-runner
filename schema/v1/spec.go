@@ -86,12 +86,10 @@ type OutputType string
 const OutputTypeArray OutputType = "array"
 const OutputTypeBoolean OutputType = "boolean"
 const OutputTypeNumber OutputType = "number"
-const OutputTypeRawString OutputType = "raw_string"
 const OutputTypeString OutputType = "string"
 const OutputTypeStruct OutputType = "struct"
 
 var enumValues_OutputType = []interface{}{
-	"raw_string",
 	"string",
 	"number",
 	"boolean",

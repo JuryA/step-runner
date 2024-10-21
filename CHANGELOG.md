@@ -1,3 +1,14 @@
+## v0 - 2024-10-21
+
+### Breaking Changes:
+
+- **Output type `raw_string` removed**. Output variables can no longer
+  be of type `raw_string`. Recommend changing the output type to `string` and
+  surrounding the value in quotes when writing to the output file.
+
+- **Default Output type changed to string**. Due to the `raw_string` type being
+  removed.
+
 ## v0 - 2024-10-17
 
 ### Breaking Changes:

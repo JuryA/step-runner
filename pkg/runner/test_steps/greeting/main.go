@@ -14,7 +14,7 @@ var (
 func main() {
 	flag.Parse()
 	fmt.Println(*greeting)
-	if err := os.WriteFile(os.Getenv("STEP_RUNNER_OUTPUT"), []byte("name="+*name), 0640); err != nil {
+	if err := os.WriteFile(os.Getenv("STEP_RUNNER_OUTPUT"), []byte(fmt.Sprintf(`name="%s"`, *name)), 0640); err != nil {
 		panic(err)
 	}
 	if err := os.WriteFile(os.Getenv("STEP_RUNNER_ENV"), []byte("NAME="+*name), 0640); err != nil {

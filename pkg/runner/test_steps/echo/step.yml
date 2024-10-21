@@ -5,4 +5,4 @@ spec:
     echo:
 ---
 exec:
-  command: [ bash, -c, "echo echo=${{ inputs.echo }} | tee ${{ output_file }}" ]
+  command: [ bash, -c, "echo echo='\"${{ inputs.echo }}\"' | tee ${{ output_file }}" ]
