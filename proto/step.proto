@@ -159,12 +159,6 @@ enum ValueType {
   array = 6;
 }
 
-// GrpcDelegate points to a GRPC service from which delegate output may be retrieved.
-message GrpcDelegate {
-  string id = 1;
-  string socket_file = 2;
-}
-
 // StepResult is the result of executing a single step.
 message StepResult {
   // Step is the invocation of this step with inputs. Expressions are expanded.
@@ -218,7 +212,22 @@ service StepRunner {
   rpc Close(CloseRequest) returns (CloseResponse);
   rpc FollowLogs(FollowLogsRequest) returns (stream FollowLogsResponse);
   rpc Status(StatusRequest) returns (StatusResponse);
+  rpc RunDelegation(RunDelegationRequest) returns (RunDelegationResponse);
   rpc RunUp(stream FollowStepsResponse) returns (stream RunRequest);
+}
+
+// Delegation points to a GRPC service at which to submit a delegation request and get results.
+message Delegation {
+  string socket_file = 1;
+  bytes request = 2;
+}
+
+message RunDelegationRequest {
+  string id = 1;
+  Delegation delegation = 2;
+}
+
+message RunDelegationResponse {
 }
 
 message Variable {

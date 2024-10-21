@@ -4,10 +4,12 @@ import (
 	ctx "context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"golang.org/x/exp/rand"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -70,10 +72,13 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 	case proto.DefinitionType_exec:
 		outputer = files
 	case proto.DefinitionType_grpc:
-		grpcOutputer, err := LoadFromFile(files.outputFile)
+		// New random id for our delegation request
+		id := strconv.Itoa(rand.Intn(32))
+		grpcOutputer, err := NewFromDelegationFile(id, files.outputFile)
 		if err != nil {
 			return result.BuildFailure(), err
 		}
+		// Service run up requests
 		go grpcOutputer.ServiceRunUp()
 		outputer = grpcOutputer
 	}

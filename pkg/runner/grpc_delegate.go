@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/api/client/basic"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/extended"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
@@ -14,12 +15,15 @@ import (
 )
 
 type GRPCOutputer struct {
-	jobId          string
+	id             string
 	runUpClient    proto.StepRunner_RunUpClient
 	extendedClient *extended.StepRunnerClient
 	stopCh         chan struct{}
 	ctx            context.Context
+	stepResult     *proto.StepResult
 }
+
+var _ basic.StepResultWriter = (*GRPCOutputer)(nil)
 
 type alreadyDialed struct {
 	conn *grpc.ClientConn
@@ -29,27 +33,32 @@ func (a *alreadyDialed) Dial() (*grpc.ClientConn, error) {
 	return a.conn, nil
 }
 
-func LoadFromFile(filename string) (*GRPCOutputer, error) {
+func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading file %v: %w", filename, err)
 	}
-	grpcDelegate := &proto.GrpcDelegate{}
-	if err := protojson.Unmarshal(data, grpcDelegate); err != nil {
+	delegation := &proto.Delegation{}
+	if err := protojson.Unmarshal(data, delegation); err != nil {
 		return nil, fmt.Errorf("reading output_file as grpc delegate: %w", err)
 	}
-	conn, err := grpc.Dial(grpcDelegate.SocketFile, grpc.WithInsecure())
+	conn, err := grpc.Dial(delegation.SocketFile, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
-	jobId := grpcDelegate.Id
 	stepRunnerClient := proto.NewStepRunnerClient(conn)
 
+	// Submit run delegation request
+	stepRunnerClient.RunDelegation(context.Background(), &proto.RunDelegationRequest{
+		Id:         id,
+		Delegation: delegation,
+	})
+
 	// We subscribe to run up requests for the specific job_id the delegate gave us
-	ctx := context.WithValue(context.Background(), "job_id", jobId)
+	ctx := context.WithValue(context.Background(), "id", id)
 	runUpClient, err := stepRunnerClient.RunUp(ctx)
 
-	conn, err = grpc.Dial(grpcDelegate.SocketFile, grpc.WithInsecure())
+	conn, err = grpc.Dial(delegation.SocketFile, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +67,7 @@ func LoadFromFile(filename string) (*GRPCOutputer, error) {
 		return nil, err
 	}
 	return &GRPCOutputer{
-		jobId:          jobId,
+		id:             id,
 		runUpClient:    runUpClient,
 		extendedClient: extendedClient,
 		stopCh:         make(chan struct{}),
@@ -112,13 +121,27 @@ func (o *GRPCOutputer) ServiceRunUp() {
 	}
 }
 
+func (o *GRPCOutputer) Write(res *proto.StepResult) error {
+	o.stepResult = res
+	return nil
+}
+
 func (o *GRPCOutputer) Outputs() (map[string]*structpb.Value, *proto.StepResult, error) {
 	defer func() {
 		// Stop servicing run up requests after we get our output
 		close(o.stopCh)
 	}()
 	// Use the extended client to get results
-	return nil, nil, nil
+	var res *proto.StepResult
+	follower := &extended.FollowOutput{
+		Logs:        os.Stdout,
+		StepResults: o,
+	}
+	_, err := o.extendedClient.Follow(context.Background(), o.id, follower)
+	if err != nil {
+		return nil, nil, err
+	}
+	return nil, res, nil
 }
 
 // Shamelessly copied from pkg/api/service/service.go
