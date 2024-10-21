@@ -122,7 +122,7 @@ message SpecDefinition {
 // ValueType is an enumerations of the possible types a value can have.
 enum ValueType {
   value_type_unspecified = 0;
-  raw_string = 1;
+  reserved 1;   // formally raw_string
   string = 2;
   number = 3;
   boolean = 4;

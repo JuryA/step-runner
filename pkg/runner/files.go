@@ -73,10 +73,7 @@ func (f *Files) Outputs() (map[string]*structpb.Value, *proto.StepResult, error)
 		if !ok {
 			return nil, nil, fmt.Errorf("output %q received from step is not declared in spec", k)
 		}
-		if outputSpec.Type == proto.ValueType_raw_string {
-			protoOutputs[k] = structpb.NewStringValue(v)
-			continue
-		}
+
 		var outputJSON any
 		err := json.Unmarshal([]byte(v), &outputJSON)
 		if err != nil {

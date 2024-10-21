@@ -15,8 +15,6 @@ import (
 var _ runner.Cache = &cache{}
 
 type cache struct {
-	cacheDir string
-
 	gitFetcher *git.GitFetcher
 }
 
@@ -26,10 +24,13 @@ func New() (runner.Cache, error) {
 		return nil, fmt.Errorf("making cache dir %q: %w", cacheDir, err)
 	}
 
+	return NewWithOptions(git.New(cacheDir, git.CloneOptions{Depth: 1})), nil
+}
+
+func NewWithOptions(gitFetcher *git.GitFetcher) runner.Cache {
 	return &cache{
-		cacheDir:   cacheDir,
-		gitFetcher: git.New(cacheDir),
-	}, nil
+		gitFetcher: gitFetcher,
+	}
 }
 
 func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {

@@ -6,10 +6,10 @@ spec:
       sensitive: true
   outputs:
     secret:
-      type: raw_string
+      type: string
       sensitive: true
 ---
 env:
   OUTPUT: ${{ inputs.secret_override }}
 exec:
-  command: [bash, -c, 'SECRET=${{ inputs.secret_override }}; SECRET=${SECRET:-$RANDOM}; echo "secret=$SECRET" >${{ output_file }}']
+  command: [bash, -c, 'SECRET=${{ inputs.secret_override }}; SECRET=${SECRET:-$RANDOM}; echo secret=\"${SECRET}\" >${{ output_file }}']

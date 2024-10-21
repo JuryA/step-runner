@@ -20,11 +20,16 @@ import (
 
 type GitFetcher struct {
 	cacheDir string
+	options  CloneOptions
 	mu       sync.Mutex
 }
 
-func New(cacheDir string) *GitFetcher {
-	return &GitFetcher{cacheDir: cacheDir}
+type CloneOptions struct {
+	Depth int
+}
+
+func New(cacheDir string, options CloneOptions) *GitFetcher {
+	return &GitFetcher{cacheDir: cacheDir, options: options}
 }
 
 func (gf *GitFetcher) Get(ctx context.Context, url, version string) (string, error) {
@@ -65,7 +70,7 @@ func (gf *GitFetcher) clone(ctx context.Context, repoDir, url, version string) (
 		}
 	} else {
 		repo, err = git.PlainCloneContext(ctx, gitDir, false, &git.CloneOptions{
-			Depth:             1,
+			Depth:             gf.options.Depth,
 			URL:               url,
 			NoCheckout:        true,
 			RecurseSubmodules: git.SubmoduleRescursivity(1),

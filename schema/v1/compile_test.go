@@ -138,7 +138,7 @@ spec:
             type: string
     outputs:
         eye_color:
-            type: raw_string
+            type: string
             default: brown
     output_method: "outputs"
 ---

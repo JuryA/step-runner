@@ -34,12 +34,6 @@ func TestExecutableStep_Run(t *testing.T) {
 				expected:       "hello world",
 				extractValueFn: func(value *structpb.Value) interface{} { return value.GetStringValue() },
 			},
-			"raw string output type": {
-				outputType:     proto.ValueType_raw_string,
-				outputValue:    `value=hello world`,
-				expected:       "hello world",
-				extractValueFn: func(value *structpb.Value) interface{} { return value.GetStringValue() },
-			},
 			"number output type": {
 				outputType:     proto.ValueType_number,
 				outputValue:    "value=56.77",

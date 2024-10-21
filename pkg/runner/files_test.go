@@ -32,9 +32,9 @@ func TestOutput(t *testing.T) {
 		name:         "single output",
 		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_raw_string},
+			"value": {Type: proto.ValueType_string},
 		},
-		writeToOutput: `value=foo`,
+		writeToOutput: `value="foo"`,
 		wantOutput: map[string]*structpb.Value{
 			"value": structpb.NewStringValue("foo"),
 		},
@@ -42,10 +42,10 @@ func TestOutput(t *testing.T) {
 		name:         "multiple outputs",
 		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_raw_string},
-			"food":  {Type: proto.ValueType_raw_string},
+			"value": {Type: proto.ValueType_string},
+			"food":  {Type: proto.ValueType_string},
 		},
-		writeToOutput: "value=foo\nfood=apple",
+		writeToOutput: "value=\"foo\"\nfood=\"apple\"",
 		wantOutput: map[string]*structpb.Value{
 			"value": structpb.NewStringValue("foo"),
 			"food":  structpb.NewStringValue("apple"),
@@ -54,14 +54,14 @@ func TestOutput(t *testing.T) {
 		name:         "outputs with extra white space",
 		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_raw_string},
-			"food":  {Type: proto.ValueType_raw_string},
+			"value": {Type: proto.ValueType_string},
+			"food":  {Type: proto.ValueType_string},
 		},
 		writeToOutput: `
 
-value=foo
+value="foo"
 
-food=apple
+food="apple"
 
 `,
 		wantOutput: map[string]*structpb.Value{
@@ -165,7 +165,7 @@ food=apple
 		name:         "invalid format",
 		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_raw_string},
+			"value": {Type: proto.ValueType_string},
 		},
 		writeToOutput: `invalid`,
 		wantErr:       true,
@@ -173,16 +173,16 @@ food=apple
 		name:         "invalid json",
 		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_string},
+			"value": {Type: proto.ValueType_struct},
 		},
-		writeToOutput: `value=foo`,
+		writeToOutput: `value={foo}`,
 		wantErr:       true,
 	}, {
 		name:         "missing output",
 		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_raw_string},
-			"food":  {Type: proto.ValueType_raw_string},
+			"value": {Type: proto.ValueType_string},
+			"food":  {Type: proto.ValueType_string},
 		},
 		writeToOutput: "value=foo",
 		wantErr:       true,
@@ -190,8 +190,8 @@ food=apple
 		name:         "extra output",
 		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_raw_string},
-			"food":  {Type: proto.ValueType_raw_string},
+			"value": {Type: proto.ValueType_string},
+			"food":  {Type: proto.ValueType_string},
 		},
 		writeToOutput: "value=foo\nfood=apple\nextra=output",
 		wantErr:       true,
@@ -199,9 +199,9 @@ food=apple
 		name:         "wrong type received",
 		outputMethod: proto.OutputMethod_outputs,
 		outputs: map[string]*proto.Spec_Content_Output{
-			"value": {Type: proto.ValueType_string},
+			"value": {Type: proto.ValueType_number},
 		},
-		writeToOutput: `value=12.34`,
+		writeToOutput: `value=twelve`,
 		wantErr:       true,
 	}, {
 		name:          "delegate output string",

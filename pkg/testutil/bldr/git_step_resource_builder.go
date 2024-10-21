@@ -5,12 +5,16 @@ import (
 )
 
 type GitStepResourceBuilder struct {
-	url string
+	url     string
+	version string
+	path    []string
 }
 
 func GitStepResource() *GitStepResourceBuilder {
 	return &GitStepResourceBuilder{
-		url: "https://gitlab.com/steps/echo",
+		url:     "https://gitlab.com/steps/echo",
+		version: "main",
+		path:    []string{""},
 	}
 }
 
@@ -19,11 +23,16 @@ func (bldr *GitStepResourceBuilder) WithURL(url string) *GitStepResourceBuilder 
 	return bldr
 }
 
+func (bldr *GitStepResourceBuilder) WithVersion(version string) *GitStepResourceBuilder {
+	bldr.version = version
+	return bldr
+}
+
+func (bldr *GitStepResourceBuilder) WithPath(path ...string) *GitStepResourceBuilder {
+	bldr.path = path
+	return bldr
+}
+
 func (bldr *GitStepResourceBuilder) Build() *runner.GitStepResource {
-	return runner.NewGitStepResource(
-		bldr.url,
-		"main",
-		[]string{},
-		"step.yml",
-	)
+	return runner.NewGitStepResource(bldr.url, bldr.version, bldr.path, "step.yml")
 }
