@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/internal/delegate"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -71,10 +70,12 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 	case proto.DefinitionType_exec:
 		outputer = files
 	case proto.DefinitionType_grpc:
-		outputer, err = delegate.LoadFromFile(files.outputFile)
+		grpcOutputer, err := LoadFromFile(files.outputFile)
 		if err != nil {
 			return result.BuildFailure(), err
 		}
+		go grpcOutputer.ServiceRunUp()
+		outputer = grpcOutputer
 	}
 
 	outputs, delegateToResult, err := outputer.Outputs()

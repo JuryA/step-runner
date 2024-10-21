@@ -66,6 +66,9 @@ func run(options *Options) error {
 	if err != nil {
 		return fmt.Errorf("creating cache: %w", err)
 	}
+	// Hacky hack hack
+	// I'm a magical fairy
+	runner.CacheSingleton = defs
 
 	osEnv, err := runner.NewEnvironmentFromOSWithKnownVars()
 
