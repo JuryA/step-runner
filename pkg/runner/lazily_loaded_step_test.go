@@ -59,7 +59,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 		_, err := step.Run(context.Background(), stepsCtx)
 
 		require.Error(t, err)
-		require.Equal(t, `failed to run lazily-evaluated step "step-name": failed to load: step does not accept input with name "not.defined"`, err.Error())
+		require.Equal(t, `failed to run step "step-name": failed to load: step does not accept input with name "not.defined"`, err.Error())
 	})
 
 	t.Run("expands step reference URL", func(t *testing.T) {
