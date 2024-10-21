@@ -15,8 +15,9 @@ import (
 func TestSequenceOfSteps_Describe(t *testing.T) {
 	subStepA := bldr.Step().Build()
 	subStepB := bldr.Step().Build()
+	specDef := bldr.ProtoSpecDef().Build()
 
-	steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, subStepA, subStepB)
+	steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStepA, subStepB)
 	require.Equal(t, "sequence of 2 steps", steps.Describe())
 }
 
@@ -27,8 +28,8 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		stepsCtx := bldr.StepsContext().Build()
 		specDef := bldr.ProtoSpecDef().Build()
 
-		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, subStep)
-		result, err := steps.Run(context.Background(), stepsCtx, specDef)
+		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStep)
+		result, err := steps.Run(context.Background(), stepsCtx)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		require.Equal(t, proto.StepResult_success, result.Status)
@@ -43,8 +44,8 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		stepsCtx := bldr.StepsContext().Build()
 		specDef := bldr.ProtoSpecDef().Build()
 
-		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, subStep)
-		result, err := steps.Run(context.Background(), stepsCtx, specDef)
+		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStep)
+		result, err := steps.Run(context.Background(), stepsCtx)
 		require.Error(t, err)
 		require.Equal(t, "failed to run sequence of steps: simulated.error", err.Error())
 		require.NotNil(t, result)

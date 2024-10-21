@@ -461,7 +461,7 @@ func runTest(testCase runnerTest) func(*testing.T) {
 		env := globalCtx.Env.AddLexicalScope(params.Env).Values()
 		inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
 		stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
-		result, err := step.Run(ctx.Background(), stepsCtx, protoStepDef)
+		result, err := step.Run(ctx.Background(), stepsCtx)
 
 		if testCase.wantErr != nil {
 			require.Error(t, err)

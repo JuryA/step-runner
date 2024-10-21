@@ -16,15 +16,17 @@ type LazilyLoadedStep struct {
 	parser         StepParser
 	stepReference  *proto.Step
 	stepResource   StepResource
+	workDir        string
 }
 
-func NewLazilyLoadedStep(globalCtx *GlobalContext, resourceLoader Cache, parser StepParser, stepReference *proto.Step, stepResource StepResource) *LazilyLoadedStep {
+func NewLazilyLoadedStep(globalCtx *GlobalContext, resourceLoader Cache, parser StepParser, stepReference *proto.Step, stepResource StepResource, workDir string) *LazilyLoadedStep {
 	return &LazilyLoadedStep{
 		globalCtx:      globalCtx,
 		resourceLoader: resourceLoader,
 		parser:         parser,
 		stepReference:  stepReference,
 		stepResource:   stepResource,
+		workDir:        workDir,
 	}
 }
 
@@ -35,8 +37,8 @@ func (s *LazilyLoadedStep) Describe() string {
 // Run fetches a step definition, parses the step, and executes it.
 // The step reference inputs and environment are expanded.
 // The current environment is cloned into params in preparation for a recursive call to Run.
-func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error) {
-	step, params, subStepSpecDefinition, err := s.loadStep(ctx, parentStepsCtx, specDefinition.Dir)
+func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*proto.StepResult, error) {
+	step, params, subStepSpecDefinition, err := s.loadStep(ctx, parentStepsCtx, s.workDir)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
@@ -46,7 +48,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext, sp
 	inputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
 	stepsCtx := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir, inputs, env)
 
-	result, err := step.Run(ctx, stepsCtx, subStepSpecDefinition)
+	result, err := step.Run(ctx, stepsCtx)
 
 	if err != nil {
 		return result, fmt.Errorf("failed to run %s: %w", s.Describe(), err)

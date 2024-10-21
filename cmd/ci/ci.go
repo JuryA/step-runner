@@ -104,7 +104,7 @@ func run(options *Options) error {
 	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
 	stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
 
-	result, err := step.Run(ctx.Background(), stepsCtx, protoStepDef)
+	result, err := step.Run(ctx.Background(), stepsCtx)
 
 	if options.WriteStepResultsFile {
 		reptErr := report.NewStepResultReport("", report.FormatJSON).Write(result)

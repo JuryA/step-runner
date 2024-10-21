@@ -14,14 +14,16 @@ import (
 type SequenceOfSteps struct {
 	loadedFrom StepReference
 	params     *Params
+	specDef    *proto.SpecDefinition
 	steps      []Step
 }
 
-func NewSequenceOfSteps(loadedFrom StepReference, params *Params, steps ...Step) *SequenceOfSteps {
+func NewSequenceOfSteps(loadedFrom StepReference, params *Params, specDef *proto.SpecDefinition, steps ...Step) *SequenceOfSteps {
 	return &SequenceOfSteps{
 		loadedFrom: loadedFrom,
 		params:     params,
 		steps:      steps,
+		specDef:    specDef,
 	}
 }
 
@@ -33,10 +35,10 @@ func (s *SequenceOfSteps) Describe() string {
 	return fmt.Sprintf("sequence of %d steps", len(s.steps))
 }
 
-func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefinition *proto.SpecDefinition) (*proto.StepResult, error) {
-	result := NewStepResultBuilder(s.loadedFrom, s.params, specDefinition)
+func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
+	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 
-	err := stepsCtx.ExpandAndApplyEnv(specDefinition.Definition.Env)
+	err := stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
 	result.WithEnv(stepsCtx.GetEnvs())
 
 	if err != nil {
@@ -44,7 +46,7 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 	}
 
 	// Create output and export files and add to context
-	files, err := NewFiles(stepsCtx, specDefinition.Spec.Spec.OutputMethod, specDefinition.Spec.Spec.Outputs)
+	files, err := NewFiles(stepsCtx, s.specDef.Spec.Spec.OutputMethod, s.specDef.Spec.Spec.Outputs)
 
 	if err != nil {
 		return result.BuildFailure(), err
@@ -53,7 +55,7 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 	defer files.Cleanup()
 
 	for _, step := range s.steps {
-		stepResult, err := step.Run(ctx, stepsCtx, specDefinition)
+		stepResult, err := step.Run(ctx, stepsCtx)
 		result.WithSubStepResult(stepResult)
 
 		// Capture results even if there was an error
@@ -75,8 +77,8 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 	// Delegate outputs are surfaced directly, effectively making
 	// the delegation mechanism "disappear" from the execution
 	// context.
-	if specDefinition.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		outputs, err := findOutputsWithName(specDefinition.Definition.Delegate, result.subStepResults)
+	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
+		outputs, err := findOutputsWithName(s.specDef.Definition.Delegate, result.subStepResults)
 		result.WithMergedOutputs(outputs)
 
 		if err != nil {
@@ -92,7 +94,7 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, specDefin
 	// encapsulation of the step function.
 	expandedOutputs := make(map[string]*structpb.Value)
 
-	for k, v := range specDefinition.Definition.Outputs {
+	for k, v := range s.specDef.Definition.Outputs {
 		res, resErr := expression.Expand(stepsCtx.View(), v)
 		if resErr == nil {
 			expandedOutputs[k] = res.Value
