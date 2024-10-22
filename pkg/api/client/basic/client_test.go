@@ -108,29 +108,6 @@ func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
 
 const lorem = `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`
 
-func Test_StepRunnerClient_FollowSteps_Success(t *testing.T) {
-	ctx := context.Background()
-	srClient := New(conn)
-
-	rr := test.RunRequest(t, `steps:
-  - name: lorem
-    step: ../../testdata/bash
-    inputs:
-        script: echo "`+lorem+`"
-`, nil, nil)
-
-	assert.NoError(t, srClient.Run(ctx, rr))
-
-	stepResultWriteCloser := test.StepResultWriter{}
-
-	n, err := srClient.FollowSteps(ctx, rr.Id, 0, &stepResultWriteCloser)
-
-	assert.Eventually(t, func() bool { return len(stepResultWriteCloser) > 0 }, time.Millisecond*500, time.Millisecond*100)
-	assert.NoError(t, err)
-	assert.Equal(t, int64(1), n)
-	assert.NoError(t, srClient.Close(ctx, rr.Id))
-}
-
 func Test_StepRunnerClient_FollowLogs_Success(t *testing.T) {
 	ctx := context.Background()
 	srClient := New(conn)

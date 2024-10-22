@@ -1,11 +1,11 @@
 // package extended implements a well-behaved, higher-level client for the step-runner gRPC service. The primary entry
-// point, RunAndFollow(), will initiate a steps job, Follow*() the step-results and logs to to completion, and on
+// point, RunAndFollow(), will initiate a steps job, Follow*() the logs to completion, and on
 // completion get the job's Status() and Close() the job, releasing all resources.
 //
 // While it does not do so currently, this client will in the future automatically reconnect and re-initiate
 // Following on connection errors using the specified DialFunc.
 //
-// Callers can use the FollowOutput type to receive streaming log and step-results.
+// Callers can use the FollowOutput type to receive streaming logs.
 //
 // Note that if it is cancelled or times out, the context passed to RunAndFollow will cancel the client AND also call
 // Close() on the job, effectively cancelling it on the server side too.
@@ -26,10 +26,9 @@ import (
 
 type (
 	FollowOutput struct {
-		Logs        io.Writer
-		StepResults basic.StepResultWriter
+		Logs io.Writer
 
-		readLogs, readStepResults int64
+		readLogs int64
 	}
 
 	Dialer interface {
@@ -77,10 +76,10 @@ func (c *StepRunnerClient) RunAndFollow(ctx context.Context, runRequest *client.
 	return c.Follow(ctx, runRequest.Id, out)
 }
 
-// Follow follows log and step-result streams as configured by FollowOutput, and return the job's final status. If nil
+// Follow follows log streams as configured by FollowOutput, and return the job's final status. If nil
 // is specified for either sink, that stream will not be followed. At least one sink must be specified.
 func (c *StepRunnerClient) Follow(ctx context.Context, jobID string, out *FollowOutput) (client.Status, error) {
-	if out.Logs == nil && out.StepResults == nil {
+	if out.Logs == nil {
 		return client.Status{}, errors.New("at least one stream sink must be specified")
 	}
 
@@ -88,18 +87,6 @@ func (c *StepRunnerClient) Follow(ctx context.Context, jobID string, out *Follow
 	defer cancel()
 
 	eg := errgroup.Group{}
-
-	if out.StepResults != nil {
-		eg.Go(func() error {
-			// TODO: add reconnection
-			n, err := c.FollowSteps(ctx, jobID, out.readStepResults, out.StepResults)
-			out.readStepResults += n
-			if err != nil {
-				cancel() // force followLogs to exit
-			}
-			return err
-		})
-	}
 
 	if out.Logs != nil {
 		eg.Go(func() error {
