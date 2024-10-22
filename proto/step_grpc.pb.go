@@ -20,11 +20,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	StepRunner_Run_FullMethodName         = "/proto.StepRunner/Run"
-	StepRunner_FollowSteps_FullMethodName = "/proto.StepRunner/FollowSteps"
-	StepRunner_Close_FullMethodName       = "/proto.StepRunner/Close"
-	StepRunner_FollowLogs_FullMethodName  = "/proto.StepRunner/FollowLogs"
-	StepRunner_Status_FullMethodName      = "/proto.StepRunner/Status"
+	StepRunner_Run_FullMethodName        = "/proto.StepRunner/Run"
+	StepRunner_Close_FullMethodName      = "/proto.StepRunner/Close"
+	StepRunner_FollowLogs_FullMethodName = "/proto.StepRunner/FollowLogs"
+	StepRunner_Status_FullMethodName     = "/proto.StepRunner/Status"
 )
 
 // StepRunnerClient is the client API for StepRunner service.
@@ -32,7 +31,6 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StepRunnerClient interface {
 	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
-	FollowSteps(ctx context.Context, in *FollowStepsRequest, opts ...grpc.CallOption) (StepRunner_FollowStepsClient, error)
 	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error)
 	FollowLogs(ctx context.Context, in *FollowLogsRequest, opts ...grpc.CallOption) (StepRunner_FollowLogsClient, error)
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
@@ -55,38 +53,6 @@ func (c *stepRunnerClient) Run(ctx context.Context, in *RunRequest, opts ...grpc
 	return out, nil
 }
 
-func (c *stepRunnerClient) FollowSteps(ctx context.Context, in *FollowStepsRequest, opts ...grpc.CallOption) (StepRunner_FollowStepsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &StepRunner_ServiceDesc.Streams[0], StepRunner_FollowSteps_FullMethodName, opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &stepRunnerFollowStepsClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type StepRunner_FollowStepsClient interface {
-	Recv() (*FollowStepsResponse, error)
-	grpc.ClientStream
-}
-
-type stepRunnerFollowStepsClient struct {
-	grpc.ClientStream
-}
-
-func (x *stepRunnerFollowStepsClient) Recv() (*FollowStepsResponse, error) {
-	m := new(FollowStepsResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 func (c *stepRunnerClient) Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error) {
 	out := new(CloseResponse)
 	err := c.cc.Invoke(ctx, StepRunner_Close_FullMethodName, in, out, opts...)
@@ -97,7 +63,7 @@ func (c *stepRunnerClient) Close(ctx context.Context, in *CloseRequest, opts ...
 }
 
 func (c *stepRunnerClient) FollowLogs(ctx context.Context, in *FollowLogsRequest, opts ...grpc.CallOption) (StepRunner_FollowLogsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &StepRunner_ServiceDesc.Streams[1], StepRunner_FollowLogs_FullMethodName, opts...)
+	stream, err := c.cc.NewStream(ctx, &StepRunner_ServiceDesc.Streams[0], StepRunner_FollowLogs_FullMethodName, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +108,6 @@ func (c *stepRunnerClient) Status(ctx context.Context, in *StatusRequest, opts .
 // for forward compatibility
 type StepRunnerServer interface {
 	Run(context.Context, *RunRequest) (*RunResponse, error)
-	FollowSteps(*FollowStepsRequest, StepRunner_FollowStepsServer) error
 	Close(context.Context, *CloseRequest) (*CloseResponse, error)
 	FollowLogs(*FollowLogsRequest, StepRunner_FollowLogsServer) error
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
@@ -155,9 +120,6 @@ type UnimplementedStepRunnerServer struct {
 
 func (UnimplementedStepRunnerServer) Run(context.Context, *RunRequest) (*RunResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Run not implemented")
-}
-func (UnimplementedStepRunnerServer) FollowSteps(*FollowStepsRequest, StepRunner_FollowStepsServer) error {
-	return status.Errorf(codes.Unimplemented, "method FollowSteps not implemented")
 }
 func (UnimplementedStepRunnerServer) Close(context.Context, *CloseRequest) (*CloseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
@@ -197,27 +159,6 @@ func _StepRunner_Run_Handler(srv interface{}, ctx context.Context, dec func(inte
 		return srv.(StepRunnerServer).Run(ctx, req.(*RunRequest))
 	}
 	return interceptor(ctx, in, info, handler)
-}
-
-func _StepRunner_FollowSteps_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(FollowStepsRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(StepRunnerServer).FollowSteps(m, &stepRunnerFollowStepsServer{stream})
-}
-
-type StepRunner_FollowStepsServer interface {
-	Send(*FollowStepsResponse) error
-	grpc.ServerStream
-}
-
-type stepRunnerFollowStepsServer struct {
-	grpc.ServerStream
-}
-
-func (x *stepRunnerFollowStepsServer) Send(m *FollowStepsResponse) error {
-	return x.ServerStream.SendMsg(m)
 }
 
 func _StepRunner_Close_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -298,11 +239,6 @@ var StepRunner_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "FollowSteps",
-			Handler:       _StepRunner_FollowSteps_Handler,
-			ServerStreams: true,
-		},
 		{
 			StreamName:    "FollowLogs",
 			Handler:       _StepRunner_FollowLogs_Handler,
