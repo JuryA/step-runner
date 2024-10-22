@@ -3,7 +3,10 @@ package runner
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"os"
+	"time"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/basic"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/extended"
@@ -86,10 +89,16 @@ func (o *GRPCOutputer) ServiceRunUp() {
 			return
 		default:
 			req, err := o.runUpClient.Recv()
+			if err == io.EOF {
+				// There has to be a better way of doing this.
+				time.Sleep(time.Second)
+				continue
+			}
 			if err != nil {
 				// TODO errors should be send back down for the delegate to deal with
 				panic(err)
 			}
+			log.Printf("got run up request\n")
 
 			// Create global and steps contexts from the request
 			req.GetEnv()
