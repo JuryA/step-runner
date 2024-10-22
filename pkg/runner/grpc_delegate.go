@@ -10,6 +10,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -42,12 +43,12 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 	if err := protojson.Unmarshal(data, delegation); err != nil {
 		return nil, fmt.Errorf("reading output_file as grpc delegate: %w", err)
 	}
-	conn, err := grpc.Dial(delegation.SocketFile, grpc.WithInsecure())
+	address := "unix:///" + delegation.SocketFile
+	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
 	stepRunnerClient := proto.NewStepRunnerClient(conn)
-
 	// Submit run delegation request
 	stepRunnerClient.RunDelegation(context.Background(), &proto.RunDelegationRequest{
 		Id:         id,
@@ -55,10 +56,13 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 	})
 
 	// We subscribe to run up requests for the specific job_id the delegate gave us
-	ctx := context.WithValue(context.Background(), "id", id)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "id", id)
 	runUpClient, err := stepRunnerClient.RunUp(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	conn, err = grpc.Dial(delegation.SocketFile, grpc.WithInsecure())
+	conn, err = grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
