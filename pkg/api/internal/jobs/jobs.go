@@ -32,7 +32,6 @@ type Job struct {
 	finishTime time.Time // time when the job finished execution.
 	mux        sync.RWMutex
 
-	// TODO: This is temporary, until we implement streaming of step-results.
 	stepResult *proto.StepResult
 	logs       *file.Streamer
 
@@ -119,7 +118,6 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 	j.stepResultStatus = computeFinalStatus(result, err)
 }
 
-// TODO: this temporary until we add step-result streaming
 func computeFinalStatus(stepResult *proto.StepResult, err error) proto.StepResult_Status {
 	if stepResult == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return proto.StepResult_cancelled

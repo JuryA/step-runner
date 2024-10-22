@@ -298,47 +298,6 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 	}
 }
 
-func Test_StepRunnerService_FollowSteps(t *testing.T) {
-	defer cleanup(t)
-
-	bg := context.Background()
-
-	rr := test.ProtoRunRequest(t, makeBashStep("sleep 1"), false)
-	_, err := apiClient.Run(bg, rr)
-	require.NoError(t, err)
-	defer apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
-
-	stream, err := apiClient.FollowSteps(bg, &proto.FollowStepsRequest{Id: rr.Id})
-	require.NoError(t, err)
-
-	got, err := stream.Recv()
-	require.NoError(t, err)
-	require.NotNil(t, got)
-
-	// since there's currently only one step-result, a subsequent read should return EOF.
-	_, err = stream.Recv()
-	require.True(t, errors.Is(err, io.EOF))
-
-	job, ok := stepsService.jobs.Get(rr.Id)
-	require.True(t, ok)
-	want, _ := job.Result()
-
-	assert.Equal(t, want.String(), got.Result.String())
-}
-
-func Test_StepRunnerService_FollowSteps_BadID(t *testing.T) {
-	defer cleanup(t)
-
-	bg := context.Background()
-
-	stream, err := apiClient.FollowSteps(bg, &proto.FollowStepsRequest{Id: "4130"})
-	require.NoError(t, err)
-
-	_, err = stream.Recv()
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "no job with id")
-}
-
 func Test_StepRunnerService_Close(t *testing.T) {
 	defer cleanup(t)
 

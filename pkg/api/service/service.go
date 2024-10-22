@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/variables"
@@ -109,49 +108,12 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 
 // run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
 func (s *StepRunnerService) run(job *jobs.Job, stepsCtx *runner.StepsContext, step runner.Step) {
-	// TODO: Add streaming of step-results as they are produced.
 	result, err := step.Run(job.Ctx, stepsCtx)
 	job.Finish(result, err)
 	if err != nil {
 		// TODO: better logging
 		log.Printf("an error occurred executing the job: %s", err)
 	}
-}
-
-// TODO: this is very much a temporary/throwaway implementation until we implement step-result streaming and job timeout.
-func (s *StepRunnerService) FollowSteps(request *proto.FollowStepsRequest, writer proto.StepRunner_FollowStepsServer) error {
-	job, ok := s.jobs.Get(request.Id)
-	if !ok {
-		return &errBadJobID{id: request.Id}
-	}
-
-	// TODO: this is temporary until we implement step-result streaming and job timeout.
-	err := waitFor(job.Finished, time.Millisecond*250, time.Hour)
-	if err != nil {
-		return fmt.Errorf("job times out: %w", err)
-	}
-
-	result, err := job.Result()
-	if err != nil {
-		return err
-	}
-	if result == nil {
-		return nil
-	}
-	return writer.Send(&proto.FollowStepsResponse{Result: result})
-}
-
-// TODO: this is temporary until we implement step-result streaming
-func waitFor(f func() bool, pollInterval, maxWait time.Duration) error {
-	start := time.Now()
-
-	for time.Since(start) < maxWait {
-		if f() {
-			return nil
-		}
-		time.Sleep(pollInterval)
-	}
-	return fmt.Errorf("timed out waiting for operation")
 }
 
 func (s *StepRunnerService) Close(ctx context.Context, request *proto.CloseRequest) (*proto.CloseResponse, error) {
