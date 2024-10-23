@@ -1,19 +1,19 @@
-variables:
-  IMAGE_TAG: $CI_REGISTRY_IMAGE/pipelines:$CI_PIPELINE_IID
-  GO_IMAGE: golang:1.22
-
 include:
   - template: Workflows/MergeRequest-Pipelines.gitlab-ci.yml
+  - local: /.gitlab/ci/variables.gitlab-ci.yml
+  - local: /.gitlab/ci/build-binaries.gitlab-ci.yml
+  - local: /.gitlab/ci/build-docker.gitlab-ci.yml
 
 stages:
   - test
-  - build
+  - build binaries
+  - build docker
   - e2e
   - deploy
 
 go-fmt:
   stage: test
-  image: $GO_IMAGE
+  image: golang:$GO_VERSION
   script:
     - make go-fmt
     - git diff --exit-code
@@ -26,7 +26,7 @@ go-lint:
 
 check-generated:
   stage: test
-  image: $GO_IMAGE
+  image: golang:$GO_VERSION
   before_script:
     - apt-get update && apt-get install -y zip
   script:
@@ -34,19 +34,9 @@ check-generated:
 
 go-test:
   stage: test
-  image: $GO_IMAGE
+  image: golang:$GO_VERSION
   script:
     - go test -race ./...
-
-docker-build:
-  stage: build
-  image: docker:20.10.16
-  services:
-    - docker:20.10.16-dind
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build --build-arg MODULE_NAME=$CI_PROJECT_PATH --build-arg STEP_RUNNER_VERSION=$CI_COMMIT_SHORT_SHA -t $IMAGE_TAG .
-    - docker push $IMAGE_TAG
 
 verify-image-version:
   stage: e2e

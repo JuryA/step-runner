@@ -5,3 +5,4 @@ step-runner
 .cache/
 .docker-env
 Library/
+out/

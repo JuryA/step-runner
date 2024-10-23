@@ -1,0 +1,4 @@
+
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE/pipelines:$CI_PIPELINE_IID
+  GO_VERSION: 1.22
