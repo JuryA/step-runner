@@ -213,7 +213,31 @@ service StepRunner {
   rpc FollowLogs(FollowLogsRequest) returns (stream FollowLogsResponse);
   rpc Status(StatusRequest) returns (StatusResponse);
   rpc RunDelegation(RunDelegationRequest) returns (RunDelegationResponse);
-  rpc RunUp(stream FollowStepsResponse) returns (stream RunRequest);
+  rpc RunUp(stream RunUpResponse) returns (stream RunUpRequest); // flow of control is inverted
+}
+
+// This is what the RunRequest should look like.
+message RunUpRequest {
+  string id = 1;
+  Context context = 2;
+  Spec spec = 3;
+  Definition definition = 4;
+}
+
+message RunUpResponse {
+  string id = 1;
+  StepResult result = 2;
+}
+
+// Both Run and RunUp should use this same context.
+message Context {
+  map<string,string> env = 1;
+  map<string,StepResult> steps = 2;
+  map<string,string> job = 3;
+  // This could also have `jobs` which are previous job outputs.
+  map<string,google.protobuf.Value> inputs = 4;
+  string work_dir = 5;
+  string step_dir = 6;
 }
 
 // Delegation points to a GRPC service at which to submit a delegation request and get results.
