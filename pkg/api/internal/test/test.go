@@ -73,13 +73,6 @@ type ClosableBuf struct{ SyncBuff }
 
 func (*ClosableBuf) Close() error { return nil }
 
-type StepResultWriter []*proto.StepResult
-
-func (w *StepResultWriter) Write(sr *proto.StepResult) error {
-	*w = append(*w, sr)
-	return nil
-}
-
 func RunRequest(t *testing.T, step string, env map[string]string, vars []client.Variable) *client.RunRequest {
 	return &client.RunRequest{
 		Id: RandJobID(),

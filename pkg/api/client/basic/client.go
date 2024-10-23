@@ -111,41 +111,6 @@ func (c *StepRunnerClient) ListJobs(ctx context.Context) ([]client.Status, error
 	return fromProto(jobs.Jobs), nil
 }
 
-// FollowSteps streams StepResults emitted by the specified job to the specified StepResultWriter.
-func (c *StepRunnerClient) FollowSteps(ctx context.Context, jobID string, offset int64, writer StepResultWriter) (int64, error) {
-	if writer == nil {
-		return -1, errors.New("nil StepResultWriter")
-	}
-
-	// TODO: add offset to FollowSteps
-	stepResultStream, err := c.client.FollowSteps(ctx, &proto.FollowStepsRequest{Id: jobID})
-	if err != nil {
-		return -1, fmt.Errorf("following step-results: %w", err)
-	}
-
-	written := offset
-	for {
-		if ctx.Err() != nil {
-			return written, ctx.Err()
-		}
-
-		res, err := stepResultStream.Recv()
-		if err == io.EOF {
-			log.Println("step-result stream done")
-			return written, nil
-		}
-		if err != nil {
-			return written, fmt.Errorf("following step-results: %w", err)
-		}
-
-		err = writer.Write(res.Result)
-		written++
-		if err != nil {
-			return written, fmt.Errorf("writing to step-result sink: %w", err)
-		}
-	}
-}
-
 // FollowLogs streams logs emitted by the specified job to the specified io.Writer.
 func (c *StepRunnerClient) FollowLogs(ctx context.Context, jobID string, offset int64, writer io.Writer) (int64, error) {
 	if writer == nil {

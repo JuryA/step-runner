@@ -117,17 +117,13 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 
 	ctx := context.Background()
 
-	logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
-	out := FollowOutput{Logs: &logs, StepResults: &stepResults}
+	logs := test.ClosableBuf{}
+	out := FollowOutput{Logs: &logs}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
 	assert.NoError(t, err)
 	assert.Equal(t, client.StateSuccess, status.State)
 	assert.Empty(t, status.Message)
-	// TODO: this will change when we add step-result streaming
-	require.Len(t, stepResults, 1)
-	assert.Len(t, stepResults[0].SubStepResults, 4)
-	assert.Equal(t, proto.StepResult_success, stepResults[0].Status)
 	assert.Contains(t, logs.String(), "meet steppy who is 1 likes {\"color\":\"red\"} and is hungry false")
 	assert.Contains(t, logs.String(), "bla bla bla bar")
 	assert.Contains(t, logs.String(), "FOO=bar")
@@ -156,8 +152,8 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
-	out := FollowOutput{Logs: &logs, StepResults: &stepResults}
+	logs := test.ClosableBuf{}
+	out := FollowOutput{Logs: &logs}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
 	assert.Error(t, err)
@@ -166,12 +162,11 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 	// on the server side yet, and Close() is necessarily called after Status().
 	assert.Equal(t, client.StateRunning, status.State)
 	assert.Empty(t, status.Message)
-	assert.Len(t, stepResults, 0)
 	assert.Contains(t, logs.String(), "hello there")
 	assert.NotContains(t, logs.String(), "goodbye")
 }
 
-func Test_StepRunnerClient_RunAndFollow_Fail(t *testing.T) {
+func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
 	defer cleanup(t)
 
 	srClient, err := New(dialer)
@@ -188,11 +183,11 @@ func Test_StepRunnerClient_RunAndFollow_Fail(t *testing.T) {
 
 	ctx := context.Background()
 
-	logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
-	out := FollowOutput{Logs: &logs, StepResults: &stepResults}
+	logs := test.ClosableBuf{}
+	out := FollowOutput{Logs: &logs}
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
-	assert.Error(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, client.StateFailure, status.State)
 	assert.Equal(t, `failed to run sequence of steps: failed to run step "bash": exec: exit status 127`, status.Message)
 	assert.Contains(t, logs.String(), "kjhdfdhlkf: command not found")
@@ -220,15 +215,13 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 `, nil, nil)
 		rr.Id = rr.Id + "-1"
 
-		logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
-		out := FollowOutput{Logs: &logs, StepResults: &stepResults}
+		logs := test.ClosableBuf{}
+		out := FollowOutput{Logs: &logs}
 		status, err := srClient.RunAndFollow(ctx, rr, &out)
 
 		assert.NoError(t, err)
 		assert.Equal(t, client.StateSuccess, status.State)
 		assert.Empty(t, status.Message)
-		require.Len(t, stepResults, 1)
-		assert.Equal(t, proto.StepResult_success, stepResults[0].Status)
 		assert.Contains(t, logs.String(), "meet steppy who is 1 likes {\"color\":\"red\"} and is hungry false")
 		assert.NotContains(t, logs.String(), "FOO=bar")
 		assert.NotContains(t, logs.String(), "BAZ=blammo")
@@ -248,16 +241,13 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 			}, nil)
 		rr.Id = rr.Id + "-2"
 
-		logs, stepResults := test.ClosableBuf{}, test.StepResultWriter{}
-		out := FollowOutput{Logs: &logs, StepResults: &stepResults}
+		logs := test.ClosableBuf{}
+		out := FollowOutput{Logs: &logs}
 		status, err := srClient.RunAndFollow(ctx, rr, &out)
 
 		assert.NoError(t, err)
 		assert.Equal(t, client.StateSuccess, status.State)
 		assert.Empty(t, status.Message)
-		// TODO: this will change when we add step-result streaming
-		require.Len(t, stepResults, 1)
-		assert.Equal(t, proto.StepResult_success, stepResults[0].Status)
 		assert.Contains(t, logs.String(), "FOO=bar")
 		assert.Contains(t, logs.String(), "BAZ=blammo")
 		assert.NotContains(t, logs.String(), "meet steppy who is 1 likes {\"color\":\"red\"} and is hungry false")
@@ -301,41 +291,4 @@ func Test_StepRunnerClient_RunAndFollow_LogsOnly(t *testing.T) {
 	assert.Contains(t, logs.String(), "bla bla bla bar")
 	assert.Contains(t, logs.String(), "FOO=bar")
 	assert.Contains(t, logs.String(), "BAZ=blammo")
-}
-
-func Test_StepRunnerClient_RunAndFollow_StepResultsOnly(t *testing.T) {
-	defer cleanup(t)
-
-	srClient, err := New(dialer)
-	require.NoError(t, err)
-	//nolint:errcheck
-	defer srClient.CloseConn()
-
-	rr := test.RunRequest(t, `steps:
-  - name: blabla
-    step: ../../testdata/bash
-    inputs:
-        script: echo "bla bla bla $FOO"
-  - name: env
-    step: ../../testdata/bash
-    inputs:
-        script: env
-`,
-		map[string]string{
-			"FOO": "bar",
-			"BAZ": "blammo",
-		}, nil)
-
-	ctx := context.Background()
-
-	stepResults := test.StepResultWriter{}
-	out := FollowOutput{StepResults: &stepResults}
-	status, err := srClient.RunAndFollow(ctx, rr, &out)
-
-	assert.NoError(t, err)
-	assert.Equal(t, client.StateSuccess, status.State)
-	assert.Empty(t, status.Message)
-	// TODO: this will change when we add step-result streaming
-	require.Len(t, stepResults, 1)
-	assert.Equal(t, proto.StepResult_success, stepResults[0].Status)
 }
