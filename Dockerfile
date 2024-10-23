@@ -1,19 +1,7 @@
 FROM golang:1.22
 
-ARG MODULE_NAME=gitlab.com/gitlab-org/step-runner
-ARG STEP_RUNNER_VERSION="UNKNOWN (unset in Dockerfile)"
-
 WORKDIR /app
-
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . ./
-
-RUN CGO_ENABLED=0 GOOS=linux \
-      go build \
-      -ldflags "-X '${MODULE_NAME}/cmd.stepRunnerVersion=${STEP_RUNNER_VERSION}'" \
-      -o /step-runner
+COPY ./out/bin/step-runner-linux-amd64 /step-runner
 
 # This is necessary only during the transition period while step-runner
 # is distributed as an image and not built into the CI environment.

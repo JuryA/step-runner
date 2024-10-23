@@ -1,0 +1,32 @@
+.go-cache:
+  variables:
+    GOCACHE: $CI_PROJECT_DIR/.gocache
+  before_script:
+    - mkdir -p "${GOCACHE}"
+  cache:
+    paths:
+      - $CI_PROJECT_DIR/.gocache/
+    key: "${CI_JOB_NAME_SLUG}"
+
+binaries:
+  stage: build binaries
+  image: golang:${GO_VERSION}-alpine
+  extends:
+    - .go-cache
+  script:
+    - apk add git make curl unzip
+    - make build
+  artifacts:
+    paths:
+      - out/bin/step-runner-*
+  parallel:
+    matrix:
+      - BUILD_OS_ARCH:
+          - darwin/amd64 darwin/arm64
+          - freebsd/amd64 freebsd/arm64
+          - freebsd/386 freebsd/arm
+          - linux/amd64 linux/arm64
+          - linux/arm linux/s390x
+          - linux/ppc64le linux/386
+          - windows/amd64 windows/386
+  needs: []

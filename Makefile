@@ -29,12 +29,36 @@ PROTO_GEN := $(wildcard proto/*.pb.go)
 GOIMPORTS := goimports
 GOIMPORTS_VERSION := v0.23.0
 
+# override BUILD_OS_ARCH to build for multiple platforms
+LOCAL_OS_ARCH := $(lastword $(shell go version))
+BUILD_OS_ARCH ?= $(LOCAL_OS_ARCH)
+TARGETS := $(foreach os_arch,$(BUILD_OS_ARCH),$(os_arch))
+BIN_PATH := out/bin
+
+.PHONY: $(TARGETS)
+$(TARGETS): GOOS=$(firstword $(subst /, ,$@))
+$(TARGETS): GOARCH=$(lastword $(subst /, ,$@))
+$(TARGETS): BINARY=$(BIN_PATH)/step-runner-$(subst /,-,$@)
+$(TARGETS):
+	@mkdir -p $(BIN_PATH)
+	CGO_ENABLED=0 GOOS="$(GOOS)" GOARCH="$(GOARCH)" go build \
+		-ldflags '-X "$(MODULE_NAME)/cmd.stepRunnerVersion=$(STEP_RUNNER_VERSION)"' \
+		-o "$(BINARY)"
+
+.PHONY: go-deps
+go-deps:
+	go mod download
+
 .PHONY: build
-build: $(PROTO_GEN)
-	go build -ldflags '-X "$(MODULE_NAME)/cmd.stepRunnerVersion=$(STEP_RUNNER_VERSION)"'
+build: FILE_EXTENSION=$(if $(findstring windows,$(BUILD_OS_ARCH)),.exe,)
+build: generate go-deps $(TARGETS)
+    ifeq (1, $(words $(BUILD_OS_ARCH)))
+		cp $(BIN_PATH)/step-runner-$(subst /,-,$(BUILD_OS_ARCH)) $(BIN_PATH)/step-runner$(FILE_EXTENSION)
+    endif
 
 $(PROTO_GEN): $(PROTO_SRC)
 	$(MAKE) generate
+	if $(lastword $(shell go version))
 
 .PHONY: .generate-proto
 .generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
@@ -86,11 +110,12 @@ $(PROTOVALIDATE_DIST):
 
 .PHONY: clean
 clean:
-	rm  step-runner
+	@rm -rf $(BIN_PATH)
 
 .PHONY: image
 image:
-	docker build --build-arg MODULE_NAME=$(MODULE_NAME) --build-arg STEP_RUNNER_VERSION="$(STEP_RUNNER_VERSION)" -t step-runner .
+	BUILD_OS_ARCH=linux/amd64 $(MAKE) build
+	docker build -t step-runner .
 
 .PHONY: check-generated
 check-generated: generate
