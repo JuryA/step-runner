@@ -20,13 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	StepRunner_Run_FullMethodName           = "/proto.StepRunner/Run"
-	StepRunner_FollowSteps_FullMethodName   = "/proto.StepRunner/FollowSteps"
-	StepRunner_Close_FullMethodName         = "/proto.StepRunner/Close"
-	StepRunner_FollowLogs_FullMethodName    = "/proto.StepRunner/FollowLogs"
-	StepRunner_Status_FullMethodName        = "/proto.StepRunner/Status"
-	StepRunner_RunDelegation_FullMethodName = "/proto.StepRunner/RunDelegation"
-	StepRunner_RunUp_FullMethodName         = "/proto.StepRunner/RunUp"
+	StepRunner_Run_FullMethodName         = "/proto.StepRunner/Run"
+	StepRunner_FollowSteps_FullMethodName = "/proto.StepRunner/FollowSteps"
+	StepRunner_Close_FullMethodName       = "/proto.StepRunner/Close"
+	StepRunner_FollowLogs_FullMethodName  = "/proto.StepRunner/FollowLogs"
+	StepRunner_Status_FullMethodName      = "/proto.StepRunner/Status"
+	StepRunner_RunUp_FullMethodName       = "/proto.StepRunner/RunUp"
 )
 
 // StepRunnerClient is the client API for StepRunner service.
@@ -38,7 +37,6 @@ type StepRunnerClient interface {
 	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error)
 	FollowLogs(ctx context.Context, in *FollowLogsRequest, opts ...grpc.CallOption) (StepRunner_FollowLogsClient, error)
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
-	RunDelegation(ctx context.Context, in *RunDelegationRequest, opts ...grpc.CallOption) (*RunDelegationResponse, error)
 	RunUp(ctx context.Context, opts ...grpc.CallOption) (StepRunner_RunUpClient, error)
 }
 
@@ -141,15 +139,6 @@ func (c *stepRunnerClient) Status(ctx context.Context, in *StatusRequest, opts .
 	return out, nil
 }
 
-func (c *stepRunnerClient) RunDelegation(ctx context.Context, in *RunDelegationRequest, opts ...grpc.CallOption) (*RunDelegationResponse, error) {
-	out := new(RunDelegationResponse)
-	err := c.cc.Invoke(ctx, StepRunner_RunDelegation_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *stepRunnerClient) RunUp(ctx context.Context, opts ...grpc.CallOption) (StepRunner_RunUpClient, error) {
 	stream, err := c.cc.NewStream(ctx, &StepRunner_ServiceDesc.Streams[2], StepRunner_RunUp_FullMethodName, opts...)
 	if err != nil {
@@ -160,7 +149,7 @@ func (c *stepRunnerClient) RunUp(ctx context.Context, opts ...grpc.CallOption) (
 }
 
 type StepRunner_RunUpClient interface {
-	Send(*FollowStepsResponse) error
+	Send(*RunResponse) error
 	Recv() (*RunRequest, error)
 	grpc.ClientStream
 }
@@ -169,7 +158,7 @@ type stepRunnerRunUpClient struct {
 	grpc.ClientStream
 }
 
-func (x *stepRunnerRunUpClient) Send(m *FollowStepsResponse) error {
+func (x *stepRunnerRunUpClient) Send(m *RunResponse) error {
 	return x.ClientStream.SendMsg(m)
 }
 
@@ -190,7 +179,6 @@ type StepRunnerServer interface {
 	Close(context.Context, *CloseRequest) (*CloseResponse, error)
 	FollowLogs(*FollowLogsRequest, StepRunner_FollowLogsServer) error
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
-	RunDelegation(context.Context, *RunDelegationRequest) (*RunDelegationResponse, error)
 	RunUp(StepRunner_RunUpServer) error
 	mustEmbedUnimplementedStepRunnerServer()
 }
@@ -213,9 +201,6 @@ func (UnimplementedStepRunnerServer) FollowLogs(*FollowLogsRequest, StepRunner_F
 }
 func (UnimplementedStepRunnerServer) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
-}
-func (UnimplementedStepRunnerServer) RunDelegation(context.Context, *RunDelegationRequest) (*RunDelegationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RunDelegation not implemented")
 }
 func (UnimplementedStepRunnerServer) RunUp(StepRunner_RunUpServer) error {
 	return status.Errorf(codes.Unimplemented, "method RunUp not implemented")
@@ -329,31 +314,13 @@ func _StepRunner_Status_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _StepRunner_RunDelegation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RunDelegationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(StepRunnerServer).RunDelegation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: StepRunner_RunDelegation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StepRunnerServer).RunDelegation(ctx, req.(*RunDelegationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _StepRunner_RunUp_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(StepRunnerServer).RunUp(&stepRunnerRunUpServer{stream})
 }
 
 type StepRunner_RunUpServer interface {
 	Send(*RunRequest) error
-	Recv() (*FollowStepsResponse, error)
+	Recv() (*RunResponse, error)
 	grpc.ServerStream
 }
 
@@ -365,8 +332,8 @@ func (x *stepRunnerRunUpServer) Send(m *RunRequest) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *stepRunnerRunUpServer) Recv() (*FollowStepsResponse, error) {
-	m := new(FollowStepsResponse)
+func (x *stepRunnerRunUpServer) Recv() (*RunResponse, error) {
+	m := new(RunResponse)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -391,10 +358,6 @@ var StepRunner_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Status",
 			Handler:    _StepRunner_Status_Handler,
-		},
-		{
-			MethodName: "RunDelegation",
-			Handler:    _StepRunner_RunDelegation_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
