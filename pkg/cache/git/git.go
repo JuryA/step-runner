@@ -85,7 +85,7 @@ func (gf *GitFetcher) clone(ctx context.Context, repoDir, url, version string) (
 	// find, fetch, find
 	ref := gf.find(repo, version)
 	if ref == nil {
-		if repo.FetchContext(ctx, &git.FetchOptions{Depth: 1}) == nil {
+		if repo.FetchContext(ctx, &git.FetchOptions{Depth: gf.options.Depth}) == nil {
 			ref = gf.find(repo, version)
 		}
 	}
