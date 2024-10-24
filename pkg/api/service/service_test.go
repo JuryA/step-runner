@@ -238,7 +238,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 		"env vars": {
 			script: "echo ${{ env.BAR}} > ${{ env.FOO }}",
 			setup: func(rr *proto.RunRequest) {
-				rr.Env = map[string]string{
+				rr.Context.Env = map[string]string{
 					"FOO": "blammo.txt",
 					"BAR": "foobarbaz",
 				}
@@ -248,7 +248,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			jobWorkDir: true,
 			script:     "echo ${{ job.BAR}} > ${{ job.FOO }}",
 			setup: func(rr *proto.RunRequest) {
-				rr.Job.Variables = []*proto.Variable{
+				rr.Context.Job = []*proto.Variable{
 					{Key: "FOO", Value: "blammo.txt"},
 					{Key: "BAR", Value: "foobarbaz"},
 				}
@@ -258,7 +258,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			jobWorkDir: true,
 			script:     "cat ${{ job.BAR}} > ${{ job.FOO }}",
 			setup: func(rr *proto.RunRequest) {
-				rr.Job.Variables = []*proto.Variable{
+				rr.Context.Job = []*proto.Variable{
 					{Key: "FOO", Value: "blammo.txt"},
 					{Key: "BAR", Value: "foobarbaz", File: true},
 				}

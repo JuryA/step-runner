@@ -266,6 +266,8 @@ message Variable {
 }
 
 message RunResponse {
+  string id = 1;
+  StepResult result = 2;
 }
 
 message FollowStepsRequest {

@@ -60,22 +60,18 @@ func (vs *Variables) Write() error {
 	return nil
 }
 
-func Prepare(pjob *proto.Job, tmpPath string) (map[string]string, error) {
-	if pjob == nil {
+func Prepare(jobVariables []*proto.Variable, tmpPath string) (map[string]string, error) {
+	if len(jobVariables) == 0 {
 		return map[string]string{}, nil
 	}
-
-	outEnv := make(map[string]string, len(pjob.Variables))
-
-	jobVars := New(pjob.Variables, tmpPath)
+	outEnv := make(map[string]string, len(jobVariables))
+	jobVars := New(jobVariables, tmpPath)
 	for _, v := range jobVars {
 		outEnv[v.Key()] = v.Value()
 	}
-
 	if err := jobVars.Write(); err != nil {
 		return nil, fmt.Errorf("preparing variables: %w", err)
 	}
-
 	return outEnv, nil
 }
 

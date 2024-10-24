@@ -54,9 +54,11 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 	stepRunnerClient := proto.NewStepRunnerClient(conn)
 	// Submit run request to delegation endpoint
 	stepRunnerClient.Run(context.Background(), &proto.RunRequest{
-		Id:           id,
-		Continuation: delegation.Continuation,
-		SetupResult:  delegation.SetupResult,
+		Id:      id,
+		Context: delegation.Continuation.Context,
+		FunctionOneof: &proto.RunRequest_Function{
+			Function: delegation.Continuation.Function,
+		},
 	})
 
 	// We subscribe to run up requests for the specific job_id the delegate gave us
@@ -102,15 +104,13 @@ func (o *GRPCOutputer) ServiceRunUp() {
 			log.Printf("got run up request\n")
 
 			// Create global and steps contexts from the request
-			req.GetEnv()
-			env := NewEnvironment(req.GetEnv())
+			env := NewEnvironment(req.Context.GetEnv())
 			globalCtx, err := NewGlobalContext(env)
 			// Run request should include inputs
 			inputs := map[string]*structpb.Value{}
-			stepsCtx := NewStepsContext(globalCtx, req.WorkDir, inputs, req.GetEnv())
+			stepsCtx := NewStepsContext(globalCtx, req.Context.WorkDir, inputs, req.Context.GetEnv())
 
-			// This should already be complied.
-			specDef, err := loadSteps(req.Steps)
+			specDef := req.GetFunction()
 			if err != nil {
 				panic(err)
 			}
@@ -125,7 +125,7 @@ func (o *GRPCOutputer) ServiceRunUp() {
 				if err != nil {
 
 				}
-				res := &proto.FollowStepsResponse{
+				res := &proto.RunResponse{
 					Id:     id,
 					Result: stepResult,
 				}
