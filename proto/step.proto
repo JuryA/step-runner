@@ -59,8 +59,10 @@ message Definition {
   Exec exec = 2;
   // Steps is a list of sub-steps to run for the `steps` type.
   repeated Step steps = 3;
+
   // GRPC is a command to run to discover a GRPC service for step results
   Exec grpc = 7;
+
   // Exec is the details of an exec type step.
   message Exec {
     // Command are the parameters to the system exec API. It does not invoke a shell.
@@ -204,6 +206,8 @@ message StepResult {
   ExecResult exec_result = 8;
   // SubStepResults are the details of a steps type step.
   repeated StepResult sub_step_results = 9;
+  // Delegation is the result of the delegation step which produced this step result.
+  StepResult delegation = 10;
 }
 
 service StepRunner {
@@ -232,10 +236,7 @@ message Context {
 // (a step result).
 message Continuation {
   Context context = 1;
-  oneof step_oneof {
-    SpecDefinition specDef = 2; // compiled
-    string steps = 3;           // to be compiled
-  }
+  SpecDefinition function = 2;
 }
 
 // Delegation points to a GRPC service at which to continue the
@@ -246,7 +247,15 @@ message Continuation {
 message Delegation {
   string socket_file = 1;
   Continuation continuation = 2;
-  StepResult setup_result = 3;
+}
+
+message RunRequest {
+  string id = 1;
+  Context context = 2;
+  oneof function_oneof {
+    SpecDefinition function = 3; // compiled
+    string steps = 4;            // to be compiled
+  }
 }
 
 message Variable {
@@ -254,12 +263,6 @@ message Variable {
   string value = 2;
   bool file = 3;
   bool masked = 4;
-}
-
-message RunRequest {
-  string id = 1;
-  Continuation continuation = 2;
-  StepResult setup_result = 3;
 }
 
 message RunResponse {

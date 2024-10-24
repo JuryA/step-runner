@@ -52,10 +52,11 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 		return nil, err
 	}
 	stepRunnerClient := proto.NewStepRunnerClient(conn)
-	// Submit run delegation request
-	stepRunnerClient.RunDelegation(context.Background(), &proto.RunDelegationRequest{
-		Id:         id,
-		Delegation: delegation,
+	// Submit run request to delegation endpoint
+	stepRunnerClient.Run(context.Background(), &proto.RunRequest{
+		Id:           id,
+		Continuation: delegation.Continuation,
+		SetupResult:  delegation.SetupResult,
 	})
 
 	// We subscribe to run up requests for the specific job_id the delegate gave us
