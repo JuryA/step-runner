@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	outputFilename = "output"
+	outputFilename  = "output"
+	contextFilename = "context"
 )
 
 type Files struct {
@@ -22,8 +23,9 @@ type Files struct {
 	outputMethod proto.OutputMethod
 	specOutputs  map[string]*proto.Spec_Content_Output
 
-	dir        string
-	outputFile string
+	dir         string
+	outputFile  string
+	contextFile string
 }
 
 func NewFiles(
@@ -41,12 +43,23 @@ func NewFiles(
 		return nil, fmt.Errorf("creating output file: %w", err)
 	}
 	stepCtx.OutputFile = outputFile
+	contextFile := filepath.Join(dir, contextFilename)
+	bytes, err := json.Marshal(stepCtx.View())
+	if err != nil {
+		return nil, err
+	}
+	err = os.WriteFile(contextFile, bytes, 0660)
+	if err != nil {
+		return nil, fmt.Errorf("creating context file: %w", err)
+	}
+	stepCtx.ContextFile = contextFile
 	return &Files{
 		stepCtx:      stepCtx,
 		outputMethod: outputMethod,
 		specOutputs:  specOutputs,
 		dir:          dir,
 		outputFile:   outputFile,
+		contextFile:  contextFile,
 	}, nil
 }
 

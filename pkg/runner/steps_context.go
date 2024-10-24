@@ -12,11 +12,12 @@ import (
 type StepsContext struct {
 	*GlobalContext
 
-	StepDir    string                       // The path to the YAML definition directory so steps can find their files and sub-steps with relative references know where to start.
-	OutputFile string                       // The path to the output file.
-	Env        *Environment                 // Expanded environment values of the executing step.
-	Inputs     map[string]*structpb.Value   // Expanded input values of the executing step.
-	Steps      map[string]*proto.StepResult // Results of previously executed steps.
+	StepDir     string                       // The path to the YAML definition directory so steps can find their files and sub-steps with relative references know where to start.
+	OutputFile  string                       // The path to the output file.
+	ContextFile string                       // The path to the context file.
+	Env         *Environment                 // Expanded environment values of the executing step.
+	Inputs      map[string]*structpb.Value   // Expanded input values of the executing step.
+	Steps       map[string]*proto.StepResult // Results of previously executed steps.
 }
 
 func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*structpb.Value, env map[string]string) *StepsContext {
@@ -78,6 +79,7 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 		Inputs:      s.Inputs,
 		Job:         s.Job,
 		OutputFile:  s.OutputFile,
+		ContextFile: s.ContextFile,
 		StepDir:     s.StepDir,
 		StepResults: stepResultViews,
 		WorkDir:     s.WorkDir,
