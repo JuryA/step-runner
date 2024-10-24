@@ -1,8 +1,3 @@
-include:
-  - template: Workflows/MergeRequest-Pipelines.gitlab-ci.yml
-  - local: /.gitlab/ci/variables.gitlab-ci.yml
-  - local: /.gitlab/ci/build-binaries.gitlab-ci.yml
-  - local: /.gitlab/ci/build-docker.gitlab-ci.yml
 
 stages:
   - test
@@ -11,71 +6,11 @@ stages:
   - e2e
   - deploy
 
-go-fmt:
-  stage: test
-  image: golang:$GO_VERSION
-  script:
-    - make go-fmt
-    - git diff --exit-code
-
-go-lint:
-  stage: test
-  image: golangci/golangci-lint:v1.59.1
-  script:
-    - golangci-lint run -v --timeout 5m
-
-check-generated:
-  stage: test
-  image: golang:$GO_VERSION
-  before_script:
-    - apt-get update && apt-get install -y zip
-  script:
-    - make check-generated
-
-go-test:
-  stage: test
-  image: golang:$GO_VERSION
-  script:
-    - go test -race ./...
-
-verify-image-version:
-  stage: e2e
-  image: $IMAGE_TAG
-  script:
-    - STEP_RUNNER_HELP=$(/step-runner help)
-    - echo "$STEP_RUNNER_HELP" | grep -q "Step Runner version:" # expect version to be printed
-    - echo "$STEP_RUNNER_HELP" | grep -q -v "UNKNOWN" # version should be known
-
-run-e2e:
-  stage: e2e
-  image: $IMAGE_TAG
-  variables:
-    CI_STEPS_DEBUG: "true"
-  run:
-    - name: ci_variables
-      step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v3
-      inputs:
-        echo: "${{ job.CI_PIPELINE_ID }}"
-  artifacts:
-    paths:
-      - step-results.json
-
-verify-e2e:
-  stage: e2e
-  needs: ["run-e2e"]
-  script:
-    - apt update && apt install -y jq
-    - if [[ $(jq -r '.subStepResults[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
-
-docker-push:
-  stage: deploy
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  image: docker:20.10.16
-  services:
-    - docker:20.10.16-dind
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker pull $IMAGE_TAG
-    - docker tag $IMAGE_TAG $CI_REGISTRY_IMAGE:v0
-    - docker push $CI_REGISTRY_IMAGE:v0
+include:
+  - template: Workflows/MergeRequest-Pipelines.gitlab-ci.yml
+  - local: /.gitlab/ci/variables.gitlab-ci.yml
+  - local: /.gitlab/ci/test.gitlab-ci.yml
+  - local: /.gitlab/ci/build-binaries.gitlab-ci.yml
+  - local: /.gitlab/ci/build-docker.gitlab-ci.yml
+  - local: /.gitlab/ci/e2e.gitlab-ci.yml
+  - local: /.gitlab/ci/deploy.gitlab-ci.yml

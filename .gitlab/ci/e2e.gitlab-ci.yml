@@ -1,0 +1,29 @@
+
+verify-image-version:
+  stage: e2e
+  image: $IMAGE_TAG
+  script:
+    - STEP_RUNNER_HELP=$(/step-runner help)
+    - echo "$STEP_RUNNER_HELP" | grep -q "Step Runner version:" # expect version to be printed
+    - echo "$STEP_RUNNER_HELP" | grep -q -v "UNKNOWN" # version should be known
+
+run-e2e:
+  stage: e2e
+  image: $IMAGE_TAG
+  variables:
+    CI_STEPS_DEBUG: "true"
+  run:
+    - name: ci_variables
+      step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v3
+      inputs:
+        echo: "${{ job.CI_PIPELINE_ID }}"
+  artifacts:
+    paths:
+      - step-results.json
+
+verify-e2e:
+  stage: e2e
+  needs: ["run-e2e"]
+  script:
+    - apt update && apt install -y jq
+    - if [[ $(jq -r '.subStepResults[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
