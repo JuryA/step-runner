@@ -55,6 +55,7 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 	// Submit run request to delegation endpoint
 	stepResultCh := make(chan *proto.StepResult)
 	go func() {
+		fmt.Printf("calling run\n")
 		res, err := stepRunnerClient.Run(context.Background(), &proto.RunRequest{
 			Id:      id,
 			Context: delegation.Continuation.Context,
@@ -62,10 +63,12 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 				Function: delegation.Continuation.Function,
 			},
 		})
+		fmt.Printf("finished run\n")
 		if err != nil {
 			panic(err)
 		}
 		stepResultCh <- res.Result
+		fmt.Printf("delivered result\n")
 	}()
 
 	// We subscribe to run up requests for the specific job_id the delegate gave us
@@ -93,6 +96,8 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 }
 
 func (o *GRPCOutputer) ServiceRunUp() {
+	fmt.Printf("begin service run up\n")
+	defer fmt.Printf("end service run up\n")
 	for {
 		select {
 		case <-o.stopCh:
@@ -146,6 +151,7 @@ func (o *GRPCOutputer) ServiceRunUp() {
 
 // There's probably a better way to do this.
 func (o *GRPCOutputer) Write(res *proto.StepResult) error {
+	fmt.Printf("writing. why do we do this anyway?\n")
 	o.stepResult = res
 	res.Delegation = o.stepResult.Delegation
 	res.Env = o.stepResult.Env
@@ -164,6 +170,8 @@ func (o *GRPCOutputer) Outputs() (map[string]*structpb.Value, *proto.StepResult,
 		// Stop servicing run up requests after we get our output
 		close(o.stopCh)
 	}()
+	fmt.Printf("waiting on outputs\n")
 	o.stepResult = <-o.stepResultCh
+	fmt.Printf("got outputs\n")
 	return o.stepResult.Outputs, o.stepResult, nil
 }
