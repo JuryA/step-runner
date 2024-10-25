@@ -11,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/basic"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/extended"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	"gitlab.com/gitlab-org/step-runner/schema/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -24,6 +23,7 @@ type GRPCOutputer struct {
 	extendedClient *extended.StepRunnerClient
 	stopCh         chan struct{}
 	ctx            context.Context
+	stepResultCh   chan *proto.StepResult
 	stepResult     *proto.StepResult
 }
 
@@ -53,13 +53,20 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 	}
 	stepRunnerClient := proto.NewStepRunnerClient(conn)
 	// Submit run request to delegation endpoint
-	stepRunnerClient.Run(context.Background(), &proto.RunRequest{
-		Id:      id,
-		Context: delegation.Continuation.Context,
-		FunctionOneof: &proto.RunRequest_Function{
-			Function: delegation.Continuation.Function,
-		},
-	})
+	stepResultCh := make(chan *proto.StepResult)
+	go func() {
+		res, err := stepRunnerClient.Run(context.Background(), &proto.RunRequest{
+			Id:      id,
+			Context: delegation.Continuation.Context,
+			FunctionOneof: &proto.RunRequest_Function{
+				Function: delegation.Continuation.Function,
+			},
+		})
+		if err != nil {
+			panic(err)
+		}
+		stepResultCh <- res.Result
+	}()
 
 	// We subscribe to run up requests for the specific job_id the delegate gave us
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "id", id)
@@ -99,7 +106,9 @@ func (o *GRPCOutputer) ServiceRunUp() {
 			}
 			if err != nil {
 				// TODO errors should be send back down for the delegate to deal with
-				panic(err)
+				fmt.Printf("error: %v\n", err)
+				time.Sleep(time.Second)
+				continue
 			}
 			log.Printf("got run up request\n")
 
@@ -135,8 +144,18 @@ func (o *GRPCOutputer) ServiceRunUp() {
 	}
 }
 
+// There's probably a better way to do this.
 func (o *GRPCOutputer) Write(res *proto.StepResult) error {
 	o.stepResult = res
+	res.Delegation = o.stepResult.Delegation
+	res.Env = o.stepResult.Env
+	res.ExecResult = o.stepResult.ExecResult
+	res.Exports = o.stepResult.Exports
+	res.Outputs = o.stepResult.Outputs
+	res.SpecDefinition = o.stepResult.SpecDefinition
+	res.Status = o.stepResult.Status
+	res.Step = o.stepResult.Step
+	res.SubStepResults = o.stepResult.SubStepResults
 	return nil
 }
 
@@ -145,36 +164,6 @@ func (o *GRPCOutputer) Outputs() (map[string]*structpb.Value, *proto.StepResult,
 		// Stop servicing run up requests after we get our output
 		close(o.stopCh)
 	}()
-	// Use the extended client to get results
-	var res *proto.StepResult
-	follower := &extended.FollowOutput{
-		Logs:        os.Stdout,
-		StepResults: o,
-	}
-	_, err := o.extendedClient.Follow(context.Background(), o.id, follower)
-	if err != nil {
-		return nil, nil, err
-	}
-	return nil, res, nil
-}
-
-// Shamelessly copied from pkg/api/service/service.go
-func loadSteps(stepsStr string) (*proto.SpecDefinition, error) {
-	spec, step, err := schema.ReadSteps(stepsStr)
-	if err != nil {
-		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
-	}
-	protoSpec, err := spec.Compile()
-	if err != nil {
-		return nil, fmt.Errorf("compiling steps: %w", err)
-	}
-	protoDef, err := step.Compile()
-	if err != nil {
-		return nil, fmt.Errorf("compiling steps: %w", err)
-	}
-	protoStepDef := &proto.SpecDefinition{
-		Spec:       protoSpec,
-		Definition: protoDef,
-	}
-	return protoStepDef, nil
+	o.stepResult = <-o.stepResultCh
+	return o.stepResult.Outputs, o.stepResult, nil
 }
