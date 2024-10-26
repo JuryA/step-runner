@@ -159,6 +159,7 @@ enum ValueType {
   boolean = 4;
   struct = 5;
   array = 6;
+  step = 7;
 }
 
 // StepResult is the result of executing a single step.

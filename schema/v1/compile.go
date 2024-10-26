@@ -78,6 +78,8 @@ func (i *Input) compileToProto() (*proto.Spec_Content_Input, error) {
 		protoInput.Type = proto.ValueType_string
 	case InputTypeStruct:
 		protoInput.Type = proto.ValueType_struct
+	case InputTypeStep:
+		protoInput.Type = proto.ValueType_step
 	default:
 		return nil, fmt.Errorf("unsupported input type: %v", i.Type)
 	}
@@ -504,3 +506,29 @@ func (value *valueCompiler) compile() (*structpb.Value, error) {
 	// expectations later.
 	return structpb.NewValue(simplifyTypes(value.v))
 }
+
+// There's gotta a better way of handling this.
+// But you get the idea. We compile all the steps!
+// func (value *valueCompiler) compileAsStep() (*structpb.Value, error) {
+// 	data, err := json.Marshal(value.v)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	step := &Step{}
+// 	err = json.Unmarshal(data, &step)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	def, err := step.Compile()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	specDef := &proto.SpecDefinition{
+// 		Definition: def,
+// 	}
+// 	v, err := structpb.NewValue(specDef)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return v, nil
+// }

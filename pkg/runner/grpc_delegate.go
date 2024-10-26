@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/basic"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/extended"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -124,7 +125,7 @@ func (o *GRPCOutputer) ServiceRunUp() {
 			inputs := map[string]*structpb.Value{}
 			stepsCtx := NewStepsContext(globalCtx, req.Context.WorkDir, inputs, req.Context.GetEnv())
 
-			specDef := req.GetFunction()
+			specDef, err := loadSteps(req.GetSteps())
 			if err != nil {
 				panic(err)
 			}
@@ -174,4 +175,25 @@ func (o *GRPCOutputer) Outputs() (map[string]*structpb.Value, *proto.StepResult,
 	o.stepResult = <-o.stepResultCh
 	fmt.Printf("got outputs\n")
 	return o.stepResult.Outputs, o.stepResult, nil
+}
+
+// Shamelessly copied from pkg/api/service/service.go
+func loadSteps(stepsStr string) (*proto.SpecDefinition, error) {
+	spec, step, err := schema.ReadSteps(stepsStr)
+	if err != nil {
+		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
+	}
+	protoSpec, err := spec.Compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling steps: %w", err)
+	}
+	protoDef, err := step.Compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling steps: %w", err)
+	}
+	protoStepDef := &proto.SpecDefinition{
+		Spec:       protoSpec,
+		Definition: protoDef,
+	}
+	return protoStepDef, nil
 }
