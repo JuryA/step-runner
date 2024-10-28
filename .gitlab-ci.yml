@@ -8,7 +8,7 @@ stages:
 
 include:
   - template: Workflows/MergeRequest-Pipelines.gitlab-ci.yml
-  - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+  - component: $CI_SERVER_FQDN/components/dependency-scanning/main@0
   - local: /.gitlab/ci/variables.gitlab-ci.yml
   - local: /.gitlab/ci/test.gitlab-ci.yml
   - local: /.gitlab/ci/build-binaries.gitlab-ci.yml
