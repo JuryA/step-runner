@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"time"
 
@@ -93,6 +92,7 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 		extendedClient: extendedClient,
 		stopCh:         make(chan struct{}),
 		ctx:            ctx,
+		stepResultCh:   stepResultCh,
 	}, nil
 }
 
@@ -112,11 +112,11 @@ func (o *GRPCOutputer) ServiceRunUp() {
 			}
 			if err != nil {
 				// TODO errors should be send back down for the delegate to deal with
-				fmt.Printf("error: %v\n", err)
+				fmt.Printf("error getting run request: %v\n", err)
 				time.Sleep(time.Second)
 				continue
 			}
-			log.Printf("got run up request\n")
+			fmt.Printf("got run up request\n")
 
 			// Create global and steps contexts from the request
 			env := NewEnvironment(req.Context.GetEnv())
@@ -144,7 +144,10 @@ func (o *GRPCOutputer) ServiceRunUp() {
 					Id:     id,
 					Result: stepResult,
 				}
-				o.runUpClient.Send(res)
+				err = o.runUpClient.Send(res)
+				if err != nil {
+					fmt.Printf("error send run response: %v\n", err)
+				}
 			}(req.Id, stepsCtx)
 		}
 	}
