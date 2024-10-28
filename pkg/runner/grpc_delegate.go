@@ -179,7 +179,11 @@ func (o *GRPCOutputer) Outputs() (map[string]*structpb.Value, *proto.StepResult,
 	fmt.Printf("waiting on outputs\n")
 	o.stepResult = <-o.stepResultCh
 	fmt.Printf("got outputs\n")
-	return o.stepResult.Outputs, o.stepResult, nil
+	var err error
+	if o.stepResult.Status == proto.StepResult_failure {
+		err = fmt.Errorf("step failed")
+	}
+	return o.stepResult.Outputs, o.stepResult, err
 }
 
 // Shamelessly copied from pkg/api/service/service.go
