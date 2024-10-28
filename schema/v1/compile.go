@@ -300,11 +300,11 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 	case s.GRPC != nil:
 		// GRPC step
 		protoDef.Type = proto.DefinitionType_grpc
-		protoDef.Grpc = &proto.Definition_Exec{
+		protoDef.Exec = &proto.Definition_Exec{
 			Command: s.GRPC.Command,
 		}
 		if s.GRPC.WorkDir != nil {
-			protoDef.Grpc.WorkDir = *s.GRPC.WorkDir
+			protoDef.Exec.WorkDir = *s.GRPC.WorkDir
 		}
 	default:
 		return nil, fmt.Errorf("could not determine step type")

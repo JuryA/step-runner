@@ -59,10 +59,6 @@ message Definition {
   Exec exec = 2;
   // Steps is a list of sub-steps to run for the `steps` type.
   repeated Step steps = 3;
-
-  // GRPC is a command to run to discover a GRPC service for step results
-  Exec grpc = 7;
-
   // Exec is the details of an exec type step.
   message Exec {
     // Command are the parameters to the system exec API. It does not invoke a shell.

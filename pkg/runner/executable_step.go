@@ -50,15 +50,7 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
 	}
 
-	var exec *proto.Definition_Exec
-	switch specDef.Definition.Type {
-	case proto.DefinitionType_exec:
-		exec = specDef.Definition.Exec
-	case proto.DefinitionType_grpc:
-		exec = specDef.Definition.Grpc
-	}
-
-	executedCmd, err := s.execCommand(ctx, stepsCtx, exec)
+	executedCmd, err := s.execCommand(ctx, stepsCtx, specDef.Definition.Exec)
 	result.WithExecResult(executedCmd)
 
 	if err != nil {
