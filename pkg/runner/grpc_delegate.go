@@ -106,9 +106,8 @@ func (o *GRPCOutputer) ServiceRunUp() {
 		default:
 			req, err := o.runUpClient.Recv()
 			if err == io.EOF {
-				// There has to be a better way of doing this.
-				time.Sleep(time.Second)
-				continue
+				fmt.Printf("run up connection closed\n")
+				return
 			}
 			if err != nil {
 				// TODO errors should be send back down for the delegate to deal with
