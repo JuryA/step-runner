@@ -64,10 +64,13 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 			},
 		})
 		fmt.Printf("finished run\n")
-		if err != nil {
-			panic(err)
+		if err == nil {
+			stepResultCh <- res.Result
+		} else {
+			stepResultCh <- &proto.StepResult{
+				Status: proto.StepResult_failure,
+			}
 		}
-		stepResultCh <- res.Result
 		fmt.Printf("delivered result\n")
 	}()
 
