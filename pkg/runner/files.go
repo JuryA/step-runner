@@ -44,7 +44,7 @@ func NewFiles(
 	}
 	stepCtx.OutputFile = outputFile
 	contextFile := filepath.Join(dir, contextFilename)
-	bytes, err := json.Marshal(stepCtx.View())
+	bytes, err := protojson.Marshal(stepCtx.Proto())
 	if err != nil {
 		return nil, err
 	}

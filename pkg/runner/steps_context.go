@@ -85,3 +85,22 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 		WorkDir:     s.WorkDir,
 	}
 }
+
+func (s *StepsContext) Proto() *proto.Context {
+	job := []*proto.Variable{}
+	for k, v := range s.Job {
+		job = append(job, &proto.Variable{
+			Key:   k,
+			Value: v,
+			// We've lost sensitive and file metadata!
+		})
+	}
+	return &proto.Context{
+		Env:     s.GetEnvs(),
+		Job:     job,
+		Steps:   s.Steps,
+		Inputs:  s.Inputs,
+		WorkDir: s.WorkDir,
+		StepDir: s.StepDir,
+	}
+}
