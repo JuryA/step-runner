@@ -46,7 +46,6 @@ func (spec *Spec) Compile() (*proto.Spec, error) {
 }
 
 func (i *Input) compile() (*proto.Spec_Content_Input, error) {
-	i.defaultTypeToString()
 	protoInput, err := i.compileToProto()
 	if err != nil {
 		return nil, err
@@ -58,15 +57,13 @@ func (i *Input) compile() (*proto.Spec_Content_Input, error) {
 	return protoInput, nil
 }
 
-func (i *Input) defaultTypeToString() {
-	if i.Type == nil || *i.Type == "" {
-		t := InputTypeString
-		i.Type = &t
-	}
-}
-
 func (i *Input) compileToProto() (*proto.Spec_Content_Input, error) {
 	protoInput := &proto.Spec_Content_Input{}
+
+	if i.Type == nil {
+		return nil, fmt.Errorf("missing input type")
+	}
+
 	switch *i.Type {
 	case InputTypeBoolean:
 		protoInput.Type = proto.ValueType_boolean
@@ -133,7 +130,6 @@ func (i *Input) verifyDefaultValueMatchesType(protoInput *proto.Spec_Content_Inp
 }
 
 func (o *Output) compile() (*proto.Spec_Content_Output, error) {
-	o.defaultTypeToString()
 	protoOutput, err := o.compileToProto()
 	if err != nil {
 		return nil, err
@@ -145,15 +141,13 @@ func (o *Output) compile() (*proto.Spec_Content_Output, error) {
 	return protoOutput, nil
 }
 
-func (o *Output) defaultTypeToString() {
-	if o.Type == nil || *o.Type == "" {
-		t := OutputTypeString
-		o.Type = &t
-	}
-}
-
 func (o *Output) compileToProto() (*proto.Spec_Content_Output, error) {
 	protoOutput := &proto.Spec_Content_Output{}
+
+	if o.Type == nil {
+		return nil, fmt.Errorf("missing output type")
+	}
+
 	switch *o.Type {
 	case OutputTypeBoolean:
 		protoOutput.Type = proto.ValueType_boolean

@@ -46,6 +46,7 @@ steps:
 spec:
     inputs:
         name:
+            type: string
 ---
 exec:
     command:
@@ -110,6 +111,7 @@ spec:
             type: string
     outputs:
         eye_color:
+            type: string
             default: brown
 ---
 exec:

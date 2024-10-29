@@ -2,8 +2,10 @@ spec:
   inputs: {}
   outputs:
     crew_name_1:
+      type: string
       default: nobody
     crew_name_2:
+      type: string
       default: nobody
 ---
 steps:

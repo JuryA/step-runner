@@ -48,6 +48,9 @@
         },
         "input": {
             "type": "object",
+            "required": [
+                "type"
+            ],
             "properties": {
                 "type": {
                     "type": "string",
@@ -122,6 +125,9 @@
             "type": "object",
             "description": "Output describes a single step output.",
             "additionalProperties": false,
+            "required": [
+                "type"
+            ],
             "properties": {
                 "type": {
                     "type": "string",

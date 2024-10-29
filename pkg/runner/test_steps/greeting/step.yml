@@ -15,6 +15,7 @@ spec:
         color: red
   outputs:
     name:
+      type: string
 ---
 env:
   STEP_RUNNER_OUTPUT: ${{ output_file }}
