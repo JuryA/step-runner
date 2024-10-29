@@ -203,8 +203,14 @@ message StepResult {
   ExecResult exec_result = 8;
   // SubStepResults are the details of a steps type step.
   repeated StepResult sub_step_results = 9;
-  // Delegation is the result of the delegation step which produced this step result.
-  StepResult delegation = 10;
+  // DelegationResult is the result of the delegation step which produced this step result.
+  message DelegationResult {
+    // StepResult is the entire step result tree run to create the delegation.
+    StepResult step_result = 1;
+    // Delegation is the result of the delegation step.
+    Delegation delegation = 2;
+  }
+  DelegationResult delegation_result = 10;
 }
 
 service StepRunner {
