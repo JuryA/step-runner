@@ -11,10 +11,10 @@ func TestSpecSchemaValidate(t *testing.T) {
 	cases := []struct {
 		name    string
 		spec    string
-		wantErr bool
+		wantErr string
 	}{{
 		name:    "empty file",
-		wantErr: true,
+		wantErr: "expected object, but got null",
 		spec:    "",
 	}, {
 		name: "empty document",
@@ -28,7 +28,7 @@ spec: {}
 `,
 	}, {
 		name:    "spec with additional properties",
-		wantErr: true,
+		wantErr: "additionalProperties 'additional' not allowed",
 		spec: `
 spec:
   additional: property
@@ -51,12 +51,20 @@ spec:
 `,
 	}, {
 		name:    "spec with invalid input type",
-		wantErr: true,
+		wantErr: `value must be one of "string", "number", "boolean", "struct", "array"`,
 		spec: `
 spec:
   inputs:
     foo:
       type: invalid
+`,
+	}, {
+		name:    "spec with missing input type",
+		wantErr: "expected object, but got null",
+		spec: `
+spec:
+  inputs:
+    foo:
 `,
 	}, {
 		name: "spec with different output types",
@@ -76,12 +84,20 @@ spec:
 `,
 	}, {
 		name:    "spec with invalid output type",
-		wantErr: true,
+		wantErr: "expected string, but got object",
 		spec: `
 spec:
   outputs:
     foo:
       type: invalid
+`,
+	}, {
+		name:    "spec with missing output type",
+		wantErr: "expected string, but got object",
+		spec: `
+spec:
+  outputs:
+    foo:
 `,
 	}, {
 		name: "spec with delegated output",
@@ -90,8 +106,8 @@ spec:
   outputs: delegate
 `,
 	}, {
-		name:    "spec with invalid string",
-		wantErr: true,
+		name:    "spec with invalid outputs to delegate",
+		wantErr: `value must be "delegate"`,
 		spec: `
 spec:
   outputs: invalid
@@ -103,7 +119,7 @@ spec:
   inputs:
     invalid name: {}
 `,
-		wantErr: true,
+		wantErr: "additionalProperties 'invalid name' not allowed",
 	}, {
 		name: "output names must be alphanumeric",
 		spec: `
@@ -111,17 +127,20 @@ spec:
   outputs:
     invalid name: {}
 `,
-		wantErr: true,
+		wantErr: "expected string, but got object",
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			var untyped any
 			err := yaml.Unmarshal([]byte(c.spec), &untyped)
 			require.NoError(t, err)
-			if c.wantErr {
-				require.Error(t, specSchema.Validate(untyped))
+
+			err = specSchema.Validate(untyped)
+			if c.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.wantErr)
 			} else {
-				require.NoError(t, specSchema.Validate(untyped))
+				require.NoError(t, err)
 			}
 		})
 	}

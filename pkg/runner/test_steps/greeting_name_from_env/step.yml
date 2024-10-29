@@ -1,6 +1,7 @@
 spec:
   outputs:
     name:
+      type: string
 ---
 steps:
   - name: name_from_env

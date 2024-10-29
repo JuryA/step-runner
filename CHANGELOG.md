@@ -1,3 +1,10 @@
+## v0 - 2024-10-28
+
+### Breaking Changes:
+
+- **Input and output types must be declared in the spec**. Variables no longer
+  default to `string`.
+
 ## v0 - 2024-10-21
 
 ### Breaking Changes:

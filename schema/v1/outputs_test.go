@@ -25,16 +25,19 @@ func TestOutputsCustomMethods(t *testing.T) {
 		},
 	}, {
 		name: "outputs map",
-		json: `{"spec":{"outputs":{"name":{}}}}`,
+		json: `{"spec":{"outputs":{"name":{"type":"string"}}}}`,
 		yaml: `
 spec:
   outputs:
-    name: {}
+    name:
+      type: string
 `,
 		wantSpec: Spec{
 			Spec: &Signature{
 				Outputs: &Outputs{
-					"name": {},
+					"name": {
+						Type: func() *OutputType { o := OutputType("string"); return &o }(),
+					},
 				},
 			},
 		},
