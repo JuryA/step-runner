@@ -118,7 +118,7 @@ func (o *GRPCOutputer) ServiceRunUp() {
 				time.Sleep(time.Second)
 				continue
 			}
-			fmt.Printf("got run up request\n")
+			fmt.Printf("got run up request %v\n", req.Id)
 
 			// Create global and steps contexts from the request
 			env := NewEnvironment(req.Context.GetEnv())
@@ -155,20 +155,8 @@ func (o *GRPCOutputer) ServiceRunUp() {
 	}
 }
 
-// There's probably a better way to do this.
 func (o *GRPCOutputer) Write(res *proto.StepResult) error {
-	fmt.Printf("writing. why do we do this anyway?\n")
-	o.stepResult = res
-	res.Delegation = o.stepResult.Delegation
-	res.Env = o.stepResult.Env
-	res.ExecResult = o.stepResult.ExecResult
-	res.Exports = o.stepResult.Exports
-	res.Outputs = o.stepResult.Outputs
-	res.SpecDefinition = o.stepResult.SpecDefinition
-	res.Status = o.stepResult.Status
-	res.Step = o.stepResult.Step
-	res.SubStepResults = o.stepResult.SubStepResults
-	return nil
+	return fmt.Errorf("write unimplemented")
 }
 
 func (o *GRPCOutputer) Outputs() (map[string]*structpb.Value, *proto.StepResult, error) {
