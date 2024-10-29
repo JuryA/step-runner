@@ -65,6 +65,7 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 	case proto.DefinitionType_exec:
 		outputer = files
 	case proto.DefinitionType_grpc:
+		time.Sleep(time.Second) // give it a sec to start ... obviously we don't want to do this.
 		// New random id for our delegation request
 		rand.Seed(time.Now().UnixNano())
 		id := strconv.Itoa(int(rand.Uint32()))
