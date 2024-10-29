@@ -380,10 +380,12 @@ func (s *Step) compileTry() error {
 		return nil
 	}
 	dir := "steps/try"
-	s.Step = GitReference{
-		Dir: &dir,
-		Rev: "main",
-		Url: "gitlab.com/josephburnett/hello-standard-library",
+	s.Step = &Reference{
+		Git: GitReference{
+			Dir: &dir,
+			Rev: "master",
+			Url: "gitlab.com/josephburnett/hello-standard-library",
+		},
 	}
 	s.Inputs = StepInputs{}
 	for k, v := range map[string]**Step{
@@ -530,6 +532,9 @@ type valueCompiler struct {
 }
 
 func (value *valueCompiler) compile() (*structpb.Value, error) {
+	if v, ok := value.v.(*structpb.Value); ok {
+		return v, nil
+	}
 	// We let structpb do all the heavy lifting
 	// and verify the type matches our
 	// expectations later.
