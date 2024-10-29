@@ -483,52 +483,30 @@ type valueCompiler struct {
 }
 
 func (value *valueCompiler) compile() (*structpb.Value, error) {
-	var simplifyTypes func(any) any
-	simplifyTypes = func(v any) any {
-		// Map a few types from our model to ones that
-		// structpb can handle.
-		switch v := v.(type) {
-		case *string:
-			if v != nil {
-				return *v
-			}
-		case StepInputs:
-			simpleMap := map[string]any{}
-			for k, v := range v {
-				simpleMap[k] = simplifyTypes(v)
-			}
-			return simpleMap
-		}
-		return v
-	}
 	// We let structpb do all the heavy lifting
 	// and verify the type matches our
 	// expectations later.
 	return structpb.NewValue(simplifyTypes(value.v))
 }
 
-// There's gotta a better way of handling this.
-// But you get the idea. We compile all the steps!
-// func (value *valueCompiler) compileAsStep() (*structpb.Value, error) {
-// 	data, err := json.Marshal(value.v)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	step := &Step{}
-// 	err = json.Unmarshal(data, &step)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	def, err := step.Compile()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	specDef := &proto.SpecDefinition{
-// 		Definition: def,
-// 	}
-// 	v, err := structpb.NewValue(specDef)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return v, nil
-// }
+func simplifyTypes(v any) any {
+	// Map a few types from our model to ones that
+	// structpb can handle.
+	switch v := v.(type) {
+	case *string:
+		if v != nil {
+			return *v
+		}
+	case StepInputs:
+		simpleMap := map[string]any{}
+		for k, v := range v {
+			simpleMap[k] = simplifyTypes(v)
+		}
+		return simpleMap
+	case []any:
+		for i, e := range v {
+			v[i] = simplifyTypes(e)
+		}
+	}
+	return v
+}
