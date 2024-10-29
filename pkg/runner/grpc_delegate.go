@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/basic"
-	"gitlab.com/gitlab-org/step-runner/pkg/api/client/extended"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 	"google.golang.org/grpc"
@@ -18,13 +17,12 @@ import (
 )
 
 type GRPCOutputer struct {
-	id             string
-	runUpClient    proto.StepRunner_RunUpClient
-	extendedClient *extended.StepRunnerClient
-	stopCh         chan struct{}
-	ctx            context.Context
-	stepResultCh   chan *proto.StepResult
-	stepResult     *proto.StepResult
+	id           string
+	runUpClient  proto.StepRunner_RunUpClient
+	stopCh       chan struct{}
+	ctx          context.Context
+	stepResultCh chan *proto.StepResult
+	stepResult   *proto.StepResult
 }
 
 var _ basic.StepResultWriter = (*GRPCOutputer)(nil)
@@ -85,17 +83,12 @@ func NewFromDelegationFile(id string, filename string) (*GRPCOutputer, error) {
 	if err != nil {
 		return nil, err
 	}
-	extendedClient, err := extended.New(&alreadyDialed{conn})
-	if err != nil {
-		return nil, err
-	}
 	return &GRPCOutputer{
-		id:             id,
-		runUpClient:    runUpClient,
-		extendedClient: extendedClient,
-		stopCh:         make(chan struct{}),
-		ctx:            ctx,
-		stepResultCh:   stepResultCh,
+		id:           id,
+		runUpClient:  runUpClient,
+		stopCh:       make(chan struct{}),
+		ctx:          ctx,
+		stepResultCh: stepResultCh,
 	}, nil
 }
 
