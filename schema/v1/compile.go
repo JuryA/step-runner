@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
+	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -325,6 +326,10 @@ func (s *Step) CompileStep(i int) (*proto.Step, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = s.compileTry()
+	if err != nil {
+		return nil, err
+	}
 	return s.compileToStepProto()
 }
 
@@ -368,6 +373,48 @@ func (s *Step) compileActionKeywordToStep() error {
 	}
 	s.Action = nil
 	return nil
+}
+
+func (s *Step) compileTry() error {
+	if s.Try == nil {
+		return nil
+	}
+	dir := "steps/try"
+	s.Step = GitReference{
+		Dir: &dir,
+		Rev: "main",
+		Url: "gitlab.com/josephburnett/hello-standard-library",
+	}
+	s.Inputs = StepInputs{}
+	for k, v := range map[string]**Step{
+		"step":         &s.Try,
+		"catch_step":   &s.Catch,
+		"finally_step": &s.Finally,
+	} {
+		// Add t/c/f steps as input parameters and remove from the enclosing step.
+		if v != nil {
+			value, err := (*v).asValue()
+			if err != nil {
+				return err
+			}
+			s.Inputs[k] = value
+			*v = nil
+		}
+	}
+	return nil
+}
+
+func (s *Step) asValue() (*structpb.Value, error) {
+	bytes, err := yaml.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	value := &valueCompiler{}
+	err = yaml.Unmarshal(bytes, &value.v)
+	if err != nil {
+		return nil, err
+	}
+	return value.compile()
 }
 
 func (s *Step) compileToStepProto() (*proto.Step, error) {
