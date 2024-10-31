@@ -3,20 +3,19 @@ package bldr
 import (
 	"bytes"
 	"os"
-	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 )
 
 type GlobalContextBuilder struct {
 	job        map[string]string
-	exportFile string
+	exportFile *runner.StepFile
 }
 
 func GlobalContext() *GlobalContextBuilder {
 	return &GlobalContextBuilder{
 		job:        map[string]string{},
-		exportFile: "export",
+		exportFile: nil,
 	}
 }
 
@@ -26,8 +25,7 @@ func (bldr *GlobalContextBuilder) WithJob(name, value string) *GlobalContextBuil
 }
 
 func (bldr *GlobalContextBuilder) WithTempExportFile(tempDir string) *GlobalContextBuilder {
-	exportFile := filepath.Join(tempDir, "export")
-	_, err := os.Create(exportFile)
+	exportFile, err := runner.NewStepFileInDir(tempDir)
 
 	if err != nil {
 		panic(err)
@@ -38,6 +36,10 @@ func (bldr *GlobalContextBuilder) WithTempExportFile(tempDir string) *GlobalCont
 }
 
 func (bldr *GlobalContextBuilder) Build() *runner.GlobalContext {
+	if bldr.exportFile == nil {
+		bldr.WithTempExportFile(os.TempDir())
+	}
+
 	return &runner.GlobalContext{
 		WorkDir:    ".",
 		Job:        bldr.job,
