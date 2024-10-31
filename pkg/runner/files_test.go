@@ -248,7 +248,7 @@ food="apple"
 			files, err := NewFiles(NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, map[string]string{}), tc.outputMethod, tc.outputs)
 			require.NoError(t, err)
 
-			outputFile, err := os.OpenFile(filepath.Join(files.dir, outputFilename), os.O_APPEND|os.O_WRONLY, 0660)
+			outputFile, err := os.OpenFile(files.outputFile.Path(), os.O_APPEND|os.O_WRONLY, 0660)
 			require.NoError(t, err)
 			_, err = outputFile.Write([]byte(tc.writeToOutput))
 			require.NoError(t, err)
@@ -322,7 +322,7 @@ foo=baz
 			globalCtx.Env = NewEnvironment(tc.globalEnv)
 			defer globalCtx.Cleanup()
 
-			exportFile, err := os.OpenFile(filepath.Join(globalCtx.ExportFile), os.O_APPEND|os.O_WRONLY, 0660)
+			exportFile, err := os.OpenFile(filepath.Join(globalCtx.ExportFile.Path()), os.O_APPEND|os.O_WRONLY, 0660)
 			require.NoError(t, err)
 			_, err = exportFile.Write([]byte(tc.writeToExport))
 			require.NoError(t, err)

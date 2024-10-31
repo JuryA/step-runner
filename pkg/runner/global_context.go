@@ -4,35 +4,22 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-
-	"github.com/joho/godotenv"
-)
-
-const (
-	exportFilename = "export"
 )
 
 type GlobalContext struct {
 	WorkDir    string
 	Job        map[string]string
-	ExportFile string
+	ExportFile *StepFile
 	Env        *Environment
 	Stdout     io.Writer
 	Stderr     io.Writer
-
-	dir string
 }
 
 func NewGlobalContext(env *Environment) (*GlobalContext, error) {
-	dir, err := os.MkdirTemp("", "step-runner-export-*")
+	exportFile, err := NewStepFileInTmp()
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to create global context: failed to make export directory: %w", err)
-	}
-	exportFile := filepath.Join(dir, exportFilename)
-	_, err = os.Create(exportFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create global context: failed to create export file: %w", err)
+		return nil, fmt.Errorf("failed to create export file: %w", err)
 	}
 
 	return &GlobalContext{
@@ -41,26 +28,32 @@ func NewGlobalContext(env *Environment) (*GlobalContext, error) {
 		Env:        env,
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,
-		dir:        dir,
 	}, nil
 }
 
 func (g *GlobalContext) Exports() (map[string]string, error) {
-	exports, err := godotenv.Read(g.ExportFile)
+	exports, err := g.ExportFile.ReadDotEnv()
 	if err != nil {
 		return nil, fmt.Errorf("reading exports: %w", err)
 	}
 
 	g.Env = g.Env.AddLexicalScope(exports)
 
-	err = os.Remove(g.ExportFile)
+	err = g.ExportFile.Remove()
 	if err != nil {
 		return nil, fmt.Errorf("clearing export file: %w", err)
 	}
-	_, err = os.Create(g.ExportFile)
-	return exports, err
+
+	exportFile, err := NewStepFileInTmp()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create export file: %w", err)
+	}
+
+	g.ExportFile = exportFile
+	return exports, nil
 }
 
 func (g *GlobalContext) Cleanup() {
-	os.RemoveAll(g.dir)
+	_ = g.ExportFile.Remove()
 }

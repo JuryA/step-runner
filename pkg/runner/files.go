@@ -3,27 +3,17 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
-)
-
-const (
-	outputFilename = "output"
 )
 
 type Files struct {
 	stepCtx      *StepsContext
 	outputMethod proto.OutputMethod
 	specOutputs  map[string]*proto.Spec_Content_Output
-
-	dir        string
-	outputFile string
+	outputFile   *StepFile
 }
 
 func NewFiles(
@@ -31,21 +21,18 @@ func NewFiles(
 	outputMethod proto.OutputMethod,
 	specOutputs map[string]*proto.Spec_Content_Output,
 ) (*Files, error) {
-	dir, err := os.MkdirTemp("", "step-runner-output-*")
+	outputFile, err := NewStepFileInTmp()
+
 	if err != nil {
-		return nil, fmt.Errorf("making output directory: %w", err)
+		return nil, fmt.Errorf("failed to create output file: %w", err)
 	}
-	outputFile := filepath.Join(dir, outputFilename)
-	err = os.WriteFile(outputFile, []byte{}, 0660)
-	if err != nil {
-		return nil, fmt.Errorf("creating output file: %w", err)
-	}
-	stepCtx.OutputFile = outputFile
+
+	stepCtx.OutputFile = outputFile.Path()
+
 	return &Files{
 		stepCtx:      stepCtx,
 		outputMethod: outputMethod,
 		specOutputs:  specOutputs,
-		dir:          dir,
 		outputFile:   outputFile,
 	}, nil
 }
@@ -53,7 +40,7 @@ func NewFiles(
 func (f *Files) Outputs() (map[string]*structpb.Value, *proto.StepResult, error) {
 	// Delegates take over step execution including reading and validating outputs.
 	if f.outputMethod == proto.OutputMethod_delegate {
-		delegateResult, err := f.loadStepResultFromOutputFile()
+		delegateResult, err := f.outputFile.ReadStepResult()
 
 		if err != nil {
 			return nil, nil, fmt.Errorf("reading outputs: %w", err)
@@ -62,7 +49,7 @@ func (f *Files) Outputs() (map[string]*structpb.Value, *proto.StepResult, error)
 		return delegateResult.Outputs, delegateResult, nil
 	}
 
-	outputs, err := readFile(f.outputFile)
+	outputs, err := f.outputFile.ReadKeyValueLines()
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading outputs: %w", err)
 	}
@@ -103,21 +90,6 @@ func (f *Files) Outputs() (map[string]*structpb.Value, *proto.StepResult, error)
 	return protoOutputs, nil, nil
 }
 
-func (f *Files) loadStepResultFromOutputFile() (*proto.StepResult, error) {
-	data, err := os.ReadFile(f.outputFile)
-
-	if err != nil {
-		return nil, fmt.Errorf("reading file %v: %w", f.outputFile, err)
-	}
-
-	stepResult := &proto.StepResult{}
-	if err := protojson.Unmarshal(data, stepResult); err != nil {
-		return nil, fmt.Errorf("reading output_file as a step result: %w", err)
-	}
-
-	return stepResult, nil
-}
-
 func checkOutputType(want proto.ValueType, have *structpb.Value) error {
 	switch want {
 	case proto.ValueType_boolean:
@@ -147,27 +119,5 @@ func checkOutputType(want proto.ValueType, have *structpb.Value) error {
 }
 
 func (f *Files) Cleanup() {
-	os.RemoveAll(f.dir)
-}
-
-func readFile(filename string) (map[string]string, error) {
-	bytes, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("reading file %v: %w", filename, err)
-	}
-	out := map[string]string{}
-	lines := strings.Split(string(bytes), "\n")
-	for _, l := range lines {
-		if len(l) == 0 {
-			continue
-		}
-		fields := strings.Split(l, "=")
-		if len(fields) < 2 {
-			return nil, fmt.Errorf("invalid line %q", l)
-		}
-		key := fields[0]
-		value := l[len(key)+1:]
-		out[key] = value
-	}
-	return out, nil
+	_ = f.outputFile.Remove()
 }
