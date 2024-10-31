@@ -2,6 +2,7 @@ FROM golang:1.22
 
 WORKDIR /app
 COPY ./out/bin/step-runner-linux-amd64 /step-runner
+RUN ln /step-runner /usr/bin/step-runner
 
 # This is necessary only during the transition period while step-runner
 # is distributed as an image and not built into the CI environment.
