@@ -318,17 +318,18 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 }
 
 func (s *Step) CompileStep(i int) (*proto.Step, error) {
-	err := s.compileScriptKeywordToStep()
-	if err != nil {
-		return nil, err
-	}
-	err = s.compileActionKeywordToStep()
-	if err != nil {
-		return nil, err
-	}
-	err = s.compileTry()
-	if err != nil {
-		return nil, err
+	for _, fn := []func() error{
+		s.compileScriptKeywordToStep,
+		s.compileActionKeywordToStep,
+		s.compileTry,
+		s.compilePoll,
+		s.compileWhen,
+		s.compileParallel,
+	}{
+		err := fn()
+		if err != nil {
+			return err
+		}
 	}
 	return s.compileToStepProto()
 }
@@ -403,6 +404,18 @@ func (s *Step) compileTry() error {
 			*v = nil
 		}
 	}
+	return nil
+}
+
+func (s *Step) compilePoll() error {
+	return nil
+}
+
+func (s *Step) compileWhen() error {
+	return nil
+}
+
+func (s *Step) compileParallel() error {
 	return nil
 }
 
