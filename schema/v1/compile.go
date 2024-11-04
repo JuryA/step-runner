@@ -318,17 +318,17 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 }
 
 func (s *Step) CompileStep(i int) (*proto.Step, error) {
-	for _, fn := []func() error{
+	for _, fn := range []func() error{
 		s.compileScriptKeywordToStep,
 		s.compileActionKeywordToStep,
 		s.compileTry,
 		s.compilePoll,
 		s.compileWhen,
 		s.compileParallel,
-	}{
+	} {
 		err := fn()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	return s.compileToStepProto()
@@ -377,10 +377,16 @@ func (s *Step) compileActionKeywordToStep() error {
 }
 
 func (s *Step) compileTry() error {
+	// Rewrite this step as standard library "try", keeping the
+	// environment and everything else so it can be common to try,
+	// catch and finally.
 	if s.Try == nil {
 		return nil
 	}
 	dir := "steps/try"
+	if s.Step != nil {
+		return fmt.Errorf("step now allowed with try")
+	}
 	s.Step = &Reference{
 		Git: GitReference{
 			Dir: &dir,
@@ -388,13 +394,16 @@ func (s *Step) compileTry() error {
 			Url: "gitlab.com/josephburnett/hello-standard-library",
 		},
 	}
+	if len(s.Inputs) != 0 {
+		return fmt.Errorf("inputs not allowed with try (put them inside)")
+	}
 	s.Inputs = StepInputs{}
 	for k, v := range map[string]**Step{
 		"step":         &s.Try,
 		"catch_step":   &s.Catch,
 		"finally_step": &s.Finally,
 	} {
-		// Add t/c/f steps as input parameters and remove from the enclosing step.
+		// Add t-c-f steps as input parameters and remove from the enclosing step.
 		if v != nil {
 			value, err := (*v).asValue()
 			if err != nil {
@@ -408,14 +417,95 @@ func (s *Step) compileTry() error {
 }
 
 func (s *Step) compilePoll() error {
+	// Create an entirely new step which calls poll. And capture
+	// this step as an input.
+	if s.Poll == nil {
+		return nil
+	}
+	dir := "steps/poll"
+	pollStep := &Step{
+		Name: s.Name,
+		Step: &Reference{
+			Git: GitReference{
+				Dir: &dir,
+				Rev: "master",
+				Url: "gitlab.com/josephburnett/hello-standard-library",
+			},
+		},
+		Inputs: StepInputs{
+			"poll": s.Poll,
+		},
+	}
+	s.Poll = nil
+	var err error
+	pollStep.Inputs["step"], err = s.asValue()
+	if err != nil {
+		return err
+	}
+	s = pollStep
 	return nil
 }
 
 func (s *Step) compileWhen() error {
+	// Create an entirely new step which calls poll. And capture
+	// this step as an input.
+	if s.When == nil {
+		return nil
+	}
+	dir := "steps/poll"
+	whenStep := &Step{
+		Name: s.Name,
+		Step: &Reference{
+			Git: GitReference{
+				Dir: &dir,
+				Rev: "master",
+				Url: "gitlab.com/josephburnett/hello-standard-library",
+			},
+		},
+		Inputs: StepInputs{
+			"when": s.When,
+		},
+	}
+	s.When = nil
+	var err error
+	whenStep.Inputs["step"], err = s.asValue()
+	if err != nil {
+		return err
+	}
+	s = whenStep
 	return nil
 }
 
 func (s *Step) compileParallel() error {
+	// Rewrite this step as "parallel" and capture steps as input.
+	if s.Parallel == nil {
+		return nil
+	}
+	dir := "steps/parallel"
+	if s.Step != nil {
+		return fmt.Errorf("step now allowed with parallel")
+	}
+	s.Step = &Reference{
+		Git: GitReference{
+			Dir: &dir,
+			Rev: "master",
+			Url: "gitlab.com/josephburnett/hello-standard-library",
+		},
+	}
+	if len(s.Inputs) != 0 {
+		return fmt.Errorf("inputs not allowed with try (put them inside)")
+	}
+	steps := []*structpb.Value{}
+	for _, s := range s.Parallel {
+		v, err := s.asValue()
+		if err != nil {
+			return err
+		}
+		steps = append(steps, v)
+	}
+	s.Inputs = StepInputs{
+		"steps": steps,
+	}
 	return nil
 }
 
