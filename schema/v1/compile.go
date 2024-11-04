@@ -510,6 +510,13 @@ func (s *Step) compileParallel() error {
 }
 
 func (s *Step) asValue() (*structpb.Value, error) {
+	// We want to pass steps as values to steps. However we want
+	// to "quote" them so their expressions would not be
+	// evaluated. Initially I thought this would be a new "step"
+	// type:
+	// https://gitlab.com/gitlab-org/step-runner/-/issues/49. But
+	// I want to pass a variety of steps in lists and step
+	// fragments, so maybe we should just have a "quoted" type.
 	bytes, err := yaml.Marshal(s)
 	if err != nil {
 		return nil, err

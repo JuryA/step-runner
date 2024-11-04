@@ -33,6 +33,10 @@ func (s *ExecutableStep) Describe() string {
 	return fmt.Sprintf("executable step %q", strings.Join(s.specDef.Definition.Exec.Command, " "))
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *proto.SpecDefinition) (*proto.StepResult, error) {
 	result := NewStepResultBuilder(s.loadedFrom, s.params, specDef)
 	files, err := NewFiles(stepsCtx, specDef.Spec.Spec.OutputMethod, specDef.Spec.Spec.Outputs)
@@ -65,15 +69,17 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 	case proto.DefinitionType_exec:
 		outputer = files
 	case proto.DefinitionType_grpc:
-		time.Sleep(time.Second) // give it a sec to start ... obviously we don't want to do this.
+		time.Sleep(time.Second) // give it a sec to start ... obviously we want to do something smarter
 		// New random id for our delegation request
-		rand.Seed(time.Now().UnixNano())
 		id := strconv.Itoa(int(rand.Uint32()))
+		// A gRPC outputer encapsulates the process of getting
+		// our outputs from the endpoint provided by this
+		// step.
 		grpcOutputer, err := NewFromDelegationFile(id, files.outputFile)
 		if err != nil {
 			return result.BuildFailure(), err
 		}
-		// Service run up requests
+		// Service run up requests in case our gRPC step needs them.
 		go grpcOutputer.ServiceRunUp()
 		outputer = grpcOutputer
 	}

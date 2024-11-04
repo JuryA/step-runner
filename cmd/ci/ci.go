@@ -66,8 +66,8 @@ func run(options *Options) error {
 	if err != nil {
 		return fmt.Errorf("creating cache: %w", err)
 	}
-	// Hacky hack hack
-	// I'm a magical fairy
+	// Hacky hack hack. I'm a magical fairy that provides a cache
+	// for compiling steps. Compiling should be a service.
 	runner.CacheSingleton = defs
 
 	osEnv, err := runner.NewEnvironmentFromOSWithKnownVars()

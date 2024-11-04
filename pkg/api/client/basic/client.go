@@ -184,6 +184,6 @@ func (c *StepRunnerClient) FollowLogs(ctx context.Context, jobID string, offset 
 
 // RunUp streams RunRequests from the server and responds with FollowStepsResponses.
 func (c *StepRunnerClient) RunUp(ctx context.Context, jobID string) (proto.StepRunner_RunUpClient, error) {
-	// I don't see any point is wrapping this.
+	// I don't see any point in wrapping this.
 	return c.client.RunUp(ctx)
 }

@@ -43,6 +43,12 @@ func NewFiles(
 		return nil, fmt.Errorf("creating output file: %w", err)
 	}
 	stepCtx.OutputFile = outputFile
+	// We want to provide a context file because serializing whole
+	// chunks of context (e.g. the environment) and passing as a
+	// string becomes an escaping nightmare. We do something
+	// similar for the custom executor by providing the job
+	// response (though for different reasons):
+	// https://docs.gitlab.com/runner/executors/custom.html#job-response
 	contextFile := filepath.Join(dir, contextFilename)
 	bytes, err := protojson.Marshal(stepCtx.Proto())
 	if err != nil {

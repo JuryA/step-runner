@@ -146,6 +146,7 @@ func (o *GRPCOutputer) ServiceRunUp() {
 }
 
 func (o *GRPCOutputer) Write(res *proto.StepResult) error {
+	// This is a weird thing to have to implement.
 	return fmt.Errorf("write unimplemented")
 }
 
