@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/api/client/basic"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 	"google.golang.org/grpc"
@@ -24,8 +23,6 @@ type GRPCOutputer struct {
 	stepResultCh chan *proto.StepResult
 	stepResult   *proto.StepResult
 }
-
-var _ basic.StepResultWriter = (*GRPCOutputer)(nil)
 
 type alreadyDialed struct {
 	conn *grpc.ClientConn
