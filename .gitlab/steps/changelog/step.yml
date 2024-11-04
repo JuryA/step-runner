@@ -1,0 +1,37 @@
+spec:
+  inputs:
+    changelog:
+      type: string
+      default: "CHANGELOG.md"
+    echo_latest:
+      type: boolean
+      default: false
+  outputs:
+    latest_version:
+      type: string
+    latest_major:
+      type: string
+    latest_minor:
+      type: string
+    latest_patch:
+      type: string
+    latest_date:
+      type: string
+    latest_changes:
+      type: string
+---
+env:
+  GOLANG_VERSION: 1.22.5
+  GOTOOLCHAIN: local
+  PATH: /go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  GOPATH: /go
+  HOME: /root
+exec:
+  work_dir: ${{step_dir}}
+  command:
+    - go
+    - run
+    - .
+    - --changelog=${{inputs.changelog}}
+    - --echo_latest=${{inputs.echo_latest}}
+    - --output_file=${{output_file}}
