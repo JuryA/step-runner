@@ -1,11 +1,11 @@
-## v0 - 2024-10-28
+## v0.0.0 (2024-10-28)
 
 ### Breaking Changes:
 
 - **Input and output types must be declared in the spec**. Variables no longer
   default to `string`.
 
-## v0 - 2024-10-21
+## v0.0.0 (2024-10-21)
 
 ### Breaking Changes:
 
@@ -16,7 +16,7 @@
 - **Default Output type changed to string**. Due to the `raw_string` type being
   removed.
 
-## v0 - 2024-10-17
+## v0.0.0 (2024-10-17)
 
 ### Breaking Changes:
 
@@ -28,7 +28,7 @@
   (https://gitlab.com/gitlab-org/step-runner/-/commit/5a964c4ab52b71fc87a5e63e528d7024fc6043c7).
   However it mistakenly wasn't applied to the `ci` command.
 
-## v0 - 2024-10-15
+## v0.0.0 (2024-10-15)
 
 ### Added:
 
