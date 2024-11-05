@@ -17,9 +17,10 @@ type StepResultBuilder struct {
 	params         *Params
 	specDef        *proto.SpecDefinition
 	subStepResults []*proto.StepResult
+	stepsCtx       *StepsContext
 }
 
-func NewStepResultBuilder(loadedFrom StepReference, params *Params, specDef *proto.SpecDefinition) *StepResultBuilder {
+func NewStepResultBuilder(loadedFrom StepReference, params *Params, specDef *proto.SpecDefinition, stepsCtx *StepsContext) *StepResultBuilder {
 	return &StepResultBuilder{
 		env:            make(map[string]string),
 		execResult:     nil,
@@ -29,20 +30,8 @@ func NewStepResultBuilder(loadedFrom StepReference, params *Params, specDef *pro
 		params:         params,
 		specDef:        specDef,
 		subStepResults: make([]*proto.StepResult, 0),
+		stepsCtx:       stepsCtx,
 	}
-}
-
-func (bldr *StepResultBuilder) WithExecResult(executedCmd *ExecResult) *StepResultBuilder {
-	if executedCmd != nil {
-		bldr.execResult = executedCmd.ToProto()
-	}
-
-	return bldr
-}
-
-func (bldr *StepResultBuilder) WithEnv(env map[string]string) *StepResultBuilder {
-	bldr.env = env
-	return bldr
 }
 
 func (bldr *StepResultBuilder) WithMergedOutputs(outputs map[string]*structpb.Value) *StepResultBuilder {
@@ -57,9 +46,31 @@ func (bldr *StepResultBuilder) WithSubStepResult(result *proto.StepResult) *Step
 	return bldr
 }
 
-func (bldr *StepResultBuilder) WithExports(exports map[string]string) *StepResultBuilder {
+func (bldr *StepResultBuilder) ObserveExecutedCmd(execResult *ExecResult, err error) error {
+	if execResult != nil {
+		bldr.execResult = execResult.ToProto()
+	}
+	return err
+}
+
+func (bldr *StepResultBuilder) ObserveOutputs(outputs map[string]*structpb.Value, delegateToResult *proto.StepResult, err error) error {
+	bldr.WithMergedOutputs(outputs).WithSubStepResult(delegateToResult)
+	return err
+}
+
+func (bldr *StepResultBuilder) ObserveExports(exports map[string]string, err error) error {
 	bldr.exports = exports
-	return bldr
+	return err
+}
+
+func (bldr *StepResultBuilder) ObserveSubStepResult(stepResult *proto.StepResult, err error) (*proto.StepResult, error) {
+	bldr.WithSubStepResult(stepResult)
+	return stepResult, err
+}
+
+func (bldr *StepResultBuilder) ObserveMergedOutputs(outputs map[string]*structpb.Value, err error) error {
+	bldr.WithMergedOutputs(outputs)
+	return err
 }
 
 func (bldr *StepResultBuilder) BuildFailure() *proto.StepResult {
@@ -77,7 +88,7 @@ func (bldr *StepResultBuilder) buildResult(status proto.StepResult_Status) *prot
 		Status:         status,
 		Outputs:        bldr.outputs,
 		Exports:        bldr.exports,
-		Env:            bldr.env,
+		Env:            bldr.stepsCtx.GetEnvs(),
 		ExecResult:     bldr.execResult,
 		SubStepResults: bldr.subStepResults,
 	}

@@ -36,12 +36,9 @@ func (s *SequenceOfSteps) Describe() string {
 }
 
 func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
-	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
+	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef, stepsCtx)
 
-	err := stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
-	result.WithEnv(stepsCtx.GetEnvs())
-
-	if err != nil {
+	if err := stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env); err != nil {
 		return result.BuildFailure(), fmt.Errorf("failed to run %s: %w", s.Describe(), err)
 	}
 
@@ -55,8 +52,7 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.S
 	defer files.Cleanup()
 
 	for _, step := range s.steps {
-		stepResult, err := step.Run(ctx, stepsCtx)
-		result.WithSubStepResult(stepResult)
+		stepResult, err := result.ObserveSubStepResult(step.Run(ctx, stepsCtx))
 
 		// Capture results even if there was an error
 		if stepResult != nil {
@@ -78,16 +74,21 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.S
 	// the delegation mechanism "disappear" from the execution
 	// context.
 	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		outputs, err := findOutputsWithName(s.specDef.Definition.Delegate, result.subStepResults)
-		result.WithMergedOutputs(outputs)
-
-		if err != nil {
+		if err := result.ObserveMergedOutputs(findOutputsWithName(s.specDef.Definition.Delegate, result.subStepResults)); err != nil {
 			return result.BuildFailure(), err
 		}
 
 		return result.Build(), nil
 	}
 
+	if err := result.ObserveMergedOutputs(s.expandOutputs(stepsCtx)); err != nil {
+		return result.BuildFailure(), err
+	}
+
+	return result.Build(), nil
+}
+
+func (s *SequenceOfSteps) expandOutputs(stepsCtx *StepsContext) (map[string]*structpb.Value, error) {
 	// Expand step definition outputs which may reference outputs
 	// of sub-steps. Outputs of sub-steps will not be available
 	// for reference after returning, which would break
@@ -99,12 +100,11 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.S
 		if resErr == nil {
 			expandedOutputs[k] = res.Value
 		} else {
-			fmt.Fprintf(stepsCtx.GlobalContext.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
+			return nil, fmt.Errorf("cannot assign %q due to error: %s", k, resErr.Error())
 		}
 	}
 
-	result.WithMergedOutputs(expandedOutputs)
-	return result.Build(), nil
+	return expandedOutputs, nil
 }
 
 // findOutputsWithName finds the output results for the step by step name

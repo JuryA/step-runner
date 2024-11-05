@@ -30,7 +30,7 @@ func (s *ExecutableStep) Describe() string {
 }
 
 func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
-	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
+	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef, stepsCtx)
 	files, err := NewFiles(stepsCtx, s.specDef.Spec.Spec.OutputMethod, s.specDef.Spec.Spec.Outputs)
 
 	if err != nil {
@@ -39,31 +39,19 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.St
 
 	defer files.Cleanup()
 
-	err = stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
-	result.WithEnv(stepsCtx.GetEnvs())
-
-	if err != nil {
+	if err := stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env); err != nil {
 		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
 	}
 
-	executedCmd, err := s.execCommand(ctx, stepsCtx)
-	result.WithExecResult(executedCmd)
-
-	if err != nil {
+	if err := result.ObserveExecutedCmd(s.execCommand(ctx, stepsCtx)); err != nil {
 		return result.BuildFailure(), err
 	}
 
-	outputs, delegateToResult, err := files.Outputs()
-	result.WithMergedOutputs(outputs).WithSubStepResult(delegateToResult)
-
-	if err != nil {
+	if err := result.ObserveOutputs(files.Outputs()); err != nil {
 		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
 	}
 
-	exports, err := stepsCtx.GlobalContext.Exports()
-	result.WithExports(exports)
-
-	if err != nil {
+	if err := result.ObserveExports(stepsCtx.GlobalContext.Exports()); err != nil {
 		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
 	}
 
