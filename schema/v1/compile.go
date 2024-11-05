@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -433,7 +434,7 @@ func (s *Step) compilePoll() error {
 			},
 		},
 		Inputs: StepInputs{
-			"poll": s.Poll,
+			"limit": s.Poll,
 		},
 	}
 	s.Poll = nil
@@ -442,7 +443,7 @@ func (s *Step) compilePoll() error {
 	if err != nil {
 		return err
 	}
-	s = pollStep
+	s.replaceWith(pollStep)
 	return nil
 }
 
@@ -452,7 +453,7 @@ func (s *Step) compileWhen() error {
 	if s.When == nil {
 		return nil
 	}
-	dir := "steps/poll"
+	dir := "steps/when"
 	whenStep := &Step{
 		Name: s.Name,
 		Step: &Reference{
@@ -472,7 +473,7 @@ func (s *Step) compileWhen() error {
 	if err != nil {
 		return err
 	}
-	s = whenStep
+	s.replaceWith(whenStep)
 	return nil
 }
 
@@ -503,6 +504,7 @@ func (s *Step) compileParallel() error {
 		}
 		steps = append(steps, v)
 	}
+	s.Parallel = nil
 	s.Inputs = StepInputs{
 		"steps": steps,
 	}
@@ -527,6 +529,28 @@ func (s *Step) asValue() (*structpb.Value, error) {
 		return nil, err
 	}
 	return value.compile()
+}
+
+func (s *Step) replaceWith(r *Step) {
+	// There's got to be a better way to do this.
+	s.Action = r.Action
+	s.Catch = r.Catch
+	s.Delegate = r.Delegate
+	s.Env = r.Env
+	s.Exec = r.Exec
+	s.Finally = r.Finally
+	s.GRPC = r.GRPC
+	s.Inputs = r.Inputs
+	s.Name = r.Name
+	s.Outputs = r.Outputs
+	s.Parallel = r.Parallel
+	s.Poll = r.Poll
+	s.Run = r.Run
+	s.Script = r.Script
+	s.Step = r.Step
+	s.Steps = r.Steps
+	s.Try = r.Try
+	s.When = r.When
 }
 
 func (s *Step) compileToStepProto() (*proto.Step, error) {
@@ -645,17 +669,36 @@ func (value *valueCompiler) compile() (*structpb.Value, error) {
 	if v, ok := value.v.(*structpb.Value); ok {
 		return v, nil
 	}
-	// We let structpb do all the heavy lifting
-	// and verify the type matches our
-	// expectations later.
-	return structpb.NewValue(simplifyTypes(value.v))
+	// Render everything as just data. That means things like
+	// steps get turned into regular structs.
+	bytes, err := json.Marshal(value.v)
+	if err != nil {
+		return nil, err
+	}
+	var untyped any
+	err = json.Unmarshal(bytes, &untyped)
+	if err != nil {
+		return nil, err
+	}
+	// We let structpb do all the heavy lifting and verify the
+	// type matches our expectations later.
+	return structpb.NewValue(simplifyTypes(untyped))
 }
 
 func simplifyTypes(v any) any {
-	// Map a few types from our model to ones that
-	// structpb can handle.
+	// Map a few types from our model to ones that structpb can
+	// handle. Go sometimes likes to use these types when
+	// unmarshalling (eye roll).
 	switch v := v.(type) {
 	case *string:
+		if v != nil {
+			return *v
+		}
+	case *float64:
+		if v != nil {
+			return *v
+		}
+	case *bool:
 		if v != nil {
 			return *v
 		}
