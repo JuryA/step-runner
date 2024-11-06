@@ -5,7 +5,7 @@
     "definitions": {
         "step": {
             "description": "Any of these step use cases are valid.",
-            "oneOf": [
+            "anyOf": [
                 {
                     "description": "Try running a step.",
                     "type": "object",
