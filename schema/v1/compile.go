@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -669,20 +668,9 @@ func (value *valueCompiler) compile() (*structpb.Value, error) {
 	if v, ok := value.v.(*structpb.Value); ok {
 		return v, nil
 	}
-	// Render everything as just data. That means things like
-	// steps get turned into regular structs.
-	bytes, err := json.Marshal(value.v)
-	if err != nil {
-		return nil, err
-	}
-	var untyped any
-	err = json.Unmarshal(bytes, &untyped)
-	if err != nil {
-		return nil, err
-	}
 	// We let structpb do all the heavy lifting and verify the
 	// type matches our expectations later.
-	return structpb.NewValue(simplifyTypes(untyped))
+	return structpb.NewValue(simplifyTypes(value.v))
 }
 
 func simplifyTypes(v any) any {
