@@ -495,7 +495,7 @@ func (s *Step) compileParallel() error {
 	if len(s.Inputs) != 0 {
 		return fmt.Errorf("inputs not allowed with try (put them inside)")
 	}
-	steps := []*structpb.Value{}
+	steps := []any{}
 	for _, s := range s.Parallel {
 		v, err := s.asValue()
 		if err != nil {
@@ -510,7 +510,7 @@ func (s *Step) compileParallel() error {
 	return nil
 }
 
-func (s *Step) asValue() (*structpb.Value, error) {
+func (s *Step) asValue() (any, error) {
 	// We want to pass steps as values to steps. However we want
 	// to "quote" them so their expressions would not be
 	// evaluated. Initially I thought this would be a new "step"
@@ -522,12 +522,12 @@ func (s *Step) asValue() (*structpb.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	value := &valueCompiler{}
-	err = yaml.Unmarshal(bytes, &value.v)
+	var untyped any
+	err = yaml.Unmarshal(bytes, &untyped)
 	if err != nil {
 		return nil, err
 	}
-	return value.compile()
+	return untyped, nil
 }
 
 func (s *Step) replaceWith(r *Step) {
