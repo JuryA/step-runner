@@ -6,8 +6,12 @@ stages:
   - e2e
   - deploy
 
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 include:
-  - template: Workflows/MergeRequest-Pipelines.gitlab-ci.yml
   - local: /.gitlab/ci/variables.gitlab-ci.yml
   - local: /.gitlab/ci/test.gitlab-ci.yml
   - local: /.gitlab/ci/build-binaries.gitlab-ci.yml

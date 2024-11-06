@@ -20,10 +20,15 @@ release:
       step: ./.gitlab/steps/changelog
       inputs:
         changelog: "${{job.CI_PROJECT_DIR}}/CHANGELOG.md"
-    - name: verify works
-      step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v3
+    - name: release
+      step: ./.gitlab/steps/create_gitlab_release
       inputs:
-        echo: "version: ${{steps.changelog.outputs.latest_version}}, major: ${{steps.changelog.outputs.latest_major}}, minor: ${{steps.changelog.outputs.latest_minor}}, patch: ${{steps.changelog.outputs.latest_patch}}, date: ${{steps.changelog.outputs.latest_date}}, changes: ${{steps.changelog.outputs.latest_changes}}"
+        commit: ${{job.CI_COMMIT_SHA}}
+        tag: ${{steps.changelog.outputs.latest_version}}
+        description: ${{steps.changelog.outputs.latest_changes}}
+        projectID: ${{job.CI_PROJECT_ID}}
+        jobToken: ${{job.CI_JOB_TOKEN}}
   when: manual
+  allow_failure: false
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
