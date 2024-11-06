@@ -103,13 +103,13 @@ func (o *GRPCOutputer) ServiceRunUp() {
 				continue
 			}
 			fmt.Printf("got run up request %v\n", req.Id)
-
 			// Create global and steps contexts from the request
 			env := NewEnvironment(req.Context.GetEnv())
 			globalCtx, err := NewGlobalContext(env)
+			globalCtx.WorkDir = req.Context.WorkDir
 			// Run request should include inputs
 			inputs := map[string]*structpb.Value{}
-			stepsCtx := NewStepsContext(globalCtx, req.Context.WorkDir, inputs, req.Context.GetEnv())
+			stepsCtx := NewStepsContext(globalCtx, req.Context.StepDir, inputs, req.Context.GetEnv())
 
 			specDef, err := loadSteps(req.GetSteps())
 			if err != nil {

@@ -386,7 +386,7 @@ func (s *Step) compileTry() error {
 	}
 	dir := "steps/try"
 	if s.Step != nil {
-		return fmt.Errorf("step now allowed with try")
+		return fmt.Errorf("step not allowed with try")
 	}
 	s.Step = &Reference{
 		Git: GitReference{
