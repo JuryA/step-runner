@@ -1,0 +1,34 @@
+spec:
+  inputs:
+    projectID:
+      type: string
+    jobToken:
+      type: string
+    commit:
+      type: string
+    tag:
+      type: string
+    description:
+      type: string
+    timeoutInSeconds:
+      type: number
+      default: 60
+---
+env:
+  GOLANG_VERSION: 1.22.5
+  GOTOOLCHAIN: local
+  PATH: /go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  GOPATH: /go
+  HOME: /root
+exec:
+  work_dir: ${{step_dir}}
+  command:
+    - go
+    - run
+    - .
+    - --projectID=${{inputs.projectID}}
+    - --jobToken=${{inputs.jobToken}}
+    - --commit=${{inputs.commit}}
+    - --description=${{inputs.description}}
+    - --tag=${{inputs.tag}}
+    - --timeoutInSeconds=${{inputs.timeoutInSeconds}}
