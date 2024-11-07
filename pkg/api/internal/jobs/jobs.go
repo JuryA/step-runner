@@ -35,7 +35,7 @@ type Job struct {
 
 	logs *file.Streamer
 
-	stepResultStatus proto.StepResult_Status
+	status proto.StepResult_Status
 }
 
 func New(request *proto.RunRequest) (*Job, error) {
@@ -72,15 +72,15 @@ func New(request *proto.RunRequest) (*Job, error) {
 	globCtx.Stdout = logs
 
 	return &Job{
-		TmpDir:           tmpDir,
-		WorkDir:          workDir,
-		ID:               request.Id,
-		Ctx:              ctx,
-		GlobCtx:          globCtx,
-		startTime:        time.Now(),
-		cancel:           cancel,
-		logs:             logs,
-		stepResultStatus: proto.StepResult_running,
+		TmpDir:    tmpDir,
+		WorkDir:   workDir,
+		ID:        request.Id,
+		Ctx:       ctx,
+		GlobCtx:   globCtx,
+		startTime: time.Now(),
+		cancel:    cancel,
+		logs:      logs,
+		status:    proto.StepResult_running,
 	}, nil
 }
 
@@ -106,7 +106,7 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 	j.logs.Stop()
 	_ = j.logs.Close()
 
-	j.stepResultStatus = computeFinalStatus(result, err)
+	j.status = computeFinalStatus(result, err)
 }
 
 func computeFinalStatus(stepResult *proto.StepResult, err error) proto.StepResult_Status {
@@ -151,7 +151,7 @@ func (j *Job) Status() *proto.Status {
 	st := proto.Status{
 		Id:        j.ID,
 		StartTime: timestamppb.New(j.startTime),
-		Status:    j.stepResultStatus,
+		Status:    j.status,
 	}
 
 	if j.finished {
