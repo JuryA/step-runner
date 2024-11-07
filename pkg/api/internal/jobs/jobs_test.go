@@ -250,6 +250,7 @@ func Test_Status(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			j, err := New(test.ProtoRunRequest(t, "", true))
+			j.status = proto.StepResult_running
 			require.NoError(t, err)
 			defer j.Close()
 

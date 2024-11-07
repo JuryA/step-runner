@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"sync"
@@ -19,12 +20,11 @@ import (
 )
 
 type Job struct {
-	TmpDir   string
-	WorkDir  string
-	GlobCtx  *runner.GlobalContext // To capture stdout/err from all subprocesses
-	StepsCtx *runner.StepsContext
-	Ctx      context.Context // The context used to manage the Job's entire lifetime.
-	ID       string          // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
+	TmpDir  string
+	WorkDir string
+	GlobCtx *runner.GlobalContext // To capture stdout/err from all subprocesses
+	Ctx     context.Context       // The context used to manage the Job's entire lifetime.
+	ID      string                // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
 
 	cancel     func()    // Used to cancel the Ctx.
 	err        error     // Captures any error returned when executing steps.
@@ -32,6 +32,7 @@ type Job struct {
 	startTime  time.Time // time when the job finished execution.
 	finishTime time.Time // time when the job finished execution.
 	mux        sync.RWMutex
+	runOnce    sync.Once
 
 	logs *file.Streamer
 
@@ -80,8 +81,24 @@ func New(request *proto.RunRequest) (*Job, error) {
 		startTime: time.Now(),
 		cancel:    cancel,
 		logs:      logs,
-		status:    proto.StepResult_running,
+		status:    proto.StepResult_unspecified,
 	}, nil
+}
+
+// Run actually starts execution of the steps request and captures the result. It is intended to be run in a
+// goroutine.
+func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
+	j.runOnce.Do(func() {
+		j.status = proto.StepResult_running
+		defer stepsCtx.Cleanup()
+		result, err := step.Run(j.Ctx, stepsCtx)
+		j.Finish(result, err)
+
+		if err != nil {
+			// TODO: better logging
+			log.Printf("an error occurred executing the job: %s", err)
+		}
+	})
 }
 
 // Finish() finishes/completes natural job execution (i.e. not cancelled). It does not clean up resources created
@@ -98,10 +115,6 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 	j.err = err
 	j.finished = true
 	j.finishTime = now
-
-	if j.StepsCtx != nil {
-		j.StepsCtx.Cleanup()
-	}
 
 	j.logs.Stop()
 	_ = j.logs.Close()

@@ -4,7 +4,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/variables"
@@ -77,12 +76,9 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 
 	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
 	stepsCtx, err := runner.NewStepsContext(job.GlobCtx, specDef.Dir, inputs, job.GlobCtx.Env)
-
 	if err != nil {
 		return nil, err
 	}
-
-	job.StepsCtx = stepsCtx
 
 	// last chance to bail...
 	if ctx.Err() != nil {
@@ -91,7 +87,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 
 	// actually execute the steps request
 	s.jobs.Put(request.Id, job)
-	go s.run(job, step)
+	go job.Run(stepsCtx, step)
 	return &proto.RunResponse{}, nil
 }
 
@@ -113,16 +109,6 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 		Definition: protoDef,
 	}
 	return protoStepDef, nil
-}
-
-// run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
-func (s *StepRunnerService) run(job *jobs.Job, step runner.Step) {
-	result, err := step.Run(job.Ctx, job.StepsCtx)
-	job.Finish(result, err)
-	if err != nil {
-		// TODO: better logging
-		log.Printf("an error occurred executing the job: %s", err)
-	}
 }
 
 func (s *StepRunnerService) Close(ctx context.Context, request *proto.CloseRequest) (*proto.CloseResponse, error) {
