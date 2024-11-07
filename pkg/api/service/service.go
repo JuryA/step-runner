@@ -36,6 +36,10 @@ func New(stepCache runner.Cache, env *runner.Environment) *StepRunnerService {
 
 // Run parses, prepares, and initiates execution of a RunRequest.
 func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) (response *proto.RunResponse, err error) {
+	if _, ok := s.jobs.Get(request.Id); ok {
+		return &proto.RunResponse{}, nil
+	}
+
 	specDef, err := s.loadSteps(request.Steps)
 	if err != nil {
 		return nil, fmt.Errorf("loading step: %w", err)

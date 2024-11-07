@@ -295,6 +295,24 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 	}
 }
 
+func Test_StepRunnerService_Run_DuplicateID(t *testing.T) {
+	defer cleanup(t)
+
+	stepCache, err := cache.New()
+	require.NoError(t, err)
+	srs := New(stepCache, runner.NewEmptyEnvironment())
+
+	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
+
+	ctx := context.Background()
+
+	_, err = srs.Run(ctx, rr)
+	require.NoError(t, err)
+
+	_, err = srs.Run(ctx, rr)
+	require.NoError(t, err)
+}
+
 func Test_StepRunnerService_Close(t *testing.T) {
 	defer cleanup(t)
 
