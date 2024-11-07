@@ -401,6 +401,25 @@ run:
 			require.Equal(t, proto.StepResult_failure, results.SubStepResults[0].Status)
 			require.Equal(t, int32(1), results.SubStepResults[0].ExecResult.ExitCode)
 		},
+	}, {
+		name: "exported env can be used in subsequent step",
+		yaml: `
+spec:
+---
+run:
+  - name: set_export_var
+    step: ./test_steps/export_env
+    inputs:
+      name: FOO
+      value: BAR
+  - name: verify_foo_can_be_used
+    step: ./test_steps/echo
+    inputs:
+      echo: "FOO is ${{env.FOO}}"
+`,
+		wantResults: func(t *testing.T, results *proto.StepResult) {
+			require.NotNil(t, results)
+		},
 	}}
 
 	for _, c := range cases {
@@ -458,9 +477,8 @@ func runTest(testCase runnerTest) func(*testing.T) {
 		step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
 		require.NoError(t, err)
 
-		env := globalCtx.Env.AddLexicalScope(params.Env).Values()
 		inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
-		stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
+		stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.Env)
 		result, err := step.Run(ctx.Background(), stepsCtx)
 
 		if testCase.wantErr != nil {

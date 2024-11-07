@@ -65,13 +65,13 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	job.GlobCtx.Job = variables.Expand(jobVars)
 	job.GlobCtx.Env = s.env.AddLexicalScope(request.Env)
 
-	step, err := runner.NewParser(job.GlobCtx, s.cache).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
+	params := &runner.Params{}
+	step, err := runner.NewParser(job.GlobCtx, s.cache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}
 
-	params := &runner.Params{}
-	env := job.GlobCtx.Env.AddLexicalScope(params.Env).Values()
+	env := job.GlobCtx.Env.AddLexicalScope(params.Env)
 	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
 	stepsCtx := runner.NewStepsContext(job.GlobCtx, specDef.Dir, inputs, env)
 

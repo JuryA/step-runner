@@ -32,7 +32,7 @@ func TestNewEnvironment(t *testing.T) {
 
 func TestEnvironment_AddLexicalScope(t *testing.T) {
 	t.Run("adds to a new environment", func(t *testing.T) {
-		a := NewEnvironment(map[string]string{"foo": "bar"})
+		a := NewKVEnvironment("foo", "bar")
 		b := a.AddLexicalScope(map[string]string{"baz": "qux"})
 
 		require.Equal(t, map[string]string{"foo": "bar"}, a.Values())
@@ -40,16 +40,42 @@ func TestEnvironment_AddLexicalScope(t *testing.T) {
 	})
 
 	t.Run("added lexical scope takes precedence over already added environment", func(t *testing.T) {
-		a := NewEnvironment(map[string]string{"foo": "bar"})
+		a := NewKVEnvironment("foo", "bar")
 		b := a.AddLexicalScope(map[string]string{"foo": "qux"})
 
 		require.Equal(t, map[string]string{"foo": "qux"}, b.Values())
 	})
 
 	t.Run("does not add scope if there are no vars", func(t *testing.T) {
-		a := NewEnvironment(map[string]string{"foo": "bar"})
+		a := NewKVEnvironment("foo", "bar")
 		b := a.AddLexicalScope(map[string]string{})
 
 		require.Same(t, a, b)
+	})
+}
+
+func TestEnvironment_Mutations(t *testing.T) {
+	t.Run("mutations have higher precedence than initial values", func(t *testing.T) {
+		env := NewKVEnvironment("foo", "bar")
+		env.Mutate(NewKVEnvironment("foo", "baz", "ping", "pop"))
+		env.Mutate(NewKVEnvironment("foo", "bap"))
+
+		require.Equal(t, map[string]string{"foo": "bap", "ping": "pop"}, env.Values())
+	})
+
+	t.Run("child environments accesses mutated values", func(t *testing.T) {
+		grandparent := NewKVEnvironment("a", "a_value")
+		parent := grandparent.AddLexicalScope(map[string]string{"b": "b_value"})
+		child := parent.AddLexicalScope(map[string]string{"c": "c_value"})
+
+		require.Equal(t, map[string]string{"a": "a_value"}, grandparent.Values())
+		require.Equal(t, map[string]string{"a": "a_value", "b": "b_value"}, parent.Values())
+		require.Equal(t, map[string]string{"a": "a_value", "b": "b_value", "c": "c_value"}, child.Values())
+
+		parent.Mutate(NewKVEnvironment("b", "new_b_value"))
+
+		require.Equal(t, map[string]string{"a": "a_value"}, grandparent.Values())
+		require.Equal(t, map[string]string{"a": "a_value", "b": "new_b_value"}, parent.Values())
+		require.Equal(t, map[string]string{"a": "a_value", "b": "new_b_value", "c": "c_value"}, child.Values())
 	})
 }

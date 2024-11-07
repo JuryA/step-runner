@@ -19,25 +19,18 @@ type StepsContext struct {
 	Steps      map[string]*proto.StepResult // Results of previously executed steps.
 }
 
-func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*structpb.Value, env map[string]string) *StepsContext {
+func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*structpb.Value, env *Environment) *StepsContext {
 	return &StepsContext{
 		GlobalContext: globalCtx,
 		StepDir:       dir,
-		Env:           NewEnvironment(env),
+		Env:           env,
 		Inputs:        inputs,
 		Steps:         map[string]*proto.StepResult{},
 	}
 }
 
 func (s *StepsContext) GetEnvs() map[string]string {
-	r := make(map[string]string)
-	for k, v := range s.GlobalContext.Env.Values() {
-		r[k] = v
-	}
-	for k, v := range s.Env.Values() {
-		r[k] = v
-	}
-	return r
+	return s.Env.Values()
 }
 
 func (s *StepsContext) GetEnvList() []string {

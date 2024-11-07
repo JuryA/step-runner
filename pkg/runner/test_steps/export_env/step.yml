@@ -1,0 +1,12 @@
+spec:
+  inputs:
+    name:
+      type: string
+    value:
+      type: string
+---
+exec:
+  command:
+    - bash
+    - -c
+    - "echo '${{inputs.name}}=${{inputs.value}}' >${{export_file}}"
