@@ -145,7 +145,7 @@ func Test_Prepare(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmp)
 
-	vs, err := Prepare(&proto.Job{Variables: pvs}, tmp)
+	vs, err := Prepare(pvs, tmp)
 	require.NoError(t, err)
 
 	assert.Len(t, vs, len(pvs))

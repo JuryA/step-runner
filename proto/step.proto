@@ -84,6 +84,7 @@ enum DefinitionType {
   definition_type_unspecified = 0;
   exec = 1;
   steps = 2;
+  grpc = 3;
 }
 
 // Spec is a document describing the interface of the step.
@@ -154,6 +155,7 @@ enum ValueType {
   boolean = 4;
   struct = 5;
   array = 6;
+  step = 7;
 }
 
 // StepResult is the result of executing a single step.
@@ -201,6 +203,14 @@ message StepResult {
   ExecResult exec_result = 8;
   // SubStepResults are the details of a steps type step.
   repeated StepResult sub_step_results = 9;
+  // DelegationResult is the result of the delegation step which produced this step result.
+  message DelegationResult {
+    // StepResult is the entire step result tree run to create the delegation.
+    StepResult step_result = 1;
+    // Delegation is the result of the delegation step.
+    Delegation delegation = 2;
+  }
+  DelegationResult delegation_result = 10;
 }
 
 service StepRunner {
@@ -209,6 +219,69 @@ service StepRunner {
   rpc Close(CloseRequest) returns (CloseResponse);
   rpc FollowLogs(FollowLogsRequest) returns (stream FollowLogsResponse);
   rpc Status(StatusRequest) returns (StatusResponse);
+  rpc RunUp(stream RunUpResponse) returns (stream RunUpRequest); // flow of control is inverted
+}
+
+message Context {
+  map<string,string> env = 1;
+  repeated Variable job = 2;
+  map<string,StepResult> steps = 3;
+  // This could also have `jobs` which are previous job outputs.
+  // Or even `workflows` which are upstream workflow outputs.
+  map<string,google.protobuf.Value> inputs = 4;
+  string work_dir = 5;
+  string step_dir = 6;
+}
+
+// Continuation allows the receiver to continue executing the
+// program on the other side of the gRPC boundary. Technically
+// it's a delimited continuation because it returns a value
+// (a step result).
+message Continuation {
+  Context context = 1;
+  SpecDefinition function = 2;
+}
+
+// Delegation points to a GRPC service at which to continue the
+// program execution and get results. The step which produced
+// the delegation are not part of the main line of execution.
+// But its results are provided along with the continuation to
+// the Run API.
+message Delegation {
+  string socket_file = 1;
+  Continuation continuation = 2;
+}
+
+message RunUpRequest {
+  string id = 1;
+  string isolation = 2;
+  oneof request_oneof {
+    RunRequest run = 3;
+    FollowStepsRequest follow_steps = 4;
+    CloseRequest close = 5;
+    FollowLogsRequest follow_logs = 6;
+    StatusRequest status = 7;
+  }
+}
+
+message RunUpResponse {
+  string id = 1;
+  oneof response_oneof {
+    RunResponse run = 2;
+    FollowStepsResponse follow_steps = 3;
+    CloseResponse close = 4;
+    FollowLogsResponse follow_logs = 5;
+    StatusResponse status = 6;
+  }
+}
+
+message RunRequest {
+  string id = 1;
+  Context context = 2;
+  oneof function_oneof {
+    SpecDefinition function = 3; // compiled
+    string steps = 4;            // to be compiled
+  }
 }
 
 message Variable {
@@ -218,20 +291,9 @@ message Variable {
   bool masked = 4;
 }
 
-message Job {
-  repeated Variable variables = 1;
-  string build_dir = 4;
-}
-
-message RunRequest {
-  string id = 1;
-  string work_dir = 2;
-  map<string,string> env = 3;
-  Job job = 5;
-  string steps = 6;
-}
-
 message RunResponse {
+  string id = 1;
+  StepResult result = 2; // Ignore me, I'm just just a short cut.
 }
 
 message FollowStepsRequest {
@@ -240,6 +302,7 @@ message FollowStepsRequest {
 
 message FollowStepsResponse {
   StepResult result = 1;
+  string id = 2;
 }
 
 message CloseRequest {
@@ -272,4 +335,36 @@ message StatusRequest {
 
 message StatusResponse {
     repeated Status jobs = 1;
+}
+
+service StepLogger {
+  rpc Log(LogRequest) returns (LogResponse);
+  rpc AddFilter(AddFilterRequest) returns (AddFilterResponse);
+}
+
+message LogRequest {
+  string id = 1;
+  bytes data = 2;
+}
+
+message LogResponse {}
+
+message AddFilterRequest {
+  string id = 1;
+  string filter = 2;
+}
+
+message AddFilterResponse {}
+
+service StepCompiler {
+  rpc Compile(CompileRequest) returns (CompileResponse);
+}
+
+message CompileRequest {
+  string dialect = 1;
+  string step = 2;
+}
+
+message CompileResponse {
+  SpecDefinition function = 1;
 }

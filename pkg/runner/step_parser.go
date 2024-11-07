@@ -38,11 +38,11 @@ func (p *Parser) Parse(specDef *proto.SpecDefinition, params *Params, loadedFrom
 }
 
 func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
-	if specDef.Definition.Type == proto.DefinitionType_exec {
+	switch specDef.Definition.Type {
+	case proto.DefinitionType_exec, proto.DefinitionType_grpc:
 		return NewExecutableStep(loadedFrom, params, specDef), nil
-	}
 
-	if specDef.Definition.Type == proto.DefinitionType_steps {
+	case proto.DefinitionType_steps:
 		var steps []Step
 
 		for _, stepReference := range specDef.Definition.Steps {
@@ -56,9 +56,9 @@ func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, lo
 		}
 
 		return NewSequenceOfSteps(loadedFrom, params, steps...), nil
+	default:
+		return nil, fmt.Errorf("unknown step definition type: %s", specDef.Definition.Type)
 	}
-
-	return nil, fmt.Errorf("unknown step definition type: %s", specDef.Definition.Type)
 }
 
 func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Variable) error {

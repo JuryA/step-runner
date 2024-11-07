@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
+	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -78,6 +79,8 @@ func (i *Input) compileToProto() (*proto.Spec_Content_Input, error) {
 		protoInput.Type = proto.ValueType_string
 	case InputTypeStruct:
 		protoInput.Type = proto.ValueType_struct
+	case InputTypeStep:
+		protoInput.Type = proto.ValueType_step
 	default:
 		return nil, fmt.Errorf("unsupported input type: %v", i.Type)
 	}
@@ -247,11 +250,15 @@ func (s *Step) verifyOneTypeProvided() error {
 		// Run type step
 		have++
 	}
+	if s.GRPC != nil {
+		// GRPC type step
+		have++
+	}
 	if have == 0 {
-		return fmt.Errorf("at least one of `script, `action`, `run` or `exec` must be provided")
+		return fmt.Errorf("at least one of `script, `action`, `run`, `exec` or `grpc` must be provided")
 	}
 	if have > 1 {
-		return fmt.Errorf("only one of `script`, `action`, `run` or `exec` may be provided. have %v", have)
+		return fmt.Errorf("only one of `script`, `action`, `run`, `exec` or `grpc` may be provided. have %v", have)
 	}
 	return nil
 }
@@ -291,6 +298,15 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 			}
 			protoDef.Outputs[k] = protoV
 		}
+	case s.GRPC != nil:
+		// GRPC step
+		protoDef.Type = proto.DefinitionType_grpc
+		protoDef.Exec = &proto.Definition_Exec{
+			Command: s.GRPC.Command,
+		}
+		if s.GRPC.WorkDir != nil {
+			protoDef.Exec.WorkDir = *s.GRPC.WorkDir
+		}
 	default:
 		return nil, fmt.Errorf("could not determine step type")
 	}
@@ -302,13 +318,19 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 }
 
 func (s *Step) CompileStep(i int) (*proto.Step, error) {
-	err := s.compileScriptKeywordToStep()
-	if err != nil {
-		return nil, err
-	}
-	err = s.compileActionKeywordToStep()
-	if err != nil {
-		return nil, err
+	for _, fn := range []func() error{
+		// This establishes the order of precedence between keywords.
+		s.compileScriptKeywordToStep,
+		s.compileActionKeywordToStep,
+		s.compileTry,
+		s.compilePoll,
+		s.compileWhen,
+		s.compileParallel,
+	} {
+		err := fn()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return s.compileToStepProto()
 }
@@ -353,6 +375,182 @@ func (s *Step) compileActionKeywordToStep() error {
 	}
 	s.Action = nil
 	return nil
+}
+
+func (s *Step) compileTry() error {
+	// Rewrite this step as standard library "try", keeping the
+	// environment and everything else so it can be common to try,
+	// catch and finally.
+	if s.Try == nil {
+		return nil
+	}
+	dir := "steps/try"
+	if s.Step != nil {
+		return fmt.Errorf("step not allowed with try")
+	}
+	s.Step = &Reference{
+		Git: GitReference{
+			Dir: &dir,
+			Rev: "master",
+			Url: "gitlab.com/josephburnett/hello-standard-library",
+		},
+	}
+	if len(s.Inputs) != 0 {
+		return fmt.Errorf("inputs not allowed with try (put them inside)")
+	}
+	s.Inputs = StepInputs{}
+	for k, v := range map[string]**Step{
+		"step":         &s.Try,
+		"catch_step":   &s.Catch,
+		"finally_step": &s.Finally,
+	} {
+		// Add t-c-f steps as input parameters and remove from the enclosing step.
+		if v != nil {
+			value, err := (*v).asValue()
+			if err != nil {
+				return err
+			}
+			s.Inputs[k] = value
+			*v = nil
+		}
+	}
+	return nil
+}
+
+func (s *Step) compilePoll() error {
+	// Create an entirely new step which calls poll. And capture
+	// this step as an input.
+	if s.Poll == nil {
+		return nil
+	}
+	dir := "steps/poll"
+	pollStep := &Step{
+		Name: s.Name,
+		Step: &Reference{
+			Git: GitReference{
+				Dir: &dir,
+				Rev: "master",
+				Url: "gitlab.com/josephburnett/hello-standard-library",
+			},
+		},
+		Inputs: StepInputs{
+			"limit": s.Poll,
+		},
+	}
+	s.Poll = nil
+	var err error
+	pollStep.Inputs["step"], err = s.asValue()
+	if err != nil {
+		return err
+	}
+	s.replaceWith(pollStep)
+	return nil
+}
+
+func (s *Step) compileWhen() error {
+	// Create an entirely new step which calls poll. And capture
+	// this step as an input.
+	if s.When == nil {
+		return nil
+	}
+	dir := "steps/when"
+	whenStep := &Step{
+		Name: s.Name,
+		Step: &Reference{
+			Git: GitReference{
+				Dir: &dir,
+				Rev: "master",
+				Url: "gitlab.com/josephburnett/hello-standard-library",
+			},
+		},
+		Inputs: StepInputs{
+			"when": s.When,
+		},
+	}
+	s.When = nil
+	var err error
+	whenStep.Inputs["step"], err = s.asValue()
+	if err != nil {
+		return err
+	}
+	s.replaceWith(whenStep)
+	return nil
+}
+
+func (s *Step) compileParallel() error {
+	// Rewrite this step as "parallel" and capture steps as input.
+	if s.Parallel == nil {
+		return nil
+	}
+	dir := "steps/parallel"
+	if s.Step != nil {
+		return fmt.Errorf("step now allowed with parallel")
+	}
+	s.Step = &Reference{
+		Git: GitReference{
+			Dir: &dir,
+			Rev: "master",
+			Url: "gitlab.com/josephburnett/hello-standard-library",
+		},
+	}
+	if len(s.Inputs) != 0 {
+		return fmt.Errorf("inputs not allowed with try (put them inside)")
+	}
+	steps := []any{}
+	for _, s := range s.Parallel {
+		v, err := s.asValue()
+		if err != nil {
+			return err
+		}
+		steps = append(steps, v)
+	}
+	s.Parallel = nil
+	s.Inputs = StepInputs{
+		"steps": steps,
+	}
+	return nil
+}
+
+func (s *Step) asValue() (any, error) {
+	// We want to pass steps as values to steps. However we want
+	// to "quote" them so their expressions would not be
+	// evaluated. Initially I thought this would be a new "step"
+	// type:
+	// https://gitlab.com/gitlab-org/step-runner/-/issues/49. But
+	// I want to pass a variety of steps in lists and step
+	// fragments, so maybe we should just have a "quoted" type.
+	bytes, err := yaml.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	var untyped any
+	err = yaml.Unmarshal(bytes, &untyped)
+	if err != nil {
+		return nil, err
+	}
+	return untyped, nil
+}
+
+func (s *Step) replaceWith(r *Step) {
+	// There's got to be a better way to do this.
+	s.Action = r.Action
+	s.Catch = r.Catch
+	s.Delegate = r.Delegate
+	s.Env = r.Env
+	s.Exec = r.Exec
+	s.Finally = r.Finally
+	s.GRPC = r.GRPC
+	s.Inputs = r.Inputs
+	s.Name = r.Name
+	s.Outputs = r.Outputs
+	s.Parallel = r.Parallel
+	s.Poll = r.Poll
+	s.Run = r.Run
+	s.Script = r.Script
+	s.Step = r.Step
+	s.Steps = r.Steps
+	s.Try = r.Try
+	s.When = r.When
 }
 
 func (s *Step) compileToStepProto() (*proto.Step, error) {
@@ -468,26 +666,41 @@ type valueCompiler struct {
 }
 
 func (value *valueCompiler) compile() (*structpb.Value, error) {
-	var simplifyTypes func(any) any
-	simplifyTypes = func(v any) any {
-		// Map a few types from our model to ones that
-		// structpb can handle.
-		switch v := v.(type) {
-		case *string:
-			if v != nil {
-				return *v
-			}
-		case StepInputs:
-			simpleMap := map[string]any{}
-			for k, v := range v {
-				simpleMap[k] = simplifyTypes(v)
-			}
-			return simpleMap
-		}
-		return v
+	if v, ok := value.v.(*structpb.Value); ok {
+		return v, nil
 	}
-	// We let structpb do all the heavy lifting
-	// and verify the type matches our
-	// expectations later.
+	// We let structpb do all the heavy lifting and verify the
+	// type matches our expectations later.
 	return structpb.NewValue(simplifyTypes(value.v))
+}
+
+func simplifyTypes(v any) any {
+	// Map a few types from our model to ones that structpb can
+	// handle. Go sometimes likes to use these types when
+	// unmarshalling (eye roll).
+	switch v := v.(type) {
+	case *string:
+		if v != nil {
+			return *v
+		}
+	case *float64:
+		if v != nil {
+			return *v
+		}
+	case *bool:
+		if v != nil {
+			return *v
+		}
+	case StepInputs:
+		simpleMap := map[string]any{}
+		for k, v := range v {
+			simpleMap[k] = simplifyTypes(v)
+		}
+		return simpleMap
+	case []any:
+		for i, e := range v {
+			v[i] = simplifyTypes(e)
+		}
+	}
+	return v
 }

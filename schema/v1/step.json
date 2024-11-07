@@ -5,7 +5,64 @@
     "definitions": {
         "step": {
             "description": "Any of these step use cases are valid.",
-            "oneOf": [
+            "anyOf": [
+                {
+                    "description": "Try running a step.",
+                    "type": "object",
+                    "required": [
+                        "try"
+                    ],
+                    "properties": {
+                        "try": {
+                            "$ref": "#/definitions/step"
+                        },
+                        "catch": {
+                            "$ref": "#/definitions/step"
+                        },
+                        "finally": {
+                            "$ref": "#/definitions/step"
+                        }
+                    }
+                },
+                {
+                    "description": "Run a step with retries",
+                    "type": "object",
+                    "required": [
+                        "poll"
+                    ],
+                    "properties": {
+                        "poll": {
+                            "type": "number"
+                        }
+                    }
+                },
+                {
+                    "description": "Run a step conditionally",
+                    "type": "object",
+                    "required": [
+                        "when"
+                    ],
+                    "properties": {
+                        "when": {
+                            "type": "boolean"
+                        }
+                    }
+                },
+                {
+                    "description": "Run steps in parallel",
+                    "type": "object",
+                    "required": [
+                        "parallel"
+                    ],
+                    "properties": {
+                        "parallel": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/step"
+                            }
+                        }
+                    }
+                },
                 {
                     "description": "Run a referenced step.",
                     "type": "object",
@@ -170,12 +227,33 @@
                             "$ref": "#/definitions/exec"
                         }
                     }
+                },
+                {
+                    "description": "Run a GRPC service",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "grpc"
+                    ],
+                    "properties": {
+                        "env": {
+                            "type": "object",
+                            "description": "Env is a map of environment variable names to string values.",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        "grpc": {
+                            "description": "Grpc is a command to run.",
+                            "$ref": "#/definitions/exec"
+                        }
+                    }
                 }
             ]
         },
-	"name": {
+        "name": {
             "type": "string",
-	    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
         },
         "reference": {
             "type": "object",

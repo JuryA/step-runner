@@ -127,6 +127,27 @@ type Step struct {
 
 	// Run is a list of sub-steps to run.
 	Run []Step `json:"run,omitempty" yaml:"run,omitempty" mapstructure:"run,omitempty"`
+
+	// GRPC is a command to run in order to get a GRPC endpoint for delegation.
+	GRPC *Exec `json:"grpc,omitempty" yaml:"grpc,omitempty" mapstructure:"grpc,omitempty"`
+
+	// Try is a step to try running.
+	Try *Step `json:"try,omitempty" yaml:"try,omitempty" mapstructure:"try,omitempty"`
+
+	// Catch is a step to run in Try fails.
+	Catch *Step `json:"catch,omitempty" yaml:"catch,omitempty" mapstructure:"catch,omitempty"`
+
+	// Finally is a step to run after Try and Catch no matter what.
+	Finally *Step `json:"finally,omitempty" yaml:"finally,omitempty" mapstructure:"finally,omitempty"`
+
+	// Poll retries a step multiple times until success
+	Poll *float64 `json:"poll,omitempty" yaml:"poll,omitempty" mapstructure:"poll,omitempty"`
+
+	// When runs a step conditionally
+	When *bool `json:"when,omitempty" yaml:"when,omitempty" mapstructure:"when,omitempty"`
+
+	// Parallel runs steps in parallel
+	Parallel []*Step `json:"parallel,omitempty" yaml:"parallel,omitempty" mapstructure:"parallel,omitempty"`
 }
 
 // Env is a map of environment variable names to string values.

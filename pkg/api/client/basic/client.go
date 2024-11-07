@@ -28,16 +28,19 @@ type (
 
 func toProto(r *client.RunRequest) *proto.RunRequest {
 	rr := proto.RunRequest{
-		Id:      r.Id,
-		WorkDir: r.WorkDir,
-		Env:     r.Env,
-		Steps:   r.Steps,
+		Id: r.Id,
+		Context: &proto.Context{
+			WorkDir: r.WorkDir,
+			Env:     r.Env,
+		},
+		FunctionOneof: &proto.RunRequest_Steps{
+			Steps: r.Steps,
+		},
 	}
 
-	rr.Job = &proto.Job{BuildDir: r.WorkDir}
 	if len(r.Variables) != 0 {
 		for _, v := range r.Variables {
-			rr.Job.Variables = append(rr.Job.Variables, &proto.Variable{
+			rr.Context.Job = append(rr.Context.Job, &proto.Variable{
 				Key:    v.Key,
 				Value:  v.Value,
 				File:   v.File,
@@ -177,4 +180,10 @@ func (c *StepRunnerClient) FollowLogs(ctx context.Context, jobID string, offset 
 			return written, fmt.Errorf("writing to log sink: %w", err)
 		}
 	}
+}
+
+// RunUp streams RunRequests from the server and responds with FollowStepsResponses.
+func (c *StepRunnerClient) RunUp(ctx context.Context, jobID string) (proto.StepRunner_RunUpClient, error) {
+	// I don't see any point in wrapping this.
+	return c.client.RunUp(ctx)
 }

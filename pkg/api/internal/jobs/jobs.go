@@ -40,12 +40,9 @@ type Job struct {
 }
 
 func New(request *proto.RunRequest) (*Job, error) {
-	workDir := request.WorkDir
+	workDir := request.Context.WorkDir
 	if workDir == "" {
 		workDir, _ = os.Getwd()
-	}
-	if request.Job != nil && request.Job.BuildDir != "" {
-		workDir = request.Job.BuildDir
 	}
 
 	if err := os.MkdirAll(workDir, 0700); err != nil {

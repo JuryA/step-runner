@@ -34,6 +34,7 @@ const InputTypeBoolean InputType = "boolean"
 const InputTypeNumber InputType = "number"
 const InputTypeString InputType = "string"
 const InputTypeStruct InputType = "struct"
+const InputTypeStep InputType = "step"
 
 var enumValues_InputType = []interface{}{
 	"string",
@@ -41,6 +42,7 @@ var enumValues_InputType = []interface{}{
 	"boolean",
 	"struct",
 	"array",
+	"step",
 }
 
 // UnmarshalJSON implements json.Unmarshaler.

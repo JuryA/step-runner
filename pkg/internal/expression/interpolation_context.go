@@ -11,6 +11,7 @@ type InterpolationContext struct {
 	Inputs      map[string]*structpb.Value `json:"inputs"`
 	Job         map[string]string          `json:"job"`
 	OutputFile  string                     `json:"output_file"`
+	ContextFile string                     `json:"context_file"`
 	StepDir     string                     `json:"step_dir"`
 	StepResults map[string]*StepResultView `json:"steps"`
 	WorkDir     string                     `json:"work_dir"`

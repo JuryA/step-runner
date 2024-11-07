@@ -37,15 +37,12 @@ func New(stepCache runner.Cache, env *runner.Environment) *StepRunnerService {
 
 // Run parses, prepares, and initiates execution of a RunRequest.
 func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) (response *proto.RunResponse, err error) {
-	specDef, err := s.loadSteps(request.Steps)
+	specDef, err := s.loadSteps(request.GetSteps())
 	if err != nil {
 		return nil, fmt.Errorf("loading step: %w", err)
 	}
 
-	specDef.Dir = request.WorkDir
-	if request.Job != nil && request.Job.BuildDir != "" {
-		specDef.Dir = request.Job.BuildDir
-	}
+	specDef.Dir = request.Context.WorkDir
 
 	job, err := jobs.New(request)
 	if err != nil {
@@ -58,13 +55,13 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		}
 	}()
 
-	jobVars, err := variables.Prepare(request.Job, job.TmpDir)
+	jobVars, err := variables.Prepare(request.Context.Job, job.TmpDir)
 	if err != nil {
 		return nil, fmt.Errorf("preparing environment: %w", err)
 	}
 
 	job.GlobCtx.Job = variables.Expand(jobVars)
-	job.GlobCtx.Env = s.env.AddLexicalScope(request.Env)
+	job.GlobCtx.Env = s.env.AddLexicalScope(request.Context.Env)
 
 	step, err := runner.NewParser(job.GlobCtx, s.cache).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
 	if err != nil {

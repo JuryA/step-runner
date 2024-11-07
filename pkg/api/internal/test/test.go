@@ -33,15 +33,14 @@ func WorkDir(t *testing.T) string {
 
 func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
 	runReq := proto.RunRequest{
-		Id:    RandJobID(),
-		Steps: step,
-		Env:   map[string]string{},
+		Id:            RandJobID(),
+		FunctionOneof: &proto.RunRequest_Steps{Steps: step},
+		Context: &proto.Context{
+			Env: map[string]string{},
+		},
 	}
 
-	runReq.WorkDir = WorkDir(t)
-	if withJob {
-		runReq.Job = &proto.Job{BuildDir: runReq.WorkDir}
-	}
+	runReq.Context.WorkDir = WorkDir(t)
 
 	return &runReq
 }

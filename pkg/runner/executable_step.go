@@ -3,8 +3,13 @@ package runner
 import (
 	ctx "context"
 	"fmt"
+	"math/rand"
 	"os/exec"
+	"strconv"
 	"strings"
+	"time"
+
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -53,7 +58,30 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, specDef *p
 		return result.BuildFailure(), err
 	}
 
-	outputs, delegateToResult, err := files.Outputs()
+	type Outputer interface {
+		Outputs() (map[string]*structpb.Value, *proto.StepResult, error)
+	}
+	var outputer Outputer
+	switch specDef.Definition.Type {
+	case proto.DefinitionType_exec:
+		outputer = files
+	case proto.DefinitionType_grpc:
+		time.Sleep(time.Second) // give it a sec to start ... obviously we want to do something smarter
+		// New random id for our delegation request
+		id := strconv.Itoa(int(rand.Uint32()))
+		// A gRPC outputer encapsulates the process of getting
+		// our outputs from the endpoint provided by this
+		// step.
+		grpcOutputer, err := NewFromDelegationFile(id, files.outputFile)
+		if err != nil {
+			return result.BuildFailure(), err
+		}
+		// Service run up requests in case our gRPC step needs them.
+		go grpcOutputer.ServiceRunUp()
+		outputer = grpcOutputer
+	}
+
+	outputs, delegateToResult, err := outputer.Outputs()
 	result.WithMergedOutputs(outputs).WithSubStepResult(delegateToResult)
 
 	if err != nil {
