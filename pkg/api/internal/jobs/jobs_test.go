@@ -54,22 +54,6 @@ func Test_New_Job_WorkDir(t *testing.T) {
 	assert.DirExists(t, j.TmpDir)
 }
 
-func Test_Result(t *testing.T) {
-	j := Job{}
-
-	r, e := j.Result()
-	assert.Nil(t, r)
-	assert.Nil(t, e)
-
-	sr := execStepResult(proto.StepResult_failure, 123456)
-	j.stepResult = sr
-	j.err = errFinal
-
-	r, e = j.Result()
-	assert.Equal(t, sr, r)
-	assert.Equal(t, errFinal, e)
-}
-
 func Test_Finish(t *testing.T) {
 	runReq := test.ProtoRunRequest(t, "", true)
 	j, err := New(runReq)
@@ -82,12 +66,12 @@ func Test_Finish(t *testing.T) {
 	assert.True(t, j.finished)
 	assert.WithinDuration(t, time.Now(), j.finishTime, time.Millisecond*5)
 
-	assert.Equal(t, sr, j.stepResult)
+	assert.Equal(t, sr.Status, j.Status().Status)
 	assert.Nil(t, j.err)
 
 	// stepResult and err remain unchanged on subsequent calls to Close
 	j.Finish(nil, errFinal)
-	assert.Equal(t, sr, j.stepResult)
+	assert.Equal(t, sr.Status, j.Status().Status)
 	assert.NoError(t, j.err)
 }
 
@@ -100,7 +84,7 @@ func Test_Close_AlreadyFinished(t *testing.T) {
 
 	j.Close()
 
-	assert.Equal(t, sr, j.stepResult)
+	assert.Equal(t, sr.Status, j.Status().Status)
 	assert.Nil(t, j.err)
 	assert.WithinDuration(t, time.Now(), j.finishTime, time.Millisecond*5)
 
@@ -114,7 +98,7 @@ func Test_Close(t *testing.T) {
 	j.Close()
 
 	assert.True(t, j.finished)
-	assert.Nil(t, j.stepResult)
+	assert.Equal(t, proto.StepResult_cancelled, j.Status().Status)
 	assert.True(t, errors.Is(j.err, j.Ctx.Err()))
 
 	assert.NoDirExists(t, j.TmpDir)

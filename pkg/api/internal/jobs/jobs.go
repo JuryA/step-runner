@@ -33,8 +33,7 @@ type Job struct {
 	finishTime time.Time // time when the job finished execution.
 	mux        sync.RWMutex
 
-	stepResult *proto.StepResult
-	logs       *file.Streamer
+	logs *file.Streamer
 
 	stepResultStatus proto.StepResult_Status
 }
@@ -85,14 +84,6 @@ func New(request *proto.RunRequest) (*Job, error) {
 	}, nil
 }
 
-// Result returns the StepResult and error resulting from executing the step. Note that this function might not be
-// necessary when we implement streaming step-results as they are executed.
-func (j *Job) Result() (*proto.StepResult, error) {
-	j.mux.RLock()
-	defer j.mux.RUnlock()
-	return j.stepResult, j.err
-}
-
 // Finish() finishes/completes natural job execution (i.e. not cancelled). It does not clean up resources created
 // during job execution. The signature of this method may change when we implement streaming step-results.
 func (j *Job) Finish(result *proto.StepResult, err error) {
@@ -104,7 +95,6 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 		return
 	}
 
-	j.stepResult = result
 	j.err = err
 	j.finished = true
 	j.finishTime = now

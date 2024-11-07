@@ -117,11 +117,9 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	assert.Eventually(t, job.Finished, time.Second*20, time.Millisecond*50)
 	assert.NoError(t, job.Ctx.Err())
 
-	res, err := job.Result()
-	assert.Nil(t, err)
-	require.NotNil(t, res)
-
-	assert.Equal(t, proto.StepResult_success, res.Status)
+	stat := job.Status()
+	assert.Empty(t, stat.Message)
+	assert.Equal(t, proto.StepResult_success, stat.Status)
 
 	apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
 	assert.NoDirExists(t, job.TmpDir)
@@ -165,9 +163,9 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 				client.Close(bg, &proto.CloseRequest{Id: j.ID})
 			},
 			validate: func(j *jobs.Job) {
-				res, err := j.Result()
-				assert.True(t, errors.Is(err, context.Canceled))
-				assert.Nil(t, res)
+				stat := j.Status()
+				assert.Contains(t, stat.Message, context.Canceled.Error())
+				assert.Equal(t, proto.StepResult_cancelled, stat.Status)
 			},
 		},
 		"Close called after request finished": {
@@ -179,9 +177,9 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 				client.Close(bg, &proto.CloseRequest{Id: j.ID})
 			},
 			validate: func(j *jobs.Job) {
-				res, err := j.Result()
-				assert.NoError(t, err)
-				assert.NotNil(t, res)
+				stat := j.Status()
+				assert.Empty(t, stat.Message)
+				assert.Equal(t, proto.StepResult_success, stat.Status)
 			},
 		},
 		"Close called before request finishes": {
@@ -193,9 +191,9 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 				client.Close(bg, &proto.CloseRequest{Id: j.ID})
 			},
 			validate: func(j *jobs.Job) {
-				res, err := j.Result()
-				assert.True(t, errors.Is(err, context.Canceled))
-				assert.Nil(t, res)
+				stat := j.Status()
+				assert.Contains(t, stat.Message, context.Canceled.Error())
+				assert.Equal(t, proto.StepResult_cancelled, stat.Status)
 			},
 		},
 	}
@@ -282,11 +280,10 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			assert.Eventually(t, job.Finished, time.Millisecond*500, time.Millisecond*50)
 			assert.NoError(t, job.Ctx.Err())
 
-			res, err := job.Result()
-			assert.Nil(t, err)
-			require.NotNil(t, res)
+			stat := job.Status()
+			assert.Empty(t, stat.Message)
+			assert.Equal(t, proto.StepResult_success, stat.Status)
 
-			assert.Equal(t, proto.StepResult_success, res.Status)
 			assert.FileExists(t, path.Join(job.WorkDir, "blammo.txt"))
 			data, err := os.ReadFile(path.Join(job.WorkDir, "blammo.txt"))
 			require.NoError(t, err)
@@ -313,9 +310,9 @@ func Test_StepRunnerService_Close(t *testing.T) {
 			},
 			validate: func(j *jobs.Job) {
 				assert.True(t, j.Finished())
-				r, err := j.Result()
-				assert.Nil(t, err)
-				assert.NotNil(t, r)
+				stat := j.Status()
+				assert.Empty(t, stat.Message)
+				assert.Equal(t, proto.StepResult_success, stat.Status)
 			},
 		},
 		"Close called before job finished (should cancel task)": {
@@ -325,9 +322,9 @@ func Test_StepRunnerService_Close(t *testing.T) {
 			},
 			validate: func(j *jobs.Job) {
 				require.Eventually(t, j.Finished, 200*time.Millisecond, 25*time.Millisecond)
-				r, err := j.Result()
-				assert.True(t, errors.Is(err, context.Canceled))
-				assert.Nil(t, r)
+				stat := j.Status()
+				assert.Contains(t, stat.Message, context.Canceled.Error())
+				assert.Equal(t, proto.StepResult_cancelled, stat.Status)
 			},
 		},
 	}
