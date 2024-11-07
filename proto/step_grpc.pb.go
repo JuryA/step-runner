@@ -149,8 +149,8 @@ func (c *stepRunnerClient) RunUp(ctx context.Context, opts ...grpc.CallOption) (
 }
 
 type StepRunner_RunUpClient interface {
-	Send(*RunResponse) error
-	Recv() (*RunRequest, error)
+	Send(*RunUpResponse) error
+	Recv() (*RunUpRequest, error)
 	grpc.ClientStream
 }
 
@@ -158,12 +158,12 @@ type stepRunnerRunUpClient struct {
 	grpc.ClientStream
 }
 
-func (x *stepRunnerRunUpClient) Send(m *RunResponse) error {
+func (x *stepRunnerRunUpClient) Send(m *RunUpResponse) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *stepRunnerRunUpClient) Recv() (*RunRequest, error) {
-	m := new(RunRequest)
+func (x *stepRunnerRunUpClient) Recv() (*RunUpRequest, error) {
+	m := new(RunUpRequest)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -319,8 +319,8 @@ func _StepRunner_RunUp_Handler(srv interface{}, stream grpc.ServerStream) error 
 }
 
 type StepRunner_RunUpServer interface {
-	Send(*RunRequest) error
-	Recv() (*RunResponse, error)
+	Send(*RunUpRequest) error
+	Recv() (*RunUpResponse, error)
 	grpc.ServerStream
 }
 
@@ -328,12 +328,12 @@ type stepRunnerRunUpServer struct {
 	grpc.ServerStream
 }
 
-func (x *stepRunnerRunUpServer) Send(m *RunRequest) error {
+func (x *stepRunnerRunUpServer) Send(m *RunUpRequest) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *stepRunnerRunUpServer) Recv() (*RunResponse, error) {
-	m := new(RunResponse)
+func (x *stepRunnerRunUpServer) Recv() (*RunUpResponse, error) {
+	m := new(RunUpResponse)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -378,5 +378,222 @@ var StepRunner_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
+	Metadata: "step.proto",
+}
+
+const (
+	StepLogger_Log_FullMethodName       = "/proto.StepLogger/Log"
+	StepLogger_AddFilter_FullMethodName = "/proto.StepLogger/AddFilter"
+)
+
+// StepLoggerClient is the client API for StepLogger service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type StepLoggerClient interface {
+	Log(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (*LogResponse, error)
+	AddFilter(ctx context.Context, in *AddFilterRequest, opts ...grpc.CallOption) (*AddFilterResponse, error)
+}
+
+type stepLoggerClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewStepLoggerClient(cc grpc.ClientConnInterface) StepLoggerClient {
+	return &stepLoggerClient{cc}
+}
+
+func (c *stepLoggerClient) Log(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (*LogResponse, error) {
+	out := new(LogResponse)
+	err := c.cc.Invoke(ctx, StepLogger_Log_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *stepLoggerClient) AddFilter(ctx context.Context, in *AddFilterRequest, opts ...grpc.CallOption) (*AddFilterResponse, error) {
+	out := new(AddFilterResponse)
+	err := c.cc.Invoke(ctx, StepLogger_AddFilter_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// StepLoggerServer is the server API for StepLogger service.
+// All implementations must embed UnimplementedStepLoggerServer
+// for forward compatibility
+type StepLoggerServer interface {
+	Log(context.Context, *LogRequest) (*LogResponse, error)
+	AddFilter(context.Context, *AddFilterRequest) (*AddFilterResponse, error)
+	mustEmbedUnimplementedStepLoggerServer()
+}
+
+// UnimplementedStepLoggerServer must be embedded to have forward compatible implementations.
+type UnimplementedStepLoggerServer struct {
+}
+
+func (UnimplementedStepLoggerServer) Log(context.Context, *LogRequest) (*LogResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Log not implemented")
+}
+func (UnimplementedStepLoggerServer) AddFilter(context.Context, *AddFilterRequest) (*AddFilterResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddFilter not implemented")
+}
+func (UnimplementedStepLoggerServer) mustEmbedUnimplementedStepLoggerServer() {}
+
+// UnsafeStepLoggerServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to StepLoggerServer will
+// result in compilation errors.
+type UnsafeStepLoggerServer interface {
+	mustEmbedUnimplementedStepLoggerServer()
+}
+
+func RegisterStepLoggerServer(s grpc.ServiceRegistrar, srv StepLoggerServer) {
+	s.RegisterService(&StepLogger_ServiceDesc, srv)
+}
+
+func _StepLogger_Log_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StepLoggerServer).Log(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StepLogger_Log_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StepLoggerServer).Log(ctx, req.(*LogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StepLogger_AddFilter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddFilterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StepLoggerServer).AddFilter(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StepLogger_AddFilter_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StepLoggerServer).AddFilter(ctx, req.(*AddFilterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// StepLogger_ServiceDesc is the grpc.ServiceDesc for StepLogger service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var StepLogger_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "proto.StepLogger",
+	HandlerType: (*StepLoggerServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Log",
+			Handler:    _StepLogger_Log_Handler,
+		},
+		{
+			MethodName: "AddFilter",
+			Handler:    _StepLogger_AddFilter_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "step.proto",
+}
+
+const (
+	StepCompiler_Compile_FullMethodName = "/proto.StepCompiler/Compile"
+)
+
+// StepCompilerClient is the client API for StepCompiler service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type StepCompilerClient interface {
+	Compile(ctx context.Context, in *CompileRequest, opts ...grpc.CallOption) (*CompileResponse, error)
+}
+
+type stepCompilerClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewStepCompilerClient(cc grpc.ClientConnInterface) StepCompilerClient {
+	return &stepCompilerClient{cc}
+}
+
+func (c *stepCompilerClient) Compile(ctx context.Context, in *CompileRequest, opts ...grpc.CallOption) (*CompileResponse, error) {
+	out := new(CompileResponse)
+	err := c.cc.Invoke(ctx, StepCompiler_Compile_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// StepCompilerServer is the server API for StepCompiler service.
+// All implementations must embed UnimplementedStepCompilerServer
+// for forward compatibility
+type StepCompilerServer interface {
+	Compile(context.Context, *CompileRequest) (*CompileResponse, error)
+	mustEmbedUnimplementedStepCompilerServer()
+}
+
+// UnimplementedStepCompilerServer must be embedded to have forward compatible implementations.
+type UnimplementedStepCompilerServer struct {
+}
+
+func (UnimplementedStepCompilerServer) Compile(context.Context, *CompileRequest) (*CompileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Compile not implemented")
+}
+func (UnimplementedStepCompilerServer) mustEmbedUnimplementedStepCompilerServer() {}
+
+// UnsafeStepCompilerServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to StepCompilerServer will
+// result in compilation errors.
+type UnsafeStepCompilerServer interface {
+	mustEmbedUnimplementedStepCompilerServer()
+}
+
+func RegisterStepCompilerServer(s grpc.ServiceRegistrar, srv StepCompilerServer) {
+	s.RegisterService(&StepCompiler_ServiceDesc, srv)
+}
+
+func _StepCompiler_Compile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StepCompilerServer).Compile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StepCompiler_Compile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StepCompilerServer).Compile(ctx, req.(*CompileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// StepCompiler_ServiceDesc is the grpc.ServiceDesc for StepCompiler service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var StepCompiler_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "proto.StepCompiler",
+	HandlerType: (*StepCompilerServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Compile",
+			Handler:    _StepCompiler_Compile_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "step.proto",
 }

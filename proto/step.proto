@@ -219,7 +219,7 @@ service StepRunner {
   rpc Close(CloseRequest) returns (CloseResponse);
   rpc FollowLogs(FollowLogsRequest) returns (stream FollowLogsResponse);
   rpc Status(StatusRequest) returns (StatusResponse);
-  rpc RunUp(stream RunResponse) returns (stream RunRequest); // flow of control is inverted
+  rpc RunUp(stream RunUpResponse) returns (stream RunUpRequest); // flow of control is inverted
 }
 
 message Context {
@@ -252,6 +252,29 @@ message Delegation {
   Continuation continuation = 2;
 }
 
+message RunUpRequest {
+  string id = 1;
+  string isolation = 2;
+  oneof request_oneof {
+    RunRequest run = 3;
+    FollowStepsRequest follow_steps = 4;
+    CloseRequest close = 5;
+    FollowLogsRequest follow_logs = 6;
+    StatusRequest status = 7;
+  }
+}
+
+message RunUpResponse {
+  string id = 1;
+  oneof response_oneof {
+    RunResponse run = 2;
+    FollowStepsResponse follow_steps = 3;
+    CloseResponse close = 4;
+    FollowLogsResponse follow_logs = 5;
+    StatusResponse status = 6;
+  }
+}
+
 message RunRequest {
   string id = 1;
   Context context = 2;
@@ -270,7 +293,7 @@ message Variable {
 
 message RunResponse {
   string id = 1;
-  StepResult result = 2;
+  StepResult result = 2; // Ignore me, I'm just just a short cut.
 }
 
 message FollowStepsRequest {
@@ -312,4 +335,36 @@ message StatusRequest {
 
 message StatusResponse {
     repeated Status jobs = 1;
+}
+
+service StepLogger {
+  rpc Log(LogRequest) returns (LogResponse);
+  rpc AddFilter(AddFilterRequest) returns (AddFilterResponse);
+}
+
+message LogRequest {
+  string id = 1;
+  bytes data = 2;
+}
+
+message LogResponse {}
+
+message AddFilterRequest {
+  string id = 1;
+  string filter = 2;
+}
+
+message AddFilterResponse {}
+
+service StepCompiler {
+  rpc Compile(CompileRequest) returns (CompileResponse);
+}
+
+message CompileRequest {
+  string dialect = 1;
+  string step = 2;
+}
+
+message CompileResponse {
+  SpecDefinition function = 1;
 }
