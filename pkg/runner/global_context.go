@@ -37,7 +37,7 @@ func (g *GlobalContext) Exports() (map[string]string, error) {
 		return nil, fmt.Errorf("reading exports: %w", err)
 	}
 
-	g.Env = g.Env.AddLexicalScope(exports)
+	g.Env.Mutate(NewEnvironment(exports))
 
 	err = g.ExportFile.Remove()
 	if err != nil {

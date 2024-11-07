@@ -129,7 +129,7 @@ func run(options *Options) error {
 		return err
 	}
 
-	stepsCtx := runner.NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, map[string]string{})
+	stepsCtx := runner.NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, globalCtx.Env)
 	result, err := step.Run(ctx.Background(), stepsCtx)
 
 	if options.WriteStepResults || options.StepResultsFile != "" {

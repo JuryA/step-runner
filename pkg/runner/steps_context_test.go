@@ -15,7 +15,7 @@ func TestStepsContext_ExpandAndApplyEnv(t *testing.T) {
 	globalCtx := bldr.GlobalContext().Build()
 
 	inputs := map[string]*structpb.Value{"name": structpb.NewStringValue("sally")}
-	env := map[string]string{"HOME": "/home"}
+	env := runner.NewEnvironment(map[string]string{"HOME": "/home"})
 
 	stepsCtx := runner.NewStepsContext(globalCtx, "", inputs, env)
 	err := stepsCtx.ExpandAndApplyEnv(map[string]string{"WORK_DIR": "/home/${{ inputs.name }}"})

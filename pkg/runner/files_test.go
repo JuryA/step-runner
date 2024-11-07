@@ -245,7 +245,7 @@ food="apple"
 			globalCtx, err := NewGlobalContext(env)
 			require.NoError(t, err)
 			defer globalCtx.Cleanup()
-			files, err := NewFiles(NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, map[string]string{}), tc.outputMethod, tc.outputs)
+			files, err := NewFiles(NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, globalCtx.Env), tc.outputMethod, tc.outputs)
 			require.NoError(t, err)
 
 			outputFile, err := os.OpenFile(files.outputFile.Path(), os.O_APPEND|os.O_WRONLY, 0660)
