@@ -102,7 +102,7 @@ func (o *GRPCOutputer) ServiceRunUp() {
 				time.Sleep(time.Second)
 				continue
 			}
-			fmt.Printf("got run up request %v\n", req.Id)
+			fmt.Printf("got run up request %v\n", req.GetRun().Id)
 			// Create global and steps contexts from the request
 			env := NewEnvironment(req.GetRun().Context.GetEnv())
 			globalCtx, err := NewGlobalContext(env)
