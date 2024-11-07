@@ -29,25 +29,16 @@ import (
 )
 
 const (
-	helloStep = `spec: {}
+	scriptStep = `spec: {}
 ---
 steps:
-  - name: hello_world
-    step: ../../runner/test_steps/greeting
-    inputs: {}
-`
-	bashStep = `spec: {}
----
-steps:
-  - name: bash
-    step: ../testdata/bash
-    inputs:
-        script: %s
+  - name: script_step
+    script: %s
 `
 )
 
-func makeBashStep(cmd string) string {
-	return fmt.Sprintf(bashStep, cmd)
+func makeScriptStep(cmd string) string {
+	return fmt.Sprintf(scriptStep, cmd)
 }
 
 const bufSize = 1024 * 1024
@@ -106,7 +97,7 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	defer cleanup(t)
 
 	bg := context.Background()
-	rr := test.ProtoRunRequest(t, helloStep, false)
+	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
 
 	_, err := apiClient.Run(bg, rr)
 	require.NoError(t, err)
@@ -132,7 +123,7 @@ func Test_StepRunnerService_Run_RequestCancelled(t *testing.T) {
 	require.NoError(t, err)
 	srs := New(stepCache, runner.NewEmptyEnvironment())
 
-	rr := test.ProtoRunRequest(t, helloStep, false)
+	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	cancel()
@@ -203,7 +194,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 
-			rr := test.ProtoRunRequest(t, makeBashStep(tt.script), false)
+			rr := test.ProtoRunRequest(t, makeScriptStep(tt.script), false)
 			_, err := apiClient.Run(bg, rr)
 			require.NoError(t, err)
 
@@ -268,7 +259,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			bg := context.Background()
 
-			rr := test.ProtoRunRequest(t, makeBashStep(tt.script), tt.jobWorkDir)
+			rr := test.ProtoRunRequest(t, makeScriptStep(tt.script), tt.jobWorkDir)
 			tt.setup(rr)
 
 			_, err := apiClient.Run(bg, rr)
@@ -351,7 +342,7 @@ func Test_StepRunnerService_Close(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			rr := test.ProtoRunRequest(t, makeBashStep(tt.cmd), false)
+			rr := test.ProtoRunRequest(t, makeScriptStep(tt.cmd), false)
 			_, err := apiClient.Run(bg, rr)
 			require.NoError(t, err)
 
@@ -390,7 +381,7 @@ func Test_StepRunnerService_FollowLogs(t *testing.T) {
 
 	bg := context.Background()
 
-	rr := test.ProtoRunRequest(t, helloStep, false)
+	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
 	_, err := apiClient.Run(bg, rr)
 	require.NoError(t, err)
 
@@ -412,7 +403,7 @@ func Test_StepRunnerService_FollowLogs(t *testing.T) {
 	apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
 
 	require.True(t, errors.Is(err, io.EOF))
-	require.Equal(t, "meet steppy who is 1 likes {\"color\":\"red\"} and is hungry false\n", logs.String())
+	require.Equal(t, "foo bar baz\n", logs.String())
 }
 
 func Test_StepRunnerService_Status(t *testing.T) {
@@ -425,7 +416,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 	tests := map[string]spec{
 		"single job eventually finishes": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, helloStep, false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
@@ -455,8 +446,8 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		"multiple jobs, no ids in request": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
 				return []*proto.RunRequest{
-					test.ProtoRunRequest(t, helloStep, false),
-					test.ProtoRunRequest(t, helloStep, false),
+					test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false),
+					test.ProtoRunRequest(t, makeScriptStep("bling blang blong"), false),
 				}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
@@ -471,8 +462,8 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		"multiple jobs, single id in request": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
 				return []*proto.RunRequest{
-					test.ProtoRunRequest(t, helloStep, false),
-					test.ProtoRunRequest(t, helloStep, false),
+					test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false),
+					test.ProtoRunRequest(t, makeScriptStep("bling blang blong"), false),
 				}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
@@ -485,7 +476,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"bad id in request": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, helloStep, false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				sr, err := apiClient.Status(bg, &proto.StatusRequest{Id: "blablabla"})
@@ -495,7 +486,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"single job failed": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, makeBashStep("sdjskjdfh"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("sdjskjdfh"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
@@ -512,7 +503,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"single job cancelled before execution start": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, makeBashStep("sleep 1"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("sleep 1"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
@@ -531,7 +522,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"single job cancelled after execution start": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, makeBashStep("sleep 1"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("sleep 1"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
