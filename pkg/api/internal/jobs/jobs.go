@@ -149,12 +149,15 @@ func (j *Job) Status() *proto.Status {
 	defer j.mux.RUnlock()
 
 	st := proto.Status{
-		Id:        j.ID,
-		StartTime: timestamppb.New(j.startTime),
-		Status:    j.status,
+		Id:     j.ID,
+		Status: j.status,
 	}
 
-	if j.finished {
+	if !j.startTime.IsZero() {
+		st.StartTime = timestamppb.New(j.startTime)
+	}
+
+	if !j.finishTime.IsZero() {
 		st.EndTime = timestamppb.New(j.finishTime)
 	}
 	if j.err != nil {
