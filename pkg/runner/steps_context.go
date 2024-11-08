@@ -20,7 +20,7 @@ type StepsContext struct {
 	Steps      map[string]*proto.StepResult // Results of previously executed steps.
 }
 
-func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*structpb.Value, env *Environment) (*StepsContext, error) {
+func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*structpb.Value, env *Environment, steps map[string]*proto.StepResult) (*StepsContext, error) {
 	outputFile, err := NewStepFileInTmp()
 
 	if err != nil {
@@ -38,7 +38,7 @@ func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*st
 		StepDir:       dir,
 		Env:           env,
 		Inputs:        inputs,
-		Steps:         map[string]*proto.StepResult{},
+		Steps:         steps,
 		OutputFile:    outputFile,
 		ExportFile:    exportFile,
 	}, nil

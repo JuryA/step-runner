@@ -97,7 +97,7 @@ func run(options *Options) error {
 
 	env := globalCtx.Env.AddLexicalScope(params.Env)
 	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
-	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
+	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env, map[string]*proto.StepResult{})
 
 	if err != nil {
 		return fmt.Errorf("creating steps context: %w", err)
@@ -105,7 +105,7 @@ func run(options *Options) error {
 
 	defer stepsCtx.Cleanup()
 
-	result, err := step.Run(ctx.Background(), stepsCtx)
+	result, err := step.Run(ctx.Background(), stepsCtx, globalCtx, protoStepDef.Dir, inputs, env, map[string]*proto.StepResult{})
 
 	if options.WriteStepResultsFile {
 		reptErr := report.NewStepResultReport("", report.FormatJSON).Write(result)

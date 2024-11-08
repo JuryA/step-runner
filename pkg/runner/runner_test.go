@@ -493,9 +493,9 @@ func runTest(testCase runnerTest) func(*testing.T) {
 		require.NoError(t, err)
 
 		inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
-		stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.Env)
+		stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.Env, map[string]*proto.StepResult{})
 		require.NoError(t, err)
-		result, err := step.Run(ctx.Background(), stepsCtx)
+		result, err := step.Run(ctx.Background(), stepsCtx, globalCtx, protoStepDef.Dir, inputs, globalCtx.Env, map[string]*proto.StepResult{})
 
 		if testCase.wantErr != nil {
 			require.Error(t, err)

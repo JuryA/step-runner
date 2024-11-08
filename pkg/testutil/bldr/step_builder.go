@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -46,6 +48,6 @@ func (s *FixedResultStep) Describe() string {
 	return fmt.Sprintf("fixed result step %s", s.stepResult.Status)
 }
 
-func (s *FixedResultStep) Run(_ context.Context, _ *runner.StepsContext) (*proto.StepResult, error) {
+func (s *FixedResultStep) Run(_ context.Context, _ *runner.StepsContext, _ *runner.GlobalContext, _ string, _ map[string]*structpb.Value, _ *runner.Environment, _ map[string]*proto.StepResult) (*proto.StepResult, error) {
 	return s.stepResult, s.err
 }

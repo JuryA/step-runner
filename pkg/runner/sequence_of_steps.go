@@ -35,10 +35,17 @@ func (s *SequenceOfSteps) Describe() string {
 	return fmt.Sprintf("sequence of %d steps", len(s.steps))
 }
 
-func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
+func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext, globalCtx *GlobalContext, stepDir string, inputs map[string]*structpb.Value, env *Environment, steps map[string]*proto.StepResult) (*proto.StepResult, error) {
+	stepsCtx, err := NewStepsContext(globalCtx, stepDir, inputs, env, steps)
+	if err != nil {
+		return nil, err
+	}
+
+	defer stepsCtx.Cleanup()
+
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 
-	err := stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
+	err = stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
 	result.WithEnv(stepsCtx.GetEnvs())
 
 	if err != nil {
@@ -46,7 +53,7 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.S
 	}
 
 	for _, step := range s.steps {
-		stepResult, err := step.Run(ctx, stepsCtx)
+		stepResult, err := step.Run(ctx, stepsCtx, globalCtx, stepDir, inputs, stepsCtx.Env, stepsCtx.Steps)
 		result.WithSubStepResult(stepResult)
 
 		// Capture results even if there was an error

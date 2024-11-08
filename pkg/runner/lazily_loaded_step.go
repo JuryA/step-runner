@@ -4,6 +4,8 @@ import (
 	ctx "context"
 	"fmt"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -37,24 +39,22 @@ func (s *LazilyLoadedStep) Describe() string {
 // Run fetches a step definition, parses the step, and executes it.
 // The step reference inputs and environment are expanded.
 // The current environment is cloned into params in preparation for a recursive call to Run.
-func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*proto.StepResult, error) {
+func (s *LazilyLoadedStep) Run(ctx ctx.Context, stepsCtx *StepsContext, globalCtx *GlobalContext, stepDir string, inputs map[string]*structpb.Value, env *Environment, steps map[string]*proto.StepResult) (*proto.StepResult, error) {
+	parentStepsCtx, err := NewStepsContext(globalCtx, stepDir, inputs, env, steps)
+	if err != nil {
+		return nil, err
+	}
+
+	defer parentStepsCtx.Cleanup()
+
 	step, params, subStepSpecDefinition, err := s.loadStep(ctx, parentStepsCtx, s.workDir)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
 	}
 
-	env := parentStepsCtx.Env.AddLexicalScope(params.Env)
-	inputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
-	stepsCtx, err := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir, inputs, env)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
-	}
-
-	defer stepsCtx.Cleanup()
-
-	result, err := step.Run(ctx, stepsCtx)
+	subStepInputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
+	result, err := step.Run(ctx, parentStepsCtx, globalCtx, subStepSpecDefinition.Dir, subStepInputs, env.AddLexicalScope(params.Env), map[string]*proto.StepResult{})
 
 	if err != nil {
 		return result, fmt.Errorf("failed to run %s: %w", s.Describe(), err)

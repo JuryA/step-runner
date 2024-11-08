@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -29,10 +31,17 @@ func (s *ExecutableStep) Describe() string {
 	return fmt.Sprintf("executable step %q", strings.Join(s.specDef.Definition.Exec.Command, " "))
 }
 
-func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
+func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, globalCtx *GlobalContext, stepDir string, inputs map[string]*structpb.Value, env *Environment, steps map[string]*proto.StepResult) (*proto.StepResult, error) {
+	stepsCtx, err := NewStepsContext(globalCtx, stepDir, inputs, env, steps)
+	if err != nil {
+		return nil, err
+	}
+
+	defer stepsCtx.Cleanup()
+
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 
-	err := stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
+	err = stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
 	result.WithEnv(stepsCtx.GetEnvs())
 	if err != nil {
 		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)

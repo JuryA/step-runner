@@ -72,7 +72,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	}
 
 	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
-	stepsCtx, err := runner.NewStepsContext(job.GlobCtx, specDef.Dir, inputs, job.GlobCtx.Env)
+	stepsCtx, err := runner.NewStepsContext(job.GlobCtx, specDef.Dir, inputs, job.GlobCtx.Env, map[string]*proto.StepResult{})
 
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 
 // run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
 func (s *StepRunnerService) run(job *jobs.Job, step runner.Step) {
-	result, err := step.Run(job.Ctx, job.StepsCtx)
+	result, err := step.Run(job.Ctx, job.StepsCtx, job.GlobCtx, job.StepsCtx.StepDir, job.StepsCtx.Inputs, job.StepsCtx.Env, map[string]*proto.StepResult{})
 	job.Finish(result, err)
 	if err != nil {
 		// TODO: better logging
