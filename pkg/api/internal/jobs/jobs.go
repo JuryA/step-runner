@@ -29,7 +29,6 @@ type Job struct {
 
 	cancel     func()    // Used to cancel the Ctx.
 	err        error     // Captures any error returned when executing steps.
-	finished   bool      // Indicated whether all processing of this job has finished.
 	startTime  time.Time // time when the job finished execution.
 	finishTime time.Time // time when the job finished execution.
 	mux        sync.RWMutex
@@ -106,7 +105,6 @@ func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 			j.status = proto.StepResult_cancelled
 			j.mux.Unlock()
 			log.Println(j.err.Error())
-			j.finished = true
 			return
 		}
 
@@ -120,7 +118,6 @@ func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 		defer j.mux.Unlock()
 
 		j.err = err
-		j.finished = true
 		j.finishTime = time.Now()
 		j.status = j.computeFinalStatus(result, err)
 
@@ -161,7 +158,7 @@ func (j *Job) computeFinalStatus(stepResult *proto.StepResult, err error) proto.
 func (j *Job) Finished() bool {
 	j.mux.RLock()
 	defer j.mux.RUnlock()
-	return j.finished
+	return j.status == proto.StepResult_success || j.status == proto.StepResult_failure || j.status == proto.StepResult_cancelled
 }
 
 // Close() cancels jobs (if still running) and cleans up all resources associated with managing the job.
