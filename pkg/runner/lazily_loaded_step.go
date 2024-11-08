@@ -39,7 +39,7 @@ func (s *LazilyLoadedStep) Describe() string {
 // Run fetches a step definition, parses the step, and executes it.
 // The step reference inputs and environment are expanded.
 // The current environment is cloned into params in preparation for a recursive call to Run.
-func (s *LazilyLoadedStep) Run(ctx ctx.Context, stepsCtx *StepsContext, globalCtx *GlobalContext, stepDir string, inputs map[string]*structpb.Value, env *Environment, steps map[string]*proto.StepResult) (*proto.StepResult, error) {
+func (s *LazilyLoadedStep) Run(ctx ctx.Context, globalCtx *GlobalContext, stepDir string, inputs map[string]*structpb.Value, env *Environment, steps map[string]*proto.StepResult) (*proto.StepResult, error) {
 	parentStepsCtx, err := NewStepsContext(globalCtx, stepDir, inputs, env, steps)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, stepsCtx *StepsContext, globalCt
 	}
 
 	subStepInputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
-	result, err := step.Run(ctx, parentStepsCtx, globalCtx, subStepSpecDefinition.Dir, subStepInputs, env.AddLexicalScope(params.Env), map[string]*proto.StepResult{})
+	result, err := step.Run(ctx, globalCtx, subStepSpecDefinition.Dir, subStepInputs, env.AddLexicalScope(params.Env), map[string]*proto.StepResult{})
 
 	if err != nil {
 		return result, fmt.Errorf("failed to run %s: %w", s.Describe(), err)

@@ -127,15 +127,7 @@ func run(options *Options) error {
 		return err
 	}
 
-	stepsCtx, err := runner.NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, globalCtx.Env, map[string]*proto.StepResult{})
-
-	if err != nil {
-		return err
-	}
-
-	defer stepsCtx.Cleanup()
-
-	result, err := step.Run(ctx.Background(), stepsCtx, globalCtx, "", map[string]*structpb.Value{}, globalCtx.Env, map[string]*proto.StepResult{})
+	result, err := step.Run(ctx.Background(), globalCtx, "", map[string]*structpb.Value{}, globalCtx.Env, map[string]*proto.StepResult{})
 
 	if options.WriteStepResults || options.StepResultsFile != "" {
 		reptErr := report.NewStepResultReport(

@@ -48,6 +48,6 @@ func (s *FixedResultStep) Describe() string {
 	return fmt.Sprintf("fixed result step %s", s.stepResult.Status)
 }
 
-func (s *FixedResultStep) Run(_ context.Context, _ *runner.StepsContext, _ *runner.GlobalContext, _ string, _ map[string]*structpb.Value, _ *runner.Environment, _ map[string]*proto.StepResult) (*proto.StepResult, error) {
+func (s *FixedResultStep) Run(_ context.Context, _ *runner.GlobalContext, _ string, _ map[string]*structpb.Value, _ *runner.Environment, _ map[string]*proto.StepResult) (*proto.StepResult, error) {
 	return s.stepResult, s.err
 }

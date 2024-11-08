@@ -31,7 +31,7 @@ func (s *ExecutableStep) Describe() string {
 	return fmt.Sprintf("executable step %q", strings.Join(s.specDef.Definition.Exec.Command, " "))
 }
 
-func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext, globalCtx *GlobalContext, stepDir string, inputs map[string]*structpb.Value, env *Environment, steps map[string]*proto.StepResult) (*proto.StepResult, error) {
+func (s *ExecutableStep) Run(ctx ctx.Context, globalCtx *GlobalContext, stepDir string, inputs map[string]*structpb.Value, env *Environment, steps map[string]*proto.StepResult) (*proto.StepResult, error) {
 	stepsCtx, err := NewStepsContext(globalCtx, stepDir, inputs, env, steps)
 	if err != nil {
 		return nil, err

@@ -31,7 +31,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 		stepsCtx := bldr.StepsContext(t).Build()
 		stepResource := bldr.FileSystemStepResource().Build()
 		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
-		stepResult, err := step.Run(context.Background(), stepsCtx, stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
+		stepResult, err := step.Run(context.Background(), stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
 
 		require.NoError(t, err)
 		require.Equal(t, proto.StepResult_success, stepResult.Status)
@@ -56,7 +56,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 		stepsCtx := bldr.StepsContext(t).Build()
 		stepResource := bldr.FileSystemStepResource().Build()
 		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
-		_, err := step.Run(context.Background(), stepsCtx, stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
+		_, err := step.Run(context.Background(), stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
 
 		require.Error(t, err)
 		require.Equal(t, `failed to run step "step-name": failed to load: step does not accept input with name "not.defined"`, err.Error())
@@ -79,7 +79,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 		stepsCtx := bldr.StepsContext(t).WithGlobalContext(globalCtx).Build()
 		stepResource := bldr.GitStepResource().WithURL("http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/step").Build()
 		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
-		stepResult, err := step.Run(context.Background(), stepsCtx, stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
+		stepResult, err := step.Run(context.Background(), stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
 
 		require.NoError(t, err)
 		require.Equal(t, proto.StepResult_success, stepResult.Status)

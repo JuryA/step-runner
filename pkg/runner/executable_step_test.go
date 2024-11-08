@@ -63,7 +63,7 @@ func TestExecutableStep_Run(t *testing.T) {
 				stepsCtx := bldr.StepsContext(t).Build()
 
 				step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
-				execStepResult, err := step.Run(context.Background(), stepsCtx, stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
+				execStepResult, err := step.Run(context.Background(), stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
 				require.NoError(t, err)
 				require.Equal(t, proto.StepResult_success, execStepResult.Status)
 				require.Equal(t, test.expected, test.extractValueFn(execStepResult.Outputs["value"]))
@@ -88,7 +88,7 @@ func TestExecutableStep_Run(t *testing.T) {
 		stepsCtx := bldr.StepsContext(t).Build()
 
 		step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
-		execStepResult, err := step.Run(context.Background(), stepsCtx, stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
+		execStepResult, err := step.Run(context.Background(), stepsCtx.GlobalContext, stepsCtx.StepDir, stepsCtx.Inputs, stepsCtx.Env, nil)
 		require.NoError(t, err)
 		require.Equal(t, proto.StepResult_success, execStepResult.Status)
 		require.Equal(t, "amanda", execStepResult.Outputs["name"].GetStringValue())
