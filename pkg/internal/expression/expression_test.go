@@ -27,7 +27,7 @@ func TestEvaluate(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.value, func(t *testing.T) {
-			got, err := expression.Evaluate(textContextSteps(), c.value)
+			got, err := expression.Evaluate(textContextSteps(t), c.value)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {

@@ -73,12 +73,7 @@ func run(options *Options) error {
 		return err
 	}
 
-	globalCtx, err := runner.NewGlobalContext(osEnv)
-	if err != nil {
-		return fmt.Errorf("creating global context: %w", err)
-	}
-	defer globalCtx.Cleanup()
-
+	globalCtx := runner.NewGlobalContext(osEnv)
 	params := &runner.Params{}
 
 	// Step runner should have no concept of "CI_BUILDS_DIR".
@@ -102,7 +97,13 @@ func run(options *Options) error {
 
 	env := globalCtx.Env.AddLexicalScope(params.Env)
 	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
-	stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
+	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
+
+	if err != nil {
+		return fmt.Errorf("creating steps context: %w", err)
+	}
+
+	defer stepsCtx.Cleanup()
 
 	result, err := step.Run(ctx.Background(), stepsCtx)
 

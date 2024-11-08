@@ -122,14 +122,19 @@ func run(options *Options) error {
 		return err
 	}
 
-	defer globalCtx.Cleanup()
-
 	step, err := runner.NewParser(globalCtx, stepCache).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return err
 	}
 
-	stepsCtx := runner.NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, globalCtx.Env)
+	stepsCtx, err := runner.NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, globalCtx.Env)
+
+	if err != nil {
+		return err
+	}
+
+	defer stepsCtx.Cleanup()
+
 	result, err := step.Run(ctx.Background(), stepsCtx)
 
 	if options.WriteStepResults || options.StepResultsFile != "" {
@@ -152,11 +157,7 @@ func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
 		return nil, err
 	}
 
-	globalCtx, err := runner.NewGlobalContext(env)
-
-	if err != nil {
-		return nil, err
-	}
+	globalCtx := runner.NewGlobalContext(env)
 
 	workDir, err := os.Getwd()
 

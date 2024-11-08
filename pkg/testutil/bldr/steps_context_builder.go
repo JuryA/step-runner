@@ -1,9 +1,9 @@
 package bldr
 
 import (
-	"os"
-	"path/filepath"
+	"testing"
 
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
@@ -14,16 +14,24 @@ type StepsContextBuilder struct {
 	globalCtx   *runner.GlobalContext
 	env         map[string]string
 	inputs      map[string]*structpb.Value
-	outputFile  string
+	outputFile  *runner.StepFile
+	exportFile  *runner.StepFile
 	stepResults map[string]*proto.StepResult
 }
 
-func StepsContext() *StepsContextBuilder {
+func StepsContext(t *testing.T) *StepsContextBuilder {
+	outputFile, err := runner.NewStepFileInDir(t.TempDir())
+	require.NoError(t, err)
+
+	exportFile, err := runner.NewStepFileInDir(t.TempDir())
+	require.NoError(t, err)
+
 	return &StepsContextBuilder{
 		globalCtx:   GlobalContext().Build(),
 		env:         map[string]string{},
 		inputs:      map[string]*structpb.Value{},
-		outputFile:  "output",
+		outputFile:  outputFile,
+		exportFile:  exportFile,
 		stepResults: map[string]*proto.StepResult{},
 	}
 }
@@ -43,18 +51,6 @@ func (bldr *StepsContextBuilder) WithInput(name string, value *structpb.Value) *
 	return bldr
 }
 
-func (bldr *StepsContextBuilder) WithTempOutputFile(tempDir string) *StepsContextBuilder {
-	outputFile := filepath.Join(tempDir, "output")
-	_, err := os.Create(outputFile)
-
-	if err != nil {
-		panic(err)
-	}
-
-	bldr.outputFile = outputFile
-	return bldr
-}
-
 func (bldr *StepsContextBuilder) WithStepResults(stepResults map[string]*proto.StepResult) *StepsContextBuilder {
 	bldr.stepResults = stepResults
 	return bldr
@@ -65,6 +61,7 @@ func (bldr *StepsContextBuilder) Build() *runner.StepsContext {
 		GlobalContext: bldr.globalCtx,
 		StepDir:       ".",
 		OutputFile:    bldr.outputFile,
+		ExportFile:    bldr.exportFile,
 		Env:           runner.NewEnvironment(bldr.env),
 		Inputs:        bldr.inputs,
 		Steps:         bldr.stepResults,

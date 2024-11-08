@@ -31,41 +31,40 @@ func (s *ExecutableStep) Describe() string {
 
 func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
-	files, err := NewFiles(stepsCtx, s.specDef.Spec.Spec.OutputMethod, s.specDef.Spec.Spec.Outputs)
 
-	if err != nil {
-		return result.BuildFailure(), err
-	}
-
-	defer files.Cleanup()
-
-	err = stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
+	err := stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
 	result.WithEnv(stepsCtx.GetEnvs())
-
 	if err != nil {
 		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
 	}
 
 	executedCmd, err := s.execCommand(ctx, stepsCtx)
 	result.WithExecResult(executedCmd)
-
 	if err != nil {
 		return result.BuildFailure(), err
 	}
 
-	outputs, delegateToResult, err := files.Outputs()
-	result.WithMergedOutputs(outputs).WithSubStepResult(delegateToResult)
-
-	if err != nil {
-		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
+	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
+		delegateResult, err := stepsCtx.OutputFile.ReadStepResult()
+		if err != nil {
+			return result.BuildFailure(), err
+		}
+		result.WithMergedOutputs(delegateResult.Outputs).WithSubStepResult(delegateResult)
+	} else {
+		outputs, err := stepsCtx.OutputFile.ReadValues(s.specDef.Spec.Spec.Outputs)
+		result.WithMergedOutputs(outputs)
+		if err != nil {
+			return result.BuildFailure(), err
+		}
 	}
 
-	exports, err := stepsCtx.GlobalContext.Exports()
+	exports, err := stepsCtx.ExportFile.ReadEnvironment()
 	result.WithExports(exports)
-
 	if err != nil {
-		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
+		return result.BuildFailure(), fmt.Errorf("export file: %w", err)
 	}
+
+	stepsCtx.GlobalContext.Env.Mutate(exports)
 
 	return result.Build(), nil
 }

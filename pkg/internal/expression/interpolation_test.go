@@ -11,8 +11,8 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
-func textContextSteps() *expression.InterpolationContext {
-	stepsCtx := bldr.StepsContext().
+func textContextSteps(t *testing.T) *expression.InterpolationContext {
+	stepsCtx := bldr.StepsContext(t).
 		WithGlobalContext(bldr.GlobalContext().WithJob("job_id", "1982").Build()).
 		WithEnv("MOVIE", "tron").
 		WithEnv("WHERE", "inside").
@@ -66,7 +66,7 @@ func TestExpandString(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.value, func(t *testing.T) {
-			got, err := expression.ExpandString(textContextSteps(), c.value)
+			got, err := expression.ExpandString(textContextSteps(t), c.value)
 			if c.wantErr != nil {
 				require.Equal(t, c.wantErr, err)
 			} else {
@@ -132,7 +132,7 @@ func TestExpand(t *testing.T) {
 		want:  structpb.NewStringValue("Hello, my name is Kevin Flynn. You killed my process. Prepare to SIGTERM."),
 	}}
 	for _, c := range cases {
-		got, err := expression.Expand(textContextSteps(), c.value)
+		got, err := expression.Expand(textContextSteps(t), c.value)
 		if c.wantErr != nil {
 			require.Equal(t, c.wantErr, err)
 		} else {

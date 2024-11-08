@@ -13,20 +13,35 @@ type StepsContext struct {
 	*GlobalContext
 
 	StepDir    string                       // The path to the YAML definition directory so steps can find their files and sub-steps with relative references know where to start.
-	OutputFile string                       // The path to the output file.
+	OutputFile *StepFile                    // The path to the output file.
+	ExportFile *StepFile                    // The path to the export file.
 	Env        *Environment                 // Expanded environment values of the executing step.
 	Inputs     map[string]*structpb.Value   // Expanded input values of the executing step.
 	Steps      map[string]*proto.StepResult // Results of previously executed steps.
 }
 
-func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*structpb.Value, env *Environment) *StepsContext {
+func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*structpb.Value, env *Environment) (*StepsContext, error) {
+	outputFile, err := NewStepFileInTmp()
+
+	if err != nil {
+		return nil, fmt.Errorf("creating steps context: output file: %w", err)
+	}
+
+	exportFile, err := NewStepFileInTmp()
+
+	if err != nil {
+		return nil, fmt.Errorf("creating steps context: export file: %w", err)
+	}
+
 	return &StepsContext{
 		GlobalContext: globalCtx,
 		StepDir:       dir,
 		Env:           env,
 		Inputs:        inputs,
 		Steps:         map[string]*proto.StepResult{},
-	}
+		OutputFile:    outputFile,
+		ExportFile:    exportFile,
+	}, nil
 }
 
 func (s *StepsContext) GetEnvs() map[string]string {
@@ -70,9 +85,14 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 		ExportFile:  s.ExportFile.Path(),
 		Inputs:      s.Inputs,
 		Job:         s.Job,
-		OutputFile:  s.OutputFile,
+		OutputFile:  s.OutputFile.Path(),
 		StepDir:     s.StepDir,
 		StepResults: stepResultViews,
 		WorkDir:     s.WorkDir,
 	}
+}
+
+func (s *StepsContext) Cleanup() {
+	_ = s.OutputFile.Remove()
+	_ = s.ExportFile.Remove()
 }

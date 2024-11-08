@@ -60,9 +60,7 @@ func TestExecutableStep_Run(t *testing.T) {
 					WithExecType("", []string{"/bin/bash", "-c", "echo " + outputValueB64 + " | base64 -d > ${{output_file}}"}).
 					Build()
 				specDef := bldr.ProtoSpecDef().WithSpec(protoSpec).WithDefinition(protoDef).Build()
-
-				globalCtx := bldr.GlobalContext().WithTempExportFile(t.TempDir()).Build()
-				stepsCtx := bldr.StepsContext().WithGlobalContext(globalCtx).Build()
+				stepsCtx := bldr.StepsContext(t).Build()
 
 				step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
 				execStepResult, err := step.Run(context.Background(), stepsCtx)
@@ -87,9 +85,7 @@ func TestExecutableStep_Run(t *testing.T) {
 			WithExecType("", []string{"/bin/bash", "-c", `echo ${{env.STEP_RESULT}} | base64 -d >${{output_file}}`}).
 			Build()
 		specDef := bldr.ProtoSpecDef().WithSpec(protoSpec).WithDefinition(protoDef).Build()
-
-		globalCtx := bldr.GlobalContext().WithTempExportFile(t.TempDir()).Build()
-		stepsCtx := bldr.StepsContext().WithTempOutputFile(t.TempDir()).WithGlobalContext(globalCtx).Build()
+		stepsCtx := bldr.StepsContext(t).Build()
 
 		step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
 		execStepResult, err := step.Run(context.Background(), stepsCtx)

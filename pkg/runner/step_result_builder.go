@@ -57,8 +57,8 @@ func (bldr *StepResultBuilder) WithSubStepResult(result *proto.StepResult) *Step
 	return bldr
 }
 
-func (bldr *StepResultBuilder) WithExports(exports map[string]string) *StepResultBuilder {
-	bldr.exports = exports
+func (bldr *StepResultBuilder) WithExports(exports *Environment) *StepResultBuilder {
+	bldr.exports = exports.Values()
 	return bldr
 }
 
