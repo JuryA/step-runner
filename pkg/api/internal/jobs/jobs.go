@@ -32,7 +32,9 @@ type Job struct {
 	startTime  time.Time // time when the job finished execution.
 	finishTime time.Time // time when the job finished execution.
 	mux        sync.RWMutex
+	finishC    chan struct{}
 	runOnce    sync.Once
+	closeOnce  sync.Once
 
 	logs *file.Streamer
 
@@ -73,15 +75,15 @@ func New(request *proto.RunRequest) (*Job, error) {
 	globCtx.Stdout = logs
 
 	return &Job{
-		TmpDir:    tmpDir,
-		WorkDir:   workDir,
-		ID:        request.Id,
-		Ctx:       ctx,
-		GlobCtx:   globCtx,
-		startTime: time.Now(),
-		cancel:    cancel,
-		logs:      logs,
-		status:    proto.StepResult_unspecified,
+		TmpDir:  tmpDir,
+		WorkDir: workDir,
+		ID:      request.Id,
+		Ctx:     ctx,
+		GlobCtx: globCtx,
+		cancel:  cancel,
+		logs:    logs,
+		status:  proto.StepResult_unspecified,
+		finishC: make(chan struct{}, 1),
 	}, nil
 }
 
@@ -89,37 +91,43 @@ func New(request *proto.RunRequest) (*Job, error) {
 // goroutine.
 func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 	j.runOnce.Do(func() {
+		defer func() {
+			stepsCtx.Cleanup()
+			j.logs.Stop()
+			_ = j.logs.Close()
+			j.finishC <- struct{}{}
+		}()
+
+		j.mux.Lock()
+
+		if j.Ctx.Err() != nil {
+			j.err = fmt.Errorf("job %q cancelled before execution started", j.ID)
+			j.status = proto.StepResult_cancelled
+			j.mux.Unlock()
+			log.Println(j.err.Error())
+			j.finished = true
+			return
+		}
+
+		j.startTime = time.Now()
 		j.status = proto.StepResult_running
-		defer stepsCtx.Cleanup()
+		j.mux.Unlock()
+
 		result, err := step.Run(j.Ctx, stepsCtx)
-		j.Finish(result, err)
+
+		j.mux.Lock()
+		defer j.mux.Unlock()
+
+		j.err = err
+		j.finished = true
+		j.finishTime = time.Now()
+		j.status = computeFinalStatus(result, err)
 
 		if err != nil {
 			// TODO: better logging
-			log.Printf("an error occurred executing the job: %s", err)
+			log.Printf("an error occurred executing job %q: %s", j.ID, err)
 		}
 	})
-}
-
-// Finish() finishes/completes natural job execution (i.e. not cancelled). It does not clean up resources created
-// during job execution. The signature of this method may change when we implement streaming step-results.
-func (j *Job) Finish(result *proto.StepResult, err error) {
-	now := time.Now()
-
-	j.mux.Lock()
-	defer j.mux.Unlock()
-	if j.finished {
-		return
-	}
-
-	j.err = err
-	j.finished = true
-	j.finishTime = now
-
-	j.logs.Stop()
-	_ = j.logs.Close()
-
-	j.status = computeFinalStatus(result, err)
 }
 
 func computeFinalStatus(stepResult *proto.StepResult, err error) proto.StepResult_Status {
@@ -139,10 +147,27 @@ func (j *Job) Finished() bool {
 
 // Close() cancels jobs (if still running) and cleans up all resources associated with managing the job.
 func (j *Job) Close() {
-	j.cancel()
-	//nolint:errcheck
-	defer os.RemoveAll(j.TmpDir)
-	j.Finish(nil, j.Ctx.Err())
+	j.closeOnce.Do(func() {
+		j.cancel()
+		// block until Run has exited
+
+		select {
+		case <-j.finishC:
+		case <-time.NewTimer(time.Second * 2).C:
+			// A caller called close without first calling Run... 2 seconds ought to be enough for exec.Cmd.Run() to
+			// return...
+			j.mux.Lock()
+			defer j.mux.Unlock()
+			if j.status == proto.StepResult_unspecified {
+				j.status = proto.StepResult_cancelled
+			}
+			if j.err == nil {
+				j.err = context.Canceled
+			}
+		}
+
+		_ = os.RemoveAll(j.TmpDir)
+	})
 }
 
 // FollowLogs writes the stdout/stderr captured from running steps to the supplied writer.
