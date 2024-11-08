@@ -183,7 +183,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			},
 			validate: func(j *jobs.Job) {
 				stat := j.Status()
-				assert.Contains(t, stat.Message, context.Canceled.Error())
+				assert.Contains(t, stat.Message, "signal: killed")
 				assert.Equal(t, proto.StepResult_cancelled, stat.Status)
 			},
 		},
@@ -332,7 +332,7 @@ func Test_StepRunnerService_Close(t *testing.T) {
 			validate: func(j *jobs.Job) {
 				require.Eventually(t, j.Finished, 200*time.Millisecond, 25*time.Millisecond)
 				stat := j.Status()
-				assert.Contains(t, stat.Message, context.Canceled.Error())
+				assert.Contains(t, stat.Message, "signal: killed")
 				assert.Equal(t, proto.StepResult_cancelled, stat.Status)
 			},
 		},
@@ -538,7 +538,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 					sr, err := apiClient.Status(bg, &proto.StatusRequest{})
 					return err == nil &&
 						assert.Equal(t, proto.StepResult_cancelled, sr.Jobs[0].Status) && // :-(
-						strings.Contains(sr.Jobs[0].Message, context.Canceled.Error())
+						strings.Contains(sr.Jobs[0].Message, "signal: killed")
 				}, time.Second*2, time.Millisecond*250)
 			},
 		},

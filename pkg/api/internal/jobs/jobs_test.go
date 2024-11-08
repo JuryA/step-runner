@@ -88,7 +88,7 @@ func Test_Run_Close(t *testing.T) {
 		},
 		"job cancelled while running, final status is cancelled": {
 			step:       makeMockStep(proto.StepResult_failure, -1, errors.New("signal: killed"), time.Millisecond*100),
-			wantStatus: proto.StepResult_failure,
+			wantStatus: proto.StepResult_cancelled,
 			wantErr:    func(_ *Job) error { return errors.New("signal: killed") },
 		},
 		"job cancelled before execution started": {
@@ -312,6 +312,87 @@ func Test_Status(t *testing.T) {
 
 			assert.Equal(t, j.ID, gotStat.Id)
 			tt.validate(t, gotStat)
+		})
+	}
+}
+
+func Test_computeFinalStatus(t *testing.T) {
+	tests := map[string]struct {
+		incomingStatus proto.StepResult_Status
+		incomingErr    error
+		cancelled      bool
+		wantStatus     proto.StepResult_Status
+	}{
+		"unspecified incoming status": {
+			incomingStatus: proto.StepResult_unspecified,
+			incomingErr:    nil,
+			cancelled:      false,
+			wantStatus:     proto.StepResult_failure,
+		},
+		"running incoming status": {
+			incomingStatus: proto.StepResult_running,
+			incomingErr:    nil,
+			cancelled:      false,
+			wantStatus:     proto.StepResult_failure,
+		},
+		"success incoming status": {
+			incomingStatus: proto.StepResult_success,
+			incomingErr:    nil,
+			cancelled:      false,
+			wantStatus:     proto.StepResult_success,
+		},
+		"cancelled incoming status": {
+			incomingStatus: proto.StepResult_cancelled,
+			incomingErr:    nil,
+			cancelled:      false,
+			wantStatus:     proto.StepResult_cancelled,
+		},
+		"failed incoming status, context cancelled error": {
+			incomingStatus: proto.StepResult_failure,
+			incomingErr:    context.Canceled,
+			cancelled:      false,
+			wantStatus:     proto.StepResult_cancelled,
+		},
+		"failed incoming status, context expired error": {
+			incomingStatus: proto.StepResult_failure,
+			incomingErr:    context.DeadlineExceeded,
+			cancelled:      false,
+			wantStatus:     proto.StepResult_cancelled,
+		},
+		"failed incoming status, signal killed error, context canceled": {
+			incomingStatus: proto.StepResult_failure,
+			incomingErr:    errors.New("foo bar baz signal: killed"),
+			cancelled:      true,
+			wantStatus:     proto.StepResult_cancelled,
+		},
+		"failed incoming status, signal killed error, context not canceled": {
+			incomingStatus: proto.StepResult_failure,
+			incomingErr:    errors.New("foo bar baz signal: killed"),
+			cancelled:      false,
+			wantStatus:     proto.StepResult_failure,
+		},
+		"failed incoming status, other error, context canceled": {
+			incomingStatus: proto.StepResult_failure,
+			incomingErr:    errors.New("foo bar baz"),
+			cancelled:      true,
+			wantStatus:     proto.StepResult_failure,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			j := Job{Ctx: ctx}
+			if tt.cancelled {
+				cancel()
+			}
+
+			sr := &proto.StepResult{Status: tt.incomingStatus}
+			gotStatus := j.computeFinalStatus(sr, tt.incomingErr)
+
+			assert.Equal(t, tt.wantStatus, gotStatus)
 		})
 	}
 }

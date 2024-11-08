@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -121,7 +122,7 @@ func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 		j.err = err
 		j.finished = true
 		j.finishTime = time.Now()
-		j.status = computeFinalStatus(result, err)
+		j.status = j.computeFinalStatus(result, err)
 
 		if err != nil {
 			// TODO: better logging
@@ -130,13 +131,31 @@ func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 	})
 }
 
-func computeFinalStatus(stepResult *proto.StepResult, err error) proto.StepResult_Status {
-	if stepResult == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return proto.StepResult_cancelled
+func (j *Job) computeFinalStatus(stepResult *proto.StepResult, err error) proto.StepResult_Status {
+	// take the status of the root step-result as the overall execution status.
+	switch stepResult.Status {
+	case proto.StepResult_unspecified, proto.StepResult_running:
+		log.Printf("invalid final status %q for job %q", stepResult.Status.String(), j.ID)
+		return proto.StepResult_failure
+	case proto.StepResult_failure:
+		// When a job is cancelled (by calling `Job.Close()`) or times out (both of
+		// which cancel the context passed to `exec.CommandContext()`), the returned
+		// error can:
+		//  * be one of context.Cancelled or context.DeadlineExceeded.
+		//  * be another error type that ends with the string "signal: killed".
+		//
+		// In both cases the `StepResult_Status` returned by `Step.Run()` is
+		// `failure`, but we want it to be `cancelled`. Since the latter can also
+		// happen when the process is otherwise killed (e.g. OOM killer), so we
+		// have to also check that the context was actually cancelled.
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
+			(j.Ctx.Err() != nil && strings.HasSuffix(err.Error(), "signal: killed")) {
+			return proto.StepResult_cancelled
+		}
+		fallthrough
+	default:
+		return stepResult.Status
 	}
-
-	// take the state of the root step-result as the overall execution state.
-	return stepResult.Status
 }
 
 func (j *Job) Finished() bool {
