@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
@@ -25,7 +26,7 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 	t.Run("sub-step succeeds", func(t *testing.T) {
 		stepResult := bldr.StepResult().WithSuccessStatus().Build()
 		subStep := bldr.Step().WithRunReturnsStepResult(stepResult).Build()
-		stepsCtx := bldr.StepsContext().Build()
+		stepsCtx := bldr.StepsContext(t).Build()
 		specDef := bldr.ProtoSpecDef().Build()
 
 		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStep)
@@ -41,7 +42,7 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		err := fmt.Errorf("simulated.error")
 		stepResult := bldr.StepResult().WithFailedStatus().Build()
 		subStep := bldr.Step().WithRunReturnsStepResult(stepResult).WithRunReturnsErr(err).Build()
-		stepsCtx := bldr.StepsContext().Build()
+		stepsCtx := bldr.StepsContext(t).Build()
 		specDef := bldr.ProtoSpecDef().Build()
 
 		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStep)
@@ -52,5 +53,21 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		require.Equal(t, proto.StepResult_failure, result.Status)
 		require.Len(t, result.SubStepResults, 1)
 		require.Equal(t, proto.StepResult_failure, result.SubStepResults[0].Status)
+	})
+
+	t.Run("interpolates outputs", func(t *testing.T) {
+		subStep := bldr.Step().Build()
+		stepsCtx := bldr.StepsContext(t).WithEnv("FOO", "BAR").Build()
+
+		protoDef := bldr.ProtoDef().
+			WithOutput("name", structpb.NewStringValue("name is ${{env.FOO}}")).
+			Build()
+		specDef := bldr.ProtoSpecDef().WithDefinition(protoDef).Build()
+
+		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStep)
+		result, err := steps.Run(context.Background(), stepsCtx)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, "name is BAR", result.Outputs["name"].GetStringValue())
 	})
 }

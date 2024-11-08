@@ -19,11 +19,12 @@ import (
 )
 
 type Job struct {
-	TmpDir  string
-	WorkDir string
-	GlobCtx *runner.GlobalContext // To capture stdout/err from all subprocesses
-	Ctx     context.Context       // The context used to manage the Job's entire lifetime.
-	ID      string                // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
+	TmpDir   string
+	WorkDir  string
+	GlobCtx  *runner.GlobalContext // To capture stdout/err from all subprocesses
+	StepsCtx *runner.StepsContext
+	Ctx      context.Context // The context used to manage the Job's entire lifetime.
+	ID       string          // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
 
 	cancel     func()    // Used to cancel the Ctx.
 	err        error     // Captures any error returned when executing steps.
@@ -65,11 +66,7 @@ func New(request *proto.RunRequest) (*Job, error) {
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
-	globCtx, err := runner.NewGlobalContext(runner.NewEmptyEnvironment())
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("creating global context: %w", err)
-	}
+	globCtx := runner.NewGlobalContext(runner.NewEmptyEnvironment())
 	globCtx.WorkDir = workDir
 	// TODO: differentiate between stdin/stderr
 	globCtx.Stderr = logs
@@ -112,6 +109,10 @@ func (j *Job) Finish(result *proto.StepResult, err error) {
 	j.finished = true
 	j.finishTime = now
 
+	if j.StepsCtx != nil {
+		j.StepsCtx.Cleanup()
+	}
+
 	j.logs.Stop()
 	_ = j.logs.Close()
 
@@ -138,7 +139,6 @@ func (j *Job) Close() {
 	j.cancel()
 	//nolint:errcheck
 	defer os.RemoveAll(j.TmpDir)
-	defer j.GlobCtx.Cleanup()
 	j.Finish(nil, j.Ctx.Err())
 }
 

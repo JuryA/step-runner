@@ -2,6 +2,7 @@ package runner_test
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
+	protobuf "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
@@ -209,6 +212,252 @@ name2=value2
 				require.Error(t, err)
 				require.Contains(t, err.Error(), test.wantErr)
 			}
+		})
+	}
+}
+
+func TestStepFile_ReadValues(t *testing.T) {
+	cases := []struct {
+		name              string
+		outputMethod      proto.OutputMethod
+		outputs           map[string]*proto.Spec_Content_Output
+		writeToOutput     string
+		wantOutput        map[string]*structpb.Value
+		wantSubStepResult *proto.StepResult
+		wantErr           string
+	}{{
+		name:       "no outputs",
+		outputs:    map[string]*proto.Spec_Content_Output{},
+		wantOutput: map[string]*structpb.Value{},
+	}, {
+		name: "single output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_string},
+		},
+		writeToOutput: `value="foo"`,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
+		},
+	}, {
+		name: "multiple outputs",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_string},
+			"food":  {Type: proto.ValueType_string},
+		},
+		writeToOutput: "value=\"foo\"\nfood=\"apple\"",
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
+			"food":  structpb.NewStringValue("apple"),
+		},
+	}, {
+		name: "outputs with extra white space",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_string},
+			"food":  {Type: proto.ValueType_string},
+		},
+		writeToOutput: `
+
+value="foo"
+
+food="apple"
+
+`,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
+			"food":  structpb.NewStringValue("apple"),
+		},
+	}, {
+		name: "json string output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_string},
+		},
+		writeToOutput: `value="foo"`,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
+		},
+	}, {
+		name: "json number output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_number},
+		},
+		writeToOutput: `value=12.34`,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewNumberValue(12.34),
+		},
+	}, {
+		name: "json bool output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_boolean},
+		},
+		writeToOutput: `value=true`,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewBoolValue(true),
+		},
+	}, {
+		name: "json empty struct output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_struct},
+		},
+		writeToOutput: `value={}`,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{}}),
+		},
+	}, {
+		name: "json full struct output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_struct},
+		},
+		writeToOutput: `value={"string":"bar","number":12.34,"bool":true,"null":null}`,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
+				"string": structpb.NewStringValue("bar"),
+				"number": structpb.NewNumberValue(12.34),
+				"bool":   structpb.NewBoolValue(true),
+				"null":   structpb.NewNullValue(),
+			}}),
+		},
+	}, {
+		name: "json empty list output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_array},
+		},
+		writeToOutput: `value=[]`,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{}}),
+		},
+	}, {
+		name: "json full list output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_array},
+		},
+		writeToOutput: `value=["bar",12.34,true,null]`,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewListValue(&structpb.ListValue{Values: []*structpb.Value{
+				structpb.NewStringValue("bar"),
+				structpb.NewNumberValue(12.34),
+				structpb.NewBoolValue(true),
+				structpb.NewNullValue(),
+			}}),
+		},
+	}, {
+		name: "default output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {
+				Type:    proto.ValueType_string,
+				Default: structpb.NewStringValue("foo"),
+			},
+		},
+		writeToOutput: ``,
+		wantOutput: map[string]*structpb.Value{
+			"value": structpb.NewStringValue("foo"),
+		},
+	}, {
+		name: "invalid format",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_string},
+		},
+		writeToOutput: `invalid`,
+		wantErr:       `reading outputs: invalid line "invalid"`,
+	}, {
+		name: "invalid json",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_struct},
+		},
+		writeToOutput: `value={foo}`,
+		wantErr:       `output "value": malformed, unmarshaling json: invalid character 'f' looking for beginning of object key string`,
+	}, {
+		name: "missing output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_string},
+			"food":  {Type: proto.ValueType_string},
+		},
+		writeToOutput: `value="foo"`,
+		wantErr:       `output "food": missing output, add to step outputs or remove from step specification`,
+	}, {
+		name: "extra output",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_string},
+			"food":  {Type: proto.ValueType_string},
+		},
+		writeToOutput: `value="foo"
+food="apple"
+extra="output"`,
+		wantErr: `output "extra": unexpected output, remove from step outputs or define in step specification`,
+	}, {
+		name: "wrong type received",
+		outputs: map[string]*proto.Spec_Content_Output{
+			"value": {Type: proto.ValueType_number},
+		},
+		writeToOutput: `value="twelve"`,
+		wantErr:       `output "value": mismatched types, declared as "number" in step specification and received from step as type "string"`,
+	}}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			outputStepFile, err := runner.NewStepFileInDir(t.TempDir())
+			require.NoError(t, err)
+			outputFile, err := os.OpenFile(outputStepFile.Path(), os.O_APPEND|os.O_WRONLY, 0660)
+			require.NoError(t, err)
+			_, err = outputFile.Write([]byte(tc.writeToOutput))
+			require.NoError(t, err)
+			err = outputFile.Close()
+			require.NoError(t, err)
+
+			outputs, err := outputStepFile.ReadValues(tc.outputs)
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+
+			if tc.wantOutput != nil {
+				require.Equal(t, fmt.Sprintf("%v", tc.wantOutput), fmt.Sprintf("%v", outputs))
+			}
+		})
+	}
+}
+
+func TestStepFile_ReadStepResult(t *testing.T) {
+	cases := []struct {
+		name              string
+		writeToOutput     string
+		wantSubStepResult *proto.StepResult
+	}{{
+		name:          "delegate output string",
+		writeToOutput: `{"outputs":{"name":"steppy"}}`,
+		wantSubStepResult: &proto.StepResult{
+			Outputs: map[string]*structpb.Value{
+				"name": structpb.NewStringValue("steppy"),
+			},
+		},
+	}, {
+		name:          "delegate output struct",
+		writeToOutput: `{"outputs":{"favorites":{"food":"hamburger"}}}`,
+		wantSubStepResult: &proto.StepResult{
+			Outputs: map[string]*structpb.Value{
+				"favorites": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
+					"food": structpb.NewStringValue("hamburger"),
+				}}),
+			},
+		},
+	},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			outputStepFile, err := runner.NewStepFileInDir(t.TempDir())
+			require.NoError(t, err)
+			outputFile, err := os.OpenFile(outputStepFile.Path(), os.O_APPEND|os.O_WRONLY, 0660)
+			require.NoError(t, err)
+			_, err = outputFile.Write([]byte(tc.writeToOutput))
+			require.NoError(t, err)
+			err = outputFile.Close()
+			require.NoError(t, err)
+
+			delegate, err := outputStepFile.ReadStepResult()
+			require.NoError(t, err)
+			require.True(t, protobuf.Equal(tc.wantSubStepResult, delegate), "wanted %+v. got %+v", tc.wantSubStepResult, delegate)
 		})
 	}
 }

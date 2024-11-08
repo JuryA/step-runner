@@ -45,15 +45,6 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.S
 		return result.BuildFailure(), fmt.Errorf("failed to run %s: %w", s.Describe(), err)
 	}
 
-	// Create output and export files and add to context
-	files, err := NewFiles(stepsCtx, s.specDef.Spec.Spec.OutputMethod, s.specDef.Spec.Spec.Outputs)
-
-	if err != nil {
-		return result.BuildFailure(), err
-	}
-
-	defer files.Cleanup()
-
 	for _, step := range s.steps {
 		stepResult, err := step.Run(ctx, stepsCtx)
 		result.WithSubStepResult(stepResult)

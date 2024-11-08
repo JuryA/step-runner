@@ -17,8 +17,10 @@ func TestStepsContext_ExpandAndApplyEnv(t *testing.T) {
 	inputs := map[string]*structpb.Value{"name": structpb.NewStringValue("sally")}
 	env := runner.NewEnvironment(map[string]string{"HOME": "/home"})
 
-	stepsCtx := runner.NewStepsContext(globalCtx, "", inputs, env)
-	err := stepsCtx.ExpandAndApplyEnv(map[string]string{"WORK_DIR": "/home/${{ inputs.name }}"})
+	stepsCtx, err := runner.NewStepsContext(globalCtx, "", inputs, env)
+	require.NoError(t, err)
+
+	err = stepsCtx.ExpandAndApplyEnv(map[string]string{"WORK_DIR": "/home/${{ inputs.name }}"})
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{"HOME": "/home", "WORK_DIR": "/home/sally"}, stepsCtx.Env.Values())
 }
@@ -30,7 +32,7 @@ func TestStepsContext_View(t *testing.T) {
 			"step.b": bldr.StepResult().WithOutput("name", structpb.NewStringValue("step_b")).Build(),
 		}
 
-		stepsCtx := bldr.StepsContext().WithStepResults(stepResults).Build()
+		stepsCtx := bldr.StepsContext(t).WithStepResults(stepResults).Build()
 		view := stepsCtx.View()
 
 		require.Len(t, view.StepResults, 2)

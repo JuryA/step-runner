@@ -385,6 +385,23 @@ delegate: composite_step
 			requireStringEqualValue(t, "steppy loves delegation", results.Outputs["name"])
 		},
 	}, {
+		name: "sequence of steps returns outputs",
+		yaml: `
+spec:
+  outputs:
+    name:
+      type: string
+---
+run:
+  - name: do_nothing
+    step: ./test_steps/exit
+outputs:
+  name: "Foo"
+`,
+		wantResults: func(t *testing.T, results *proto.StepResult) {
+			requireStringEqualValue(t, "Foo", results.Outputs["name"])
+		},
+	}, {
 		name: "return results even with an error",
 		yaml: `
 spec: {}
@@ -464,9 +481,7 @@ func runTest(testCase runnerTest) func(*testing.T) {
 		osEnv, err := runner.NewEnvironmentFromOS()
 		require.NoError(t, err)
 
-		globalCtx, err := runner.NewGlobalContext(osEnv)
-		require.NoError(t, err)
-		defer globalCtx.Cleanup()
+		globalCtx := runner.NewGlobalContext(osEnv)
 		globalCtx.Env = runner.NewEnvironment(testCase.globalEnv)
 		globalCtx.Stdout = &log
 		globalCtx.Stderr = &log
@@ -478,7 +493,8 @@ func runTest(testCase runnerTest) func(*testing.T) {
 		require.NoError(t, err)
 
 		inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
-		stepsCtx := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.Env)
+		stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.Env)
+		require.NoError(t, err)
 		result, err := step.Run(ctx.Background(), stepsCtx)
 
 		if testCase.wantErr != nil {

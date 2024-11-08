@@ -71,9 +71,14 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}
 
-	env := job.GlobCtx.Env.AddLexicalScope(params.Env)
 	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
-	stepsCtx := runner.NewStepsContext(job.GlobCtx, specDef.Dir, inputs, env)
+	stepsCtx, err := runner.NewStepsContext(job.GlobCtx, specDef.Dir, inputs, job.GlobCtx.Env)
+
+	if err != nil {
+		return nil, err
+	}
+
+	job.StepsCtx = stepsCtx
 
 	// last chance to bail...
 	if ctx.Err() != nil {
@@ -82,7 +87,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 
 	// actually execute the steps request
 	s.jobs.Put(request.Id, job)
-	go s.run(job, stepsCtx, step)
+	go s.run(job, step)
 	return &proto.RunResponse{}, nil
 }
 
@@ -107,8 +112,8 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 }
 
 // run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
-func (s *StepRunnerService) run(job *jobs.Job, stepsCtx *runner.StepsContext, step runner.Step) {
-	result, err := step.Run(job.Ctx, stepsCtx)
+func (s *StepRunnerService) run(job *jobs.Job, step runner.Step) {
+	result, err := step.Run(job.Ctx, job.StepsCtx)
 	job.Finish(result, err)
 	if err != nil {
 		// TODO: better logging
