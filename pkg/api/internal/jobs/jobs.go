@@ -23,9 +23,8 @@ import (
 type Job struct {
 	TmpDir  string
 	WorkDir string
-	GlobCtx *runner.GlobalContext // To capture stdout/err from all subprocesses
-	Ctx     context.Context       // The context used to manage the Job's entire lifetime.
-	ID      string                // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
+	Ctx     context.Context // The context used to manage the Job's entire lifetime.
+	ID      string          // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
 
 	cancel     func()    // Used to cancel the Ctx.
 	err        error     // Captures any error returned when executing steps.
@@ -68,18 +67,11 @@ func New(request *proto.RunRequest) (*Job, error) {
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
-	globCtx := runner.NewGlobalContext(runner.NewEmptyEnvironment())
-	globCtx.WorkDir = workDir
-	// TODO: differentiate between stdin/stderr
-	globCtx.Stderr = logs
-	globCtx.Stdout = logs
-
 	return &Job{
 		TmpDir:  tmpDir,
 		WorkDir: workDir,
 		ID:      request.Id,
 		Ctx:     ctx,
-		GlobCtx: globCtx,
 		cancel:  cancel,
 		logs:    logs,
 		status:  proto.StepResult_unspecified,
@@ -97,6 +89,11 @@ func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 			_ = j.logs.Close()
 			j.finishC <- struct{}{}
 		}()
+
+		stepsCtx.WorkDir = j.WorkDir
+		// TODO: differentiate between stdin/stderr
+		stepsCtx.Stderr = j.logs
+		stepsCtx.Stdout = j.logs
 
 		j.mux.Lock()
 
