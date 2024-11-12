@@ -49,11 +49,15 @@ $(TARGETS):
 go-deps:
 	go mod download
 
+# Build generates step runner binaries for platforms listed in BUILD_OS_ARCH.
+# If there is only one platform, the binary is copied to $BIN_PATH/step-runner for ease of use.
 .PHONY: build
-build: FILE_EXTENSION=$(if $(findstring windows,$(BUILD_OS_ARCH)),.exe,)
+build: FIRST_PLATFORM=$(firstword $(BUILD_OS_ARCH))
+build: PLATFORM_BINARY=$(BIN_PATH)/step-runner-$(subst /,-,$(FIRST_PLATFORM))
+build: FIXED_LOCATION_BINARY=$(BIN_PATH)/step-runner
 build: generate go-deps $(TARGETS)
     ifeq (1, $(words $(BUILD_OS_ARCH)))
-		cp $(BIN_PATH)/step-runner-$(subst /,-,$(BUILD_OS_ARCH)) $(BIN_PATH)/step-runner$(FILE_EXTENSION)
+		cp $(PLATFORM_BINARY) $(FIXED_LOCATION_BINARY)
     endif
 
 $(PROTO_GEN): $(PROTO_SRC)
@@ -115,7 +119,7 @@ clean:
 .PHONY: image
 image:
 	BUILD_OS_ARCH=linux/amd64 $(MAKE) build
-	docker build -t step-runner .
+	docker build -t step-runner -f Dockerfile.legacy .
 
 .PHONY: check-generated
 check-generated: generate
