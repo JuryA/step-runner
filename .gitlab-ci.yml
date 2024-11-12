@@ -1,8 +1,7 @@
 
 stages:
   - test
-  - build binaries
-  - build docker
+  - build
   - e2e
   - deploy
 

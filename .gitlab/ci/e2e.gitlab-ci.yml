@@ -1,7 +1,7 @@
 
 verify-image-version:
   stage: e2e
-  image: $IMAGE_TAG
+  image: $LEGACY_IMAGE_TAG
   script:
     - STEP_RUNNER_HELP=$(/step-runner help)
     - echo "$STEP_RUNNER_HELP" | grep -q "Step Runner version:" # expect version to be printed
@@ -9,7 +9,7 @@ verify-image-version:
 
 run-e2e:
   stage: e2e
-  image: $IMAGE_TAG
+  image: $LEGACY_IMAGE_TAG
   variables:
     CI_STEPS_DEBUG: "true"
   run:

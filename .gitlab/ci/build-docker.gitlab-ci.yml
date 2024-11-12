@@ -1,12 +1,61 @@
 
-docker image:
-  stage: build docker
-  image: docker:20.10.16
+.docker image:
+  stage: build
+  image: docker:${DOCKER_VERSION}
   services:
-    - docker:20.10.16-dind
-  dependencies:
-    - "binaries: [linux/amd64 linux/arm64]"
+    - docker:${DOCKER_VERSION}-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+docker image legacy:
+  extends: .docker image
+  needs:
+    - job: binaries
+      parallel:
+        matrix:
+          - BUILD_OS_ARCH: linux/amd64 linux/arm64
+  script:
+    - docker build -t $LEGACY_IMAGE_TAG -f Dockerfile.legacy .
+    - docker push $LEGACY_IMAGE_TAG
+
+docker image unix:
+  extends: .docker image
+  needs:
+    - binaries
+  script:
+    - docker buildx create --name docker-builder --driver=docker-container --use
+    - BUILD_TAG="${IMAGE_TAG}" docker buildx bake build-unix --builder docker-builder
+
+# saas-windows-medium-amd64 runners currently use Docker version 20
+# See https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/blob/671b93e4ab3b83f7d6df055791519241bffdff4e/cookbooks/preinstalled-software/attributes/default.rb#L20
+# This version of Docker does not support buildx, bake, --platforms (TARGETOS, TARGETARCH must be supplied as a build-arg)
+# For now, the old approach to building a Docker image is used to create the Windows image
+docker image windows:
+  stage: build
+  tags: [saas-windows-medium-amd64]
+  needs:
+    - job: binaries
+      parallel:
+        matrix:
+          - BUILD_OS_ARCH: windows/amd64 windows/386
+  parallel:
+    matrix:
+      - WINDOWS_VERSION:
+          - 2019
+          - 2022
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -t $IMAGE_TAG .
-    - docker push $IMAGE_TAG
+    - docker build --tag "${IMAGE_TAG}-windows-amd64-${WINDOWS_VERSION}" --build-arg TARGETOS=windows --build-arg TARGETARCH=amd64 --build-arg BASE_IMAGE="mcr.microsoft.com/windows/nanoserver:ltsc${WINDOWS_VERSION}" .
+    - docker push "${IMAGE_TAG}-windows-amd64-${WINDOWS_VERSION}"
+
+docker image multi-architecture:
+  extends: .docker image
+  needs:
+    - docker image unix
+    - docker image windows
+  script:
+    - |
+      docker buildx imagetools create --tag "${IMAGE_TAG}" \
+        "${IMAGE_TAG}-unix" \
+        "${IMAGE_TAG}-windows-amd64-2019" \
+        "${IMAGE_TAG}-windows-amd64-2022"
