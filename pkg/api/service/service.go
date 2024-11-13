@@ -115,7 +115,7 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 func (s *StepRunnerService) Close(ctx context.Context, request *proto.CloseRequest) (*proto.CloseResponse, error) {
 	job, ok := s.jobs.Get(request.Id)
 	if !ok {
-		return nil, &errBadJobID{id: request.Id}
+		return &proto.CloseResponse{}, nil
 	}
 
 	job.Close()

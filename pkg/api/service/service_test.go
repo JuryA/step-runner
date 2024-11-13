@@ -379,8 +379,7 @@ func Test_StepRunnerService_Close_BadID(t *testing.T) {
 	bg := context.Background()
 
 	_, err := apiClient.Close(bg, &proto.CloseRequest{Id: "4130"})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "no job with id")
+	require.NoError(t, err)
 }
 
 func Test_StepRunnerService_FollowLogs(t *testing.T) {
