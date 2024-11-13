@@ -167,19 +167,3 @@ func Test_Prepare(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, vs, 0)
 }
-
-func Test_Expand(t *testing.T) {
-	env := map[string]string{
-		"FOO":    "foo",
-		"BAR":    "bar",
-		"BAZ":    "$FOO/$BAR",
-		"BLAMMO": "${FOO}/${BAR}/baz",
-	}
-
-	expanded := Expand(env)
-
-	assert.Equal(t, "foo", expanded["FOO"])
-	assert.Equal(t, "bar", expanded["BAR"])
-	assert.Equal(t, "foo/bar", expanded["BAZ"])
-	assert.Equal(t, "foo/bar/baz", expanded["BLAMMO"])
-}

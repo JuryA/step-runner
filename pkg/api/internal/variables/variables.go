@@ -78,13 +78,3 @@ func Prepare(pjob *proto.Job, tmpPath string) (map[string]string, error) {
 
 	return outEnv, nil
 }
-
-func Expand(env map[string]string) map[string]string {
-	expanded := make(map[string]string, len(env))
-	for k, v := range env {
-		expanded[k] = os.Expand(v, func(k string) string {
-			return env[k]
-		})
-	}
-	return expanded
-}
