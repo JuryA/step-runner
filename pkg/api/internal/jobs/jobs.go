@@ -79,6 +79,9 @@ func New(jobID, workDir string) (*Job, error) {
 	}, nil
 }
 
+// Logs returns a pair of io.Writers corresponding to the Job's stdout and stderr (in that order).
+func (j *Job) Logs() (io.Writer, io.Writer) { return j.logs, j.logs }
+
 // Run actually starts execution of the steps request and captures the result. It is intended to be run in a
 // goroutine.
 func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
@@ -88,11 +91,6 @@ func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 			_ = j.logs.Close()
 			j.finishC <- struct{}{}
 		}()
-
-		stepsCtx.WorkDir = j.WorkDir
-		// TODO: differentiate between stdin/stderr
-		stepsCtx.Stderr = j.logs
-		stepsCtx.Stdout = j.logs
 
 		j.mux.Lock()
 

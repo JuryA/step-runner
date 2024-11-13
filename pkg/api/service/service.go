@@ -62,6 +62,8 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 
 	globCtx := runner.NewGlobalContext(s.env.AddLexicalScope(request.Env))
 	globCtx.Job = jobVars
+	globCtx.WorkDir = job.WorkDir
+	globCtx.Stdout, globCtx.Stderr = job.Logs()
 
 	params := &runner.Params{}
 	step, err := runner.NewParser(globCtx, s.cache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
