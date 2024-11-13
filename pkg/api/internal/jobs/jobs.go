@@ -85,7 +85,6 @@ func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 	j.runOnce.Do(func() {
 		defer func() {
 			stepsCtx.Cleanup()
-			j.logs.Stop()
 			_ = j.logs.Close()
 			j.finishC <- struct{}{}
 		}()

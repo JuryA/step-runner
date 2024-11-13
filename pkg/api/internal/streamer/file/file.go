@@ -39,6 +39,11 @@ func (s *Streamer) Stop() {
 	s.cond.Broadcast()
 }
 
+func (s *Streamer) Close() error {
+	s.Stop()
+	return s.WriteCloser.Close()
+}
+
 // toIOReader can be used to "cast" a func([]byte)(int, error) to an io.Reader.
 type toIOReader func([]byte) (int, error)
 
