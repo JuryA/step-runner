@@ -189,7 +189,7 @@ func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, client.StateFailure, status.State)
-	assert.Equal(t, `failed to run sequence of steps: failed to run step "bash": exec: exit status 127`, status.Message)
+	assert.Equal(t, `step "bash": exec: exit status 127`, status.Message)
 	assert.Contains(t, logs.String(), "kjhdfdhlkf: command not found")
 }
 

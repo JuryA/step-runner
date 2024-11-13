@@ -1,8 +1,6 @@
 package runner
 
 import (
-	"maps"
-
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -45,8 +43,8 @@ func (bldr *StepResultBuilder) WithEnv(env map[string]string) *StepResultBuilder
 	return bldr
 }
 
-func (bldr *StepResultBuilder) WithMergedOutputs(outputs map[string]*structpb.Value) *StepResultBuilder {
-	maps.Copy(bldr.outputs, outputs)
+func (bldr *StepResultBuilder) WithOutputs(outputs map[string]*structpb.Value) *StepResultBuilder {
+	bldr.outputs = outputs
 	return bldr
 }
 
@@ -60,6 +58,31 @@ func (bldr *StepResultBuilder) WithSubStepResult(result *proto.StepResult) *Step
 func (bldr *StepResultBuilder) WithExports(exports *Environment) *StepResultBuilder {
 	bldr.exports = exports.Values()
 	return bldr
+}
+
+func (bldr *StepResultBuilder) ObserveEnv(env *Environment, err error) error {
+	bldr.WithEnv(env.Values())
+	return err
+}
+
+func (bldr *StepResultBuilder) ObserveExecutedCmd(execResult *ExecResult, err error) error {
+	bldr.WithExecResult(execResult)
+	return err
+}
+
+func (bldr *StepResultBuilder) ObserveOutputs(outputs map[string]*structpb.Value, err error) error {
+	bldr.WithOutputs(outputs)
+	return err
+}
+
+func (bldr *StepResultBuilder) ObserveExports(exports *Environment, err error) (*Environment, error) {
+	bldr.WithExports(exports)
+	return exports, err
+}
+
+func (bldr *StepResultBuilder) ObserveStepResult(stepResult *proto.StepResult, err error) (*proto.StepResult, error) {
+	bldr.WithSubStepResult(stepResult)
+	return stepResult, err
 }
 
 func (bldr *StepResultBuilder) BuildFailure() *proto.StepResult {

@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -32,40 +34,24 @@ func (s *ExecutableStep) Describe() string {
 func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 
-	err := stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
-	result.WithEnv(stepsCtx.GetEnvs())
-	if err != nil {
-		return result.BuildFailure(), fmt.Errorf("failed to run executable step: %w", err)
+	if err := result.ObserveEnv(stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)); err != nil {
+		return result.BuildFailure(), fmt.Errorf("expand step env: %w", err)
 	}
 
-	executedCmd, err := s.execCommand(ctx, stepsCtx)
-	result.WithExecResult(executedCmd)
-	if err != nil {
-		return result.BuildFailure(), err
+	if err := result.ObserveExecutedCmd(s.execCommand(ctx, stepsCtx)); err != nil {
+		return result.BuildFailure(), fmt.Errorf("exec: %w", err)
 	}
 
-	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		delegateResult, err := stepsCtx.OutputFile.ReadStepResult()
-		if err != nil {
-			return result.BuildFailure(), err
-		}
-		result.WithMergedOutputs(delegateResult.Outputs).WithSubStepResult(delegateResult)
-	} else {
-		outputs, err := stepsCtx.OutputFile.ReadValues(s.specDef.Spec.Spec.Outputs)
-		result.WithMergedOutputs(outputs)
-		if err != nil {
-			return result.BuildFailure(), err
-		}
+	if err := result.ObserveOutputs(s.readOutputs(stepsCtx.OutputFile)); err != nil {
+		return result.BuildFailure(), fmt.Errorf("output file: %w", err)
 	}
 
-	exports, err := stepsCtx.ExportFile.ReadEnvironment()
-	result.WithExports(exports)
+	exports, err := result.ObserveExports(stepsCtx.ExportFile.ReadEnvironment())
 	if err != nil {
 		return result.BuildFailure(), fmt.Errorf("export file: %w", err)
 	}
 
 	stepsCtx.GlobalContext.Env.Mutate(exports)
-
 	return result.Build(), nil
 }
 
@@ -76,7 +62,7 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 		res, err := expression.ExpandString(stepsCtx.View(), arg)
 
 		if err != nil {
-			return nil, fmt.Errorf("failed to interpolate command argument %q: %w", arg, err)
+			return nil, fmt.Errorf("interpolate command argument %q: %w", arg, err)
 		}
 
 		cmdArgs = append(cmdArgs, res)
@@ -90,9 +76,7 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = workDir
 
-	// Provide only environment variables from the steps context. Not from the step runner's environment.
 	cmd.Env = stepsCtx.GetEnvList()
-	// TODO: Use multi-writer
 	cmd.Stdout = stepsCtx.GlobalContext.Stdout
 	cmd.Stderr = stepsCtx.GlobalContext.Stderr
 
@@ -100,7 +84,7 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 	execResult := NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode())
 
 	if err != nil {
-		return execResult, fmt.Errorf("exec: %w", err)
+		return execResult, err
 	}
 
 	return execResult, nil
@@ -116,8 +100,21 @@ func (s *ExecutableStep) determineWorkDir(stepsCtx *StepsContext) (string, error
 	res, err := expression.ExpandString(stepsCtx.View(), workDir)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to interpolate workdir %q: %w", workDir, err)
+		return "", fmt.Errorf("interpolate workdir %q: %w", workDir, err)
 	}
 
 	return res, nil
+}
+
+func (s *ExecutableStep) readOutputs(outputFile *StepFile) (map[string]*structpb.Value, error) {
+	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
+		stepResult, err := outputFile.ReadStepResult()
+		if err != nil {
+			return nil, fmt.Errorf("delegate: %w", err)
+		}
+
+		return stepResult.Outputs, nil
+	}
+
+	return outputFile.ReadValues(s.specDef.Spec.Spec.Outputs)
 }

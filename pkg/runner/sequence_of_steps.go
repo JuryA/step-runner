@@ -38,67 +38,49 @@ func (s *SequenceOfSteps) Describe() string {
 func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 
-	err := stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)
-	result.WithEnv(stepsCtx.GetEnvs())
-
-	if err != nil {
-		return result.BuildFailure(), fmt.Errorf("failed to run %s: %w", s.Describe(), err)
+	if err := result.ObserveEnv(stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)); err != nil {
+		return result.BuildFailure(), fmt.Errorf("expand step env: %w", err)
 	}
 
 	for _, step := range s.steps {
-		stepResult, err := step.Run(ctx, stepsCtx)
-		result.WithSubStepResult(stepResult)
-
-		// Capture results even if there was an error
-		if stepResult != nil {
-			if stepResult.Step != nil {
-				stepsCtx.Steps[stepResult.Step.Name] = stepResult
-			}
-
-			if stepResult.Status == proto.StepResult_failure {
-				return result.BuildFailure(), fmt.Errorf("failed to run %s: %w", s.Describe(), err)
-			}
-		}
+		stepResult, err := result.ObserveStepResult(step.Run(ctx, stepsCtx))
+		stepsCtx.RecordResult(stepResult)
 
 		if err != nil {
-			return result.BuildFailure(), err
+			return result.BuildFailure(), err // expose underlying step error (no need to wrap)
 		}
 	}
 
-	// Delegate outputs are surfaced directly, effectively making
-	// the delegation mechanism "disappear" from the execution
-	// context.
-	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		outputs, err := findOutputsWithName(s.specDef.Definition.Delegate, result.subStepResults)
-		result.WithMergedOutputs(outputs)
-
-		if err != nil {
-			return result.BuildFailure(), err
-		}
-
-		return result.Build(), nil
+	if err := result.ObserveOutputs(s.readOutputs(stepsCtx, stepsCtx.StepResults())); err != nil {
+		return result.BuildFailure(), fmt.Errorf("outputs: %w", err)
 	}
 
-	// Expand step definition outputs which may reference outputs
-	// of sub-steps. Outputs of sub-steps will not be available
-	// for reference after returning, which would break
-	// encapsulation of the step function.
-	expandedOutputs := make(map[string]*structpb.Value)
-
-	for k, v := range s.specDef.Definition.Outputs {
-		res, resErr := expression.Expand(stepsCtx.View(), v)
-		if resErr == nil {
-			expandedOutputs[k] = res.Value
-		} else {
-			fmt.Fprintf(stepsCtx.GlobalContext.Stderr, "Cannot assign %q due to error: %s", k, resErr.Error())
-		}
-	}
-
-	result.WithMergedOutputs(expandedOutputs)
 	return result.Build(), nil
 }
 
-// findOutputsWithName finds the output results for the step by step name
+func (s *SequenceOfSteps) readOutputs(stepsCtx *StepsContext, stepResults []*proto.StepResult) (map[string]*structpb.Value, error) {
+	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
+		return findOutputsWithName(s.specDef.Definition.Delegate, stepResults)
+	}
+
+	return s.interpolateStepOutputs(stepsCtx)
+}
+
+func (s *SequenceOfSteps) interpolateStepOutputs(stepsCtx *StepsContext) (map[string]*structpb.Value, error) {
+	outputs := make(map[string]*structpb.Value)
+
+	for k, v := range s.specDef.Definition.Outputs {
+		res, err := expression.Expand(stepsCtx.View(), v)
+		if err == nil {
+			outputs[k] = res.Value
+		} else {
+			return nil, fmt.Errorf("expand %q: %w", k, err)
+		}
+	}
+
+	return outputs, nil
+}
+
 func findOutputsWithName(name string, results []*proto.StepResult) (map[string]*structpb.Value, error) {
 	for _, s := range results {
 		if s.Step != nil && s.Step.Name == name {
@@ -106,5 +88,5 @@ func findOutputsWithName(name string, results []*proto.StepResult) (map[string]*
 		}
 	}
 
-	return nil, fmt.Errorf("delegating outputs to %q: could not find substep", name)
+	return nil, fmt.Errorf("delegate: could not find step with name %q", name)
 }
