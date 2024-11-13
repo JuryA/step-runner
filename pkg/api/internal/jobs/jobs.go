@@ -109,27 +109,27 @@ func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 		j.mux.Unlock()
 
 		result, err := step.Run(j.Ctx, stepsCtx)
+		j.onRunCompletion(result, err)
 
-		j.mux.Lock()
-		defer j.mux.Unlock()
-
-		j.err = err
-		j.finishTime = time.Now()
-		j.status = j.computeFinalStatus(result, err)
-
-		if err != nil {
-			// TODO: better logging
-			log.Printf("an error occurred executing job %q: %s", j.ID, err)
+		if j.err != nil {
+			log.Printf("an error occurred executing job %q: %s", j.ID, err.Error())
 		}
 	})
 }
 
-func (j *Job) computeFinalStatus(stepResult *proto.StepResult, err error) proto.StepResult_Status {
-	// take the status of the root step-result as the overall execution status.
+func (j *Job) onRunCompletion(stepResult *proto.StepResult, err error) {
+	j.mux.Lock()
+	defer j.mux.Unlock()
+
+	j.finishTime = time.Now()
+
 	switch stepResult.Status {
-	case proto.StepResult_unspecified, proto.StepResult_running:
-		log.Printf("invalid final status %q for job %q", stepResult.Status.String(), j.ID)
-		return proto.StepResult_failure
+	case proto.StepResult_unspecified:
+		j.err = fmt.Errorf("job %q did not start running: %w", j.ID, err)
+		j.status = proto.StepResult_failure
+	case proto.StepResult_running:
+		j.err = fmt.Errorf("job %q did not finish running: %w", j.ID, err)
+		j.status = proto.StepResult_failure
 	case proto.StepResult_failure:
 		// When a job is cancelled (by calling `Job.Close()`) or times out (both of
 		// which cancel the context passed to `exec.CommandContext()`), the returned
@@ -143,11 +143,14 @@ func (j *Job) computeFinalStatus(stepResult *proto.StepResult, err error) proto.
 		// have to also check that the context was actually cancelled.
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
 			(j.Ctx.Err() != nil && strings.HasSuffix(err.Error(), "signal: killed")) {
-			return proto.StepResult_cancelled
+			j.err = fmt.Errorf("job %q cancelled: %w", j.ID, err)
+			j.status = proto.StepResult_cancelled
+			return
 		}
 		fallthrough
 	default:
-		return stepResult.Status
+		j.err = err
+		j.status = stepResult.Status
 	}
 }
 

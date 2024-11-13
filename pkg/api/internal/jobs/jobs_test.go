@@ -79,29 +79,29 @@ func Test_CloseNoRun(t *testing.T) {
 func Test_Run_Close(t *testing.T) {
 	tests := map[string]struct {
 		step       runner.Step
-		wantErr    func(*Job) error
+		wantErr    func(*Job) string
 		wantStatus proto.StepResult_Status
 		pre        func(*Job)
 	}{
 		"job runs to completion, success": {
 			step:       makeMockStep(proto.StepResult_success, 0, nil, 0),
 			wantStatus: proto.StepResult_success,
-			wantErr:    func(_ *Job) error { return nil },
+			wantErr:    func(_ *Job) string { return "" },
 		},
 		"job runs to completion, failure": {
 			step:       makeMockStep(proto.StepResult_failure, -1, errors.New("FOO"), 0),
 			wantStatus: proto.StepResult_failure,
-			wantErr:    func(_ *Job) error { return errors.New("FOO") },
+			wantErr:    func(_ *Job) string { return "FOO" },
 		},
 		"job cancelled while running, final status is cancelled": {
 			step:       makeMockStep(proto.StepResult_failure, -1, errors.New("signal: killed"), time.Millisecond*100),
 			wantStatus: proto.StepResult_cancelled,
-			wantErr:    func(_ *Job) error { return errors.New("signal: killed") },
+			wantErr:    func(j *Job) string { return fmt.Sprintf("job %q cancelled: signal: killed", j.ID) },
 		},
 		"job cancelled before execution started": {
 			step:       makeMockStep(proto.StepResult_failure, -1, errors.New("FOO"), 0),
 			wantStatus: proto.StepResult_cancelled,
-			wantErr:    func(j *Job) error { return fmt.Errorf("job %q cancelled before execution started", j.ID) },
+			wantErr:    func(j *Job) string { return fmt.Sprintf("job %q cancelled before execution started", j.ID) },
 			pre: func(j *Job) {
 				j.cancel()
 			},
@@ -128,7 +128,13 @@ func Test_Run_Close(t *testing.T) {
 
 			assert.True(t, jobFinished(j)())
 			assert.Equal(t, tt.wantStatus, j.Status().Status)
-			assert.Equal(t, tt.wantErr(j), j.err)
+			wantErr := tt.wantErr(j)
+			if wantErr == "" {
+				assert.NoError(t, j.err)
+			} else {
+				require.Error(t, j.err)
+				assert.Contains(t, j.err.Error(), wantErr)
+			}
 
 			assert.NoDirExists(t, j.TmpDir)
 
@@ -397,9 +403,9 @@ func Test_computeFinalStatus(t *testing.T) {
 			}
 
 			sr := &proto.StepResult{Status: tt.incomingStatus}
-			gotStatus := j.computeFinalStatus(sr, tt.incomingErr)
+			j.onRunCompletion(sr, tt.incomingErr)
 
-			assert.Equal(t, tt.wantStatus, gotStatus)
+			assert.Equal(t, tt.wantStatus.String(), j.status.String())
 		})
 	}
 }
