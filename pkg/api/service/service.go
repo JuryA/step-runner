@@ -39,14 +39,9 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return &proto.RunResponse{}, nil
 	}
 
-	specDef, err := s.loadSteps(request.Steps)
+	specDef, err := s.loadSteps(request.Steps, request)
 	if err != nil {
 		return nil, fmt.Errorf("loading step: %w", err)
-	}
-
-	specDef.Dir = request.WorkDir
-	if request.Job != nil && request.Job.BuildDir != "" {
-		specDef.Dir = request.Job.BuildDir
 	}
 
 	job, err := jobs.New(request)
@@ -65,9 +60,8 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("preparing environment: %w", err)
 	}
 
-	globCtx := runner.NewGlobalContext(runner.NewEmptyEnvironment())
-	globCtx.Job = variables.Expand(jobVars)
-	globCtx.Env = s.env.AddLexicalScope(request.Env)
+	globCtx := runner.NewGlobalContext(s.env.AddLexicalScope(request.Env))
+	globCtx.Job = jobVars
 
 	params := &runner.Params{}
 	step, err := runner.NewParser(globCtx, s.cache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
@@ -92,7 +86,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	return &proto.RunResponse{}, nil
 }
 
-func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, error) {
+func (s *StepRunnerService) loadSteps(stepsStr string, request *proto.RunRequest) (*proto.SpecDefinition, error) {
 	spec, step, err := schema.ReadSteps(stepsStr)
 	if err != nil {
 		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
@@ -108,6 +102,11 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 	protoStepDef := &proto.SpecDefinition{
 		Spec:       protoSpec,
 		Definition: protoDef,
+	}
+
+	protoStepDef.Dir = request.WorkDir
+	if request.Job != nil && request.Job.BuildDir != "" {
+		protoStepDef.Dir = request.Job.BuildDir
 	}
 	return protoStepDef, nil
 }
