@@ -40,20 +40,20 @@ type Job struct {
 	status proto.StepResult_Status
 }
 
-func New(request *proto.RunRequest) (*Job, error) {
-	workDir := request.WorkDir
+func New(jobID, workDir string) (*Job, error) {
 	if workDir == "" {
-		workDir, _ = os.Getwd()
-	}
-	if request.Job != nil && request.Job.BuildDir != "" {
-		workDir = request.Job.BuildDir
+		osWorkDir, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("could not determine working directory: %w", err)
+		}
+		workDir = osWorkDir
 	}
 
 	if err := os.MkdirAll(workDir, 0700); err != nil {
 		return nil, fmt.Errorf("creating workdir %q: %w", workDir, err)
 	}
 
-	tmpDir := path.Join(os.TempDir(), "step-runner-output-"+request.Id)
+	tmpDir := path.Join(os.TempDir(), "step-runner-output-"+jobID)
 	if err := os.MkdirAll(tmpDir, 0700); err != nil {
 		return nil, fmt.Errorf("creating tmpdir %q: %w", tmpDir, err)
 	}
@@ -70,7 +70,7 @@ func New(request *proto.RunRequest) (*Job, error) {
 	return &Job{
 		TmpDir:  tmpDir,
 		WorkDir: workDir,
-		ID:      request.Id,
+		ID:      jobID,
 		Ctx:     ctx,
 		cancel:  cancel,
 		logs:    logs,

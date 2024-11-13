@@ -43,13 +43,13 @@ func makeMockStep(status proto.StepResult_Status, exitCode int32, err error, sle
 }
 
 func Test_New(t *testing.T) {
-	runReq := test.ProtoRunRequest(t, "", false)
-	j, err := New(runReq)
+	jid := test.RandJobID()
+	j, err := New(jid, test.WorkDir(t))
 	require.NoError(t, err)
 	defer j.Close()
 	j.finishC <- struct{}{}
 
-	assert.Equal(t, runReq.Id, j.ID)
+	assert.Equal(t, jid, j.ID)
 	assert.DirExists(t, j.TmpDir)
 }
 
@@ -61,7 +61,7 @@ func jobFinished(j *Job) func() bool {
 }
 
 func Test_CloseNoRun(t *testing.T) {
-	j, err := New(test.ProtoRunRequest(t, "", false))
+	j, err := New(test.RandJobID(), test.WorkDir(t))
 	require.NoError(t, err)
 
 	go j.Close()
@@ -110,7 +110,7 @@ func Test_Run_Close(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			j, err := New(test.ProtoRunRequest(t, "", false))
+			j, err := New(test.RandJobID(), test.WorkDir(t))
 			require.NoError(t, err)
 
 			if tt.pre != nil {
@@ -191,8 +191,7 @@ func Test_FollowLogs(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			gotWritten := bytes.Buffer{}
 
-			rr := test.ProtoRunRequest(t, "", false)
-			j, err := New(rr)
+			j, err := New(test.RandJobID(), test.WorkDir(t))
 			require.NoError(t, err)
 
 			defer j.Close()
@@ -314,7 +313,7 @@ func Test_Status(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			j, err := New(test.ProtoRunRequest(t, "", true))
+			j, err := New(test.RandJobID(), test.WorkDir(t))
 			require.NoError(t, err)
 			j.finishC <- struct{}{}
 			defer j.Close()

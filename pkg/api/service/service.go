@@ -44,7 +44,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("loading step: %w", err)
 	}
 
-	job, err := jobs.New(request)
+	job, err := jobs.New(request.Id, specDef.Dir)
 	if err != nil {
 		return nil, fmt.Errorf("initializing request: %w", err)
 	}
