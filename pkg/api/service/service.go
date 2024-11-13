@@ -77,11 +77,6 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, err
 	}
 
-	// last chance to bail...
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
 	// actually execute the steps request
 	s.jobs.Put(request.Id, job)
 	go job.Run(stepsCtx, step)

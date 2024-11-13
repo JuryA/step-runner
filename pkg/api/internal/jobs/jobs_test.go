@@ -99,9 +99,9 @@ func Test_Run_Close(t *testing.T) {
 			wantErr:    func(j *Job) string { return fmt.Sprintf("job %q cancelled: signal: killed", j.ID) },
 		},
 		"job cancelled before execution started": {
-			step:       makeMockStep(proto.StepResult_failure, -1, errors.New("FOO"), 0),
+			step:       makeMockStep(proto.StepResult_failure, -1, errors.New("signal: killed"), 0),
 			wantStatus: proto.StepResult_cancelled,
-			wantErr:    func(j *Job) string { return fmt.Sprintf("job %q cancelled before execution started", j.ID) },
+			wantErr:    func(j *Job) string { return fmt.Sprintf("job %q cancelled: signal: killed", j.ID) },
 			pre: func(j *Job) {
 				j.cancel()
 			},

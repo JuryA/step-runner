@@ -94,14 +94,6 @@ func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
 
 		j.mux.Lock()
 
-		if j.Ctx.Err() != nil {
-			j.err = fmt.Errorf("job %q cancelled before execution started", j.ID)
-			j.status = proto.StepResult_cancelled
-			j.mux.Unlock()
-			log.Println(j.err.Error())
-			return
-		}
-
 		j.startTime = time.Now()
 		j.status = proto.StepResult_running
 		j.mux.Unlock()
