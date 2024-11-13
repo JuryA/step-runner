@@ -53,13 +53,20 @@ func Test_New(t *testing.T) {
 	assert.DirExists(t, j.TmpDir)
 }
 
+func jobFinished(j *Job) func() bool {
+	return func() bool {
+		stat := j.Status()
+		return stat.Status == proto.StepResult_success || stat.Status == proto.StepResult_failure || stat.Status == proto.StepResult_cancelled
+	}
+}
+
 func Test_CloseNoRun(t *testing.T) {
 	j, err := New(test.ProtoRunRequest(t, "", false))
 	require.NoError(t, err)
 
 	go j.Close()
 
-	assert.Eventually(t, j.Finished, time.Second*3, time.Millisecond*500)
+	assert.Eventually(t, jobFinished(j), time.Second*3, time.Millisecond*500)
 
 	stat := j.Status()
 	assert.Equal(t, proto.StepResult_cancelled, stat.Status)
@@ -119,7 +126,7 @@ func Test_Run_Close(t *testing.T) {
 
 			j.Close()
 
-			assert.True(t, j.Finished())
+			assert.True(t, jobFinished(j)())
 			assert.Equal(t, tt.wantStatus, j.Status().Status)
 			assert.Equal(t, tt.wantErr(j), j.err)
 

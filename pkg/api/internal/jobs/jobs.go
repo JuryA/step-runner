@@ -152,12 +152,6 @@ func (j *Job) computeFinalStatus(stepResult *proto.StepResult, err error) proto.
 	}
 }
 
-func (j *Job) Finished() bool {
-	j.mux.RLock()
-	defer j.mux.RUnlock()
-	return j.status == proto.StepResult_success || j.status == proto.StepResult_failure || j.status == proto.StepResult_cancelled
-}
-
 // Close() cancels jobs (if still running) and cleans up all resources associated with managing the job.
 func (j *Job) Close() {
 	j.closeOnce.Do(func() {
