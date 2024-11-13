@@ -20,7 +20,7 @@ func TestStepsContext_ExpandAndApplyEnv(t *testing.T) {
 	stepsCtx, err := runner.NewStepsContext(globalCtx, "", inputs, env)
 	require.NoError(t, err)
 
-	err = stepsCtx.ExpandAndApplyEnv(map[string]string{"WORK_DIR": "/home/${{ inputs.name }}"})
+	_, err = stepsCtx.ExpandAndApplyEnv(map[string]string{"WORK_DIR": "/home/${{ inputs.name }}"})
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{"HOME": "/home", "WORK_DIR": "/home/sally"}, stepsCtx.Env.Values())
 }

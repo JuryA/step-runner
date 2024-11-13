@@ -48,7 +48,7 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStep)
 		result, err := steps.Run(context.Background(), stepsCtx)
 		require.Error(t, err)
-		require.Equal(t, "failed to run sequence of steps: simulated.error", err.Error())
+		require.Equal(t, "simulated.error", err.Error())
 		require.NotNil(t, result)
 		require.Equal(t, proto.StepResult_failure, result.Status)
 		require.Len(t, result.SubStepResults, 1)

@@ -41,7 +41,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 	step, params, subStepSpecDefinition, err := s.loadStep(ctx, parentStepsCtx, s.workDir)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
+		return nil, fmt.Errorf("%s: %w", s.Describe(), err)
 	}
 
 	env := parentStepsCtx.Env.AddLexicalScope(params.Env)
@@ -49,7 +49,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 	stepsCtx, err := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir, inputs, env)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
+		return nil, fmt.Errorf("%s: %w", s.Describe(), err)
 	}
 
 	defer stepsCtx.Cleanup()
@@ -57,7 +57,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 	result, err := step.Run(ctx, stepsCtx)
 
 	if err != nil {
-		return result, fmt.Errorf("failed to run %s: %w", s.Describe(), err)
+		return result, fmt.Errorf("%s: %w", s.Describe(), err)
 	}
 
 	return result, nil

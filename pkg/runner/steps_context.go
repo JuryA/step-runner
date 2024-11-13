@@ -3,6 +3,7 @@ package runner
 import (
 	"fmt"
 
+	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
@@ -56,21 +57,21 @@ func (s *StepsContext) GetEnvList() []string {
 	return r
 }
 
-func (s *StepsContext) ExpandAndApplyEnv(env map[string]string) error {
+func (s *StepsContext) ExpandAndApplyEnv(env map[string]string) (*Environment, error) {
 	expandedEnv := map[string]string{}
 
 	for key, value := range env {
 		expanded, err := expression.ExpandString(s.View(), value)
 
 		if err != nil {
-			return fmt.Errorf("failed to expand environment variable %q: %w", key, err)
+			return nil, fmt.Errorf("env variable %q: %w", key, err)
 		}
 
 		expandedEnv[key] = expanded
 	}
 
 	s.Env = s.Env.AddLexicalScope(expandedEnv)
-	return nil
+	return s.Env, nil
 }
 
 func (s *StepsContext) View() *expression.InterpolationContext {
@@ -90,6 +91,19 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 		StepResults: stepResultViews,
 		WorkDir:     s.WorkDir,
 	}
+}
+
+// RecordResult captures the result of a step even if it failed
+func (s *StepsContext) RecordResult(stepResult *proto.StepResult) {
+	if stepResult == nil || stepResult.Step == nil {
+		return
+	}
+
+	s.Steps[stepResult.Step.Name] = stepResult
+}
+
+func (s *StepsContext) StepResults() []*proto.StepResult {
+	return maps.Values(s.Steps)
 }
 
 func (s *StepsContext) Cleanup() {
