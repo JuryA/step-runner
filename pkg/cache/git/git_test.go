@@ -4,9 +4,11 @@ import (
 	"context"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/require"
 
 	gitFetch "gitlab.com/gitlab-org/step-runner/pkg/cache/git"
@@ -72,6 +74,26 @@ func TestGitFetcher(t *testing.T) {
 				require.NoError(t, err)
 
 				_, err = repo.CreateTag("v1.0.0", head.Hash(), nil)
+				require.NoError(t, err)
+				return ""
+			},
+		},
+		"clone using an annotated tag": {
+			version:          "v1.0.0",
+			expectClonedFile: "step.yml",
+			modifyRepo: func(t *testing.T, repo *git.Repository) string {
+				head, err := repo.Head()
+				require.NoError(t, err)
+
+				opts := &git.CreateTagOptions{
+					Message: "tag msg",
+					Tagger: &object.Signature{
+						Name:  "Sally Seashells",
+						Email: "sally-seashells@gitlab+fake.com",
+						When:  time.Now(),
+					},
+				}
+				_, err = repo.CreateTag("v1.0.0", head.Hash(), opts)
 				require.NoError(t, err)
 				return ""
 			},
