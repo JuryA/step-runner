@@ -82,25 +82,22 @@ func (gf *GitFetcher) clone(ctx context.Context, repoDir, url, version string) (
 		}
 	}
 
-	// find, fetch, find
-	ref := gf.find(repo, version)
-	if ref == nil {
-		if repo.FetchContext(ctx, &git.FetchOptions{Depth: gf.options.Depth}) == nil {
-			ref = gf.find(repo, version)
-		}
+	ref, err := gf.findFetchAndFindAgain(ctx, repo, version)
+	if err != nil {
+		return "", err
 	}
 
 	if ref == nil {
 		return "", fmt.Errorf("cannot find version %q", version)
 	}
 
-	ver, err := module.EscapeVersion(ref.Hash().String())
+	ver, err := ref.EscapeHash()
 	if err != nil {
 		return "", fmt.Errorf("escaping version: %w", err)
 	}
 
 	// checkout
-	commit, err := repo.CommitObject(ref.Hash())
+	commit, err := ref.Commit(repo)
 	if err != nil {
 		return "", fmt.Errorf("fetching commit object: %w", err)
 	}
@@ -159,30 +156,62 @@ func (gf *GitFetcher) clone(ctx context.Context, repoDir, url, version string) (
 	return stepDir, nil
 }
 
-func (gf *GitFetcher) find(repo *git.Repository, version string) *plumbing.Reference {
-	tag, err := repo.Tag(version)
-	if err == nil {
-		return tag
+func (gf *GitFetcher) findFetchAndFindAgain(ctx context.Context, repo *git.Repository, version string) (*Reference, error) {
+	ref, err := gf.find(repo, version)
+
+	if err != nil {
+		return nil, fmt.Errorf("finding version %q: %w", version, err)
 	}
 
-	branch, err := repo.Reference(plumbing.NewBranchReferenceName(version), true)
-	if err == nil {
-		return branch
+	if ref != nil {
+		return ref, nil
 	}
 
-	partial, err := repo.Reference(plumbing.NewBranchReferenceName("refs/heads/"+version), true)
-	if err == nil {
-		return partial
+	if err := repo.FetchContext(ctx, &git.FetchOptions{Depth: gf.options.Depth}); err != nil {
+		return nil, fmt.Errorf("fetching: %w", err)
+	}
+
+	ref, err = gf.find(repo, version)
+
+	if err != nil {
+		return nil, fmt.Errorf("finding version %q: %w", version, err)
+	}
+
+	return ref, nil
+}
+
+func (gf *GitFetcher) find(repo *git.Repository, version string) (*Reference, error) {
+	if tag, err := repo.Tag(version); err == nil {
+		annotatedTag, err := repo.TagObject(tag.Hash())
+
+		// object not found is returned for lightweight tags
+		if err != nil && !errors.Is(err, plumbing.ErrObjectNotFound) {
+			return nil, fmt.Errorf("getting annotated tag: %w", err)
+		}
+
+		if annotatedTag != nil {
+			return NewReferenceToAnnotatedTag(annotatedTag), nil
+		}
+
+		return NewReference(tag), nil
+	}
+
+	if branch, err := repo.Reference(plumbing.NewBranchReferenceName(version), true); err == nil {
+		return NewReference(branch), nil
+	}
+
+	if partial, err := repo.Reference(plumbing.NewBranchReferenceName("refs/heads/"+version), true); err == nil {
+		return NewReference(partial), nil
 	}
 
 	commits, err := repo.CommitObjects()
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("getting commit objects: %w", err)
 	}
 	defer commits.Close()
 
 	var found *plumbing.Reference
-	_ = commits.ForEach(func(c *object.Commit) error {
+	err = commits.ForEach(func(c *object.Commit) error {
 		h := c.Hash.String()
 
 		if h == version || (len(version) > 7 && strings.HasPrefix(h, version)) {
@@ -193,5 +222,13 @@ func (gf *GitFetcher) find(repo *git.Repository, version string) *plumbing.Refer
 		return nil
 	})
 
-	return found
+	if err != nil {
+		return nil, fmt.Errorf("searching commits: %w", err)
+	}
+
+	if found == nil {
+		return nil, nil
+	}
+
+	return NewReference(found), nil
 }
