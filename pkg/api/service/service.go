@@ -4,7 +4,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/variables"
@@ -36,17 +35,16 @@ func New(stepCache runner.Cache, env *runner.Environment) *StepRunnerService {
 
 // Run parses, prepares, and initiates execution of a RunRequest.
 func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) (response *proto.RunResponse, err error) {
-	specDef, err := s.loadSteps(request.Steps)
+	if _, ok := s.jobs.Get(request.Id); ok {
+		return &proto.RunResponse{}, nil
+	}
+
+	specDef, err := s.loadSteps(request.Steps, request)
 	if err != nil {
 		return nil, fmt.Errorf("loading step: %w", err)
 	}
 
-	specDef.Dir = request.WorkDir
-	if request.Job != nil && request.Job.BuildDir != "" {
-		specDef.Dir = request.Job.BuildDir
-	}
-
-	job, err := jobs.New(request)
+	job, err := jobs.New(request.Id, specDef.Dir)
 	if err != nil {
 		return nil, fmt.Errorf("initializing request: %w", err)
 	}
@@ -62,36 +60,30 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("preparing environment: %w", err)
 	}
 
-	job.GlobCtx.Job = variables.Expand(jobVars)
-	job.GlobCtx.Env = s.env.AddLexicalScope(request.Env)
+	globCtx := runner.NewGlobalContext(s.env.AddLexicalScope(request.Env))
+	globCtx.Job = jobVars
+	globCtx.WorkDir = job.WorkDir
+	globCtx.Stdout, globCtx.Stderr = job.Logs()
 
 	params := &runner.Params{}
-	step, err := runner.NewParser(job.GlobCtx, s.cache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
+	step, err := runner.NewParser(globCtx, s.cache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}
 
 	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
-	stepsCtx, err := runner.NewStepsContext(job.GlobCtx, specDef.Dir, inputs, job.GlobCtx.Env)
-
+	stepsCtx, err := runner.NewStepsContext(globCtx, specDef.Dir, inputs, globCtx.Env)
 	if err != nil {
 		return nil, err
 	}
 
-	job.StepsCtx = stepsCtx
-
-	// last chance to bail...
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
 	// actually execute the steps request
 	s.jobs.Put(request.Id, job)
-	go s.run(job, step)
+	go job.Run(stepsCtx, step)
 	return &proto.RunResponse{}, nil
 }
 
-func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, error) {
+func (s *StepRunnerService) loadSteps(stepsStr string, request *proto.RunRequest) (*proto.SpecDefinition, error) {
 	spec, step, err := schema.ReadSteps(stepsStr)
 	if err != nil {
 		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
@@ -108,23 +100,18 @@ func (s *StepRunnerService) loadSteps(stepsStr string) (*proto.SpecDefinition, e
 		Spec:       protoSpec,
 		Definition: protoDef,
 	}
-	return protoStepDef, nil
-}
 
-// run actually starts execution of the steps request and captures the result. It is intended to be run in a goroutine.
-func (s *StepRunnerService) run(job *jobs.Job, step runner.Step) {
-	result, err := step.Run(job.Ctx, job.StepsCtx)
-	job.Finish(result, err)
-	if err != nil {
-		// TODO: better logging
-		log.Printf("an error occurred executing the job: %s", err)
+	protoStepDef.Dir = request.WorkDir
+	if request.Job != nil && request.Job.BuildDir != "" {
+		protoStepDef.Dir = request.Job.BuildDir
 	}
+	return protoStepDef, nil
 }
 
 func (s *StepRunnerService) Close(ctx context.Context, request *proto.CloseRequest) (*proto.CloseResponse, error) {
 	job, ok := s.jobs.Get(request.Id)
 	if !ok {
-		return nil, &errBadJobID{id: request.Id}
+		return &proto.CloseResponse{}, nil
 	}
 
 	job.Close()

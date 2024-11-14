@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,40 +21,39 @@ import (
 )
 
 type Job struct {
-	TmpDir   string
-	WorkDir  string
-	GlobCtx  *runner.GlobalContext // To capture stdout/err from all subprocesses
-	StepsCtx *runner.StepsContext
-	Ctx      context.Context // The context used to manage the Job's entire lifetime.
-	ID       string          // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
+	TmpDir  string
+	WorkDir string
+	Ctx     context.Context // The context used to manage the Job's entire lifetime.
+	ID      string          // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
 
 	cancel     func()    // Used to cancel the Ctx.
 	err        error     // Captures any error returned when executing steps.
-	finished   bool      // Indicated whether all processing of this job has finished.
 	startTime  time.Time // time when the job finished execution.
 	finishTime time.Time // time when the job finished execution.
 	mux        sync.RWMutex
+	finishC    chan struct{}
+	runOnce    sync.Once
+	closeOnce  sync.Once
 
-	stepResult *proto.StepResult
-	logs       *file.Streamer
+	logs *file.Streamer
 
-	stepResultStatus proto.StepResult_Status
+	status proto.StepResult_Status
 }
 
-func New(request *proto.RunRequest) (*Job, error) {
-	workDir := request.WorkDir
+func New(jobID, workDir string) (*Job, error) {
 	if workDir == "" {
-		workDir, _ = os.Getwd()
-	}
-	if request.Job != nil && request.Job.BuildDir != "" {
-		workDir = request.Job.BuildDir
+		osWorkDir, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("could not determine working directory: %w", err)
+		}
+		workDir = osWorkDir
 	}
 
 	if err := os.MkdirAll(workDir, 0700); err != nil {
 		return nil, fmt.Errorf("creating workdir %q: %w", workDir, err)
 	}
 
-	tmpDir := path.Join(os.TempDir(), "step-runner-output-"+request.Id)
+	tmpDir := path.Join(os.TempDir(), "step-runner-output-"+jobID)
 	if err := os.MkdirAll(tmpDir, 0700); err != nil {
 		return nil, fmt.Errorf("creating tmpdir %q: %w", tmpDir, err)
 	}
@@ -66,80 +67,106 @@ func New(request *proto.RunRequest) (*Job, error) {
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
-	globCtx := runner.NewGlobalContext(runner.NewEmptyEnvironment())
-	globCtx.WorkDir = workDir
-	// TODO: differentiate between stdin/stderr
-	globCtx.Stderr = logs
-	globCtx.Stdout = logs
-
 	return &Job{
-		TmpDir:           tmpDir,
-		WorkDir:          workDir,
-		ID:               request.Id,
-		Ctx:              ctx,
-		GlobCtx:          globCtx,
-		startTime:        time.Now(),
-		cancel:           cancel,
-		logs:             logs,
-		stepResultStatus: proto.StepResult_running,
+		TmpDir:  tmpDir,
+		WorkDir: workDir,
+		ID:      jobID,
+		Ctx:     ctx,
+		cancel:  cancel,
+		logs:    logs,
+		status:  proto.StepResult_unspecified,
+		finishC: make(chan struct{}, 1),
 	}, nil
 }
 
-// Result returns the StepResult and error resulting from executing the step. Note that this function might not be
-// necessary when we implement streaming step-results as they are executed.
-func (j *Job) Result() (*proto.StepResult, error) {
-	j.mux.RLock()
-	defer j.mux.RUnlock()
-	return j.stepResult, j.err
+// Logs returns a pair of io.Writers corresponding to the Job's stdout and stderr (in that order).
+func (j *Job) Logs() (io.Writer, io.Writer) { return j.logs, j.logs }
+
+// Run actually starts execution of the steps request and captures the result. It is intended to be run in a
+// goroutine.
+func (j *Job) Run(stepsCtx *runner.StepsContext, step runner.Step) {
+	j.runOnce.Do(func() {
+		defer func() {
+			stepsCtx.Cleanup()
+			_ = j.logs.Close()
+			j.finishC <- struct{}{}
+		}()
+
+		j.mux.Lock()
+
+		j.startTime = time.Now()
+		j.status = proto.StepResult_running
+		j.mux.Unlock()
+
+		result, err := step.Run(j.Ctx, stepsCtx)
+		j.onRunCompletion(result, err)
+
+		if j.err != nil {
+			log.Printf("an error occurred executing job %q: %s", j.ID, err.Error())
+		}
+	})
 }
 
-// Finish() finishes/completes natural job execution (i.e. not cancelled). It does not clean up resources created
-// during job execution. The signature of this method may change when we implement streaming step-results.
-func (j *Job) Finish(result *proto.StepResult, err error) {
-	now := time.Now()
-
+func (j *Job) onRunCompletion(stepResult *proto.StepResult, err error) {
 	j.mux.Lock()
 	defer j.mux.Unlock()
-	if j.finished {
-		return
+
+	j.finishTime = time.Now()
+
+	switch stepResult.Status {
+	case proto.StepResult_unspecified:
+		j.err = fmt.Errorf("job %q did not start running: %w", j.ID, err)
+		j.status = proto.StepResult_failure
+	case proto.StepResult_running:
+		j.err = fmt.Errorf("job %q did not finish running: %w", j.ID, err)
+		j.status = proto.StepResult_failure
+	case proto.StepResult_failure:
+		// When a job is cancelled (by calling `Job.Close()`) or times out (both of
+		// which cancel the context passed to `exec.CommandContext()`), the returned
+		// error can:
+		//  * be one of context.Cancelled or context.DeadlineExceeded.
+		//  * be another error type that ends with the string "signal: killed".
+		//
+		// In both cases the `StepResult_Status` returned by `Step.Run()` is
+		// `failure`, but we want it to be `cancelled`. Since the latter can also
+		// happen when the process is otherwise killed (e.g. OOM killer), so we
+		// have to also check that the context was actually cancelled.
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
+			(j.Ctx.Err() != nil && strings.HasSuffix(err.Error(), "signal: killed")) {
+			j.err = fmt.Errorf("job %q cancelled: %w", j.ID, err)
+			j.status = proto.StepResult_cancelled
+			return
+		}
+		fallthrough
+	default:
+		j.err = err
+		j.status = stepResult.Status
 	}
-
-	j.stepResult = result
-	j.err = err
-	j.finished = true
-	j.finishTime = now
-
-	if j.StepsCtx != nil {
-		j.StepsCtx.Cleanup()
-	}
-
-	j.logs.Stop()
-	_ = j.logs.Close()
-
-	j.stepResultStatus = computeFinalStatus(result, err)
-}
-
-func computeFinalStatus(stepResult *proto.StepResult, err error) proto.StepResult_Status {
-	if stepResult == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return proto.StepResult_cancelled
-	}
-
-	// take the state of the root step-result as the overall execution state.
-	return stepResult.Status
-}
-
-func (j *Job) Finished() bool {
-	j.mux.RLock()
-	defer j.mux.RUnlock()
-	return j.finished
 }
 
 // Close() cancels jobs (if still running) and cleans up all resources associated with managing the job.
 func (j *Job) Close() {
-	j.cancel()
-	//nolint:errcheck
-	defer os.RemoveAll(j.TmpDir)
-	j.Finish(nil, j.Ctx.Err())
+	j.closeOnce.Do(func() {
+		j.cancel()
+		// block until Run has exited
+
+		select {
+		case <-j.finishC:
+		case <-time.NewTimer(time.Second * 2).C:
+			// A caller called close without first calling Run... 2 seconds ought to be enough for exec.Cmd.Run() to
+			// return...
+			j.mux.Lock()
+			defer j.mux.Unlock()
+			if j.status == proto.StepResult_unspecified {
+				j.status = proto.StepResult_cancelled
+			}
+			if j.err == nil {
+				j.err = context.Canceled
+			}
+		}
+
+		_ = os.RemoveAll(j.TmpDir)
+	})
 }
 
 // FollowLogs writes the stdout/stderr captured from running steps to the supplied writer.
@@ -159,12 +186,15 @@ func (j *Job) Status() *proto.Status {
 	defer j.mux.RUnlock()
 
 	st := proto.Status{
-		Id:        j.ID,
-		StartTime: timestamppb.New(j.startTime),
-		Status:    j.stepResultStatus,
+		Id:     j.ID,
+		Status: j.status,
 	}
 
-	if j.finished {
+	if !j.startTime.IsZero() {
+		st.StartTime = timestamppb.New(j.startTime)
+	}
+
+	if !j.finishTime.IsZero() {
 		st.EndTime = timestamppb.New(j.finishTime)
 	}
 	if j.err != nil {
