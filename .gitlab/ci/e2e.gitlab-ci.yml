@@ -27,3 +27,15 @@ verify-e2e:
   script:
     - apt update && apt install -y jq
     - if [[ $(jq -r '.subStepResults[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
+
+run-action-e2e:
+  stage: e2e
+  image: $LEGACY_IMAGE_TAG
+  variables:
+    CI_STEPS_DEBUG: "true"
+  run:
+    - name: say_hi
+      step: ./.gitlab/steps/e2e_action
+  artifacts:
+    paths:
+      - step-results.json

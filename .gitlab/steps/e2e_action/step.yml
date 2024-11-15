@@ -1,0 +1,7 @@
+spec:
+---
+run:
+  - name: say_hi
+    action: mikefarah/yq@master
+    inputs:
+      cmd: echo ["Hi, ${{job.CI_PROJECT_NAME}}!"] | yq .[0]
