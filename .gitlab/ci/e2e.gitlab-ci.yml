@@ -33,6 +33,7 @@ run-action-e2e:
   image: $LEGACY_IMAGE_TAG
   variables:
     CI_STEPS_DEBUG: "true"
+    DOCKER_HOST: "$DOCKER_HOST"
   run:
     - name: say_hi
       step: ./.gitlab/steps/e2e_action
