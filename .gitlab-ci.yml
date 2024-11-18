@@ -11,7 +11,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 include:
-  - local: /.gitlab/ci/variables.gitlab-ci.yml
+  - local: /.gitlab/ci/common.gitlab-ci.yml
   - local: /.gitlab/ci/test.gitlab-ci.yml
   - local: /.gitlab/ci/build-binaries.gitlab-ci.yml
   - local: /.gitlab/ci/build-docker.gitlab-ci.yml

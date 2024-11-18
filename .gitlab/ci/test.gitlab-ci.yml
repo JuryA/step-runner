@@ -22,6 +22,8 @@ check-generated:
 
 go-test:
   stage: test
+  extends:
+    - .go-cache
   image: golang:$GO_VERSION
   script:
     - go test -race ./...
