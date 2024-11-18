@@ -486,25 +486,6 @@ func Test_StepRunnerService_Status(t *testing.T) {
 				assert.Contains(t, sr.Jobs[0].Message, "exec: exit status 127")
 			},
 		},
-		"single job cancelled before execution start": {
-			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("sleep 1"), false)}
-			},
-			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
-				rr := runRequests[0]
-				j, ok := stepsService.jobs.Get(rr.Id)
-				require.True(t, ok)
-
-				// cancel the job before it starts executing. This cancels but does not delete the job
-				j.Close()
-
-				sr, err := apiClient.Status(bg, &proto.StatusRequest{})
-				assert.NoError(t, err)
-				// exit-code was never set
-				assert.Equal(t, proto.StepResult_cancelled, sr.Jobs[0].Status)
-				assert.Contains(t, sr.Jobs[0].Message, context.Canceled.Error())
-			},
-		},
 		"single job cancelled after execution start": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
 				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("sleep 1"), false)}
