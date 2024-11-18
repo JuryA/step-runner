@@ -1,25 +1,32 @@
 
 verify-image-version:
   stage: e2e
-  image: $IMAGE_TAG
-  tags: [$RUNNER_PLATFORM]
+  image: docker:${DOCKER_VERSION}
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  tags: ["saas-${OS}-medium-${OS}"]
   parallel:
     matrix:
-      - RUNNER_PLATFORM: [saas-linux-small-amd64, saas-linux-medium-arm64]
+      - OS: linux
+        ARCH: amd64
+      - OS: linux
+        ARCH: arm64
   script:
-    - STEP_RUNNER_HELP=$(/step-runner help)
+    - STEP_RUNNER_HELP=$(docker run --rm -v "${CI_PROJECT_DIR}:/app" "${IMAGE_TAG}" /app/step-runner help)
     - echo "$STEP_RUNNER_HELP" | grep -q "Step Runner version:" # expect version to be printed
     - echo "$STEP_RUNNER_HELP" | grep -q -v "UNKNOWN" # version should be known
 
 run-e2e:
   stage: e2e
-  image: $IMAGE_TAG
+  image: docker:${DOCKER_VERSION}
+  services:
+    - docker:${DOCKER_VERSION}-dind
   script: |
-    /step-runner run
-      gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v3
-      --inputs 'echo=${{job.CI_PIPELINE_ID}}'
-      --job 'CI_PIPELINE_ID=112'
-      --write-steps-results
+    docker run --rm -v "${CI_PROJECT_DIR}:/app" "${IMAGE_TAG}" /app/step-runner run
+        gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v3
+        --inputs 'echo=${{job.CI_PIPELINE_ID}}'
+        --job 'CI_PIPELINE_ID=112'
+        --write-steps-results
   artifacts:
     paths:
       - step-results.json
@@ -38,10 +45,10 @@ run-action-e2e:
   services:
     - docker:${DOCKER_VERSION}-dind
   script: |
-    /step-runner run
-      ./.gitlab/steps/e2e_action
-      --job "DOCKER_HOST=tcp://docker:2375,CI_PROJECT_NAME=$CI_PROJECT_NAME,CI_PROJECT_DIR=$CI_PROJECT_DIR"
-      --write-steps-results
+    docker run --rm -v "${CI_PROJECT_DIR}:/app" "${IMAGE_TAG}" /app/step-runner run
+        ./.gitlab/steps/e2e_action
+        --job "DOCKER_HOST=tcp://docker:2375,CI_PROJECT_NAME=$CI_PROJECT_NAME,CI_PROJECT_DIR=$CI_PROJECT_DIR"
+        --write-steps-results
   artifacts:
     paths:
       - step-results.json
@@ -68,4 +75,8 @@ verify-e2e legacy:
   needs: ["run-e2e legacy"]
   script:
     - apk add jq
-    - "[ $(jq -r '.subStepResults[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ] && exit 1"
+    - export A=$(jq -r '.subStepResults[0].outputs.echo' step-results.json)
+    - export B=$CI_PIPELINE_ID
+    - echo "A is $A"
+    - echo "B is $B"
+    - [ "$A" == "$B" ]
