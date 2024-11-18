@@ -10,21 +10,16 @@ verify-image-version:
       - OS: linux
         ARCH: arm64
   script:
-    - find .
-    - ls -la ./out/bin
     - STEP_RUNNER_HELP=$(./out/bin/step-runner-${OS}-${ARCH} help)
+    - echo "$STEP_RUNNER_HELP"
     - echo "$STEP_RUNNER_HELP" | grep -q "Step Runner version:" # expect version to be printed
     - echo "$STEP_RUNNER_HELP" | grep -q -v "UNKNOWN" # version should be known
 
 run-e2e:
   stage: e2e
   image: alpine:3.20
-  script: |
-    ./out/bin/step-runner-linux-amd64 run
-        gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v3
-        --inputs 'echo=${{job.CI_PIPELINE_ID}}'
-        --job 'CI_PIPELINE_ID=112'
-        --write-steps-results
+  script:
+    - ./out/bin/step-runner-linux-amd64 run gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v3 --inputs 'echo=${{job.CI_PIPELINE_ID}}' --job 'CI_PIPELINE_ID=$CI_PIPELINE_ID' --write-steps-results
   artifacts:
     paths:
       - step-results.json
@@ -36,18 +31,15 @@ verify-e2e:
   script:
     - apk add jq
     - ECHO_MESSAGE=$(jq -r '.subStepResults[0].outputs.echo' step-results.json)
-    - "[ $ECHO_MESSAGE == 112 ]"
+    - "[ $ECHO_MESSAGE == $CI_PIPELINE_ID ]"
 
 run-action-e2e:
   stage: e2e
   image: docker:${DOCKER_VERSION}
   services:
     - docker:${DOCKER_VERSION}-dind
-  script: |
-    ./out/bin/step-runner-linux-amd64 run
-        ./.gitlab/steps/e2e_action
-        --job "DOCKER_HOST=tcp://docker:2375,CI_PROJECT_NAME=$CI_PROJECT_NAME,CI_PROJECT_DIR=$CI_PROJECT_DIR"
-        --write-steps-results
+  script:
+    - ./out/bin/step-runner-linux-amd64 run ./.gitlab/steps/e2e_action --job "DOCKER_HOST=tcp://docker:2375,CI_PROJECT_NAME=$CI_PROJECT_NAME,CI_PROJECT_DIR=$CI_PROJECT_DIR" --write-steps-results
   artifacts:
     paths:
       - step-results.json
