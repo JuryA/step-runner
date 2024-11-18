@@ -53,7 +53,7 @@ func (c *Changelog) read() ([]*Version, error) {
 			changes = append(changes, line)
 		case len(parts) == 5:
 			if current != nil {
-				versions = append(versions, NewVersion(current[1], current[2], current[3], current[4], changes))
+				versions = append(versions, NewVersion(current[1], current[2], current[3], changes))
 			}
 
 			current = parts
@@ -68,7 +68,7 @@ func (c *Changelog) read() ([]*Version, error) {
 	}
 
 	if current != nil {
-		versions = append(versions, NewVersion(current[1], current[2], current[3], current[4], changes))
+		versions = append(versions, NewVersion(current[1], current[2], current[3], changes))
 	}
 
 	return versions, nil

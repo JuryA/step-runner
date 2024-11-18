@@ -15,17 +15,38 @@ docker-push:
 release:
   stage: deploy
   image: registry.gitlab.com/gitlab-org/step-runner:v0
+  variables:
+    CI_IMAGE_TAG: ${IMAGE_TAG}
   run:
     - name: changelog
       step: ./.gitlab/steps/changelog
       inputs:
         changelog: "${{job.CI_PROJECT_DIR}}/CHANGELOG.md"
+    - name: verify_release_doesnt_exist
+      script: |
+        [ $(cd ${{job.CI_PROJECT_DIR}} && git tag --list ${{steps.changelog.outputs.version}}) ] \
+          && echo 'Tag ${{steps.changelog.outputs.version}} already exists, aborting' && exit 1 \
+          || echo 'Tag ${{steps.changelog.outputs.version}} not found, continuing'
+    - name: tag_docker_image
+      script: |
+        docker login -u ${{job.CI_REGISTRY_USER}} -p ${{job.CI_REGISTRY_PASSWORD}} ${{job.CI_REGISTRY_IMAGE}}
+        docker buildx imagetools create --tag ${{job.CI_REGISTRY_IMAGE}}:latest ${{job.CI_IMAGE_TAG}}
+        docker buildx imagetools create --tag ${{job.CI_REGISTRY_IMAGE}}:${{steps.changelog.outputs.major}} ${{job.CI_IMAGE_TAG}}
+        docker buildx imagetools create --tag ${{job.CI_REGISTRY_IMAGE}}:${{steps.changelog.outputs.major_minor}} ${{job.CI_IMAGE_TAG}}
+        docker buildx imagetools create --tag ${{job.CI_REGISTRY_IMAGE}}:${{steps.changelog.outputs.major_minor_patch}} ${{job.CI_IMAGE_TAG}}
     - name: release
       step: ./.gitlab/steps/create_gitlab_release
       inputs:
         commit: ${{job.CI_COMMIT_SHA}}
-        tag: ${{steps.changelog.outputs.latest_version}}
-        description: ${{steps.changelog.outputs.latest_changes}}
+        tag: ${{steps.changelog.outputs.version}}
+        description: |
+          ## Changes
+          ${{steps.changelog.outputs.changes}}
+          ## Docker images
+          - `${{job.CI_REGISTRY_IMAGE}}:latest`
+          - `${{job.CI_REGISTRY_IMAGE}}:${{steps.changelog.outputs.major}}`
+          - `${{job.CI_REGISTRY_IMAGE}}:${{steps.changelog.outputs.major_minor}}`
+          - `${{job.CI_REGISTRY_IMAGE}}:${{steps.changelog.outputs.major_minor_patch}}`
         projectID: ${{job.CI_PROJECT_ID}}
         jobToken: ${{job.CI_JOB_TOKEN}}
   when: manual

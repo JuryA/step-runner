@@ -1,3 +1,7 @@
+## v0.1.0 (2024-10-28)
+
+- Version the Step Runner
+
 ## v0.0.0 (2024-10-28)
 
 ### Breaking Changes:

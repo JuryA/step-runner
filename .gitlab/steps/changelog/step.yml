@@ -7,17 +7,15 @@ spec:
       type: boolean
       default: false
   outputs:
-    latest_version:
+    version:
       type: string
-    latest_major:
+    major:
       type: string
-    latest_minor:
+    major_minor:
       type: string
-    latest_patch:
+    major_minor_patch:
       type: string
-    latest_date:
-      type: string
-    latest_changes:
+    changes:
       type: string
 ---
 env:
