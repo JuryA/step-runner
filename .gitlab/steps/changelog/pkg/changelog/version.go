@@ -3,17 +3,32 @@ package changelog
 import "fmt"
 
 type Version struct {
-	Major   string
-	Minor   string
-	Patch   string
-	Date    string
-	Changes []string
+	major   string
+	minor   string
+	patch   string
+	changes []string
 }
 
-func NewVersion(major, minor, patch, date string, changes []string) *Version {
-	return &Version{Major: major, Minor: minor, Patch: patch, Date: date, Changes: changes}
+func NewVersion(major, minor, patch string, changes []string) *Version {
+	return &Version{major: major, minor: minor, patch: patch, changes: changes}
+}
+
+func (v *Version) Tag() string {
+	return fmt.Sprintf("v%s", v.MajorMinorPatch())
+}
+
+func (v *Version) Major() string {
+	return v.major
+}
+
+func (v *Version) MajorMinor() string {
+	return fmt.Sprintf("%s.%s", v.major, v.minor)
 }
 
 func (v *Version) MajorMinorPatch() string {
-	return fmt.Sprintf("%s.%s.%s", v.Major, v.Minor, v.Patch)
+	return fmt.Sprintf("%s.%s.%s", v.major, v.minor, v.patch)
+}
+
+func (v *Version) Changes() []string {
+	return v.changes
 }

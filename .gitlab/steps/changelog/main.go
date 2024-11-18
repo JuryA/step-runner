@@ -41,9 +41,9 @@ func main() {
 	}
 
 	if echoLatestVersion != nil && *echoLatestVersion {
-		log.Printf("Latest changelog version: v%s (%s)\n", version.MajorMinorPatch(), version.Date)
+		log.Printf("Latest changelog version: v%s (%s)\n", version.Tag())
 
-		for _, change := range version.Changes {
+		for _, change := range version.Changes() {
 			log.Printf("%s\n", change)
 		}
 	}
@@ -51,13 +51,12 @@ func main() {
 
 func outputs(version *changelog.Version) string {
 	template := `
-latest_version="v%s"
-latest_major="%s"
-latest_minor="%s"
-latest_patch="%s"
-latest_date="%s"
-latest_changes="%s"
+version="%s"
+major="%s"
+major_minor="%s"
+major_minor_patch="%s"
+changes="%s"
 `
-	changes := strings.Trim(strings.Join(version.Changes, `\n`), `\n`)
-	return fmt.Sprintf(template, version.MajorMinorPatch(), version.Major, version.Minor, version.Patch, version.Date, changes)
+	changes := strings.Trim(strings.Join(version.Changes(), `\n`), `\n`)
+	return fmt.Sprintf(template, version.Tag(), version.Major(), version.MajorMinor(), version.MajorMinorPatch(), changes)
 }
