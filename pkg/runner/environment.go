@@ -34,13 +34,18 @@ func NewEnvironmentFromOS(rejectPredicates ...func(string) bool) (*Environment, 
 			return nil, fmt.Errorf("failed to parse environment variable: %s", nameValue)
 		}
 
-		for _, reject := range rejectPredicates {
-			if reject(name) {
-				continue
+		reject := false
+
+		for _, rejectPred := range rejectPredicates {
+			if rejectPred(name) {
+				reject = true
+				break
 			}
 		}
 
-		vars[name] = value
+		if !reject {
+			vars[name] = value
+		}
 	}
 
 	return NewEnvironment(vars), nil
