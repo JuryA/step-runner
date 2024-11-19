@@ -175,7 +175,8 @@ func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
 func excludeJobVars(envName string) bool {
 	return strings.HasPrefix(envName, "CI_") ||
 		strings.HasPrefix(envName, "GITLAB_") ||
-		strings.HasPrefix(envName, "FF_")
+		strings.HasPrefix(envName, "FF_") ||
+		strings.HasPrefix(envName, "DOCKER_ENV_")
 }
 
 func wrapStepsInSingleStep(ymlSteps []byte) (*schema.Step, error) {
