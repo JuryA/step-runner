@@ -21,6 +21,7 @@ run-e2e:
   script:
     - ./out/bin/step-runner-linux-amd64 run gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v3 --inputs 'echo=${{job.CI_PIPELINE_ID}}' --job 'CI_PIPELINE_ID=$CI_PIPELINE_ID' --write-steps-results
   artifacts:
+    access: developer
     paths:
       - step-results.json
 
@@ -41,6 +42,7 @@ run-action-e2e:
   script:
     - ./out/bin/step-runner-linux-amd64 run ./.gitlab/steps/e2e_action --job "DOCKER_HOST=tcp://docker:2375,CI_PROJECT_NAME=$CI_PROJECT_NAME,CI_PROJECT_DIR=$CI_PROJECT_DIR" --write-steps-results
   artifacts:
+    access: developer
     paths:
       - step-results.json
 
@@ -57,6 +59,7 @@ run-e2e legacy:
       inputs:
         echo: "${{job.CI_PIPELINE_ID}}"
   artifacts:
+    access: developer
     paths:
       - step-results.json
 
