@@ -54,10 +54,10 @@ func (j *GitReference) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["rev"]; raw != nil && !ok {
-		return fmt.Errorf("field rev in GitReference: required")
+		return fmt.Errorf("field rev in git: required")
 	}
 	if _, ok := raw["url"]; raw != nil && !ok {
-		return fmt.Errorf("field url in GitReference: required")
+		return fmt.Errorf("field url in git: required")
 	}
 	type Plain GitReference
 	var plain Plain
@@ -81,7 +81,7 @@ func (j *Reference) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["git"]; raw != nil && !ok {
-		return fmt.Errorf("field git in Reference: required")
+		return fmt.Errorf("field git: required")
 	}
 	type Plain Reference
 	var plain Plain
