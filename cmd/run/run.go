@@ -33,6 +33,7 @@ type Options struct {
 	WriteStepResults  bool
 	StepResultsFile   string
 	StepResultsFormat string
+	OsEnvNames        []string
 }
 
 func NewCmd() *cobra.Command {
@@ -57,6 +58,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringToStringVar(&options.Env, "env", make(map[string]string), "provide environment to step")
 	cmd.Flags().StringToStringVar(&options.Job, "job", make(map[string]string), "provide job variables to step")
 	cmd.Flags().StringVar(&options.TextProtoStepFile, "text-proto-step-file", "", "file containing a text protobuf definition of a step")
+	cmd.Flags().StringArrayVar(&options.OsEnvNames, "os-env-name-filter", []string{}, "filter OS env by name, omitting or leaving blank will include all OS envs in global context")
 
 	defaultWriteStepsFile, _ := strconv.ParseBool(os.Getenv("CI_STEPS_DEBUG"))
 	cmd.Flags().BoolVar(&options.WriteStepResults, "write-steps-results", defaultWriteStepsFile, "write step-results.json file, note this file may contain secrets")
@@ -151,7 +153,7 @@ func run(options *Options) error {
 }
 
 func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
-	env, err := runner.NewEnvironmentFromOS()
+	env, err := runner.NewEnvironmentFromOS(excludeJobVars)
 
 	if err != nil {
 		return nil, err
@@ -168,6 +170,12 @@ func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
 	globalCtx.WorkDir = workDir
 	globalCtx.Job = options.Job
 	return globalCtx, nil
+}
+
+func excludeJobVars(envName string) bool {
+	return strings.HasPrefix(envName, "CI_") ||
+		strings.HasPrefix(envName, "GITLAB_") ||
+		strings.HasPrefix(envName, "FF_")
 }
 
 func wrapStepsInSingleStep(ymlSteps []byte) (*schema.Step, error) {

@@ -24,7 +24,7 @@ type Environment struct {
 
 // NewEnvironmentFromOS returns the environment variables found in the OS runtime.
 // Variables can be filtered by name, passing no names will return all variables.
-func NewEnvironmentFromOS(names ...string) (*Environment, error) {
+func NewEnvironmentFromOS(rejectPredicates ...func(string) bool) (*Environment, error) {
 	vars := map[string]string{}
 
 	for _, nameValue := range os.Environ() {
@@ -34,8 +34,10 @@ func NewEnvironmentFromOS(names ...string) (*Environment, error) {
 			return nil, fmt.Errorf("failed to parse environment variable: %s", nameValue)
 		}
 
-		if len(names) > 0 && !slices.Contains(names, name) {
-			continue
+		for _, reject := range rejectPredicates {
+			if reject(name) {
+				continue
+			}
 		}
 
 		vars[name] = value
@@ -45,7 +47,7 @@ func NewEnvironmentFromOS(names ...string) (*Environment, error) {
 }
 
 func NewEnvironmentFromOSWithKnownVars() (*Environment, error) {
-	return NewEnvironmentFromOS(
+	knownVars := []string{
 		"HTTPS_PROXY",
 		"HTTP_PROXY",
 		"LANG",
@@ -63,7 +65,9 @@ func NewEnvironmentFromOSWithKnownVars() (*Environment, error) {
 		"http_proxy",
 		"https_proxy",
 		"no_proxy",
-	)
+	}
+
+	return NewEnvironmentFromOS(func(envName string) bool { return !slices.Contains(knownVars, envName) })
 }
 
 func NewEmptyEnvironment() *Environment {
