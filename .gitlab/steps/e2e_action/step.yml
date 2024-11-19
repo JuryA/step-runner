@@ -2,6 +2,8 @@ spec:
 ---
 run:
   - name: say_hi
-    action: mikefarah/yq@master
+    step: gitlab.com/components/action-runner@cam/debug-invalid-env-file
     inputs:
-      cmd: echo ["Hi, ${{job.CI_PROJECT_NAME}}!"] | yq .[0]
+      action: mikefarah/yq@master
+      inputs:
+        cmd: echo ["Hi, ${{job.CI_PROJECT_NAME}}!"] | yq .[0]
