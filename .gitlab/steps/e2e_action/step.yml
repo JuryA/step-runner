@@ -2,7 +2,7 @@ spec:
 ---
 run:
   - name: say_hi
-    step: gitlab.com/components/action-runner@cam/debug-invalid-env-file
+    step: gitlab.com/components/action-runner@main
     inputs:
       action: mikefarah/yq@master
       inputs:
