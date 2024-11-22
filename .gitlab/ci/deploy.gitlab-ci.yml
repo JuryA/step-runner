@@ -1,8 +1,19 @@
 
-docker-push:
+release:
   stage: deploy
+  image: alpine:latest
+  script: |
+    [ -n "$BLOCK_RELEASE" ] \
+      && echo "Block release: $BLOCK_RELEASE" && exit 1 \
+      || echo "Release not blocked, continuing." && exit 0
+  when: manual
+  allow_failure: false
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+legacy image:
+  stage: deploy
+  needs: ["release"]
   image: docker:20.10.16
   services:
     - docker:20.10.16-dind
@@ -11,9 +22,12 @@ docker-push:
     - docker pull $LEGACY_IMAGE_TAG
     - docker tag $LEGACY_IMAGE_TAG $CI_REGISTRY_IMAGE:v0
     - docker push $CI_REGISTRY_IMAGE:v0
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-release:
+binary images:
   stage: deploy
+  needs: ["release"]
   image: registry.gitlab.com/gitlab-org/step-runner:v0
   variables:
     CI_IMAGE_TAG: ${IMAGE_TAG}
@@ -49,7 +63,5 @@ release:
           - `${{job.CI_REGISTRY_IMAGE}}:${{steps.changelog.outputs.major_minor_patch}}`
         projectID: ${{job.CI_PROJECT_ID}}
         jobToken: ${{job.CI_JOB_TOKEN}}
-  when: manual
-  allow_failure: false
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

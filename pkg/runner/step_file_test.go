@@ -52,69 +52,35 @@ func TestStepFile(t *testing.T) {
 	})
 }
 
-func TestStepFile_ReadAsDotEnv(t *testing.T) {
+func TestStepFile_ReadEnvironment(t *testing.T) {
 	tests := map[string]struct {
 		data    string
 		want    map[string]string
 		wantErr string
 	}{
-		"standard key/value": {
-			data: `NAME=VALUE`,
+		"value as string": {
+			data: `NAME="VALUE"`,
 			want: map[string]string{"NAME": "VALUE"},
 		},
-		"lowercase key/value": {
-			data: `name=value`,
-			want: map[string]string{"name": "value"},
+		"value as number": {
+			data: `NAME=56.99`,
+			want: map[string]string{"NAME": "56.99"},
 		},
-		"comments are stripped from lines": {
-			data: `PROJECT TITLE=My Project # is this a comment`,
-			want: map[string]string{"PROJECT TITLE": "My Project"},
+		"value as bool": {
+			data: `NAME=false`,
+			want: map[string]string{"NAME": "false"},
 		},
-		"new lines can be added to value surrounded by quotes": {
-			data: `KEY="one
-two"`,
-			want: map[string]string{"KEY": "one\ntwo"},
+		"value as null": {
+			data: `NAME=null`,
+			want: map[string]string{"NAME": ""},
 		},
-		"new lines can be added to value surrounded by single quotes": {
-			data: `KEY='one
-two'`,
-			want: map[string]string{"KEY": "one\ntwo"},
+		"value as list": {
+			data:    `NAME=[1,2,3]`,
+			wantErr: `read env file: key "NAME": cannot convert value type "array" to string`,
 		},
-		"unicode cannot be used in key": {
-			data:    `spaß=German for fun`,
-			wantErr: `unexpected character "\u009f" in variable name near "spaß=German for fun`,
-		},
-		"unicode can be used in value": {
-			data: `FUN=spaß`,
-			want: map[string]string{"FUN": "spaß"},
-		},
-		"keys can start with a number": {
-			data: `2_MUCH_FUN=always`,
-			want: map[string]string{"2_MUCH_FUN": "always"},
-		},
-		"empty space is removed": {
-			data: `NAME=VALUE
-
-NAME2=VALUE2
-
-`,
-			want: map[string]string{"NAME": "VALUE", "NAME2": "VALUE2"},
-		},
-		"keys and values are trimmed for space": {
-			data: ` NAME =     VALUE      `,
-			want: map[string]string{"NAME": "VALUE"},
-		},
-		"quotes can be added to value by surrounding with single quotes": {
-			data: `KEY='"VALUE"'`,
-			want: map[string]string{"KEY": `"VALUE"`},
-		},
-		"expressions can be added as the value": {
-			data: `NAME=${{inputs.name}}`,
-			want: map[string]string{"NAME": `${{inputs.name}}`},
-		},
-		"expressions cannot be added as the key": {
-			data:    `${{inputs.name}}=Name value`,
-			wantErr: `unexpected character "$" in variable name near "${{inputs.name}}=Name value"`,
+		"value as struct": {
+			data:    `NAME={"value":"ah-oh"}`,
+			wantErr: `read env file: key "NAME": cannot convert value type "struct" to string`,
 		},
 	}
 
@@ -130,11 +96,11 @@ NAME2=VALUE2
 			_, err = io.Copy(file, strings.NewReader(test.data))
 			require.NoError(t, err)
 
-			env, err := stepFile.ReadDotEnv()
+			env, err := stepFile.ReadEnvironment()
 
 			if test.wantErr == "" {
 				require.NoError(t, err)
-				require.Equal(t, test.want, env)
+				require.Equal(t, test.want, env.Values())
 			} else {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), test.wantErr)
@@ -357,14 +323,14 @@ food="apple"
 			"value": {Type: proto.ValueType_string},
 		},
 		writeToOutput: `invalid`,
-		wantErr:       `reading outputs: invalid line "invalid"`,
+		wantErr:       `read output file: invalid line "invalid"`,
 	}, {
 		name: "invalid json",
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_struct},
 		},
 		writeToOutput: `value={foo}`,
-		wantErr:       `output "value": malformed, unmarshaling json: invalid character 'f' looking for beginning of object key string`,
+		wantErr:       `read output file: key "value": malformed, unmarshaling json: invalid character 'f' looking for beginning of object key string`,
 	}, {
 		name: "missing output",
 		outputs: map[string]*proto.Spec_Content_Output{
@@ -372,7 +338,7 @@ food="apple"
 			"food":  {Type: proto.ValueType_string},
 		},
 		writeToOutput: `value="foo"`,
-		wantErr:       `output "food": missing output, add to step outputs or remove from step specification`,
+		wantErr:       `read output file: key "food": missing output, add to step outputs or remove from step specification`,
 	}, {
 		name: "extra output",
 		outputs: map[string]*proto.Spec_Content_Output{
@@ -382,14 +348,14 @@ food="apple"
 		writeToOutput: `value="foo"
 food="apple"
 extra="output"`,
-		wantErr: `output "extra": unexpected output, remove from step outputs or define in step specification`,
+		wantErr: `read output file: key "extra": unexpected output, remove from step outputs or define in step specification`,
 	}, {
 		name: "wrong type received",
 		outputs: map[string]*proto.Spec_Content_Output{
 			"value": {Type: proto.ValueType_number},
 		},
 		writeToOutput: `value="twelve"`,
-		wantErr:       `output "value": mismatched types, declared as "number" in step specification and received from step as type "string"`,
+		wantErr:       `read output file: key "value": mismatched types, declared as "number" in step specification and received from step as type "string"`,
 	}}
 
 	for _, tc := range cases {
