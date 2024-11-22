@@ -1,3 +1,10 @@
+## v0.2.0 (2024-11-21)
+
+### Breaking Changes:
+
+- **export_file format is the same as the output_file**. Key/values must be
+  written in the form `name=JSON value`. See !157+.
+
 ## v0.1.0 (2024-10-28)
 
 - Version the Step Runner
