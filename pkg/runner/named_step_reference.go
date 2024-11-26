@@ -38,3 +38,7 @@ func (sr *NamedStepReference) formatInputs(inputs map[string]*context.Variable) 
 
 	return formatted
 }
+
+func (sr *NamedStepReference) Describe() string {
+	return sr.name
+}

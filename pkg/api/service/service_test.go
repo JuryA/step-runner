@@ -388,7 +388,8 @@ func Test_StepRunnerService_FollowLogs(t *testing.T) {
 	apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
 
 	require.True(t, errors.Is(err, io.EOF))
-	require.Equal(t, "foo bar baz\n", logs.String())
+	require.Contains(t, logs.String(), `Running step "script_step"`)
+	require.Contains(t, logs.String(), "foo bar baz\n")
 }
 
 func Test_StepRunnerService_Status(t *testing.T) {

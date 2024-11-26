@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"fmt"
 	"io"
 	"os"
 )
@@ -20,4 +21,17 @@ func NewGlobalContext(env *Environment) *GlobalContext {
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
+}
+
+func (gc *GlobalContext) Logln(format string, v ...any) error {
+	return gc.Logf(format+"\n", v...)
+}
+
+func (gc *GlobalContext) Logf(format string, v ...any) error {
+	_, err := fmt.Fprintf(gc.Stdout, format, v...)
+	if err != nil {
+		return fmt.Errorf("writing to stdout: %w", err)
+	}
+
+	return nil
 }
