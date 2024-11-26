@@ -1,3 +1,7 @@
+## v0.2.0 (2024-11-21)
+
+- Log name of executing step
+
 ## v0.1.0 (2024-10-28)
 
 - Version the Step Runner

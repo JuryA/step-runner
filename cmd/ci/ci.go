@@ -128,8 +128,6 @@ func wrapStepsInSpecDef(steps string) (*schema.Step, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unmarshalling steps: %w", err)
 	}
-	runningSteps, _ := yaml.Marshal(def)
-	fmt.Printf("running steps:\n%v", string(runningSteps))
 	return def, nil
 }
 

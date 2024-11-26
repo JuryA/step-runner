@@ -32,6 +32,10 @@ func (s *ExecutableStep) Describe() string {
 }
 
 func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
+	if err := stepsCtx.Logln("Running step %q", s.loadedFrom.Describe()); err != nil {
+		return nil, err
+	}
+
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 
 	if err := result.ObserveEnv(stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)); err != nil {

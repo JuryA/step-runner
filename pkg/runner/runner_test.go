@@ -129,9 +129,13 @@ run:
           - ${{steps.greet_the_crew.outputs.crew_name_1}}
           - ${{steps.greet_the_crew.outputs.crew_name_2}}
 `,
-		wantLog: `meet steppy who is 1 likes {"foods":["hamburger"]} and is hungry true
+		wantLog: `Running step "greet_steppy"
+meet steppy who is 1 likes {"foods":["hamburger"]} and is hungry true
+Running step "greet_sponge_bob"
 meet sponge bob who is 5 likes {"pants":"square"} and is hungry false
+Running step "greet_patrick_star"
 meet patrick star who is 7 likes {"color":"red"} and is hungry true
+Running step "greet_joe"
 meet joe who is 42 likes {"characters":["sponge bob","patrick star"]} and is hungry false
 `,
 		wantResults: func(t *testing.T, result *proto.StepResult) {

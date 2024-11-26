@@ -106,7 +106,10 @@ func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
 	assert.NoError(t, srClient.Close(ctx, rr2.Id))
 }
 
-const lorem = `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`
+const (
+	runStepMsg = "Running step \"lorem\"\n"
+	lorem      = `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`
+)
 
 func Test_StepRunnerClient_FollowLogs_Success(t *testing.T) {
 	ctx := context.Background()
@@ -124,8 +127,8 @@ func Test_StepRunnerClient_FollowLogs_Success(t *testing.T) {
 	n, err := srClient.FollowLogs(ctx, rr.Id, 0, &buf)
 
 	assert.NoError(t, err)
-	assert.Equal(t, int64(len(lorem)+1), n)
-	assert.Equal(t, lorem+"\n", buf.String())
+	assert.Equal(t, int64(len(runStepMsg)+len(lorem)+1), n)
+	assert.Equal(t, runStepMsg+lorem+"\n", buf.String())
 	assert.NoError(t, srClient.Close(ctx, rr.Id))
 }
 
@@ -146,8 +149,12 @@ func Test_StepRunnerClient_FollowLogs_Again(t *testing.T) {
 	assert.NoError(t, srClient.Run(ctx, rr))
 
 	buf := bytes.Buffer{}
-	bytesToWrite := 66
+	bytesToWrite := 20
 	writerWithErr := func(p []byte) (int, error) {
+		if len(p) < bytesToWrite {
+			bytesToWrite = len(p)
+		}
+
 		buf.Write(p[:bytesToWrite])
 		return bytesToWrite, errors.New("pow")
 	}
@@ -156,12 +163,12 @@ func Test_StepRunnerClient_FollowLogs_Again(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Equal(t, int64(bytesToWrite), n)
-	assert.Equal(t, lorem[:bytesToWrite], buf.String())
+	assert.Equal(t, runStepMsg[:bytesToWrite], buf.String())
 
 	n, err = srClient.FollowLogs(ctx, rr.Id, n, &buf)
 
 	assert.NoError(t, err)
-	assert.Equal(t, int64(len(lorem)+1), n)
-	assert.Equal(t, lorem+"\n", buf.String())
+	assert.Equal(t, int64(bytesToWrite+len(lorem)+1), n)
+	assert.Equal(t, runStepMsg[:bytesToWrite]+lorem+"\n", buf.String())
 	assert.NoError(t, srClient.Close(ctx, rr.Id))
 }
