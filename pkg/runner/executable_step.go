@@ -6,8 +6,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"google.golang.org/protobuf/types/known/structpb"
-
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -46,7 +44,7 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.St
 		return result.BuildFailure(), fmt.Errorf("exec: %w", err)
 	}
 
-	if err := result.ObserveOutputs(s.readOutputs(stepsCtx.OutputFile)); err != nil {
+	if err := result.ObserveOutputs(stepsCtx.OutputFile.ReadValues(s.specDef.Spec.Spec.Outputs)); err != nil {
 		return result.BuildFailure(), fmt.Errorf("output file: %w", err)
 	}
 
@@ -108,17 +106,4 @@ func (s *ExecutableStep) determineWorkDir(stepsCtx *StepsContext) (string, error
 	}
 
 	return res, nil
-}
-
-func (s *ExecutableStep) readOutputs(outputFile *StepFile) (map[string]*structpb.Value, error) {
-	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		stepResult, err := outputFile.ReadStepResult()
-		if err != nil {
-			return nil, fmt.Errorf("delegate: %w", err)
-		}
-
-		return stepResult.Outputs, nil
-	}
-
-	return outputFile.ReadValues(s.specDef.Spec.Spec.Outputs)
 }

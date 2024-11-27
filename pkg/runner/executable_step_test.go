@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
@@ -69,29 +68,6 @@ func TestExecutableStep_Run(t *testing.T) {
 				require.Equal(t, test.expected, test.extractValueFn(execStepResult.Outputs["value"]))
 			})
 		}
-	})
-
-	t.Run("delegates output", func(t *testing.T) {
-		stepResult := bldr.StepResult().
-			WithOutput("name", structpb.NewStringValue("amanda")).
-			WithSuccessStatus().
-			Build()
-		jsonStepResult, err := protojson.Marshal(stepResult)
-		require.NoError(t, err)
-
-		protoSpec := bldr.ProtoSpec().WithOutputMethod(proto.OutputMethod_delegate).Build()
-		protoDef := bldr.ProtoDef().
-			WithEnvVar("STEP_RESULT", base64.StdEncoding.EncodeToString(jsonStepResult)).
-			WithExecType("", []string{"/bin/bash", "-c", `echo ${{env.STEP_RESULT}} | base64 -d >${{output_file}}`}).
-			Build()
-		specDef := bldr.ProtoSpecDef().WithSpec(protoSpec).WithDefinition(protoDef).Build()
-		stepsCtx := bldr.StepsContext(t).Build()
-
-		step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
-		execStepResult, err := step.Run(context.Background(), stepsCtx)
-		require.NoError(t, err)
-		require.Equal(t, proto.StepResult_success, execStepResult.Status)
-		require.Equal(t, "amanda", execStepResult.Outputs["name"].GetStringValue())
 	})
 }
 
