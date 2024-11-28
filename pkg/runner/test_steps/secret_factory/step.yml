@@ -12,4 +12,4 @@ spec:
 env:
   OUTPUT: ${{ inputs.secret_override }}
 exec:
-  command: [bash, -c, 'SECRET=${{ inputs.secret_override }}; SECRET=${SECRET:-$RANDOM}; echo secret=\"${SECRET}\" >${{ output_file }}']
+  command: [bash, -c, 'SECRET=${{ inputs.secret_override }}; SECRET=${SECRET:-$RANDOM}; echo "{\"name\":\"secret\",\"value\":\"${SECRET}\"}" >${{ output_file }}']
