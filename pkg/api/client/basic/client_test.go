@@ -134,3 +134,34 @@ func Test_StepRunnerClient_FollowLogs_Again(t *testing.T) {
 	assert.Equal(t, runStepMsg[:bytesToWrite]+lorem+"\n", buf.String())
 	assert.NoError(t, srClient.Close(ctx, rr.Id))
 }
+
+func Test_StepRunnerClient_WaitForReady(t *testing.T) {
+	srvr := server.New(t)
+	t.Run("aborts waiting for ready when deadline has exceeded", func(t *testing.T) {
+		conn := srvr.NewConnection()
+		require.Eventually(t, func() bool { return conn.GetState() == connectivity.TransientFailure }, 2*time.Second, 100*time.Millisecond)
+
+		step := "steps:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"
+		runRequest := test.RunRequest(t, step, nil, nil)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
+		defer cancel()
+
+		srClient := New(conn)
+		err := srClient.Run(ctx, runRequest)
+		require.Error(t, err)
+		require.Equal(t, codes.DeadlineExceeded, status.Code(err))
+	})
+
+	t.Run("blocks on send until server is ready", func(t *testing.T) {
+		conn := srvr.NewConnection()
+		require.Eventually(t, func() bool { return conn.GetState() == connectivity.TransientFailure }, 2*time.Second, 100*time.Millisecond)
+
+		srvr.Serve()
+		step := "steps:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"
+		runRequest := test.RunRequest(t, step, nil, nil)
+
+		srClient := New(conn)
+		require.NoError(t, srClient.Run(context.Background(), runRequest))
+	})
+}

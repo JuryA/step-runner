@@ -79,7 +79,7 @@ func New(conn *grpc.ClientConn) *StepRunnerClient {
 // Run initiates the job defined in runRequest on the connected step-runner service.
 func (c *StepRunnerClient) Run(ctx context.Context, runRequest *client.RunRequest) error {
 	// TODO: compile steps here when we separate step compilation and execution...
-	if _, err := c.client.Run(ctx, toProto(runRequest)); err != nil {
+	if _, err := c.client.Run(ctx, toProto(runRequest), grpc.WaitForReady(true)); err != nil {
 		return fmt.Errorf("running run request for job %q: %w", runRequest.Id, err)
 	}
 	return nil
