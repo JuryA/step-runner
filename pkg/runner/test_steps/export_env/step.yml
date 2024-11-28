@@ -9,4 +9,4 @@ exec:
   command:
     - bash
     - -c
-    - "echo '${{inputs.name}}=\"${{inputs.value}}\"' >${{export_file}}"
+    - "echo '{\"name\":\"${{inputs.name}}\",\"value\":\"${{inputs.value}}\"}' >${{export_file}}"

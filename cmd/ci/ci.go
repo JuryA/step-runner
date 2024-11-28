@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -40,8 +39,8 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	defaultWriteStepsFile, _ := strconv.ParseBool(os.Getenv("CI_STEPS_DEBUG"))
-	cmd.Flags().BoolVar(&options.WriteStepResultsFile, "write-steps-results", defaultWriteStepsFile, "write step-results.json file, note this file may contain secrets")
+	argUsage := "write step-results.json file, note this file may contain secrets"
+	cmd.Flags().BoolVar(&options.WriteStepResultsFile, "write-steps-results", runner.RunningInDebugMode, argUsage)
 	return cmd
 }
 

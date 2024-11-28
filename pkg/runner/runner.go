@@ -1,11 +1,16 @@
 package runner
 
 import (
+	"os"
+	"strconv"
+
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
+
+var RunningInDebugMode, _ = strconv.ParseBool(os.Getenv("CI_STEPS_DEBUG"))
 
 // Params are the input and environment parameters for an execution.
 type Params struct {

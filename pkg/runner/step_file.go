@@ -2,7 +2,6 @@ package runner
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -21,6 +20,13 @@ import (
 
 var filesDirMutex = sync.Mutex{}
 var filesDir string
+
+const lineErrMsg = "failed to unmarshal JSON at line"
+
+type StepFileLine struct {
+	Name  *string         `json:"name"`
+	Value *structpb.Value `json:"value"`
+}
 
 type StepFile struct {
 	path string
@@ -53,9 +59,7 @@ func NewStepFileInDir(dir string) (*StepFile, error) {
 }
 
 func NewStepFile(path string) *StepFile {
-	return &StepFile{
-		path: path,
-	}
+	return &StepFile{path: path}
 }
 
 func (s *StepFile) Path() string {
@@ -72,33 +76,52 @@ func (s *StepFile) ReadDotEnv() (map[string]string, error) {
 	return dotenv, nil
 }
 
-func (s *StepFile) ReadKeyValueLines() (map[string]string, error) {
-	data, err := os.ReadFile(s.path)
+func (s *StepFile) ReadKeyValueLines() (map[string]*structpb.Value, error) {
+	file, err := os.Open(s.path)
 	if err != nil {
-		return nil, fmt.Errorf("reading file %v: %w", s.path, err)
+		return nil, fmt.Errorf("opening file %v: %w", s.path, err)
 	}
 
-	out := map[string]string{}
+	out := map[string]*structpb.Value{}
+	scanner := bufio.NewScanner(file)
 
-	scanner := bufio.NewScanner(bytes.NewReader(data))
-
-	for scanner.Scan() {
-		line := scanner.Text()
+	for i := 1; scanner.Scan(); i++ {
+		line := scanner.Bytes()
+		errCtx := NewErrorCtx("line", line)
 
 		if len(line) == 0 {
 			continue
 		}
 
-		fields := strings.SplitN(line, "=", 2)
-
-		if len(fields) < 2 {
-			return nil, fmt.Errorf("invalid line %q", line)
+		v := &StepFileLine{}
+		if err = json.Unmarshal(line, v); err != nil {
+			return nil, errCtx.Errorf("%s %d: %w", lineErrMsg, i, err)
 		}
 
-		out[fields[0]] = fields[1]
+		if v.Name == nil && !strings.Contains(string(line), `"name"`) {
+			return nil, errCtx.Errorf(`%s %d: "name" field is missing`, lineErrMsg, i)
+		}
+
+		if v.Name == nil {
+			return nil, errCtx.Errorf(`%s %d: "name" field value is null`, lineErrMsg, i)
+		}
+
+		if *v.Name == "" {
+			return nil, errCtx.Errorf(`%s %d: "name" field value is empty`, lineErrMsg, i)
+		}
+
+		if v.Value == nil && !strings.Contains(string(line), `"value"`) {
+			return nil, errCtx.Errorf(`%s %d: "value" field is missing`, lineErrMsg, i)
+		}
+
+		if v.Value == nil {
+			return nil, errCtx.Errorf(`%s %d: "value" field value is null`, lineErrMsg, i)
+		}
+
+		out[*v.Name] = v.Value
 	}
 
-	return out, scanner.Err()
+	return out, nil
 }
 
 func (s *StepFile) ReadStepResult() (*proto.StepResult, error) {
@@ -109,7 +132,7 @@ func (s *StepFile) ReadStepResult() (*proto.StepResult, error) {
 
 	stepResult := &proto.StepResult{}
 	if err := protojson.Unmarshal(data, stepResult); err != nil {
-		return nil, fmt.Errorf("reading output_file as a step result: %w", err)
+		return nil, NewErrorCtx("output file data", data).Errorf("reading output_file as a step result: %w", []any{err}...)
 	}
 
 	return stepResult, nil
@@ -126,7 +149,7 @@ func (s *StepFile) Remove() error {
 }
 
 func (s *StepFile) ReadEnvironment() (*Environment, error) {
-	outputs, err := s.readAndConvertLines()
+	outputs, err := s.ReadKeyValueLines()
 
 	if err != nil {
 		return nil, fmt.Errorf("read env file: %w", err)
@@ -142,8 +165,6 @@ func (s *StepFile) ReadEnvironment() (*Environment, error) {
 			env[key] = strconv.FormatFloat(value.GetNumberValue(), 'f', -1, 64)
 		case *structpb.Value_StringValue:
 			env[key] = value.GetStringValue()
-		case *structpb.Value_NullValue:
-			env[key] = ""
 		default:
 			return nil, fmt.Errorf("read env file: key %q: cannot convert value type %q to string", key, structpbValueToTypeName(value))
 		}
@@ -153,7 +174,7 @@ func (s *StepFile) ReadEnvironment() (*Environment, error) {
 }
 
 func (s *StepFile) ReadValues(specOutputs map[string]*proto.Spec_Content_Output) (map[string]*structpb.Value, error) {
-	keyValues, err := s.readAndConvertLines()
+	keyValues, err := s.ReadKeyValueLines()
 	if err != nil {
 		return nil, fmt.Errorf("read output file: %w", err)
 	}
@@ -181,31 +202,6 @@ func (s *StepFile) ReadValues(specOutputs map[string]*proto.Spec_Content_Output)
 	}
 
 	return keyValues, nil
-}
-
-func (s *StepFile) readAndConvertLines() (map[string]*structpb.Value, error) {
-	keyValues, err := s.ReadKeyValueLines()
-	if err != nil {
-		return nil, err
-	}
-
-	outputs := map[string]*structpb.Value{}
-
-	for key, jsonValue := range keyValues {
-		var outputJSON any
-		if err := json.Unmarshal([]byte(jsonValue), &outputJSON); err != nil {
-			return nil, fmt.Errorf("key %q: malformed, unmarshaling json: %w", key, err)
-		}
-
-		value, err := structpb.NewValue(outputJSON)
-		if err != nil {
-			return nil, fmt.Errorf("key %q: %w", key, err)
-		}
-
-		outputs[key] = value
-	}
-
-	return outputs, nil
 }
 
 func (s *StepFile) checkOutputType(want proto.ValueType, have *structpb.Value) error {

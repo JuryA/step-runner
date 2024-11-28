@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
@@ -44,34 +45,26 @@ func TestCICmd(t *testing.T) {
 	t.Run("generates step-results file", func(t *testing.T) {
 		tests := []struct {
 			name             string
-			env              map[string]string
+			runInDebugMode   bool
 			args             []string
 			expectFileExists bool
 		}{
 			{
 				name:             "generates step file when CLI arg used",
+				runInDebugMode:   false,
 				args:             []string{"--write-steps-results"},
 				expectFileExists: true,
 			},
 			{
 				name:             "generates step file when env variable set",
-				env:              map[string]string{"CI_STEPS_DEBUG": "true"},
+				runInDebugMode:   true,
+				args:             []string{},
 				expectFileExists: true,
 			},
 			{
 				name:             "does not generate step file when env variable not set and CLI arg not used",
-				env:              map[string]string{},
+				runInDebugMode:   false,
 				args:             []string{},
-				expectFileExists: false,
-			},
-			{
-				name:             "does not generate step file when env variable set to false",
-				env:              map[string]string{"CI_STEPS_DEBUG": "false"},
-				expectFileExists: false,
-			},
-			{
-				name:             "does not generate step file when env variable not valid bool",
-				env:              map[string]string{"CI_STEPS_DEBUG": "invalid.bool"},
 				expectFileExists: false,
 			},
 		}
@@ -83,10 +76,9 @@ func TestCICmd(t *testing.T) {
 				require.NoError(t, os.Setenv("STEPS", `- step: ../../pkg/runner/test_steps/secret_factory`))
 				defer func() { _ = os.Unsetenv("STEPS") }()
 
-				for key, value := range test.env {
-					defer func() { _ = os.Unsetenv(key) }()
-					require.NoError(t, os.Setenv(key, value))
-				}
+				beforeValue := runner.RunningInDebugMode
+				defer func() { runner.RunningInDebugMode = beforeValue }()
+				runner.RunningInDebugMode = test.runInDebugMode
 
 				cmd := NewCmd()
 				cmd.SetArgs(test.args)

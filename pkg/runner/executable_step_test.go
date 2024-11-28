@@ -30,19 +30,19 @@ func TestExecutableStep_Run(t *testing.T) {
 		}{
 			"string output type": {
 				outputType:     proto.ValueType_string,
-				outputValue:    `value="hello world"`,
+				outputValue:    `{"name":"value","value":"hello world"}`,
 				expected:       "hello world",
 				extractValueFn: func(value *structpb.Value) interface{} { return value.GetStringValue() },
 			},
 			"number output type": {
 				outputType:     proto.ValueType_number,
-				outputValue:    "value=56.77",
+				outputValue:    `{"name":"value","value":56.77}`,
 				expected:       56.77,
 				extractValueFn: func(value *structpb.Value) interface{} { return value.GetNumberValue() },
 			},
 			"boolean output type": {
 				outputType:     proto.ValueType_boolean,
-				outputValue:    "value=true",
+				outputValue:    `{"name":"value","value":true}`,
 				expected:       true,
 				extractValueFn: func(value *structpb.Value) interface{} { return value.GetBoolValue() },
 			},

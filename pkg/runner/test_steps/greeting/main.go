@@ -14,10 +14,10 @@ var (
 func main() {
 	flag.Parse()
 	fmt.Println(*greeting)
-	if err := os.WriteFile(os.Getenv("STEP_RUNNER_OUTPUT"), []byte(fmt.Sprintf("name=%q", *name)), 0640); err != nil {
+	if err := os.WriteFile(os.Getenv("STEP_RUNNER_OUTPUT"), []byte(fmt.Sprintf(`{"name":"name", "value":%q}`, *name)), 0640); err != nil {
 		panic(err)
 	}
-	if err := os.WriteFile(os.Getenv("STEP_RUNNER_ENV"), []byte(fmt.Sprintf("NAME=%q", *name)), 0640); err != nil {
+	if err := os.WriteFile(os.Getenv("STEP_RUNNER_ENV"), []byte(fmt.Sprintf(`{"name":"NAME", "value":%q}`, *name)), 0640); err != nil {
 		panic(err)
 	}
 }
