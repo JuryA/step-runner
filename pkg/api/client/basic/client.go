@@ -80,7 +80,7 @@ func New(conn *grpc.ClientConn) *StepRunnerClient {
 func (c *StepRunnerClient) Run(ctx context.Context, runRequest *client.RunRequest) error {
 	// TODO: compile steps here when we separate step compilation and execution...
 	if _, err := c.client.Run(ctx, toProto(runRequest)); err != nil {
-		return fmt.Errorf("running job request: %w", err)
+		return fmt.Errorf("running run request for job %q: %w", runRequest.Id, err)
 	}
 	return nil
 }
@@ -88,7 +88,7 @@ func (c *StepRunnerClient) Run(ctx context.Context, runRequest *client.RunReques
 // Close cancelled (if running) the specified job-id, and frees all resources associated with the job.
 func (c *StepRunnerClient) Close(ctx context.Context, jobID string) error {
 	if _, err := c.client.Close(ctx, &proto.CloseRequest{Id: jobID}); err != nil {
-		return fmt.Errorf("closing job: %w", err)
+		return fmt.Errorf("closing job %q: %w", jobID, err)
 	}
 	return nil
 }
@@ -119,7 +119,7 @@ func (c *StepRunnerClient) FollowLogs(ctx context.Context, jobID string, offset 
 
 	ioStream, err := c.client.FollowLogs(ctx, &proto.FollowLogsRequest{Id: jobID, Offset: offset})
 	if err != nil {
-		return -1, fmt.Errorf("following logs: %w", err)
+		return -1, fmt.Errorf("following logs for job %q: %w", jobID, err)
 	}
 
 	written := offset
