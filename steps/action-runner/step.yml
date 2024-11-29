@@ -17,12 +17,12 @@ spec:
 ---
 run:
   - name: write_env_to_file
-    step: ./internal/env
+    step: ./steps/env
     inputs:
       env_file: .env-file
       work_dir: "${{ job.CI_PROJECT_DIR }}"
   - name: docker_run_action_runner
-    step: ./internal/docker
+    step: ./steps/docker
     inputs:
       action: "${{ inputs.action }}"
       inputs: "${{ inputs.inputs }}"
