@@ -10,10 +10,20 @@ workflow:
     - if: $CI_MERGE_REQUEST_IID
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE/pipelines:$CI_PIPELINE_IID
+  LEGACY_IMAGE_TAG: ${IMAGE_TAG}-legacy
+  GO_VERSION: 1.22
+  DOCKER_VERSION: 27.3.1
+
 include:
-  - local: /.gitlab/ci/variables.gitlab-ci.yml
-  - local: /.gitlab/ci/test.gitlab-ci.yml
-  - local: /.gitlab/ci/build-binaries.gitlab-ci.yml
-  - local: /.gitlab/ci/build-docker.gitlab-ci.yml
-  - local: /.gitlab/ci/e2e.gitlab-ci.yml
-  - local: /.gitlab/ci/deploy.gitlab-ci.yml
+  - local: .gitlab/ci/test.gitlab-ci.yml
+  - local: .gitlab/ci/build-binaries.gitlab-ci.yml
+  - local: .gitlab/ci/build-docker.gitlab-ci.yml
+  - local: .gitlab/ci/e2e.gitlab-ci.yml
+  - local: .gitlab/ci/deploy.gitlab-ci.yml
+  - local: steps/action-runner/.gitlab-ci.yml
+#    rules:
+#      - if: $FORCE_ACTIONS_PIPELINE == "true"
+#      - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+#      - changes: [/steps/action-runner/**/*]

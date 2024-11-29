@@ -1,0 +1,56 @@
+
+
+actions run-e2e:
+  stage: e2e
+  image: registry.gitlab.com/gitlab-org/step-runner:v0
+  script:
+    - /step-runner ci --write-steps-results
+  variables:
+    STEPS: |
+      - name: install_go
+        step: $WORKING_DIR/test/steps/install_go
+      - name: echo_test
+        step: $WORKING_DIR
+        env:
+          ECHO: hello actions
+        inputs:
+          action: $WORKING_DIR/test/actions/echo
+          action_runner_image: ${ACTION_IMAGE_TAG}
+          inputs: {}
+      - name: test_yq
+        step: $WORKING_DIR
+        inputs:
+          action: mikefarah/yq@master
+          action_runner_image: ${ACTION_IMAGE_TAG}
+          inputs:
+            cmd: yq .messages[0] ${CI_PROJECT_DIR}/${WORKING_DIR}/test/data/hello-world.yml
+      - name: test_trufflehog
+        step: $WORKING_DIR
+        inputs:
+          action: trufflesecurity/trufflehog@main
+          action_runner_image: ${ACTION_IMAGE_TAG}
+          inputs:
+            extra_args: --only-verified
+      - name: gosec
+        step: $WORKING_DIR
+        inputs:
+          action: securego/gosec@master
+          action_runner_image: ${ACTION_IMAGE_TAG}
+          inputs:
+            args: -exclude=G304 ${CI_PROJECT_DIR}/${WORKING_DIR}/pkg/...
+    TMPDIR: /builds
+    DOCKER_HOST: tcp://docker:2375
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  artifacts:
+    when: always
+    paths:
+      - step-results.json
+
+actions verify-e2e:
+  stage: e2e
+  needs: ["actions run-e2e"]
+  script:
+    - apt update && apt install -y jq
+    - if [[ $(jq -r '.subStepResults[1].outputs.echo' step-results.json) != "hello actions" ]]; then exit 1 ; fi
+    - if [[ $(jq -r '.subStepResults[2].outputs.result' step-results.json) != "hello world" ]]; then exit 1 ; fi

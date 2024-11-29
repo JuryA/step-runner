@@ -1,0 +1,11 @@
+
+actions docker-build:
+  stage: build
+  image: docker:${DOCKER_VERSION}
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  script:
+    - cd $WORKING_DIR
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $ACTION_IMAGE_TAG .
+    - docker push $ACTION_IMAGE_TAG

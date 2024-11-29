@@ -1,0 +1,26 @@
+
+actions go-fmt:
+  stage: test
+  image: golang:$GO_VERSION
+  script:
+    - cd $WORKING_DIR
+    - make go-fmt
+    - git diff --exit-code
+
+actions go-lint:
+  stage: test
+  image: golangci/golangci-lint:v1.59.1
+  script:
+    - cd $WORKING_DIR
+    - golangci-lint run -v --timeout 5m
+
+actions go-test:
+  stage: test
+  image: golang:1.21
+  script:
+    - cd $WORKING_DIR
+    - go test ./...
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+  services:
+    - docker:${DOCKER_VERSION}-dind
