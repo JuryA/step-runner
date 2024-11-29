@@ -332,7 +332,15 @@ func (s *Step) compileActionKeywordToStep() error {
 	if s.Script != nil && *s.Script != "" {
 		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
 	}
-	s.Step = "https://gitlab.com/components/action-runner@main"
+
+	s.Step = &Reference{
+		Git: GitReference{
+			Dir: PointerTo("steps/action"),
+			Rev: "cam/inline-language-steps",
+			Url: "https://gitlab.com/gitlab-org/step-runner",
+		},
+	}
+
 	s.Inputs = map[string]any{
 		"action": s.Action,
 		"inputs": s.Inputs,
@@ -476,4 +484,8 @@ func (value *valueCompiler) compile() (*structpb.Value, error) {
 	// and verify the type matches our
 	// expectations later.
 	return structpb.NewValue(simplifyTypes(value.v))
+}
+
+func PointerTo[T any](v T) *T {
+	return &v
 }

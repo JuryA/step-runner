@@ -236,8 +236,9 @@ steps:
     - name: find_something
       step:
           protocol: git
-          url: "https://gitlab.com/components/action-runner"
-          version: main
+          url: "https://gitlab.com/gitlab-org/step-runner"
+          version: cam/inline-language-steps
+          path: [ steps, action ]
           filename: step.yml
       inputs:
           action: mikefarah/yq@master

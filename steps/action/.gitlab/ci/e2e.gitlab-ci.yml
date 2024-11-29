@@ -2,7 +2,7 @@
 
 actions run-e2e:
   stage: e2e
-  image: registry.gitlab.com/gitlab-org/step-runner:v0
+  image: $LEGACY_IMAGE_TAG
   script:
     - /step-runner ci --write-steps-results
   variables:
@@ -29,13 +29,6 @@ actions run-e2e:
           action_runner_image: ${ACTION_IMAGE_TAG}
           inputs:
             extra_args: --only-verified
-      - name: gosec
-        step: $WORKING_DIR
-        inputs:
-          action: securego/gosec@master
-          action_runner_image: ${ACTION_IMAGE_TAG}
-          inputs:
-            args: -exclude=G304 ${CI_PROJECT_DIR}/${WORKING_DIR}/pkg/...
     TMPDIR: /builds
     DOCKER_HOST: tcp://docker:2375
   services:
@@ -47,8 +40,9 @@ actions run-e2e:
 
 actions verify-e2e:
   stage: e2e
+  image: alpine:3.20
   needs: ["actions run-e2e"]
   script:
-    - apt update && apt install -y jq
+    - apk add jq
     - if [[ $(jq -r '.subStepResults[0].outputs.echo' step-results.json) != "hello actions" ]]; then exit 1 ; fi
     - if [[ $(jq -r '.subStepResults[1].outputs.result' step-results.json) != "hello world" ]]; then exit 1 ; fi
