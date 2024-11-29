@@ -1,0 +1,12 @@
+
+variables:
+  ACTION_IMAGE_TAG: $CI_REGISTRY_IMAGE/pipelines/action-runner:$CI_PIPELINE_IID
+  ACTION_DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/action-runner
+  IMAGE_VERSION: v0
+  WORKING_DIR: "./steps/action"
+
+include:
+  - local: steps/action/.gitlab/ci/test.gitlab-ci.yml
+  - local: steps/action/.gitlab/ci/build-docker.gitlab-ci.yml
+  - local: steps/action/.gitlab/ci/e2e.gitlab-ci.yml
+  - local: steps/action/.gitlab/ci/deploy.gitlab-ci.yml
