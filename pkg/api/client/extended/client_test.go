@@ -2,7 +2,6 @@ package extended
 
 import (
 	"context"
-	"net"
 	"os"
 	"path"
 	"sync"
@@ -12,61 +11,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/test/bufconn"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
-	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test/server"
 )
 
-const bufSize = 1024 * 1024
-
 type testDialer struct {
-	dial func() (*grpc.ClientConn, error)
+	dial func() *grpc.ClientConn
 }
 
-func (t *testDialer) Dial() (*grpc.ClientConn, error) { return t.dial() }
-
-func must(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-var dialer *testDialer
-
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-
-	stepCache, err := cache.New()
-	must(err)
-
-	stepsService := service.New(stepCache, runner.NewEmptyEnvironment())
-
-	buflis := bufconn.Listen(bufSize)
-	server := grpc.NewServer()
-	proto.RegisterStepRunnerServer(server, stepsService)
-	go func() { must(server.Serve(buflis)) }()
-	defer func() { server.GracefulStop() }()
-
-	bufDialer := func(context.Context, string) (net.Conn, error) { return buflis.Dial() }
-	dialer = &testDialer{
-		dial: func() (*grpc.ClientConn, error) {
-			return grpc.DialContext(
-				ctx,
-				"bufnet",
-				grpc.WithContextDialer(bufDialer),
-				grpc.WithTransportCredentials(insecure.NewCredentials()))
-		},
-	}
-
-	code := m.Run()
-	os.Exit(code)
-}
+func (t *testDialer) Dial() (*grpc.ClientConn, error) { return t.dial(), nil }
 
 func cleanup(t *testing.T, paths ...string) {
 	os.RemoveAll(path.Join(test.WorkDir(t), ".config"))
@@ -80,7 +35,8 @@ func cleanup(t *testing.T, paths ...string) {
 func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 	defer cleanup(t)
 
-	srClient, err := New(dialer)
+	server := server.New(t).Serve()
+	srClient, err := New(&testDialer{dial: server.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
@@ -135,7 +91,8 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 	defer cleanup(t)
 
-	srClient, err := New(dialer)
+	server := server.New(t).Serve()
+	srClient, err := New(&testDialer{dial: server.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
@@ -169,7 +126,8 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
 	defer cleanup(t)
 
-	srClient, err := New(dialer)
+	server := server.New(t).Serve()
+	srClient, err := New(&testDialer{dial: server.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
@@ -198,7 +156,8 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 
 	ctx := context.Background()
 
-	srClient, err := New(dialer)
+	server := server.New(t).Serve()
+	srClient, err := New(&testDialer{dial: server.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
@@ -259,7 +218,8 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 func Test_StepRunnerClient_RunAndFollow_LogsOnly(t *testing.T) {
 	defer cleanup(t)
 
-	srClient, err := New(dialer)
+	server := server.New(t).Serve()
+	srClient, err := New(&testDialer{dial: server.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
