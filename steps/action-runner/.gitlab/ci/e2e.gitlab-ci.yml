@@ -7,8 +7,6 @@ actions run-e2e:
     - /step-runner ci --write-steps-results
   variables:
     STEPS: |
-      - name: install_go
-        step: $WORKING_DIR/test/steps/install_go
       - name: echo_test
         step: $WORKING_DIR
         env:
@@ -52,5 +50,5 @@ actions verify-e2e:
   needs: ["actions run-e2e"]
   script:
     - apt update && apt install -y jq
-    - if [[ $(jq -r '.subStepResults[1].outputs.echo' step-results.json) != "hello actions" ]]; then exit 1 ; fi
-    - if [[ $(jq -r '.subStepResults[2].outputs.result' step-results.json) != "hello world" ]]; then exit 1 ; fi
+    - if [[ $(jq -r '.subStepResults[0].outputs.echo' step-results.json) != "hello actions" ]]; then exit 1 ; fi
+    - if [[ $(jq -r '.subStepResults[1].outputs.result' step-results.json) != "hello world" ]]; then exit 1 ; fi

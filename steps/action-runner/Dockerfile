@@ -1,4 +1,5 @@
-FROM golang:1.21 as build
+ARG GO_VERSION="latest"
+FROM golang:$GO_VERSION AS build
 
 WORKDIR /app
 

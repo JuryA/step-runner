@@ -16,7 +16,7 @@ actions go-lint:
 
 actions go-test:
   stage: test
-  image: golang:1.21
+  image: golang:$GO_VERSION
   script:
     - cd $WORKING_DIR
     - go test ./...

@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"gitlab.com/components/action-runner/pkg/runner"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	"gitlab.com/components/action-runner/pkg/runner"
 )
 
 var (
