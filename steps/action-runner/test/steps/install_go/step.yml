@@ -1,0 +1,17 @@
+spec:
+  inputs:
+    go_version:
+      type: string
+      default: go1.21.7
+---
+steps:
+  - name: download_go
+    script: curl -sL "https://golang.org/dl/${{ inputs.go_version }}.linux-amd64.tar.gz" -o /tmp/go.tar.gz
+  - name: untar_go
+    script: tar -C /usr/local -xzf /tmp/go.tar.gz
+  - name: add_go_to_path
+    script: echo PATH=/usr/local/go/bin:$PATH | tee ${{ export_file }}
+  - name: set_goroot
+    script: echo GOROOT=/usr/local/go | tee ${{ export_file }}
+  - name: check_go
+    script: go version

@@ -2,6 +2,7 @@
 step-results.json
 step-results.txtpb
 step-runner
+.env-file
 .cache/
 .docker-env
 Library/

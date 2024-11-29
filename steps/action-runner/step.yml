@@ -1,0 +1,35 @@
+spec:
+  inputs:
+    action:
+      type: string
+    inputs:
+      type: struct
+    docker_socket_file:
+      type: string
+      default: /var/run/docker.sock
+    action_runner_image:
+      type: string
+      default: registry.gitlab.com/components/action-runner:v0
+    action_image:
+      type: string
+      default: catthehacker/ubuntu:act-latest
+  outputs: delegate
+---
+run:
+  - name: write_env_to_file
+    step: ./internal/env
+    inputs:
+      env_file: .env-file
+      work_dir: "${{ job.CI_PROJECT_DIR }}"
+  - name: docker_run_action_runner
+    step: ./internal/docker
+    inputs:
+      action: "${{ inputs.action }}"
+      inputs: "${{ inputs.inputs }}"
+      docker_host: "${{ job.DOCKER_HOST }}"
+      docker_socket_file: "${{ inputs.docker_socket_file }}"
+      action_runner_image: "${{ inputs.action_runner_image }}"
+      action_image: "${{ inputs.action_image }}"
+      env_file: .env-file
+      work_dir: "${{ job.CI_PROJECT_DIR }}"
+delegate: docker_run_action_runner

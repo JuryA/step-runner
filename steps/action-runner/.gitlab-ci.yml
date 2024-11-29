@@ -1,0 +1,101 @@
+include:
+  - template: 'Workflows/MergeRequest-Pipelines.gitlab-ci.yml'
+
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE/pipelines:$CI_PIPELINE_IID
+  IMAGE_VERSION: v0
+
+stages:
+  - test
+  - build
+  - e2e
+  - deploy
+
+go-test:
+  stage: test
+  image:
+    name: golang:1.21
+  script:
+    - go test ./...
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+  services:
+    - docker:24.0.5-dind
+
+docker-build:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $IMAGE_TAG .
+    - docker push $IMAGE_TAG
+
+run-e2e:
+  stage: e2e
+  image: registry.gitlab.com/gitlab-org/step-runner:v0
+  script:
+    - /step-runner ci --write-steps-results
+  variables:
+    STEPS: |
+      - name: install_go
+        step: ./test/steps/install_go
+      - name: echo_test
+        step: .
+        env:
+          ECHO: hello actions
+        inputs:
+          action: ./test/actions/echo
+          action_runner_image: ${IMAGE_TAG}
+          inputs: {}
+      - name: test_yq
+        step: .
+        inputs:
+          action: mikefarah/yq@master
+          action_runner_image: ${IMAGE_TAG}
+          inputs:
+            cmd: yq .messages[0] ${CI_PROJECT_DIR}/test/data/hello-world.yml
+      - name: test_trufflehog
+        step: .
+        inputs:
+          action: trufflesecurity/trufflehog@main
+          action_runner_image: ${IMAGE_TAG}
+          inputs:
+            extra_args: --only-verified
+      - name: gosec
+        step: .
+        inputs:
+          action: securego/gosec@master
+          action_runner_image: ${IMAGE_TAG}
+          inputs:
+            args: -exclude=G304 ${CI_PROJECT_DIR}/pkg/...
+    TMPDIR: /builds
+    DOCKER_HOST: tcp://docker:2375
+  services:
+    - docker:24.0.5-dind
+  artifacts:
+    when: always
+    paths:
+      - step-results.json
+
+verify-e2e:
+  stage: e2e
+  needs: ["run-e2e"]
+  script:
+    - apt update && apt install -y jq
+    - if [[ $(jq -r '.subStepResults[1].outputs.echo' step-results.json) != "hello actions" ]]; then exit 1 ; fi
+    - if [[ $(jq -r '.subStepResults[2].outputs.result' step-results.json) != "hello world" ]]; then exit 1 ; fi
+
+docker-push:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker pull $IMAGE_TAG
+    - docker tag $IMAGE_TAG $CI_REGISTRY_IMAGE:$IMAGE_VERSION
+    - docker push $CI_REGISTRY_IMAGE:$IMAGE_VERSION

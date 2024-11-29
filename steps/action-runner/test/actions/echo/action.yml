@@ -1,0 +1,14 @@
+name: Echo env action
+description: A GitHub action that echos the environment variable ECHO
+outputs:
+  echo:
+    description: The value of ECHO
+runs:
+  using: composite
+  inputs: {}
+  outputs:
+    echo:
+      description: An echo of the ECHO environment variable
+  steps:
+    - shell: bash
+      run: echo "echo=$ECHO" | tee "$GITHUB_OUTPUT"

@@ -1,0 +1,10 @@
+spec:
+  inputs:
+    env_file:
+      type: string
+    work_dir:
+      type: string
+---
+exec:
+  work_dir: "${{ inputs.work_dir }}"
+  command: [ bash, -c, "env > ${{ inputs.env_file }}" ]

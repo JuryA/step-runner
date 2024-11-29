@@ -1,0 +1,13 @@
+inputs:
+  message:
+    description: The message to echo
+    require: true
+outputs:
+  echo:
+    description:
+runs:
+  using: composite
+  steps:
+    - run: |
+        echo "echo=$INPUT_MESSAGE" >> "$GITHUB_OUTPUT"
+      shell: bash

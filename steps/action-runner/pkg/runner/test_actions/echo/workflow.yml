@@ -1,0 +1,10 @@
+jobs:
+    single-action:
+        runs-on: ubuntu-latest
+        steps:
+            - id: single-step
+              uses: ./test_actions/echo
+              with:
+                message: hello world
+        outputs:
+            echo: ${{ steps.single-step.outputs.echo }}
