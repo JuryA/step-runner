@@ -1,5 +1,7 @@
 ## v0.2.0 (2024-11-21)
 
+- Make the initial Run API call wait for the connection to be ready. See !161+.
+
 ### Breaking Changes:
 
 - **export_file format is the same as the output_file**. Key/values must be
