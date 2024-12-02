@@ -4,65 +4,21 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"net"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/test/bufconn"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/status"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
-	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test/server"
 )
 
-const bufSize = 1024 * 1024
-
-func must(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-var conn *grpc.ClientConn
-
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-
-	stepCache, err := cache.New()
-	must(err)
-
-	stepsService := service.New(stepCache, runner.NewEmptyEnvironment())
-
-	buflis := bufconn.Listen(bufSize)
-	server := grpc.NewServer()
-	proto.RegisterStepRunnerServer(server, stepsService)
-	go func() { must(server.Serve(buflis)) }()
-	defer func() { server.GracefulStop() }()
-
-	bufDialer := func(context.Context, string) (net.Conn, error) { return buflis.Dial() }
-	conn, err = grpc.DialContext(
-		ctx,
-		"bufnet",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	must(err)
-	defer func() { conn.Close() }()
-
-	code := m.Run()
-	os.Exit(code)
-}
-
 func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
-	ctx := context.Background()
-	srClient := New(conn)
-
 	rr1 := test.RunRequest(t, `steps:
   - name: hello_world
     step: ../../../runner/test_steps/greeting
@@ -78,6 +34,10 @@ func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
 `, nil, nil)
 	rr1.Id = rr1.Id + "-2"
 
+	server := server.New(t).Serve()
+	srClient := New(server.NewConnection())
+
+	ctx := context.Background()
 	assert.NoError(t, srClient.Run(ctx, rr1))
 	assert.NoError(t, srClient.Run(ctx, rr2))
 
@@ -112,15 +72,16 @@ const (
 )
 
 func Test_StepRunnerClient_FollowLogs_Success(t *testing.T) {
-	ctx := context.Background()
-	srClient := New(conn)
-
 	rr := test.RunRequest(t, `steps:
   - name: lorem
     step: ../../testdata/bash
     inputs:
         script: echo "`+lorem+`"`, nil, nil)
 
+	server := server.New(t).Serve()
+	srClient := New(server.NewConnection())
+
+	ctx := context.Background()
 	assert.NoError(t, srClient.Run(ctx, rr))
 
 	buf := bytes.Buffer{}
@@ -137,15 +98,16 @@ type toWriter func([]byte) (int, error)
 func (t toWriter) Write(p []byte) (int, error) { return t(p) }
 
 func Test_StepRunnerClient_FollowLogs_Again(t *testing.T) {
-	ctx := context.Background()
-	srClient := New(conn)
-
 	rr := test.RunRequest(t, `steps:
   - name: lorem
     step: ../../testdata/bash
     inputs:
         script: echo "`+lorem+`"`, nil, nil)
 
+	server := server.New(t).Serve()
+	srClient := New(server.NewConnection())
+
+	ctx := context.Background()
 	assert.NoError(t, srClient.Run(ctx, rr))
 
 	buf := bytes.Buffer{}
@@ -171,4 +133,35 @@ func Test_StepRunnerClient_FollowLogs_Again(t *testing.T) {
 	assert.Equal(t, int64(bytesToWrite+len(lorem)+1), n)
 	assert.Equal(t, runStepMsg[:bytesToWrite]+lorem+"\n", buf.String())
 	assert.NoError(t, srClient.Close(ctx, rr.Id))
+}
+
+func Test_StepRunnerClient_WaitForReady(t *testing.T) {
+	srvr := server.New(t)
+	t.Run("aborts waiting for ready when deadline has exceeded", func(t *testing.T) {
+		conn := srvr.NewConnection()
+		require.Eventually(t, func() bool { return conn.GetState() == connectivity.TransientFailure }, 2*time.Second, 100*time.Millisecond)
+
+		step := "steps:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"
+		runRequest := test.RunRequest(t, step, nil, nil)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
+		defer cancel()
+
+		srClient := New(conn)
+		err := srClient.Run(ctx, runRequest)
+		require.Error(t, err)
+		require.Equal(t, codes.DeadlineExceeded, status.Code(err))
+	})
+
+	t.Run("blocks on send until server is ready", func(t *testing.T) {
+		conn := srvr.NewConnection()
+		require.Eventually(t, func() bool { return conn.GetState() == connectivity.TransientFailure }, 2*time.Second, 100*time.Millisecond)
+
+		srvr.Serve()
+		step := "steps:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"
+		runRequest := test.RunRequest(t, step, nil, nil)
+
+		srClient := New(conn)
+		require.NoError(t, srClient.Run(context.Background(), runRequest))
+	})
 }
