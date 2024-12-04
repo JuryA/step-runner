@@ -1,0 +1,9 @@
+spec:
+---
+run:
+  - name: hello_world
+    step: ./hello
+  - name: hello_steps
+    step: ./hello
+    inputs:
+      who: gitlab steps

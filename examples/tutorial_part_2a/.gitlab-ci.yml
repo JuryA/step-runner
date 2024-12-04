@@ -1,0 +1,8 @@
+hello-world:
+  run:
+    - name: hello_world
+      step: .
+    - name: hello_steps
+      step: .
+      inputs:
+        who: gitlab steps

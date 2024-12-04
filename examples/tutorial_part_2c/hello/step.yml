@@ -1,0 +1,14 @@
+spec:
+  inputs:
+    who:
+      type: string
+      default: world
+  outputs:
+    greeting:
+      type: string
+---
+exec:
+  command:
+    - bash
+    - -c
+    - echo '{"name":"greeting","value":"hello ${{inputs.who}}"}' | tee ${{output_file}}

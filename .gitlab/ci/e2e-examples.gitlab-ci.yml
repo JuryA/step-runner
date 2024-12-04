@@ -1,0 +1,48 @@
+
+.example:
+  stage: e2e
+  image: alpine:3.20
+  script:
+    - apk add yq bash
+    - mkdir $EXAMPLE_DIR/test
+    # add header to test step.yml
+    - printf "spec:\n---\nrun:\n" >$EXAMPLE_DIR/test/step.yml
+    # scrape run command from .gitlab-ci.yml
+    - yq '.hello-world.run' $EXAMPLE_DIR/.gitlab-ci.yml >>$EXAMPLE_DIR/test/step.yml
+    # change step references to reference the parent dir
+    - yq -i 'select(di == 1).run |= map(select(.step == ".").step = "../")' $EXAMPLE_DIR/test/step.yml
+    - ./out/bin/step-runner-linux-amd64 run ./$EXAMPLE_DIR/test | tee stdout.txt
+    - >
+      if [[ -n "$EXPECT_STDOUT_1" ]]; then
+        grep -q "$EXPECT_STDOUT_1" stdout.txt || (echo "Failed to find '$EXPECT_STDOUT_1' in step runner output" && exit 1)
+      fi
+    - >
+      if [[ -n "$EXPECT_STDOUT_2" ]]; then
+        grep -q "$EXPECT_STDOUT_2" stdout.txt || (echo "Failed to find '$EXPECT_STDOUT_2' in step runner output" && exit 1)
+      fi
+
+examples/tutorial part 1:
+  extends: .example
+  variables:
+    EXAMPLE_DIR: examples/tutorial_part_1
+    EXPECT_STDOUT_1: "hello world"
+
+examples/tutorial part 2a:
+  extends: .example
+  variables:
+    EXAMPLE_DIR: examples/tutorial_part_2a
+    EXPECT_STDOUT_1: "hello world"
+    EXPECT_STDOUT_2: "hello gitlab steps"
+
+examples/tutorial part 2b:
+  extends: .example
+  variables:
+    EXAMPLE_DIR: examples/tutorial_part_2b
+    EXPECT_STDOUT_1: "hello world"
+    EXPECT_STDOUT_2: "hello gitlab steps"
+
+examples/tutorial part 2c:
+  extends: .example
+  variables:
+    EXAMPLE_DIR: examples/tutorial_part_2c
+    EXPECT_STDOUT_1: "all my greetings say hello world and hello gitlab steps"
