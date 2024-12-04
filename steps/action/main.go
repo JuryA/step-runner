@@ -1,76 +1,69 @@
-package main
+package action
 
 import (
-	"encoding/json"
-	"flag"
+	"context"
 	"fmt"
 	"os"
 
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 
-	"gitlab.com/components/action-runner/pkg/runner"
+	step_runner "gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/steps/action/pkg/runner"
 )
 
-var (
-	action      = flag.String("action", "", "The action to run")
-	actionImage = flag.String("action-image", "", "The image in which to run the action")
-	inputsJson  = flag.String("inputs", "", "The action inputs as a JSON struct")
-	outputFile  = flag.String("output-file", "", "The step-runner output file")
+type Config struct {
+	Action      string
+	ActionImage string
+	Inputs      map[string]string
+}
 
-	inputs = map[string]string{}
-)
-
-func main() {
-	readAndCheckInputs()
-	stepResult, err := runner.Run(*action, *actionImage, inputs)
+func Run(_ context.Context, stepsCtx *step_runner.StepsContext) error {
+	cfg, err := buildConfig(stepsCtx.Inputs)
 	if err != nil {
-		errorAndExit("running action %q: %v", *action, err)
+		return err
 	}
+
+	stepResult, err := runner.Run(cfg.Action, cfg.ActionImage, cfg.Inputs)
+	if err != nil {
+		return fmt.Errorf("running action %q: %v", cfg.Action, err)
+	}
+
 	data, err := protojson.Marshal(stepResult)
 	if err != nil {
-		errorAndExit("marshaling step result: %v", err)
+		return fmt.Errorf("marshaling step result: %v", err)
 	}
-	data = []byte(string(data))
-	err = os.WriteFile(*outputFile, data, 0600)
+
+	err = os.WriteFile(stepsCtx.OutputFile.Path(), data, 0600)
 	if err != nil {
-		errorAndExit("writing output file: %v", err)
+		return fmt.Errorf("writing output file: %v", err)
 	}
+
+	return nil
 }
 
-func readAndCheckInputs() {
-	flag.Parse()
-	if *action == "" {
-		errorAndExit("--action is required")
+func buildConfig(inputs map[string]*structpb.Value) (*Config, error) {
+	if _, ok := inputs["action"]; !ok {
+		return nil, fmt.Errorf("action is required")
 	}
-	if *actionImage == "" {
-		errorAndExit("--action-image is required")
-	}
-	if *inputsJson == "" {
-		errorAndExit("--inputs is required")
-	}
-	if *outputFile == "" {
-		errorAndExit("--output-file is required")
-	}
-	// Check types one layer at a time so we can give a nice error message
-	var inputAny any
-	err := json.Unmarshal([]byte(*inputsJson), &inputAny)
-	if err != nil {
-		errorAndExit("unmarshaling JSON inputs: %v", err)
-	}
-	inputMap, ok := inputAny.(map[string]interface{})
-	if !ok {
-		errorAndExit("inputs should be a JSON struct. got %T", inputAny)
-	}
-	for k, v := range inputMap {
-		valueString, ok := v.(string)
-		if !ok {
-			errorAndExit("input values must be strings. %q was a %T", k, v)
-		}
-		inputs[k] = valueString
-	}
-}
 
-func errorAndExit(msg string, params ...any) {
-	fmt.Fprintf(os.Stderr, fmt.Sprintf(msg, params...)+"\n")
-	os.Exit(1)
+	if _, ok := inputs["actionImage"]; !ok {
+		return nil, fmt.Errorf("actionImage is required")
+	}
+
+	actionInputs := make(map[string]string)
+
+	// TODO: case where inputs is not provided
+	// TODO: case where values are wrong types
+	for name, value := range inputs["inputs"].GetStructValue().GetFields() {
+		actionInputs[name] = value.GetStringValue()
+	}
+
+	cfg := &Config{
+		Action:      inputs["action"].GetStringValue(),
+		ActionImage: inputs["actionImage"].GetStringValue(),
+		Inputs:      actionInputs,
+	}
+
+	return cfg, nil
 }
