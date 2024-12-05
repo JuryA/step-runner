@@ -13,9 +13,9 @@ message Step {
   // Step is a reference to the step to invoke.
   Reference step = 2;
   // Env is a map of environment variable names to string values.
-  map<string,string> env = 3;
+  map<string, string> env = 3;
   // Inputs is a map of step input names to structured values.
-  map<string,google.protobuf.Value> inputs = 4;
+  map<string, google.protobuf.Value> inputs = 4;
   // Reference is a reference to a step. References can contain either a short or a full form.
   message Reference {
     // Protocol determines which step reference protocol to use when fetching the step.
@@ -59,11 +59,12 @@ message Definition {
     string work_dir = 2;
   }
   // Outputs are the output values for a `steps` type. They can reference the outputs of sub-steps.
-  map<string,google.protobuf.Value> outputs = 4;
+  map<string, google.protobuf.Value> outputs = 4;
   // Env is a map of environment variable names to values for all steps
-  map<string,string> env = 5;
+  map<string, string> env = 5;
   // Delegate selects a step by name which will produce the outputs for this step.
   string delegate = 6;
+  string inlineStep = 7;
 }
 
 // Definition type is either exec or steps.
@@ -79,7 +80,7 @@ message Spec {
   Content spec = 1;
   message Content {
     // Inputs is a map of input names to their parameters.
-    map<string,Input> inputs = 1;
+    map<string, Input> inputs = 1;
     // Input describes a single step input.
     message Input {
       // Type is the value type of the input.
@@ -90,9 +91,9 @@ message Spec {
       bool sensitive = 3;
     }
     // Outputs is a map of output names to their parameters.
-    map<string,Output> outputs = 2;
+    map<string, Output> outputs = 2;
     // Output describes a single step output.
-    message Output {  
+    message Output {
       // Type is the value type of the output.
       ValueType type = 1;
       // Default is the default output value.
@@ -150,11 +151,11 @@ message StepResult {
   // Status is the state of this step.
   Status status = 4;
   // Outputs are the output values returned from this step.
-  map<string,google.protobuf.Value> outputs = 5;
+  map<string, google.protobuf.Value> outputs = 5;
   // Exports are the environment variables exported from this step.
-  map<string,string> exports = 6;
+  map<string, string> exports = 6;
   // Env is the environment at the step definition level. Expressions are expanded.
-  map<string,string> env = 7;
+  map<string, string> env = 7;
   // ExecResult contains the details of an exec call.
   message ExecResult {
     // Command are the exec parameters. Expressions are expanded.
@@ -203,7 +204,7 @@ message Job {
 message RunRequest {
   string id = 1;
   string work_dir = 2;
-  map<string,string> env = 3;
+  map<string, string> env = 3;
   Job job = 5;
   string steps = 6;
 }
@@ -212,33 +213,33 @@ message RunResponse {
 }
 
 message CloseRequest {
-    string id = 1;
+  string id = 1;
 }
 
 message CloseResponse {
 }
 
 message FollowLogsRequest {
-    string id = 1;
-    int64 offset = 2;
+  string id = 1;
+  int64 offset = 2;
 }
 
 message FollowLogsResponse {
-    bytes data = 1;
+  bytes data = 1;
 }
 
 message Status {
-    string id = 1;
-    string message = 2;
-    StepResult.Status status = 3;
-    google.protobuf.Timestamp start_time = 5;
-    google.protobuf.Timestamp end_time = 6;
+  string id = 1;
+  string message = 2;
+  StepResult.Status status = 3;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
 }
 
 message StatusRequest {
-    string id = 1;
+  string id = 1;
 }
 
 message StatusResponse {
-    repeated Status jobs = 1;
+  repeated Status jobs = 1;
 }
