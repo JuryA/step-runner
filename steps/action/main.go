@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	step_runner "gitlab.com/gitlab-org/step-runner/pkg/runner"
+	steprunner "gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/steps/action/pkg/runner"
 )
 
@@ -18,7 +18,7 @@ type Config struct {
 	Inputs      map[string]string
 }
 
-func Run(_ context.Context, stepsCtx *step_runner.StepsContext) error {
+func Run(_ context.Context, stepsCtx *steprunner.StepsContext) error {
 	cfg, err := buildConfig(stepsCtx.Inputs)
 	if err != nil {
 		return err

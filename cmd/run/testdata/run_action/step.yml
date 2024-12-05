@@ -1,0 +1,7 @@
+spec:
+---
+run:
+  - name: yq_action
+    action: mikefarah/yq@master
+    inputs:
+      cmd: yq .messages[0] ${CI_PROJECT_DIR}/test/data/hello-world.yml

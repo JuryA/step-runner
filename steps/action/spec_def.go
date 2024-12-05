@@ -28,7 +28,7 @@ var SpecDef = &proto.SpecDefinition{
 		Type: proto.DefinitionType_exec,
 		Exec: &proto.Definition_Exec{
 			Command: []string{
-				"${{inputs.step_runner}}",
+				"${{step_runner}}",
 				"act",
 				"--steps-context=${{steps_context}}",
 			},

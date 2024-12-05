@@ -13,7 +13,7 @@ func NewCmd() *cobra.Command {
 	options := NewOptions()
 
 	cmd := &cobra.Command{
-		Use:   "action",
+		Use:   "act",
 		Short: "Run an action",
 		RunE:  func(cmd *cobra.Command, args []string) error { return run(options) },
 	}

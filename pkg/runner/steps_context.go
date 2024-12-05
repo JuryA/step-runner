@@ -103,6 +103,7 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 	}
 
 	// this belongs elsewhere
+	// also, this really sucks. If running using go run, we don't have a step-runner binary.
 	stepRunner, err := os.Executable()
 	if err != nil {
 		panic(fmt.Errorf("cannot find step-runner executable: %w", err))
