@@ -19,6 +19,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
+	"gitlab.com/gitlab-org/step-runner/steps"
 )
 
 type Options struct {
@@ -122,7 +123,7 @@ func run(options *Options) error {
 		return err
 	}
 
-	step, err := runner.NewParser(globalCtx, stepCache).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
+	step, err := runner.NewParser(globalCtx, stepCache, steps.InlineSteps).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return err
 	}

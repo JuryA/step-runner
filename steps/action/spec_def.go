@@ -25,13 +25,7 @@ var SpecDef = &proto.SpecDefinition{
 		},
 	},
 	Definition: &proto.Definition{
-		Type: proto.DefinitionType_exec,
-		Exec: &proto.Definition_Exec{
-			Command: []string{
-				"${{step_runner}}",
-				"act",
-				"--steps-context=${{steps_context}}",
-			},
-		},
+		Type:       proto.DefinitionType_inline,
+		InlineStep: "inline-step://action",
 	},
 }

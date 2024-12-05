@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
+	"gitlab.com/gitlab-org/step-runner/steps"
 )
 
 type Options struct {
@@ -88,7 +89,7 @@ func run(options *Options) error {
 	// call.
 	globalCtx.Job = options.JobVariables
 
-	step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
+	step, err := runner.NewParser(globalCtx, defs, steps.InlineSteps).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
 
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)

@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
+	"gitlab.com/gitlab-org/step-runner/steps"
 )
 
 type errBadJobID struct{ id string }
@@ -66,7 +67,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	globCtx.Stdout, globCtx.Stderr = job.Logs()
 
 	params := &runner.Params{}
-	step, err := runner.NewParser(globCtx, s.cache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
+	step, err := runner.NewParser(globCtx, s.cache, steps.InlineSteps).Parse(specDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}

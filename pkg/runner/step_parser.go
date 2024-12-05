@@ -12,14 +12,16 @@ type StepParser interface {
 }
 
 type Parser struct {
-	globalCtx *GlobalContext
-	stepCache Cache
+	globalCtx   *GlobalContext
+	stepCache   Cache
+	inlineSteps map[string]InlineStepFn
 }
 
-func NewParser(globalCtx *GlobalContext, stepCache Cache) *Parser {
+func NewParser(globalCtx *GlobalContext, stepCache Cache, inlineSteps map[string]InlineStepFn) *Parser {
 	return &Parser{
-		globalCtx: globalCtx,
-		stepCache: stepCache,
+		globalCtx:   globalCtx,
+		stepCache:   stepCache,
+		inlineSteps: inlineSteps,
 	}
 }
 
@@ -38,6 +40,15 @@ func (p *Parser) Parse(specDef *proto.SpecDefinition, params *Params, loadedFrom
 }
 
 func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
+	if specDef.Definition.Type == proto.DefinitionType_inline {
+		inlineStepFn, ok := p.inlineSteps[specDef.Definition.InlineStep]
+		if !ok {
+			return nil, fmt.Errorf("inline step not found: %q", specDef.Definition.InlineStep)
+		}
+
+		return NewInlineStep(loadedFrom, inlineStepFn, params, specDef), nil
+	}
+
 	if specDef.Definition.Type == proto.DefinitionType_exec {
 		return NewExecutableStep(loadedFrom, params, specDef), nil
 	}

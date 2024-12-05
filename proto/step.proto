@@ -72,6 +72,7 @@ enum DefinitionType {
   definition_type_unspecified = 0;
   exec = 1;
   steps = 2;
+  inline = 3;
 }
 
 // Spec is a document describing the interface of the step.
