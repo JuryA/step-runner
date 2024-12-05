@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/steps/action"
 )
 
 func (spec *Spec) Compile() (*proto.Spec, error) {
@@ -333,56 +334,13 @@ func (s *Step) compileActionKeywordToStep() error {
 		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
 	}
 
-	// write a step.yml in a temporary directory
-	// Ideally, this would be in memory. Requires a change of the proto for that.
-	/**
-		spec:
-	      inputs:
-	        step_runner:
-	          type: string
-	          description: path to the step runner binary
-	        inputs:
-	          type: struct
-	        job:
-	          type: struct
-	        env:
-	          type: struct
-	        work_dir:
-	          type: string
-	      outputs: delegate
-		---
-		exec:
-		  command:
-			- ${{inputs.step_runner}}
-			- act                          # need a special command here, need to reference `steps/action` in Go. step-runner run steps/action won't work.
-			- --work-dir=${{inputs.work_dir}}
-			- --inputs=${{inputs.inputs}}  # okay here, must be evaluated last possible moment by the new process
-			- --job=${{JSON(job)}}         # not supported by the expression language, not available at the compile step
-			- --env=${{JSON(env)}}         # not supported by the expression language, not available at the compile step
-		                                   # MUST be evaluated just prior to running step (process). Expression language doesn't support this.
-			                               # if we pass through as key/values we've lost the hierarchy of the environment (likely okay)
-			                               # if a step calls os.Env, it will return different values from a step that was not run in a separate process
-			                                 # This limitation is okay, steps should get their env from the steps context.
-	*/
-
-	// I wonder if there should be multiple compile phases.
-	//  1. CI model -> CI model (e.g. s.Inputs = map[string]any{"action": s.Action, "inputs": s.Inputs})
-	//  2. Proto -> Proto (e.g. default to HTTPS)
-	//  3. Domain -> Domain (e.g. compilation for lazily-evaluated fields/concepts)
-
-	s.Step = &proto.Step_Reference{
-		Protocol: proto.StepReferenceProtocol_local,
-		Url:      "",
-		Path:     nil,
-		Filename: "",
-		Version:  "",
-	}
-
 	s.Inputs = map[string]any{
 		"action": s.Action,
 		"inputs": s.Inputs,
 	}
 	s.Action = nil
+	s.Step = action.SpecDef
+
 	return nil
 }
 
@@ -397,14 +355,18 @@ func (s *Step) compileToStepProto() (*proto.Step, error) {
 		protoInputs[k] = protoValue
 	}
 	var (
-		ref *proto.Step_Reference
-		err error
+		ref     *proto.Step_Reference
+		specDef *proto.SpecDefinition
+		err     error
 	)
 	switch v := s.Step.(type) {
 	case string:
 		ref, err = shortReference(v).compile()
 	case *Reference:
 		ref, err = v.compile()
+	case *proto.SpecDefinition:
+		ref = nil
+		specDef = v
 	default:
 		err = fmt.Errorf("unsupported type: %T", v)
 	}
@@ -417,6 +379,7 @@ func (s *Step) compileToStepProto() (*proto.Step, error) {
 	protoStep.Env = s.Env
 	protoStep.Step = ref
 	protoStep.Inputs = protoInputs
+	protoStep.SpecDef = specDef
 	return protoStep, nil
 }
 

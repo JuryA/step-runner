@@ -46,7 +46,7 @@ func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, lo
 		var steps []Step
 
 		for _, stepReference := range specDef.Definition.Steps {
-			stepResource, err := p.parseStepResource(stepReference.Step)
+			stepResource, err := p.parseStepResource(stepReference.Step, stepReference.SpecDef)
 
 			if err != nil {
 				return nil, err
@@ -71,12 +71,15 @@ func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Var
 	return nil
 }
 
-func (p *Parser) parseStepResource(stepRef *proto.Step_Reference) (StepResource, error) {
-	switch stepRef.Protocol {
-	case proto.StepReferenceProtocol_local:
+func (p *Parser) parseStepResource(stepRef *proto.Step_Reference, specDef *proto.SpecDefinition) (StepResource, error) {
+	switch {
+	case stepRef == nil && specDef != nil:
+		return NewInlineStepResource(specDef), nil
+
+	case stepRef != nil && stepRef.Protocol == proto.StepReferenceProtocol_local:
 		return NewFileSystemStepResource(stepRef.Path, stepRef.Filename), nil
 
-	case proto.StepReferenceProtocol_git:
+	case stepRef != nil && stepRef.Protocol == proto.StepReferenceProtocol_git:
 		return NewGitStepResource(stepRef.Url, stepRef.Version, stepRef.Path, stepRef.Filename), nil
 	}
 

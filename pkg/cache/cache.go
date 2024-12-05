@@ -59,7 +59,11 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 		return protoStepDef, nil
 	}
 
+	inlineStepResource, isInline := stepResource.(*runner.InlineStepResource)
+
 	switch {
+	case isInline:
+		return inlineStepResource.ToSpecDef(), nil
 	case stepRef.Protocol == proto.StepReferenceProtocol_local:
 		return load(parentDir)
 
