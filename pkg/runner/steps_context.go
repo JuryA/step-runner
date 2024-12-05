@@ -2,6 +2,7 @@ package runner
 
 import (
 	"fmt"
+	"os"
 
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -98,7 +99,14 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 		stepResultViews[name] = &expression.StepResultView{Outputs: step.Outputs}
 	}
 
+	// this belongs elsewhere
+	stepRunner, err := os.Executable()
+	if err != nil {
+		panic(fmt.Errorf("cannot find step-runner executable: %w", err))
+	}
+
 	return &expression.InterpolationContext{
+		StepRunner:  stepRunner,
 		Context:     s.ToProto(),
 		Env:         s.Env.Values(),
 		ExportFile:  s.ExportFile.Path(),

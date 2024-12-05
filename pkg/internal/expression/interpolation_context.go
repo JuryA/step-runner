@@ -8,6 +8,7 @@ import (
 
 // InterpolationContext contains fields that can be accessed by expressions.
 type InterpolationContext struct {
+	StepRunner  string                     `json:"step_runner"`
 	Context     *proto.StepsContext        `json:"steps_context"`
 	Env         map[string]string          `json:"env"`
 	ExportFile  string                     `json:"export_file"`
