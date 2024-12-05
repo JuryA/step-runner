@@ -74,6 +74,23 @@ func (s *StepsContext) ExpandAndApplyEnv(env map[string]string) (*Environment, e
 	return s.Env, nil
 }
 
+func (s *StepsContext) ToProto() *proto.StepsContext {
+	job := make([]*proto.Variable, 0)
+
+	for k, v := range s.Job {
+		job = append(job, &proto.Variable{Key: k, Value: v, File: false, Masked: false})
+	}
+
+	return &proto.StepsContext{
+		Env:     s.Env.Values(),
+		Job:     job,
+		Steps:   s.Steps,
+		Inputs:  s.Inputs,
+		WorkDir: s.WorkDir,
+		StepDir: s.StepDir,
+	}
+}
+
 func (s *StepsContext) View() *expression.InterpolationContext {
 	stepResultViews := make(map[string]*expression.StepResultView)
 
@@ -82,6 +99,7 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 	}
 
 	return &expression.InterpolationContext{
+		Context:     s.ToProto(),
 		Env:         s.Env.Values(),
 		ExportFile:  s.ExportFile.Path(),
 		Inputs:      s.Inputs,
