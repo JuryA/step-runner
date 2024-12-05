@@ -1,38 +1,43 @@
 package act
 
-import "fmt"
+import (
+	"fmt"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+)
 
 type Options struct {
-	WorkDir   *string
-	ProtoStep *CLIProtoStep
-	Env       *NameValues
-	Job       *NameValues
+	CLIStepsContext *CLIStepsContext
 }
 
 func NewOptions() *Options {
 	return &Options{
-		ProtoStep: &CLIProtoStep{},
-		Env:       &NameValues{},
-		Job:       &NameValues{},
+		CLIStepsContext: &CLIStepsContext{},
 	}
 }
 
 func (o *Options) Validate() error {
-	if o.WorkDir == nil || *o.WorkDir == "" {
-		return fmt.Errorf("work dir is required")
-	}
-
-	if o.ProtoStep == nil {
-		return fmt.Errorf("proto step is required")
-	}
-
-	if o.Env == nil {
-		return fmt.Errorf("env is required")
-	}
-
-	if o.Job == nil {
-		return fmt.Errorf("job is required")
+	if o.CLIStepsContext == nil {
+		return fmt.Errorf("steps-context is required")
 	}
 
 	return nil
+}
+
+func (o *Options) ToStepsContext() (*runner.StepsContext, error) {
+	job := make(map[string]string)
+
+	for _, v := range o.CLIStepsContext.StepsContext.Job {
+		job[v.Key] = v.Value
+	}
+
+	globalCtx := runner.NewGlobalContext(runner.NewEmptyEnvironment())
+	globalCtx.Job = job
+	globalCtx.WorkDir = o.CLIStepsContext.StepsContext.WorkDir
+
+	stepDir := o.CLIStepsContext.StepsContext.StepDir
+	inputs := o.CLIStepsContext.StepsContext.Inputs
+	env := runner.NewEnvironment(o.CLIStepsContext.StepsContext.Env)
+
+	return runner.NewStepsContext(globalCtx, stepDir, inputs, env)
 }

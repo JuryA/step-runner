@@ -8,23 +8,23 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-type CLIProtoStep struct {
-	Step *proto.Step
+type CLIStepsContext struct {
+	StepsContext *proto.StepsContext
 }
 
-func (s *CLIProtoStep) Set(input string) error {
-	if err := protojson.Unmarshal([]byte(input), s.Step); err != nil {
-		return fmt.Errorf("cannot unmarshal proto step: %w", err)
+func (sc *CLIStepsContext) Set(input string) error {
+	if err := protojson.Unmarshal([]byte(input), sc.StepsContext); err != nil {
+		return fmt.Errorf("cannot unmarshal proto steps context: %w", err)
 	}
 
 	return nil
 }
 
-func (s *CLIProtoStep) Type() string {
-	return "proto step"
+func (sc *CLIStepsContext) Type() string {
+	return "proto steps context"
 }
 
-func (s *CLIProtoStep) String() string {
-	data, _ := protojson.Marshal(s.Step)
+func (sc *CLIStepsContext) String() string {
+	data, _ := protojson.Marshal(sc.StepsContext)
 	return string(data)
 }

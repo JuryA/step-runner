@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"golang.org/x/exp/maps"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
@@ -83,12 +84,14 @@ func (s *StepsContext) ToProto() *proto.StepsContext {
 	}
 
 	return &proto.StepsContext{
-		Env:     s.Env.Values(),
-		Job:     job,
-		Steps:   s.Steps,
-		Inputs:  s.Inputs,
-		WorkDir: s.WorkDir,
-		StepDir: s.StepDir,
+		Env:        s.Env.Values(),
+		Job:        job,
+		Steps:      s.Steps,
+		Inputs:     s.Inputs,
+		WorkDir:    s.WorkDir,
+		StepDir:    s.StepDir,
+		OutputFile: s.OutputFile.Path(),
+		ExportFile: s.ExportFile.Path(),
 	}
 }
 
@@ -105,9 +108,15 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 		panic(fmt.Errorf("cannot find step-runner executable: %w", err))
 	}
 
+	// handle errs properly
+	context, err := protojson.Marshal(s.ToProto())
+	if err != nil {
+		panic(fmt.Errorf("cannot marshal steps-context: %w", err))
+	}
+
 	return &expression.InterpolationContext{
 		StepRunner:  stepRunner,
-		Context:     s.ToProto(),
+		Context:     string(context), // I wonder how we can handle having different views of the same value.
 		Env:         s.Env.Values(),
 		ExportFile:  s.ExportFile.Path(),
 		Inputs:      s.Inputs,

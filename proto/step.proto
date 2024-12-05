@@ -184,6 +184,8 @@ message StepsContext {
   map<string, google.protobuf.Value> inputs = 4;
   string work_dir = 5;
   string step_dir = 6;
+  string output_file = 7;
+  string export_file = 8;
 }
 
 message Variable {
