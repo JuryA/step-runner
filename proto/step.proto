@@ -29,6 +29,9 @@ message Step {
     // Version is which version of the step to use.
     string version = 5;
   }
+
+  // A spec definition, used if already known so doesn't need to be fetched using a step reference
+  SpecDefinition specDef = 5;
 }
 
 // StepReferenceProtocol is the method of fetching the referenced step.
@@ -172,6 +175,15 @@ service StepRunner {
   rpc Close(CloseRequest) returns (CloseResponse);
   rpc FollowLogs(FollowLogsRequest) returns (stream FollowLogsResponse);
   rpc Status(StatusRequest) returns (StatusResponse);
+}
+
+message StepsContext {
+  map<string, string> env = 1;
+  repeated Variable job = 2;
+  map<string, StepResult> steps = 3;
+  map<string, google.protobuf.Value> inputs = 4;
+  string work_dir = 5;
+  string step_dir = 6;
 }
 
 message Variable {
