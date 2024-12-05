@@ -151,7 +151,7 @@ func run(options *Options) error {
 }
 
 func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
-	env, err := runner.NewEnvironmentFromOS()
+	env, err := runner.NewEnvironmentFromOS(excludeJobVars)
 
 	if err != nil {
 		return nil, err
@@ -168,6 +168,13 @@ func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
 	globalCtx.WorkDir = workDir
 	globalCtx.Job = options.Job
 	return globalCtx, nil
+}
+
+func excludeJobVars(envName string) bool {
+	return strings.HasPrefix(envName, "CI_") ||
+		strings.HasPrefix(envName, "GITLAB_") ||
+		strings.HasPrefix(envName, "FF_") ||
+		strings.HasPrefix(envName, "DOCKER_ENV_")
 }
 
 func wrapStepsInSingleStep(ymlSteps []byte) (*schema.Step, error) {

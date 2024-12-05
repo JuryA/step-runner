@@ -24,7 +24,7 @@ type Environment struct {
 
 // NewEnvironmentFromOS returns the environment variables found in the OS runtime.
 // Variables can be filtered by name, passing no names will return all variables.
-func NewEnvironmentFromOS(names ...string) (*Environment, error) {
+func NewEnvironmentFromOS(rejectIf ...func(string) bool) (*Environment, error) {
 	vars := map[string]string{}
 
 	for _, nameValue := range os.Environ() {
@@ -34,18 +34,16 @@ func NewEnvironmentFromOS(names ...string) (*Environment, error) {
 			return nil, fmt.Errorf("failed to parse environment variable: %s", nameValue)
 		}
 
-		if len(names) > 0 && !slices.Contains(names, name) {
-			continue
+		if acceptEnvName(name, rejectIf) {
+			vars[name] = value
 		}
-
-		vars[name] = value
 	}
 
 	return NewEnvironment(vars), nil
 }
 
 func NewEnvironmentFromOSWithKnownVars() (*Environment, error) {
-	return NewEnvironmentFromOS(
+	knownVars := []string{
 		"HTTPS_PROXY",
 		"HTTP_PROXY",
 		"LANG",
@@ -63,7 +61,9 @@ func NewEnvironmentFromOSWithKnownVars() (*Environment, error) {
 		"http_proxy",
 		"https_proxy",
 		"no_proxy",
-	)
+	}
+
+	return NewEnvironmentFromOS(func(envName string) bool { return !slices.Contains(knownVars, envName) })
 }
 
 func NewEmptyEnvironment() *Environment {
@@ -133,4 +133,14 @@ func (e *Environment) Mutate(env *Environment) {
 	defer e.mutationsMu.Unlock()
 
 	e.mutations = append(e.mutations, env)
+}
+
+func acceptEnvName(name string, rejectIf []func(string) bool) bool {
+	for _, rejectIfFn := range rejectIf {
+		if rejectIfFn(name) {
+			return false
+		}
+	}
+
+	return true
 }
