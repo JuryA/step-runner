@@ -1,4 +1,4 @@
-package service
+package service_test
 
 import (
 	"bytes"
@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"path"
 	"strings"
@@ -16,13 +15,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/test/bufconn"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test/server"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -39,49 +34,6 @@ steps:
 
 func makeScriptStep(cmd string) string {
 	return fmt.Sprintf(scriptStep, cmd)
-}
-
-const bufSize = 1024 * 1024
-
-func must(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-var (
-	conn         *grpc.ClientConn
-	stepsService *StepRunnerService
-	apiClient    proto.StepRunnerClient
-)
-
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-
-	stepCache, err := cache.New()
-	must(err)
-
-	stepsService = New(stepCache, runner.NewEmptyEnvironment())
-
-	buflis := bufconn.Listen(bufSize)
-	server := grpc.NewServer()
-	proto.RegisterStepRunnerServer(server, stepsService)
-	go func() { must(server.Serve(buflis)) }()
-	defer func() { server.GracefulStop() }()
-
-	bufDialer := func(context.Context, string) (net.Conn, error) { return buflis.Dial() }
-	conn, err = grpc.DialContext(
-		ctx,
-		"bufnet",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	must(err)
-	defer func() { conn.Close() }()
-
-	apiClient = proto.NewStepRunnerClient(conn)
-
-	code := m.Run()
-	os.Exit(code)
 }
 
 func cleanup(t *testing.T, paths ...string) {
@@ -106,10 +58,13 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	bg := context.Background()
 	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
 
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
+
 	_, err := apiClient.Run(bg, rr)
 	require.NoError(t, err)
 
-	job, ok := stepsService.jobs.Get(rr.Id)
+	job, ok := server.GetJob(rr.Id)
 	require.True(t, ok)
 
 	assert.Eventually(t, jobFinished(job), time.Second*20, time.Millisecond*50)
@@ -175,6 +130,9 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 		},
 	}
 
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			wg := sync.WaitGroup{}
@@ -184,7 +142,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			_, err := apiClient.Run(bg, rr)
 			require.NoError(t, err)
 
-			job, ok := stepsService.jobs.Get(rr.Id)
+			job, ok := server.GetJob(rr.Id)
 			require.True(t, ok)
 
 			go tt.finish(job, apiClient, &wg)
@@ -241,6 +199,9 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 		},
 	}
 
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			bg := context.Background()
@@ -251,7 +212,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			_, err := apiClient.Run(bg, rr)
 			require.NoError(t, err)
 
-			job, ok := stepsService.jobs.Get(rr.Id)
+			job, ok := server.GetJob(rr.Id)
 			require.True(t, ok)
 
 			assert.Eventually(t, jobFinished(job), time.Millisecond*500, time.Millisecond*50)
@@ -275,18 +236,17 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 func Test_StepRunnerService_Run_DuplicateID(t *testing.T) {
 	defer cleanup(t)
 
-	stepCache, err := cache.New()
-	require.NoError(t, err)
-	srs := New(stepCache, runner.NewEmptyEnvironment())
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
 
 	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
 
 	ctx := context.Background()
 
-	_, err = srs.Run(ctx, rr)
+	_, err := apiClient.Run(ctx, rr)
 	require.NoError(t, err)
 
-	_, err = srs.Run(ctx, rr)
+	_, err = apiClient.Run(ctx, rr)
 	require.NoError(t, err)
 }
 
@@ -325,6 +285,8 @@ func Test_StepRunnerService_Close(t *testing.T) {
 	}
 
 	bg := context.Background()
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -336,7 +298,7 @@ func Test_StepRunnerService_Close(t *testing.T) {
 			var job *jobs.Job
 			var ok bool
 			require.Eventually(t, func() bool {
-				job, ok = stepsService.jobs.Get(rr.Id)
+				job, ok = server.GetJob(rr.Id)
 				return ok && job != nil
 			}, 200*time.Millisecond, 25*time.Millisecond)
 
@@ -348,15 +310,17 @@ func Test_StepRunnerService_Close(t *testing.T) {
 			tt.validate(job)
 
 			// the job was removed from the map of jobs
-			_, ok = stepsService.jobs.Get(rr.Id)
+			_, ok = server.GetJob(rr.Id)
 			require.False(t, ok)
 		})
 	}
 }
 
 func Test_StepRunnerService_Close_BadID(t *testing.T) {
-	bg := context.Background()
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
 
+	bg := context.Background()
 	_, err := apiClient.Close(bg, &proto.CloseRequest{Id: "4130"})
 	require.NoError(t, err)
 }
@@ -364,9 +328,11 @@ func Test_StepRunnerService_Close_BadID(t *testing.T) {
 func Test_StepRunnerService_FollowLogs(t *testing.T) {
 	defer cleanup(t)
 
-	bg := context.Background()
-
 	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
+
+	bg := context.Background()
 	_, err := apiClient.Run(bg, rr)
 	require.NoError(t, err)
 
@@ -395,6 +361,9 @@ func Test_StepRunnerService_FollowLogs(t *testing.T) {
 func Test_StepRunnerService_Status(t *testing.T) {
 	bg := context.Background()
 
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
+
 	type spec struct {
 		runRequests func(*testing.T) []*proto.RunRequest
 		validate    func(*testing.T, *spec, []*proto.RunRequest)
@@ -406,7 +375,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
-				j, ok := stepsService.jobs.Get(rr.Id)
+				j, ok := server.GetJob(rr.Id)
 				assert.True(t, ok)
 
 				sr, err := apiClient.Status(bg, &proto.StatusRequest{Id: rr.Id})
@@ -476,7 +445,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
-				j, ok := stepsService.jobs.Get(rr.Id)
+				j, ok := server.GetJob(rr.Id)
 				require.True(t, ok)
 
 				assert.Eventually(t, jobFinished(j), time.Second*20, time.Millisecond*50)
@@ -493,7 +462,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
-				j, ok := stepsService.jobs.Get(rr.Id)
+				j, ok := server.GetJob(rr.Id)
 				require.True(t, ok)
 
 				// give the job enough time to start execution

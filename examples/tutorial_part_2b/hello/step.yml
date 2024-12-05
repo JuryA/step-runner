@@ -1,0 +1,11 @@
+spec:
+  inputs:
+    who:
+      type: string
+      default: world
+---
+exec:
+  command:
+    - bash
+    - -c
+    - echo 'hello ${{inputs.who}}'

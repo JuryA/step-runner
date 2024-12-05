@@ -11,7 +11,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/protocol/packp"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/server"
-	"github.com/stretchr/testify/require"
 )
 
 // StartGitSmartHTTPServer starts a Git Smart HTTP Server.
@@ -19,8 +18,7 @@ import (
 // Shallow clones are not supported.
 // Not thread-safe.
 func StartGitSmartHTTPServer(t *testing.T, repo *git.Repository) string {
-	listener, port, err := allocatePort()
-	require.NoError(t, err)
+	listener, port := TCPPort(t).Listen("0")
 
 	gitServer := NewGitSmartHTTPServer(listener, repo)
 	gitServer.Serve()
@@ -101,7 +99,6 @@ func (s *GitSmartHTTPServer) handleUploadPack(w http.ResponseWriter, r *http.Req
 	}
 
 	uploadResponse, err := session.UploadPack(r.Context(), uploadReq)
-
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to upload pack: %v", err), http.StatusInternalServerError)
 		return
@@ -119,18 +116,4 @@ func (s *GitSmartHTTPServer) establishUploadPackSession() (transport.UploadPackS
 	endpoint, _ := transport.NewEndpoint("/")
 	gitServer := server.NewServer(server.MapLoader{endpoint.String(): s.repo.Storer})
 	return gitServer.NewUploadPackSession(endpoint, nil)
-}
-
-func allocatePort() (net.Listener, string, error) {
-	tcpListener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to allocate TCP port: %w", err)
-	}
-
-	_, port, err := net.SplitHostPort(tcpListener.Addr().String())
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to split host and port: %w", err)
-	}
-
-	return tcpListener, port, nil
 }

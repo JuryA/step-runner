@@ -1,13 +1,63 @@
 
 verify-image-version:
   stage: e2e
-  image: $LEGACY_IMAGE_TAG
+  image: alpine:${ALPINE_VERSION}
+  tags: ["saas-${OS}-medium-${ARCH}"]
+  parallel:
+    matrix:
+      - OS: linux
+        ARCH: amd64
+      - OS: linux
+        ARCH: arm64
   script:
-    - STEP_RUNNER_HELP=$(/step-runner help)
+    - STEP_RUNNER_HELP=$(./out/bin/step-runner-${OS}-${ARCH} help)
+    - echo "$STEP_RUNNER_HELP"
     - echo "$STEP_RUNNER_HELP" | grep -q "Step Runner version:" # expect version to be printed
     - echo "$STEP_RUNNER_HELP" | grep -q -v "UNKNOWN" # version should be known
 
 run-e2e:
+  stage: e2e
+  image: alpine:${ALPINE_VERSION}
+  script:
+    - >
+      ./out/bin/step-runner-linux-amd64 run gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@cam/update-output-format \
+        --inputs echo='${{job.CI_MOCK_PIPELINE_ID}}' \
+        --job CI_MOCK_PIPELINE_ID=mock_pipeline_id \
+        --write-steps-results
+    - apk add jq
+    - ECHO_MESSAGE=$(jq -r '.subStepResults[0].outputs.echo' step-results.json)
+    - "[ $ECHO_MESSAGE == mock_pipeline_id ]"
+  artifacts:
+    access: developer
+    when: always
+    paths:
+      - step-results.json
+
+##### Legacy Image tests
+
+run-action-e2e:
+  stage: e2e
+  image: $LEGACY_IMAGE_TAG
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  variables:
+    TMPDIR: /builds
+    DOCKER_HOST: tcp://docker:2375
+  run:
+    - name: say_hi
+      step: gitlab.com/components/action-runner@main
+      inputs:
+        action: mikefarah/yq@master
+        action_runner_image: registry.gitlab.com/components/action-runner:v0
+        inputs:
+          cmd: echo ["Hi, ${{job.CI_PROJECT_NAME}}!"] | yq .[0]
+  artifacts:
+    access: developer
+    when: always
+    paths:
+      - step-results.json
+
+run-e2e legacy:
   stage: e2e
   image: $LEGACY_IMAGE_TAG
   variables:
@@ -16,14 +66,18 @@ run-e2e:
     - name: ci_variables
       step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@cam/update-output-format
       inputs:
-        echo: "${{ job.CI_PIPELINE_ID }}"
+        echo: "${{job.CI_PIPELINE_ID}}"
   artifacts:
+    access: developer
+    when: always
     paths:
       - step-results.json
 
-verify-e2e:
+verify-e2e legacy:
   stage: e2e
-  needs: ["run-e2e"]
+  image: alpine:${ALPINE_VERSION}
+  needs: ["run-e2e legacy"]
   script:
-    - apt update && apt install -y jq
-    - if [[ $(jq -r '.subStepResults[0].outputs.echo' step-results.json) != $CI_PIPELINE_ID ]]; then exit 1 ; fi
+    - apk add jq
+    - ECHO_MESSAGE=$(jq -r '.subStepResults[0].outputs.echo' step-results.json)
+    - "[ $ECHO_MESSAGE == $CI_PIPELINE_ID ]"

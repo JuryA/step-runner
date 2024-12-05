@@ -1,0 +1,4 @@
+hello-world:
+  run:
+    - name: hello_everybody
+      step: .

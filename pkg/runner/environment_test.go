@@ -2,6 +2,7 @@ package runner
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,19 @@ func TestNewEnvironment(t *testing.T) {
 		env, err := NewEnvironmentFromOSWithKnownVars()
 		require.NoError(t, err)
 		require.Equal(t, "en", env.Values()["LANG"])
-		require.NotContains(t, "FOO", env.Values())
+		require.NotContains(t, env.Values(), "FOO")
+	})
+
+	t.Run("excludes environment variables based on a predicate", func(t *testing.T) {
+		require.NoError(t, os.Setenv("INCLUDE_VALUE", "1"))
+		require.NoError(t, os.Setenv("EXCLUDE_VALUE", "2"))
+		defer func() { _ = os.Unsetenv("INCLUDE_VALUE") }()
+		defer func() { _ = os.Unsetenv("EXCLUDE_VALUE") }()
+
+		env, err := NewEnvironmentFromOS(func(envName string) bool { return strings.HasPrefix(envName, "EXCLUDE_") })
+		require.NoError(t, err)
+		require.Equal(t, "1", env.Values()["INCLUDE_VALUE"])
+		require.NotContains(t, env.Values(), "EXCLUDE_VALUE")
 	})
 }
 

@@ -13,15 +13,17 @@ workflow:
 variables:
   IMAGE_TAG: $CI_REGISTRY_IMAGE/pipelines:$CI_PIPELINE_IID
   LEGACY_IMAGE_TAG: ${IMAGE_TAG}-legacy
-  GO_VERSION: 1.22
-  DOCKER_VERSION: 27.3.1
+  GO_VERSION: "1.22"
+  DOCKER_VERSION: "27.3.1"
+  ALPINE_VERSION: "3.20"
 
 include:
-  - local: .gitlab/ci/test.gitlab-ci.yml
-  - local: .gitlab/ci/build-binaries.gitlab-ci.yml
-  - local: .gitlab/ci/build-docker.gitlab-ci.yml
-  - local: .gitlab/ci/e2e.gitlab-ci.yml
-  - local: .gitlab/ci/deploy.gitlab-ci.yml
+  - local: /.gitlab/ci/test.gitlab-ci.yml
+  - local: /.gitlab/ci/build-binaries.gitlab-ci.yml
+  - local: /.gitlab/ci/build-docker.gitlab-ci.yml
+  - local: /.gitlab/ci/e2e.gitlab-ci.yml
+  - local: /.gitlab/ci/e2e-examples.gitlab-ci.yml
+  - local: /.gitlab/ci/deploy.gitlab-ci.yml
   - local: steps/action/.gitlab-ci.yml
     rules:
       - if: $FORCE_ACTIONS_PIPELINE == "true"
