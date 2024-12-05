@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"gitlab.com/gitlab-org/step-runner/cmd"
-	"gitlab.com/gitlab-org/step-runner/cmd/act"
 	"gitlab.com/gitlab-org/step-runner/cmd/bootstrap"
 	"gitlab.com/gitlab-org/step-runner/cmd/ci"
 	"gitlab.com/gitlab-org/step-runner/cmd/proxy"
@@ -16,7 +15,6 @@ func main() {
 	rootCmd := cmd.NewRootCmd()
 	rootCmd.AddCommand(ci.NewCmd())
 	rootCmd.AddCommand(run.NewCmd())
-	rootCmd.AddCommand(act.NewCmd())
 	rootCmd.AddCommand(serve.NewCmd())
 	rootCmd.AddCommand(proxy.NewCmd())
 	rootCmd.AddCommand(bootstrap.NewCmd())
