@@ -4,7 +4,7 @@ spec:
       type: string
   outputs: delegate
 ---
-steps:
+run:
   - name: exec_step
     step: ../greeting
     inputs:

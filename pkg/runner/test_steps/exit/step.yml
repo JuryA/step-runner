@@ -4,6 +4,6 @@ spec:
       type: number
       default: 0
 ---
-steps:
+run:
   - name: exit
     script: exit ${{inputs.exit_code}}

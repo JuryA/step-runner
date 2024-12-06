@@ -210,25 +210,9 @@ run:
       - step: gitlab.com/components/another-step
 `,
 	}, {
-		name:    "cannot provide both steps and run",
-		wantErr: true,
-		step: `
-run:
-  - step: ./my-step
-steps:
-  - step: ./my-step
-`,
-	}, {
-		name: "steps without run is still okay",
-		step: `
-steps:
-  - name: my_step
-    step: ./my-step
-`,
-	}, {
 		name: "name must be alphanumeric",
 		step: `
-steps:
+run:
     - name: not allowed to have a space
       script: echo hello world
 `,
@@ -236,7 +220,7 @@ steps:
 	}, {
 		name: "env names must be alphanumeric",
 		step: `
-steps:
+run:
     - name: my_step
       step: ./my-step
       env:
@@ -246,7 +230,7 @@ steps:
 	}, {
 		name: "output names must be alphanumeric",
 		step: `
-steps:
+run:
     - name: my_step
       step: ./my-step
 outputs:

@@ -26,7 +26,7 @@ import (
 const (
 	scriptStep = `spec: {}
 ---
-steps:
+run:
   - name: script_step
     script: %s
 `

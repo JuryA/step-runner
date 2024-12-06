@@ -19,14 +19,14 @@ import (
 )
 
 func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
-	rr1 := test.RunRequest(t, `steps:
+	rr1 := test.RunRequest(t, `run:
   - name: hello_world
     step: ../../../runner/test_steps/greeting
     inputs: {}
 `, nil, nil)
 	rr1.Id = rr1.Id + "-1"
 
-	rr2 := test.RunRequest(t, `steps:
+	rr2 := test.RunRequest(t, `run:
   - name: blabla
     step: ../../testdata/bash
     inputs:
@@ -72,7 +72,7 @@ const (
 )
 
 func Test_StepRunnerClient_FollowLogs_Success(t *testing.T) {
-	rr := test.RunRequest(t, `steps:
+	rr := test.RunRequest(t, `run:
   - name: lorem
     step: ../../testdata/bash
     inputs:
@@ -98,7 +98,7 @@ type toWriter func([]byte) (int, error)
 func (t toWriter) Write(p []byte) (int, error) { return t(p) }
 
 func Test_StepRunnerClient_FollowLogs_Again(t *testing.T) {
-	rr := test.RunRequest(t, `steps:
+	rr := test.RunRequest(t, `run:
   - name: lorem
     step: ../../testdata/bash
     inputs:
@@ -141,7 +141,7 @@ func Test_StepRunnerClient_WaitForReady(t *testing.T) {
 		conn := srvr.NewConnection()
 		require.Eventually(t, func() bool { return conn.GetState() == connectivity.TransientFailure }, 2*time.Second, 100*time.Millisecond)
 
-		step := "steps:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"
+		step := "run:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"
 		runRequest := test.RunRequest(t, step, nil, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
@@ -158,7 +158,7 @@ func Test_StepRunnerClient_WaitForReady(t *testing.T) {
 		require.Eventually(t, func() bool { return conn.GetState() == connectivity.TransientFailure }, 2*time.Second, 100*time.Millisecond)
 
 		srvr.Serve()
-		step := "steps:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"
+		step := "run:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"
 		runRequest := test.RunRequest(t, step, nil, nil)
 
 		srClient := New(conn)

@@ -179,7 +179,7 @@ func excludeJobVars(envName string) bool {
 
 func wrapStepsInSingleStep(ymlSteps []byte) (*schema.Step, error) {
 	def := &schema.Step{}
-	err := yaml.Unmarshal(ymlSteps, &def.Steps)
+	err := yaml.Unmarshal(ymlSteps, &def.Run)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal step: %w", err)
