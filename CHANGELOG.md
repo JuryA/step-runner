@@ -1,14 +1,16 @@
 ## v0.2.0 (2024-11-21)
 
 - Make the initial Run API call wait for the connection to be ready. See !161+.
+- Log name of executing step. See !158+.
 
 ### Breaking Changes:
 
 - **export_file format is the same as the output_file**. Key/values must be
   written in the form `name=JSON value`. See !157+.
-- Log name of executing step. See !158+.
 - **output file format** (and export_file format) changed to be JSON on each line.
   Each line of JSON must have non-null `name` and `value` keys. See !159+.
+- **Use `run:` instead of `steps:` to run a sequence of steps**. This is consistent with what is used
+  when defining steps for a job in the `.gitlab-ci.yml` file. See !145+.
 
 ## v0.1.0 (2024-10-28)
 

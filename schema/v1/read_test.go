@@ -52,7 +52,7 @@ spec:
 		yaml: `
 {}
 ---
-steps:
+run:
     - name: my_step
       script: echo hello world
 `,

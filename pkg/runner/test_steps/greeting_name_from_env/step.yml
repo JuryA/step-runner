@@ -3,7 +3,7 @@ spec:
     name:
       type: string
 ---
-steps:
+run:
   - name: name_from_env
     step: ../greeting
     inputs:

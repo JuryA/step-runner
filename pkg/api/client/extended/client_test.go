@@ -41,7 +41,7 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 	//nolint:errcheck
 	defer srClient.CloseConn()
 
-	rr := test.RunRequest(t, `steps:
+	rr := test.RunRequest(t, `run:
   - name: hello_world
     step: ../../../runner/test_steps/greeting
     inputs: {}
@@ -97,7 +97,7 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 	//nolint:errcheck
 	defer srClient.CloseConn()
 
-	rr := test.RunRequest(t, `steps:
+	rr := test.RunRequest(t, `run:
   - name: bash
     step: ../../testdata/bash
     inputs:
@@ -132,7 +132,7 @@ func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
 	//nolint:errcheck
 	defer srClient.CloseConn()
 
-	rr := test.RunRequest(t, `steps:
+	rr := test.RunRequest(t, `run:
   - name: bash
     step: ../../testdata/bash
     inputs:
@@ -167,7 +167,7 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		rr := test.RunRequest(t, `steps:
+		rr := test.RunRequest(t, `run:
   - name: hello_world
     step: ../../../runner/test_steps/greeting
     inputs: {}
@@ -188,7 +188,7 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		rr := test.RunRequest(t, `steps:
+		rr := test.RunRequest(t, `run:
   - name: bash
     step: ../../testdata/bash
     inputs:
@@ -224,7 +224,7 @@ func Test_StepRunnerClient_RunAndFollow_LogsOnly(t *testing.T) {
 	//nolint:errcheck
 	defer srClient.CloseConn()
 
-	rr := test.RunRequest(t, `steps:
+	rr := test.RunRequest(t, `run:
   - name: blabla
     step: ../../testdata/bash
     inputs:

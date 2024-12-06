@@ -227,10 +227,6 @@ func (s *Step) verifyOneTypeProvided() error {
 		// Exec type step
 		have++
 	}
-	if s.Steps != nil {
-		// Steps type step
-		have++
-	}
 	if s.Run != nil {
 		// Run type step
 		have++
@@ -246,10 +242,6 @@ func (s *Step) verifyOneTypeProvided() error {
 
 func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 	protoDef := &proto.Definition{}
-	if s.Run == nil && s.Steps != nil {
-		s.Run = s.Steps
-		s.Steps = nil
-	}
 	switch {
 	case s.Exec != nil:
 		// Exec step

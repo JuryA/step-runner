@@ -20,7 +20,7 @@ func TestCompile(t *testing.T) {
 		steps: `
 {}
 ---
-steps:
+run:
 - name: my_step
   script: echo hello world
 `,
@@ -71,7 +71,7 @@ exec:
 		steps: `
 spec:
 ---
-steps:
+run:
   - name: my_special_script_name
     script: echo hello world
 `,
@@ -162,7 +162,7 @@ env:
     NAME: foo
 outputs:
     eye_color: brown
-steps:
+run:
     - env:
           JOB_ID: ${{job.id}}
           USER: srunner
@@ -221,7 +221,7 @@ outputs:
 		steps: `
 spec: {}
 ---
-steps:
+run:
     - name: find_something
       action: mikefarah/yq@master
       inputs:
@@ -250,7 +250,7 @@ steps:
 spec:
   outputs: delegate
 ---
-steps:
+run:
     - name: delegate_me
       step: https://gitlab.com/components/foo@v1
 delegate: delegate_me

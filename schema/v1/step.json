@@ -38,57 +38,28 @@
                 },
                 {
                     "description": "Run a sequence of steps.",
-                    "oneOf": [
-                        {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "required": [
-                                "steps"
-                            ],
-                            "properties": {
-                                "env": {
-                                    "$ref": "#/definitions/namedStrings"
-                                },
-                                "steps": {
-                                    "description": "Deprecated. Use `run` instead.",
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/definitions/step"
-                                    }
-                                },
-                                "outputs": {
-                                    "$ref": "#/definitions/namedValues"
-                                },
-                                "delegate": {
-                                    "type": "string"
-                                }
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "run"
+                    ],
+                    "properties": {
+                        "env": {
+                            "$ref": "#/definitions/namedStrings"
+                        },
+                        "run": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/step"
                             }
                         },
-                        {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "required": [
-                                "run"
-                            ],
-                            "properties": {
-                                "env": {
-                                    "$ref": "#/definitions/namedStrings"
-                                },
-                                "run": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/definitions/step"
-                                    }
-                                },
-                                "outputs": {
-                                    "$ref": "#/definitions/namedValues"
-                                },
-                                "delegate": {
-                                    "type": "string"
-                                }
-                            }
+                        "outputs": {
+                            "$ref": "#/definitions/namedValues"
+                        },
+                        "delegate": {
+                            "type": "string"
                         }
-                    ]
+                    }
                 },
                 {
                     "description": "Run an action.",

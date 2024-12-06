@@ -123,7 +123,7 @@ func run(options *Options) error {
 
 func wrapStepsInSpecDef(steps string) (*schema.Step, error) {
 	def := &schema.Step{}
-	err := yaml.Unmarshal([]byte(steps), &def.Steps)
+	err := yaml.Unmarshal([]byte(steps), &def.Run)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshalling steps: %w", err)
 	}

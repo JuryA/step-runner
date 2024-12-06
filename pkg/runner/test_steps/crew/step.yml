@@ -8,7 +8,7 @@ spec:
       type: string
       default: nobody
 ---
-steps:
+run:
   - name: greet_sponge_bob
     step: ../greeting
     inputs:
