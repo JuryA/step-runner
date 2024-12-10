@@ -1,7 +1,7 @@
 
 .example:
   stage: e2e
-  image: alpine:3.20
+  image: alpine:${ALPINE_VERSION}
   script:
     - apk add yq bash
     - mkdir $EXAMPLE_DIR/test

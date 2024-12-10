@@ -20,7 +20,7 @@ run-e2e:
   image: alpine:${ALPINE_VERSION}
   script:
     - >
-      ./out/bin/step-runner-linux-amd64 run gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@cam/update-output-format \
+      ./out/bin/step-runner-linux-amd64 run gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@main \
         --inputs echo='${{job.CI_MOCK_PIPELINE_ID}}' \
         --job CI_MOCK_PIPELINE_ID=mock_pipeline_id \
         --write-steps-results
@@ -64,7 +64,7 @@ run-e2e legacy:
     CI_STEPS_DEBUG: "true"
   run:
     - name: ci_variables
-      step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@cam/update-output-format
+      step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@main
       inputs:
         echo: "${{job.CI_PIPELINE_ID}}"
   artifacts:
