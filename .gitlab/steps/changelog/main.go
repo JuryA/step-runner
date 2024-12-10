@@ -51,11 +51,11 @@ func main() {
 
 func outputs(version *changelog.Version) string {
 	template := `
-version="%s"
-major="%s"
-major_minor="%s"
-major_minor_patch="%s"
-changes="%s"
+{"name":"version", "value":"%s"}
+{"name":"major", "value":"%s"}
+{"name":"major_minor", "value":"%s"}
+{"name":"major_minor_patch", "value":"%s"}
+{"name":"changes", "value":"%s"}
 `
 	changes := strings.Trim(strings.Join(version.Changes(), `\n`), `\n`)
 	return fmt.Sprintf(template, version.Tag(), version.Major(), version.MajorMinor(), version.MajorMinorPatch(), changes)

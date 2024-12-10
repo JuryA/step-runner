@@ -3,6 +3,6 @@ hello-world:
     - name: hello_everybody
       step: .
     - name: all_my_greetings
-      step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@cam/update-output-format
+      step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@main
       inputs:
         echo: "all my greetings say ${{steps.hello_everybody.outputs.all_greetings}}"
