@@ -98,12 +98,37 @@ func (s *session) read() {
 			fmt.Printf("client error: %v", err)
 			return
 		}
-		// TODO read command
-		s.debugClient.Send(&proto.DebugRequest{
-			CommandOneof: &proto.DebugRequest_View_{
-				View: &proto.DebugRequest_View{},
-			},
-		})
+		if len(input) == 0 {
+			continue
+		}
+		switch input[0] {
+		case 'i': // interrupt
+			s.debugClient.Send(&proto.DebugRequest{
+				CommandOneof: &proto.DebugRequest_Stop_{
+					Stop: &proto.DebugRequest_Stop{},
+				},
+			})
+		case 'l': // list
+			s.debugClient.Send(&proto.DebugRequest{
+				CommandOneof: &proto.DebugRequest_View_{
+					View: &proto.DebugRequest_View{},
+				},
+			})
+		case 's': // step
+			s.debugClient.Send(&proto.DebugRequest{
+				CommandOneof: &proto.DebugRequest_Step_{
+					Step: &proto.DebugRequest_Step{},
+				},
+			})
+		case 'c': // continue
+			s.debugClient.Send(&proto.DebugRequest{
+				CommandOneof: &proto.DebugRequest_Continue_{
+					Continue: &proto.DebugRequest_Continue{},
+				},
+			})
+		default:
+			continue
+		}
 	}
 }
 

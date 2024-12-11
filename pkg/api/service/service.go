@@ -160,12 +160,27 @@ func (s *StepRunnerService) Status(ctx context.Context, request *proto.StatusReq
 
 func (s *StepRunnerService) Debug(debugServer proto.StepRunner_DebugServer) error {
 	for {
-		_, err := debugServer.Recv()
+		req, err := debugServer.Recv()
 		if err != nil {
 			return err
 		}
-		debugServer.Send(&proto.DebugResponse{
-			StepView: "(step view)\n",
-		})
+		sendView := func() {
+			debugServer.Send(&proto.DebugResponse{
+				// TODO: wait for next state
+				StepView: "(step view)\n",
+			})
+		}
+		switch req.CommandOneof.(type) {
+		case *proto.DebugRequest_Stop_:
+			runner.Breakpoint.Stop()
+			sendView()
+		case *proto.DebugRequest_Step_:
+			runner.Breakpoint.Step()
+			sendView()
+		case *proto.DebugRequest_View_:
+			sendView()
+		case *proto.DebugRequest_Continue_:
+			runner.Breakpoint.Continue()
+		}
 	}
 }
