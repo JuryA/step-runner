@@ -172,6 +172,7 @@ service StepRunner {
   rpc Close(CloseRequest) returns (CloseResponse);
   rpc FollowLogs(FollowLogsRequest) returns (stream FollowLogsResponse);
   rpc Status(StatusRequest) returns (StatusResponse);
+  rpc Debug(stream DebugRequest) returns (stream DebugResponse);
 }
 
 message Variable {
@@ -227,4 +228,30 @@ message StatusRequest {
 
 message StatusResponse {
     repeated Status jobs = 1;
+}
+
+message DebugRequest {
+  oneof command_oneof {
+    View view = 1;
+    Next next = 2;
+    Step step = 3;
+    Print print = 4;
+    Set set = 5;
+    Disconnect disconnect = 6;
+  }
+  message View {}
+  message Next {}
+  message Step {}
+  message Print {
+    string expression = 1;
+  }
+  message Set {
+    string path = 1;
+    google.protobuf.Value value = 2;
+  }
+  message Disconnect {}
+}
+
+message DebugResponse {
+  string step_view = 1;
 }

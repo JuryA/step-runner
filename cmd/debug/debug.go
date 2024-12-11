@@ -1,0 +1,121 @@
+package debug
+
+import (
+	"context"
+	"fmt"
+	"sync"
+
+	"github.com/spf13/cobra"
+	"gitlab.com/gitlab-org/step-runner/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+type Options struct {
+	Endpoint string
+}
+
+func NewCmd() *cobra.Command {
+	options := &Options{}
+	cmd := &cobra.Command{
+		Use:   "debug [endpoint]",
+		Short: "Debug running steps",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return run(options)
+		},
+	}
+	cmd.Flags().StringVar(&options.Endpoint, "endpoint", "", "step-runner service endpoint")
+	return cmd
+}
+
+func run(options *Options) error {
+	conn, err := grpc.Dial(options.Endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("error connecting to endpoint: %w", err)
+	}
+	stepRunnerClient := proto.NewStepRunnerClient(conn)
+	debugClient, err := stepRunnerClient.Debug(context.Background())
+	if err != nil {
+		return fmt.Errorf("error calling debug: %w", err)
+	}
+	defer debugClient.CloseSend()
+	err = debugClient.Send(&proto.DebugRequest{
+		CommandOneof: &proto.DebugRequest_View_{
+			View: &proto.DebugRequest_View{},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("error getting initial view: %w", err)
+	}
+	s := &session{
+		debugClient: debugClient,
+		stopCh:      make(chan struct{}),
+		wg:          &sync.WaitGroup{},
+	}
+	s.wg.Add(2)
+	go func() {
+		defer s.wg.Done()
+		defer s.stop()
+		s.read()
+	}()
+	go func() {
+		defer s.wg.Done()
+		defer s.stop()
+		s.write()
+	}()
+	s.wg.Wait()
+	return nil
+}
+
+type session struct {
+	debugClient proto.StepRunner_DebugClient
+	stopCh      chan struct{}
+	wg          *sync.WaitGroup
+}
+
+func (s *session) done() bool {
+	select {
+	case <-s.stopCh:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *session) stop() {
+	s.stopCh <- struct{}{}
+}
+
+func (s *session) read() {
+	for {
+		if s.done() {
+			return
+		}
+		var input string
+		fmt.Print("> ")
+		_, err := fmt.Scan(&input)
+		if err != nil {
+			fmt.Printf("client error: %v", err)
+			return
+		}
+		// TODO read command
+		s.debugClient.Send(&proto.DebugRequest{
+			CommandOneof: &proto.DebugRequest_View_{
+				View: &proto.DebugRequest_View{},
+			},
+		})
+	}
+}
+
+func (s *session) write() {
+	for {
+		if s.done() {
+			return
+		}
+		res, err := s.debugClient.Recv()
+		if err != nil {
+			fmt.Printf("server error: %v", err)
+		}
+		fmt.Print(res.StepView)
+	}
+}

@@ -24,6 +24,7 @@ const (
 	StepRunner_Close_FullMethodName      = "/proto.StepRunner/Close"
 	StepRunner_FollowLogs_FullMethodName = "/proto.StepRunner/FollowLogs"
 	StepRunner_Status_FullMethodName     = "/proto.StepRunner/Status"
+	StepRunner_Debug_FullMethodName      = "/proto.StepRunner/Debug"
 )
 
 // StepRunnerClient is the client API for StepRunner service.
@@ -34,6 +35,7 @@ type StepRunnerClient interface {
 	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error)
 	FollowLogs(ctx context.Context, in *FollowLogsRequest, opts ...grpc.CallOption) (StepRunner_FollowLogsClient, error)
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	Debug(ctx context.Context, opts ...grpc.CallOption) (StepRunner_DebugClient, error)
 }
 
 type stepRunnerClient struct {
@@ -103,6 +105,37 @@ func (c *stepRunnerClient) Status(ctx context.Context, in *StatusRequest, opts .
 	return out, nil
 }
 
+func (c *stepRunnerClient) Debug(ctx context.Context, opts ...grpc.CallOption) (StepRunner_DebugClient, error) {
+	stream, err := c.cc.NewStream(ctx, &StepRunner_ServiceDesc.Streams[1], StepRunner_Debug_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &stepRunnerDebugClient{stream}
+	return x, nil
+}
+
+type StepRunner_DebugClient interface {
+	Send(*DebugRequest) error
+	Recv() (*DebugResponse, error)
+	grpc.ClientStream
+}
+
+type stepRunnerDebugClient struct {
+	grpc.ClientStream
+}
+
+func (x *stepRunnerDebugClient) Send(m *DebugRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *stepRunnerDebugClient) Recv() (*DebugResponse, error) {
+	m := new(DebugResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // StepRunnerServer is the server API for StepRunner service.
 // All implementations must embed UnimplementedStepRunnerServer
 // for forward compatibility
@@ -111,6 +144,7 @@ type StepRunnerServer interface {
 	Close(context.Context, *CloseRequest) (*CloseResponse, error)
 	FollowLogs(*FollowLogsRequest, StepRunner_FollowLogsServer) error
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
+	Debug(StepRunner_DebugServer) error
 	mustEmbedUnimplementedStepRunnerServer()
 }
 
@@ -129,6 +163,9 @@ func (UnimplementedStepRunnerServer) FollowLogs(*FollowLogsRequest, StepRunner_F
 }
 func (UnimplementedStepRunnerServer) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
+}
+func (UnimplementedStepRunnerServer) Debug(StepRunner_DebugServer) error {
+	return status.Errorf(codes.Unimplemented, "method Debug not implemented")
 }
 func (UnimplementedStepRunnerServer) mustEmbedUnimplementedStepRunnerServer() {}
 
@@ -218,6 +255,32 @@ func _StepRunner_Status_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StepRunner_Debug_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(StepRunnerServer).Debug(&stepRunnerDebugServer{stream})
+}
+
+type StepRunner_DebugServer interface {
+	Send(*DebugResponse) error
+	Recv() (*DebugRequest, error)
+	grpc.ServerStream
+}
+
+type stepRunnerDebugServer struct {
+	grpc.ServerStream
+}
+
+func (x *stepRunnerDebugServer) Send(m *DebugResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *stepRunnerDebugServer) Recv() (*DebugRequest, error) {
+	m := new(DebugRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // StepRunner_ServiceDesc is the grpc.ServiceDesc for StepRunner service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -243,6 +306,12 @@ var StepRunner_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "FollowLogs",
 			Handler:       _StepRunner_FollowLogs_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "Debug",
+			Handler:       _StepRunner_Debug_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "step.proto",
