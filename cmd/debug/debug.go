@@ -1,8 +1,10 @@
 package debug
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -40,8 +42,8 @@ func run(options *Options) error {
 	}
 	defer debugClient.CloseSend()
 	err = debugClient.Send(&proto.DebugRequest{
-		CommandOneof: &proto.DebugRequest_View_{
-			View: &proto.DebugRequest_View{},
+		CommandOneof: &proto.DebugRequest_Stop_{
+			Stop: &proto.DebugRequest_Stop{},
 		},
 	})
 	if err != nil {
@@ -91,9 +93,8 @@ func (s *session) read() {
 		if s.done() {
 			return
 		}
-		var input string
-		fmt.Print("> ")
-		_, err := fmt.Scan(&input)
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Printf("client error: %v", err)
 			return
@@ -126,6 +127,14 @@ func (s *session) read() {
 					Continue: &proto.DebugRequest_Continue{},
 				},
 			})
+		case 'p': // print
+			s.debugClient.Send(&proto.DebugRequest{
+				CommandOneof: &proto.DebugRequest_Print_{
+					Print: &proto.DebugRequest_Print{
+						Expression: input[1:],
+					},
+				},
+			})
 		default:
 			continue
 		}
@@ -142,5 +151,6 @@ func (s *session) write() {
 			fmt.Printf("server error: %v", err)
 		}
 		fmt.Print(res.StepView)
+		fmt.Print("> ")
 	}
 }

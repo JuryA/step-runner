@@ -7,10 +7,12 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/variables"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/syncmap"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
+	"google.golang.org/protobuf/encoding/prototext"
 )
 
 type errBadJobID struct{ id string }
@@ -166,8 +168,7 @@ func (s *StepRunnerService) Debug(debugServer proto.StepRunner_DebugServer) erro
 		}
 		sendView := func() {
 			debugServer.Send(&proto.DebugResponse{
-				// TODO: wait for next state
-				StepView: "(step view)\n",
+				StepView: stepView(),
 			})
 		}
 		switch req.CommandOneof.(type) {
@@ -181,6 +182,38 @@ func (s *StepRunnerService) Debug(debugServer proto.StepRunner_DebugServer) erro
 			sendView()
 		case *proto.DebugRequest_Continue_:
 			runner.Breakpoint.Continue()
+		case *proto.DebugRequest_Print_:
+			debugServer.Send(&proto.DebugResponse{
+				StepView: printExpression(req.GetPrint().Expression),
+			})
 		}
 	}
+}
+
+func stepView() string {
+	specDef, _ := runner.Breakpoint.State()
+	if specDef == nil {
+		return "(no breakpoint)\n"
+	}
+	options := prototext.MarshalOptions{
+		Multiline: true,
+		Indent:    "  ",
+	}
+	view, err := options.Marshal(specDef.Definition)
+	if err != nil {
+		return err.Error()
+	}
+	return string(view)
+}
+
+func printExpression(exp string) string {
+	_, stepsContext := runner.Breakpoint.State()
+	if stepsContext == nil {
+		return "(no breakpoint)\n"
+	}
+	res, err := expression.ExpandString(stepsContext.View(), exp)
+	if err != nil {
+		return err.Error() + "\n"
+	}
+	return res
 }

@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"os"
 	"sync"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -13,7 +14,10 @@ var Breakpoint *Bp = &Bp{
 }
 
 func init() {
-	close(Breakpoint.release) // start continued
+	if os.Getenv("STEP_RUNNER_DEBUG_STOP") == "true" {
+		return // begin stopped
+	}
+	close(Breakpoint.release) // begin started
 }
 
 type Bp struct {
