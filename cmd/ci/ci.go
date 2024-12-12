@@ -131,7 +131,7 @@ func wrapStepsInSpecDef(steps string) (*schema.Step, error) {
 }
 
 func findWorkDir() string {
-	workDir := os.Getenv("CI_BUILDS_DIR")
+	workDir := os.Getenv("CI_PROJECT_DIR")
 
 	if workDir == "" {
 		workDir, _ = os.Getwd()
