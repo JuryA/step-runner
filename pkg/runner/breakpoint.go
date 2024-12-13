@@ -9,70 +9,141 @@ import (
 
 // Singleton breakpoint object for entire step-runner instance
 var Breakpoint *Bp = &Bp{
-	atPoint: make(chan struct{}),
-	release: make(chan struct{}),
+	state:     Running,
+	listeners: []chan View{},
 }
 
 func init() {
 	if os.Getenv("STEP_RUNNER_DEBUG_STOP") == "true" {
-		return // begin stopped
+		Breakpoint.state = Stopping
 	}
-	close(Breakpoint.release) // begin started
 }
 
-type Bp struct {
-	mux            sync.Mutex
-	atSpecDef      *proto.SpecDefinition
-	atStepsContext *StepsContext
-	atPoint        chan struct{}
+type State int
+
+const (
+	Running State = iota
+	Stopping
+	Stopped
+	Stepping
+)
+
+type Point struct {
+	AtSpecDef      *proto.SpecDefinition
+	AtStepsContext *StepsContext
 	release        chan struct{}
 }
 
+type View struct {
+	Point *Point
+	State State
+}
+
+type Bp struct {
+	mux        sync.Mutex
+	state      State
+	foreground *Point
+	background []*Point
+	listeners  []chan View
+}
+
+// At is for step-runner to call when it arrives at interesting
+// places.
 func (b *Bp) At(specDef *proto.SpecDefinition, stepsContext *StepsContext) {
 	// This should be in another package but we don't have a non-runner context (e.g. proto.Context)
+	point := &Point{
+		AtSpecDef:      specDef,
+		AtStepsContext: stepsContext,
+		release:        make(chan struct{}),
+	}
 	b.mux.Lock()
-	b.atSpecDef = specDef
-	b.atStepsContext = stepsContext
+	switch b.state {
+	case Running:
+		// Just keep running past this break point
+		close(point.release)
+	case Stopping:
+		// Stop and place this point in the foreground
+		b.foreground = point
+		b.state = Stopped
+		b.broadcast()
+	case Stopped:
+		//
+		b.background = append(b.background, point)
+	}
 	b.mux.Unlock()
-	close(b.atPoint) // currently at a breakpoint
-	<-b.release
-	b.mux.Lock()
-	b.atSpecDef = nil
-	b.atStepsContext = nil
-	b.atPoint = make(chan struct{}) // leaving breakpoint
-	b.mux.Unlock()
+	<-point.release
 }
 
+// Stop will stop all requests at their next breakpoint. The first
+// request to stop will be in the foreground.
 func (b *Bp) Stop() {
 	b.mux.Lock()
-	b.release = make(chan struct{}) // stop at next breakpoint
-	b.mux.Unlock()
+	defer b.mux.Unlock()
+	b.state = Stopping
+	b.broadcast()
 }
 
+// Continue will release all breakpoints.
 func (b *Bp) Continue() {
 	b.mux.Lock()
-	b.atSpecDef = nil
-	b.atStepsContext = nil
-	b.mux.Unlock()
-	close(b.release) // release all breakpoints
+	defer b.mux.Unlock()
+	b.state = Running
+	b.releaseAll()
+	b.broadcast()
 }
 
+// Step will release only the foreground breakpoint.
 func (b *Bp) Step() {
 	b.mux.Lock()
-	b.atSpecDef = nil
-	b.atStepsContext = nil
-	b.mux.Unlock()
-	b.release <- struct{}{} // release to next breakpoint
+	defer b.mux.Unlock()
+	b.state = Stopping
+	b.releaseForeground()
+	b.broadcast()
 }
 
 func (b *Bp) Next() {
-	// not implemented
+	// Not implemented. Needs tracking breakpoints by request path or source location.
 	b.Step()
 }
 
-func (b *Bp) State() (*proto.SpecDefinition, *StepsContext) {
-	<-b.atPoint // wait for next breakpoint
+// State is for the debug server to call when it is waiting on the
+// results of a command or just wants an updated view.
+func (b *Bp) State() chan View {
+	viewCh := make(chan View, 1)
 	b.mux.Lock()
 	defer b.mux.Unlock()
-	return b.atSpecDef, b.atStepsContext
+	if b.state == Stopped {
+		viewCh <- View{
+			Point: b.foreground,
+			State: b.state,
+		}
+	} else {
+		b.listeners = append(b.listeners, viewCh)
+	}
+	return viewCh
+}
+
+func (b *Bp) broadcast() {
+	for _, l := range b.listeners {
+		l <- View{
+			Point: b.foreground,
+			State: b.state,
+		}
+	}
+	b.listeners = nil
+}
+
+func (b *Bp) releaseForeground() {
+	if b.foreground != nil {
+		close(b.foreground.release)
+		b.foreground = nil
+	}
+}
+
+func (b *Bp) releaseAll() {
+	b.releaseForeground()
+	for _, p := range b.background {
+		close(p.release)
+	}
+	b.background = nil
 }
