@@ -79,6 +79,9 @@ func (b *Bp) At(specDef *proto.SpecDefinition, stepsContext *StepsContext) {
 func (b *Bp) Stop() {
 	b.mux.Lock()
 	defer b.mux.Unlock()
+	if b.state == Stopped {
+		return
+	}
 	b.state = Stopping
 	b.broadcast()
 }
