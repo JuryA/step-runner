@@ -1,3 +1,8 @@
+## v0.2.1 (2024-12-13)
+
+- Initial working dir CI_PROJECT_DIR in CI. See !165.
+- Ignore NoErrAlreadyUpToDate error when cloning a steps repo. See !166.
+
 ## v0.2.0 (2024-11-21)
 
 - Make the initial Run API call wait for the connection to be ready. See !161+.
