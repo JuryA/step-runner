@@ -167,7 +167,7 @@ func (gf *GitFetcher) findFetchAndFindAgain(ctx context.Context, repo *git.Repos
 		return ref, nil
 	}
 
-	if err := repo.FetchContext(ctx, &git.FetchOptions{Depth: gf.options.Depth}); err != nil {
+	if err := repo.FetchContext(ctx, &git.FetchOptions{Depth: gf.options.Depth}); err != nil && err != git.NoErrAlreadyUpToDate {
 		return nil, fmt.Errorf("fetching: %w", err)
 	}
 
