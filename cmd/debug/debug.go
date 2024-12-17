@@ -3,14 +3,17 @@ package debug
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/spf13/cobra"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Options struct {
@@ -135,7 +138,40 @@ func (s *session) read() {
 					},
 				},
 			})
+		case 't': // set
+			path, value, ok := strings.Cut(strings.TrimSpace(input[1:]), " ")
+			if !ok {
+				fmt.Printf("need path and value\n")
+				continue
+			}
+			var untyped any
+			err := json.Unmarshal([]byte(value), &untyped)
+			if err != nil {
+				fmt.Printf(err.Error() + "\n")
+				continue
+			}
+			protoValue, err := structpb.NewValue(untyped)
+			if err != nil {
+				fmt.Printf(err.Error() + "\n")
+				continue
+			}
+			s.debugClient.Send(&proto.DebugRequest{
+				CommandOneof: &proto.DebugRequest_Set_{
+					Set: &proto.DebugRequest_Set{
+						Path:  path,
+						Value: protoValue,
+					},
+				},
+			})
 		default:
+			fmt.Printf(`
+i - interrupt
+l - list
+s - step
+c - continue
+p - print [expression]
+t - set [path] [value]
+`)
 			continue
 		}
 	}

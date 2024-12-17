@@ -186,6 +186,15 @@ func (s *StepRunnerService) Debug(debugServer proto.StepRunner_DebugServer) erro
 			debugServer.Send(&proto.DebugResponse{
 				StepView: printExpression(req.GetPrint().Expression),
 			})
+		case *proto.DebugRequest_Set_:
+			err = runner.Breakpoint.Set(req.GetSet().Path, req.GetSet().Value)
+			if err != nil {
+				debugServer.Send(&proto.DebugResponse{
+					StepView: err.Error() + "\n",
+				})
+			} else {
+				sendView()
+			}
 		}
 	}
 }
