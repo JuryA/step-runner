@@ -12,7 +12,6 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
-	"google.golang.org/protobuf/encoding/prototext"
 )
 
 type errBadJobID struct{ id string }
@@ -166,56 +165,50 @@ func (s *StepRunnerService) Debug(debugServer proto.StepRunner_DebugServer) erro
 		if err != nil {
 			return err
 		}
-		sendView := func() {
+		sendState := func() {
+			specDef, message := specDef()
 			debugServer.Send(&proto.DebugResponse{
-				StepView: stepView(),
+				SpecDef: specDef,
+				Message: message,
 			})
 		}
 		switch req.CommandOneof.(type) {
 		case *proto.DebugRequest_Stop_:
 			runner.Breakpoint.Stop()
-			sendView()
+			sendState()
 		case *proto.DebugRequest_Step_:
 			runner.Breakpoint.Step()
-			sendView()
+			sendState()
 		case *proto.DebugRequest_View_:
-			sendView()
+			sendState()
 		case *proto.DebugRequest_Continue_:
 			runner.Breakpoint.Continue()
 		case *proto.DebugRequest_Print_:
 			debugServer.Send(&proto.DebugResponse{
-				StepView: printExpression(req.GetPrint().Expression),
+				Message: eval(req.GetPrint().Expression) + "\n",
 			})
 		case *proto.DebugRequest_Set_:
 			err = runner.Breakpoint.Set(req.GetSet().Path, req.GetSet().Value)
 			if err != nil {
 				debugServer.Send(&proto.DebugResponse{
-					StepView: err.Error() + "\n",
+					Message: err.Error() + "\n",
 				})
 			} else {
-				sendView()
+				sendState()
 			}
 		}
 	}
 }
 
-func stepView() string {
+func specDef() (*proto.SpecDefinition, string) {
 	s := <-runner.Breakpoint.State()
 	if s.Point == nil || s.Point.SpecDef == nil {
-		return "(no breakpoint)\n"
+		return nil, "(no breakpoint)\n"
 	}
-	options := prototext.MarshalOptions{
-		Multiline: true,
-		Indent:    "  ",
-	}
-	view, err := options.Marshal(s.Point.SpecDef)
-	if err != nil {
-		return err.Error()
-	}
-	return string(view)
+	return s.Point.SpecDef, ""
 }
 
-func printExpression(exp string) string {
+func eval(exp string) string {
 	s := <-runner.Breakpoint.State()
 	if s.Point == nil || s.Point.StepsContext == nil {
 		return "(no breakpoint)\n"

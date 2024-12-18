@@ -5,6 +5,8 @@ import (
 	"context"
 	ctx "context"
 	"fmt"
+	"math"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -91,15 +93,16 @@ func run(options *Options) error {
 		}
 
 		basicClient := basic.New(conn)
+		id := strconv.Itoa(rand.Intn(math.MaxInt32))
 		err = basicClient.Run(ctx.Background(), &client.RunRequest{
-			Id:    "run",
+			Id:    id,
 			Steps: steps,
 		})
 		if err != nil {
 			return fmt.Errorf("error running steps: %w", err)
 		}
 
-		_, err = basicClient.FollowLogs(context.Background(), "run", 0, os.Stdout)
+		_, err = basicClient.FollowLogs(context.Background(), id, 0, os.Stdout)
 		if err != nil {
 			return fmt.Errorf("error following logs: %w", err)
 		}

@@ -257,5 +257,6 @@ message DebugRequest {
 }
 
 message DebugResponse {
-  string step_view = 1;
+  SpecDefinition spec_def = 1;
+  string message = 2;
 }

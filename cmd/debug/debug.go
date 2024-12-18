@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -188,7 +189,19 @@ func (s *session) write() {
 		if err != nil {
 			fmt.Printf("server error: %v", err)
 		}
-		fmt.Print(res.StepView)
+		if res.SpecDef != nil {
+			options := prototext.MarshalOptions{
+				Multiline: true,
+				Indent:    "  ",
+			}
+			view, err := options.Marshal(res.SpecDef)
+			if err != nil {
+				fmt.Print(err.Error())
+			} else {
+				fmt.Print(string(view))
+			}
+		}
+		fmt.Print(res.Message)
 		fmt.Print("> ")
 	}
 }
