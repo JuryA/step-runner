@@ -37,8 +37,6 @@ func (s *SequenceOfSteps) Describe() string {
 
 func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
 
-	Breakpoint.At(s.specDef, stepsCtx, s.params)
-
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 
 	if err := result.ObserveEnv(stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)); err != nil {
@@ -46,6 +44,9 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.S
 	}
 
 	for _, step := range s.steps {
+
+		Breakpoint.At(s.specDef, stepsCtx)
+
 		stepResult, err := result.ObserveStepResult(step.Run(ctx, stepsCtx))
 		stepsCtx.RecordResult(stepResult)
 

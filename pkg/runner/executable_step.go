@@ -33,7 +33,7 @@ func (s *ExecutableStep) Describe() string {
 
 func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
 
-	Breakpoint.At(s.specDef, stepsCtx, s.params)
+	Breakpoint.At(s.specDef, stepsCtx)
 
 	if err := stepsCtx.Logln("Running step %q", s.loadedFrom.Describe()); err != nil {
 		return nil, err

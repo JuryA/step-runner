@@ -38,7 +38,6 @@ const (
 type Point struct {
 	SpecDef      *proto.SpecDefinition
 	StepsContext *StepsContext
-	Params       *Params
 	release      chan struct{}
 }
 
@@ -57,12 +56,11 @@ type Bp struct {
 
 // At is for step-runner to call when it arrives at interesting
 // places.
-func (b *Bp) At(specDef *proto.SpecDefinition, stepsContext *StepsContext, params *Params) {
+func (b *Bp) At(specDef *proto.SpecDefinition, stepsContext *StepsContext) {
 	// This should be in another package but we don't have a non-runner context (e.g. proto.Context)
 	point := &Point{
 		SpecDef:      specDef,
 		StepsContext: stepsContext,
-		Params:       params,
 		release:      make(chan struct{}),
 	}
 	b.mux.Lock()
