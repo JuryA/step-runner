@@ -36,9 +36,10 @@ const (
 )
 
 type Point struct {
-	AtSpecDef      *proto.SpecDefinition
-	AtStepsContext *StepsContext
-	release        chan struct{}
+	SpecDef      *proto.SpecDefinition
+	StepsContext *StepsContext
+	Params       *Params
+	release      chan struct{}
 }
 
 type View struct {
@@ -56,12 +57,13 @@ type Bp struct {
 
 // At is for step-runner to call when it arrives at interesting
 // places.
-func (b *Bp) At(specDef *proto.SpecDefinition, stepsContext *StepsContext) {
+func (b *Bp) At(specDef *proto.SpecDefinition, stepsContext *StepsContext, params *Params) {
 	// This should be in another package but we don't have a non-runner context (e.g. proto.Context)
 	point := &Point{
-		AtSpecDef:      specDef,
-		AtStepsContext: stepsContext,
-		release:        make(chan struct{}),
+		SpecDef:      specDef,
+		StepsContext: stepsContext,
+		Params:       params,
+		release:      make(chan struct{}),
 	}
 	b.mux.Lock()
 	switch b.state {
@@ -122,10 +124,10 @@ func (b *Bp) Set(path string, value *structpb.Value) error {
 	if b.foreground == nil {
 		return fmt.Errorf("no foreground breakpoint")
 	}
-	if b.foreground.AtSpecDef == nil {
+	if b.foreground.SpecDef == nil {
 		return fmt.Errorf("no foreground spec definition (context not yet supported)")
 	}
-	untypedContainer, err := untypeProto(b.foreground.AtSpecDef)
+	untypedContainer, err := untypeProto(b.foreground.SpecDef)
 	if err != nil {
 		return err
 	}
@@ -143,7 +145,7 @@ func (b *Bp) Set(path string, value *structpb.Value) error {
 	if err != nil {
 		return err
 	}
-	err = retypeProto(untypedContainer, b.foreground.AtSpecDef)
+	err = retypeProto(untypedContainer, b.foreground.SpecDef)
 	if err != nil {
 		return err
 	}

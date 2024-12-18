@@ -37,7 +37,7 @@ func (s *SequenceOfSteps) Describe() string {
 
 func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
 
-	Breakpoint.At(s.specDef, stepsCtx)
+	Breakpoint.At(s.specDef, stepsCtx, s.params)
 
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 

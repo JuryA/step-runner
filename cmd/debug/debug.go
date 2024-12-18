@@ -102,44 +102,45 @@ func (s *session) read() {
 			fmt.Printf("client error: %v", err)
 			return
 		}
+		input = strings.TrimSpace(input)
 		if len(input) == 0 {
 			continue
 		}
-		switch input[0] {
-		case 'i': // interrupt
+		switch {
+		case strings.HasPrefix(input, "stop"):
 			s.debugClient.Send(&proto.DebugRequest{
 				CommandOneof: &proto.DebugRequest_Stop_{
 					Stop: &proto.DebugRequest_Stop{},
 				},
 			})
-		case 'l': // list
+		case input == "l" || input == "list":
 			s.debugClient.Send(&proto.DebugRequest{
 				CommandOneof: &proto.DebugRequest_View_{
 					View: &proto.DebugRequest_View{},
 				},
 			})
-		case 's': // step
+		case input == "s" || input == "step":
 			s.debugClient.Send(&proto.DebugRequest{
 				CommandOneof: &proto.DebugRequest_Step_{
 					Step: &proto.DebugRequest_Step{},
 				},
 			})
-		case 'c': // continue
+		case input == "c" || input == "continue":
 			s.debugClient.Send(&proto.DebugRequest{
 				CommandOneof: &proto.DebugRequest_Continue_{
 					Continue: &proto.DebugRequest_Continue{},
 				},
 			})
-		case 'p': // print
+		case strings.HasPrefix(input, "eval "):
 			s.debugClient.Send(&proto.DebugRequest{
 				CommandOneof: &proto.DebugRequest_Print_{
 					Print: &proto.DebugRequest_Print{
-						Expression: input[1:],
+						Expression: input[len("eval "):],
 					},
 				},
 			})
-		case 't': // set
-			path, value, ok := strings.Cut(strings.TrimSpace(input[1:]), " ")
+		case strings.HasPrefix(input, "set "):
+			path, value, ok := strings.Cut(strings.TrimSpace(input[len("set "):]), " ")
 			if !ok {
 				fmt.Printf("need path and value\n")
 				continue
@@ -165,12 +166,13 @@ func (s *session) read() {
 			})
 		default:
 			fmt.Printf(`
-i - interrupt
-l - list
-s - step
-c - continue
-p - print [expression]
-t - set [path] [value]
+Usage:
+  stop
+  l(ist)
+  s(tep)
+  c(ontinue)
+  eval [expression]
+  set [path] [value]
 `)
 			continue
 		}

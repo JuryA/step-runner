@@ -43,7 +43,6 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", s.Describe(), err)
 	}
-
 	env := parentStepsCtx.Env.AddLexicalScope(params.Env)
 	inputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
 	stepsCtx, err := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir, inputs, env)

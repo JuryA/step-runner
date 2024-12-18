@@ -201,14 +201,14 @@ func (s *StepRunnerService) Debug(debugServer proto.StepRunner_DebugServer) erro
 
 func stepView() string {
 	s := <-runner.Breakpoint.State()
-	if s.Point == nil || s.Point.AtSpecDef == nil {
+	if s.Point == nil || s.Point.SpecDef == nil {
 		return "(no breakpoint)\n"
 	}
 	options := prototext.MarshalOptions{
 		Multiline: true,
 		Indent:    "  ",
 	}
-	view, err := options.Marshal(s.Point.AtSpecDef)
+	view, err := options.Marshal(s.Point.SpecDef)
 	if err != nil {
 		return err.Error()
 	}
@@ -217,10 +217,10 @@ func stepView() string {
 
 func printExpression(exp string) string {
 	s := <-runner.Breakpoint.State()
-	if s.Point == nil || s.Point.AtStepsContext == nil {
+	if s.Point == nil || s.Point.StepsContext == nil {
 		return "(no breakpoint)\n"
 	}
-	res, err := expression.ExpandString(s.Point.AtStepsContext.View(), exp)
+	res, err := expression.ExpandString(s.Point.StepsContext.View(), exp)
 	if err != nil {
 		return err.Error() + "\n"
 	}
