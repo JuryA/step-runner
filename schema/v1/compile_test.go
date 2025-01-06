@@ -194,6 +194,7 @@ steps:
           protocol: git
           url: "https://gitlab.com/components/foo"
           version: v1
+          path: [ "steps" ]
           filename: step.yml
       env:
           JOB_ID: ${{job.id}}
@@ -266,6 +267,7 @@ steps:
           protocol: git
           url: "https://gitlab.com/components/foo"
           version: v1
+          path: [ "steps" ]
           filename: step.yml
 delegate: delegate_me
 `,
@@ -329,7 +331,7 @@ func TestReferenceCompiler(t *testing.T) {
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
 			Url:      "https://gitlab.com/components/script",
-			Path:     nil,
+			Path:     []string{"steps"},
 			Filename: "step.yml",
 			Version:  "v1",
 		},
@@ -338,17 +340,44 @@ func TestReferenceCompiler(t *testing.T) {
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
 			Url:      "https://gitlab.com/components/script",
-			Path:     nil,
+			Path:     []string{"steps"},
 			Filename: "step.yml",
+			Version:  "v1",
+		},
+	}, {
+		step: "step: gitlab.com/components/script/-/sub-step@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script",
+			Path:     []string{"steps", "sub-step"},
+			Filename: "step.yml",
+			Version:  "v1",
+		},
+	}, {
+		step: "step: gitlab.com/components/script/-/my-step.yml@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script",
+			Path:     []string{"steps"},
+			Filename: "my-step.yml",
+			Version:  "v1",
+		},
+	}, {
+		step: "step: gitlab.com/components/script/-/sub-step/my-step.yml@v1",
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script",
+			Path:     []string{"steps", "sub-step"},
+			Filename: "my-step.yml",
 			Version:  "v1",
 		},
 	}, {
 		step: `
 step:
     git:
-        url:     gitlab.com/components/script
-        dir:     bash
-        rev:  v1
+        url: gitlab.com/components/script
+        dir: bash
+        rev: v1
 `,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
@@ -361,7 +390,23 @@ step:
 		step: `
 step:
     git:
-        url:    http://bad.idea.com/my-step
+        url: gitlab.com/components/script
+        dir: bash
+        rev: v1
+        file: my-step.yml
+`,
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_git,
+			Url:      "https://gitlab.com/components/script",
+			Path:     []string{"bash"},
+			Filename: "my-step.yml",
+			Version:  "v1",
+		},
+	}, {
+		step: `
+step:
+    git:
+        url: http://bad.idea.com/my-step
         rev: v1
 `,
 		want: &proto.Step_Reference{
@@ -375,7 +420,7 @@ step:
 		step: `
 step:
     git:
-        url:    gitlab.com/components/script
+        url: gitlab.com/components/script
         rev: v2.1
 `,
 		want: &proto.Step_Reference{
@@ -389,7 +434,7 @@ step:
 		step: `
 step:
     git:
-        url:    gitlab.com/components/script
+        url: gitlab.com/components/script
         rev: 20e9c40c
 `,
 		want: &proto.Step_Reference{
@@ -403,7 +448,7 @@ step:
 		step: `
 step:
     git:
-        url:    gitlab.com/components/script
+        url: gitlab.com/components/script
         rev: 20e9c40c9213f2a044e4a81906956a779af3da4b
 `,
 		want: &proto.Step_Reference{
@@ -420,7 +465,7 @@ step: http://gitlab-ci-token:ABCDEF@gitlab.com/josephburnett/hello-private-repo.
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
 			Url:      "http://gitlab-ci-token:ABCDEF@gitlab.com/josephburnett/hello-private-repo.git",
-			Path:     nil,
+			Path:     []string{"steps"},
 			Filename: "step.yml",
 			Version:  "main",
 		},
@@ -431,7 +476,7 @@ step: http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/josephburnett/he
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_git,
 			Url:      "http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/josephburnett/hello-private-repo.git",
-			Path:     nil,
+			Path:     []string{"steps"},
 			Filename: "step.yml",
 			Version:  "main",
 		},

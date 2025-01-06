@@ -306,7 +306,12 @@ func (s *Step) compileScriptKeywordToStep() error {
 	if len(s.Inputs) != 0 {
 		return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 	}
-	s.Step = "https://gitlab.com/components/script@main"
+	s.Step = &Reference{
+		Git: GitReference{
+			Url: "https://gitlab.com/components/script",
+			Rev: "main",
+		},
+	}
 	s.Inputs = map[string]any{
 		"script": s.Script,
 	}
@@ -324,7 +329,12 @@ func (s *Step) compileActionKeywordToStep() error {
 	if s.Script != nil && *s.Script != "" {
 		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
 	}
-	s.Step = "https://gitlab.com/components/action-runner@main"
+	s.Step = &Reference{
+		Git: GitReference{
+			Url: "https://gitlab.com/components/action-runner",
+			Rev: "main",
+		},
+	}
 	s.Inputs = map[string]any{
 		"action": s.Action,
 		"inputs": s.Inputs,
@@ -390,43 +400,43 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 	if len(parts) < 2 {
 		return nil, fmt.Errorf("expecting url@rev. got %q", sr)
 	}
-	url := strings.Join(parts[0:len(parts)-1], "@")
+	rest := strings.Join(parts[0:len(parts)-1], "@")
 	rev := parts[len(parts)-1]
-
-	url, err := defaultHTTPS(url)
-	if err != nil {
-		return nil, fmt.Errorf("parsing reference %q: %w", string(sr), err)
-	}
+	url, rest, _ := strings.Cut(rest, "/-/")
+	url = defaultHTTPS(url)
+	path, filename := pathFilename(&rest)
+	path = append([]string{"steps"}, path...)
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,
 		Url:      url,
 		Version:  rev,
-		Filename: "step.yml",
+		Path:     path,
+		Filename: filename,
 	}, nil
 }
 
 func (r *Reference) compile() (*proto.Step_Reference, error) {
-	url, err := defaultHTTPS(r.Git.Url)
-	if err != nil {
-		return nil, fmt.Errorf("parsing url as url: %w", err)
-	}
-	path, filename := pathFilename(r.Git.Dir)
-	version := ""
-	version = r.Git.Rev
-	return &proto.Step_Reference{
+	url := defaultHTTPS(r.Git.Url)
+	s := &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,
 		Url:      url,
-		Path:     path,
-		Filename: filename,
-		Version:  version,
-	}, nil
+		Filename: "step.yml",
+		Version:  r.Git.Rev,
+	}
+	if r.Git.Dir != nil {
+		s.Path = strings.Split(*r.Git.Dir, "/")
+	}
+	if r.Git.File != nil {
+		s.Filename = *r.Git.File
+	}
+	return s, nil
 }
 
-func defaultHTTPS(stepUrl string) (string, error) {
+func defaultHTTPS(stepUrl string) string {
 	if strings.HasPrefix(stepUrl, "http://") || strings.HasPrefix(stepUrl, "https://") {
-		return stepUrl, nil
+		return stepUrl
 	}
-	return "https://" + stepUrl, nil
+	return "https://" + stepUrl
 }
 
 func pathFilename(pathStr *string) (path []string, filename string) {
@@ -438,6 +448,10 @@ func pathFilename(pathStr *string) (path []string, filename string) {
 		return nil, filename
 	}
 	path = strings.Split(*pathStr, "/")
+	if strings.HasSuffix(path[len(path)-1], ".yml") {
+		filename = path[len(path)-1]
+		path = path[:len(path)-1]
+	}
 	return path, filename
 }
 
