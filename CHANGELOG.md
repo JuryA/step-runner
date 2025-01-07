@@ -1,3 +1,13 @@
+## v0.3.0 (2025-01-06)
+
+- Accept dir and file after /-/. See !169.
+
+### Breaking Changes:
+
+- Steps must be in the `steps` folder in the repository unless the
+  expanded step syntax is used. See !gitlab/177038 for documentation
+  update.
+
 ## v0.2.1 (2024-12-13)
 
 - Initial working dir CI_PROJECT_DIR in CI. See !165.
