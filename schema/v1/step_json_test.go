@@ -60,6 +60,7 @@ step:
     url: gitlab.com/my-org/my-step
     rev: v1
     dir: sub-dir
+    file: my-step.yml
 `,
 	}, {
 		name:    "remote nested step with additional properties",
