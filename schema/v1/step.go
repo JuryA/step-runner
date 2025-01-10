@@ -45,6 +45,9 @@ type GitReference struct {
 
 	// Url corresponds to the JSON schema field "url".
 	Url string `json:"url" yaml:"url" mapstructure:"url"`
+
+	// File corresponds to the JSON schema field "file".
+	File *string `json:"file,omitempty" yaml:"file,omitempty" mapstructure:"file,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.

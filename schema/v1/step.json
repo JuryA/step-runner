@@ -178,6 +178,9 @@
                         },
                         "rev": {
                             "type": "string"
+                        },
+                        "file": {
+                            "type": "string"
                         }
                     }
                 }
