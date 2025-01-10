@@ -387,7 +387,7 @@ func (sr shortReference) compile() (*proto.Step_Reference, error) {
 }
 
 func (sr shortReference) compileLocal() (*proto.Step_Reference, error) {
-	path, filename := pathFilename((*string)(&sr))
+	path, filename := pathFilename(string(sr))
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_local,
 		Path:     path,
@@ -404,7 +404,7 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 	rev := parts[len(parts)-1]
 	url, rest, _ := strings.Cut(rest, "/-/")
 	url = defaultHTTPS(url)
-	path, filename := pathFilename(&rest)
+	path, filename := pathFilename(rest)
 	path = append([]string{"steps"}, path...)
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,
@@ -439,15 +439,12 @@ func defaultHTTPS(stepUrl string) string {
 	return "https://" + stepUrl
 }
 
-func pathFilename(pathStr *string) (path []string, filename string) {
+func pathFilename(pathStr string) (path []string, filename string) {
 	filename = "step.yml"
-	if pathStr == nil {
+	if pathStr == "" {
 		return nil, filename
 	}
-	if *pathStr == "" {
-		return nil, filename
-	}
-	path = strings.Split(*pathStr, "/")
+	path = strings.Split(pathStr, "/")
 	if strings.HasSuffix(path[len(path)-1], ".yml") {
 		filename = path[len(path)-1]
 		path = path[:len(path)-1]
