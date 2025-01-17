@@ -81,20 +81,23 @@ func (s *StepFile) ReadKeyValueLines() (map[string]*structpb.Value, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening file %v: %w", s.path, err)
 	}
+	defer file.Close()
 
 	out := map[string]*structpb.Value{}
-	scanner := bufio.NewScanner(file)
-
-	for i := 1; scanner.Scan(); i++ {
-		line := scanner.Bytes()
-		errCtx := NewErrorCtx("line", line)
+	reader := bufio.NewReader(file)
+	for i := 1; true; i++ {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		errCtx := NewErrorCtx("line", []byte(line))
 
 		if len(line) == 0 {
 			continue
 		}
 
 		v := &StepFileLine{}
-		if err = json.Unmarshal(line, v); err != nil {
+		if err = json.Unmarshal([]byte(line), v); err != nil {
 			return nil, errCtx.Errorf("%s %d: %w", lineErrMsg, i, err)
 		}
 
@@ -119,6 +122,10 @@ func (s *StepFile) ReadKeyValueLines() (map[string]*structpb.Value, error) {
 		}
 
 		out[*v.Name] = v.Value
+	}
+
+	if err != nil && err.Error() != "EOF" {
+		return nil, err
 	}
 
 	return out, nil
@@ -178,7 +185,6 @@ func (s *StepFile) ReadValues(specOutputs map[string]*proto.Spec_Content_Output)
 	if err != nil {
 		return nil, fmt.Errorf("read output file: %w", err)
 	}
-
 	for key, value := range keyValues {
 		outputSpec, ok := specOutputs[key]
 		if !ok {
