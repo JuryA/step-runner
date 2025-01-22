@@ -44,6 +44,13 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("loading step: %w", err)
 	}
 
+	if request.Attestation != nil {
+		specDef.Definition.Attestation = &proto.Attestation{
+			Enable:    request.Attestation.Enable,
+			Attestors: request.Attestation.Attestors,
+		}
+	}
+
 	job, err := jobs.New(request.Id, specDef.Dir)
 	if err != nil {
 		return nil, fmt.Errorf("initializing request: %w", err)

@@ -2,6 +2,7 @@ package runner
 
 import (
 	ctx "context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -10,6 +11,15 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
+
+	witness "github.com/in-toto/go-witness"
+	iwitness "gitlab.com/gitlab-org/step-runner/internal/witness"
+
+	attest "github.com/in-toto/go-witness/attestation"
+	"github.com/in-toto/go-witness/attestation/commandrun"
+	"github.com/in-toto/go-witness/attestation/material"
+	"github.com/in-toto/go-witness/attestation/product"
+	"github.com/in-toto/go-witness/log"
 )
 
 // ExecutableStep is a step that executes a command.
@@ -77,18 +87,69 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 		return nil, err
 	}
 
-	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = workDir
+	attestation := s.specDef.Definition.Attestation
 
-	cmd.Env = stepsCtx.GetEnvList()
-	cmd.Stdout = stepsCtx.GlobalContext.Stdout
-	cmd.Stderr = stepsCtx.GlobalContext.Stderr
+	var execResult *ExecResult
+	if attestation != nil && attestation.Enable {
+		fmt.Println("WE HAVE ENTERED ATTESTATION")
+		log.Info("Executing step with attestation enabled")
+		l := iwitness.NewLogger(stepsCtx.Stdout)
+		log.SetLogger(l)
 
-	err = cmd.Run()
-	execResult := NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode())
+		attestors := []attest.Attestor{product.New(), material.New(), commandrun.New(commandrun.WithCommand(cmdArgs))}
+		for _, att := range attestation.Attestors {
+			attestor, err := attest.GetAttestor(att)
+			if err != nil {
+				return nil, fmt.Errorf("error getting attestation: %w", err)
+			}
 
-	if err != nil {
-		return execResult, err
+			attestors = append(attestors, attestor)
+		}
+
+		res, err := witness.Run(
+			//NOTE: Taken this from above log line - might be incorrect identifier
+			s.loadedFrom.Describe(),
+			// NOTE: We don't pass a signer in as we want to let the runner sign
+			nil,
+			witness.RunWithAttestors(attestors),
+			witness.RunWithAttestationOpts(attest.WithWorkingDir(workDir), attest.WithEnvVars(stepsCtx.GetEnvs())),
+		)
+
+		if err != nil {
+			fmt.Println("Error running witness", err.Error())
+			return NewExecResult(workDir, cmdArgs, 1), err
+		}
+
+		// The witness run result will be our final message, because the run will have completed
+		resJson, err := json.Marshal(res)
+		if err != nil {
+			return nil, err
+		}
+
+		out, err := structpb.NewValue(resJson)
+		if err != nil {
+			return nil, err
+		}
+
+		execResult = NewExecResult(workDir, cmdArgs, 1)
+
+		//NOTE: Not sure if setting it here will set it in the outputs correctly...
+		s.specDef.Definition.Outputs["attestation"] = out
+	} else {
+
+		cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
+		cmd.Dir = workDir
+
+		cmd.Env = stepsCtx.GetEnvList()
+		cmd.Stdout = stepsCtx.GlobalContext.Stdout
+		cmd.Stderr = stepsCtx.GlobalContext.Stderr
+
+		err = cmd.Run()
+		execResult := NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode())
+
+		if err != nil {
+			return execResult, err
+		}
 	}
 
 	return execResult, nil

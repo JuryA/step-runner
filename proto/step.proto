@@ -62,6 +62,15 @@ message Definition {
   map<string,string> env = 5;
   // Delegate selects a step by name which will produce the outputs for this step.
   string delegate = 6;
+
+  // Attestation is the attestation generation configuration for a step
+  Attestation attestation = 7;
+}
+
+
+message Attestation {
+    bool enable = 1;
+    repeated string attestors = 2;
 }
 
 // Definition type is either exec or steps.

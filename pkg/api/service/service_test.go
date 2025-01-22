@@ -233,6 +233,88 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 	}
 }
 
+func Test_StepRunnerService_Run_Attest(t *testing.T) {
+	defer cleanup(t, "test.txt")
+
+	tests := map[string]struct {
+		jobWorkDir bool
+		script     string
+		setup      func(*proto.RunRequest)
+		validate   func(*jobs.Job)
+	}{
+		"attestation enabled": {
+			script: "echo 'attest it!' > test.txt",
+			setup: func(rr *proto.RunRequest) {
+				rr.Attestation = &proto.Attestation{
+					Enable:    true,
+					Attestors: []string{"product", "environment"},
+				}
+				rr.Attestation.Enable = true
+				rr.Attestation.Attestors = []string{"product", "environment"}
+			},
+			validate: func(j *jobs.Job) {
+				data, err := os.ReadFile(path.Join(j.WorkDir, "test.txt"))
+				require.NoError(t, err)
+				assert.Equal(t, "attest it!", strings.TrimSpace(string(data)))
+
+				att, err := j.GetOutput("attestation")
+				require.NoError(t, err)
+				assert.NotEmpty(t, att)
+			},
+		},
+		"attestation disabled": {
+			script: "echo 'dont attest it!' > test.txt",
+			setup: func(rr *proto.RunRequest) {
+				rr.Attestation = &proto.Attestation{
+					Enable:    false,
+					Attestors: []string{"product", "environment"},
+				}
+			},
+			validate: func(j *jobs.Job) {
+				data, err := os.ReadFile(path.Join(j.WorkDir, "test.txt"))
+				require.NoError(t, err)
+				assert.Equal(t, "attest it!", strings.TrimSpace(string(data)))
+
+				att, err := j.GetOutput("attestation")
+				require.Error(t, err)
+				assert.Empty(t, att)
+			},
+		},
+	}
+
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			bg := context.Background()
+
+			rr := test.ProtoRunRequest(t, makeScriptStep(tt.script), tt.jobWorkDir)
+			tt.setup(rr)
+
+			_, err := apiClient.Run(bg, rr)
+			require.NoError(t, err)
+
+			job, ok := server.GetJob(rr.Id)
+			require.True(t, ok)
+
+			assert.Eventually(t, jobFinished(job), time.Millisecond*500, time.Millisecond*50)
+			assert.NoError(t, job.Ctx.Err())
+
+			stat := job.Status()
+			assert.Empty(t, stat.Message)
+			assert.Equal(t, proto.StepResult_success, stat.Status)
+
+			assert.FileExists(t, path.Join(job.WorkDir, "test.txt"))
+
+			tt.validate(job)
+
+			apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
+			assert.NoDirExists(t, job.TmpDir)
+		})
+	}
+}
+
 func Test_StepRunnerService_Run_DuplicateID(t *testing.T) {
 	defer cleanup(t)
 
