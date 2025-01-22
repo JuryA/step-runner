@@ -2,6 +2,8 @@ package runner
 
 import (
 	ctx "context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -12,7 +14,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
-	witness "github.com/in-toto/go-witness"
+	"github.com/in-toto/go-witness"
 	iwitness "gitlab.com/gitlab-org/step-runner/internal/witness"
 
 	attest "github.com/in-toto/go-witness/attestation"
@@ -91,7 +93,6 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 
 	var execResult *ExecResult
 	if attestation != nil && attestation.Enable {
-		fmt.Println("WE HAVE ENTERED ATTESTATION")
 		log.Info("Executing step with attestation enabled")
 		l := iwitness.NewLogger(stepsCtx.Stdout)
 		log.SetLogger(l)
@@ -126,6 +127,10 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 			return nil, err
 		}
 
+		h := sha256.New()
+		h.Write(resJson)
+		sha := hex.EncodeToString(h.Sum(nil))
+
 		out, err := structpb.NewValue(resJson)
 		if err != nil {
 			return nil, err
@@ -134,7 +139,7 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 		execResult = NewExecResult(workDir, cmdArgs, 1)
 
 		//NOTE: Not sure if setting it here will set it in the outputs correctly...
-		s.specDef.Definition.Outputs["attestation"] = out
+		s.specDef.Definition.Outputs[sha] = out
 	} else {
 
 		cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
