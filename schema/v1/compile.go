@@ -380,6 +380,13 @@ func (s *Step) compileToStepProto() (*proto.Step, error) {
 type shortReference string
 
 func (sr shortReference) compile() (*proto.Step_Reference, error) {
+	switch {
+	case strings.HasPrefix(string(sr), "."):
+		return sr.compileLocal()
+
+	case strings.HasPrefix(string(sr), "oci:"):
+		return sr.compileOCI()
+	}
 	if strings.HasPrefix(string(sr), ".") {
 		return sr.compileLocal()
 	}
@@ -410,6 +417,20 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 		Protocol: proto.StepReferenceProtocol_git,
 		Url:      url,
 		Version:  rev,
+		Path:     path,
+		Filename: filename,
+	}, nil
+}
+
+func (sr shortReference) compileOCI() (*proto.Step_Reference, error) {
+	url, version, _ := strings.Cut(strings.TrimPrefix(string(sr), "oci:"), ":")
+	version, stepPath, _ := strings.Cut(version, " ")
+	path, filename := pathFilename(stepPath)
+
+	return &proto.Step_Reference{
+		Protocol: proto.StepReferenceProtocol_oci,
+		Url:      url,
+		Version:  version,
 		Path:     path,
 		Filename: filename,
 	}, nil
