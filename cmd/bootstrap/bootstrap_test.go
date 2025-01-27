@@ -12,14 +12,10 @@ import (
 )
 
 func Test_run(t *testing.T) {
-	t.Run("copies file to destination directory", func(t *testing.T) {
-		source, err := os.Executable()
-		require.NoError(t, err)
+	source, err := os.Executable()
+	require.NoError(t, err)
 
-		destination := t.TempDir()
-
-		require.NoError(t, run(source, destination))
-
+	compareFiles := func(source, destination string) {
 		dst, err := os.ReadFile(path.Join(destination, "step-runner"))
 		require.NoError(t, err)
 
@@ -27,12 +23,23 @@ func Test_run(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, src, dst)
+	}
+
+	t.Run("copies file to destination directory idempotently", func(t *testing.T) {
+		destination := t.TempDir()
+
+		require.NoError(t, run(source, destination))
+		compareFiles(source, destination)
+
+		require.NoError(t, run(source, destination))
+		compareFiles(source, destination)
 	})
 
-	t.Run("destination does not exists", func(t *testing.T) {
-		err := run("", path.Join("foo", "bar", "baz"))
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "stat foo/bar/baz: no such file or directory")
+	t.Run("destination does not exist", func(t *testing.T) {
+		destination := t.TempDir()
+
+		require.NoError(t, run(source, destination))
+		compareFiles(source, destination)
 	})
 
 	t.Run("destination is not a directory", func(t *testing.T) {
@@ -41,17 +48,28 @@ func Test_run(t *testing.T) {
 
 		err := run("", destination)
 		require.Error(t, run("", destination))
-		require.Contains(t, err.Error(), fmt.Sprintf("destination %q is not a directory", destination))
+		require.Contains(t, err.Error(), fmt.Sprintf("mkdir %s: not a directory", destination))
 	})
 
 	t.Run("destination file exists", func(t *testing.T) {
-		tempDir := t.TempDir()
-		file, err := os.Create(path.Join(tempDir, "step-runner"))
+		destination := t.TempDir()
+		file, err := os.Create(path.Join(destination, "step-runner"))
 		require.NoError(t, err)
 		require.NoError(t, file.Close())
 
-		err = run("", tempDir)
+		err = run(source, destination)
+		require.NoError(t, err)
+
+		compareFiles(source, destination)
+	})
+
+	t.Run("destination file exists and is dir", func(t *testing.T) {
+		destination := t.TempDir()
+		err := os.Mkdir(path.Join(destination, "step-runner"), 0o755)
+		require.NoError(t, err)
+
+		err = run(source, destination)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("destination %q already exists", file.Name()))
+		require.Contains(t, err.Error(), fmt.Sprintf(": open %s: is a directory", path.Join(destination, "step-runner")))
 	})
 }

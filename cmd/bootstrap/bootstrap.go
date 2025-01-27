@@ -26,20 +26,11 @@ func NewCmd() *cobra.Command {
 }
 
 func run(source, destination string) error {
-	info, err := os.Stat(destination)
-	if err != nil {
+	if err := os.MkdirAll(destination, 0o755); err != nil {
 		return err
 	}
 
-	if !info.IsDir() {
-		return fmt.Errorf("destination %q is not a directory", destination)
-	}
-
 	destination = path.Join(destination, "step-runner")
-
-	if _, err := os.Stat(destination); err == nil {
-		return fmt.Errorf("destination %q already exists", destination)
-	}
 
 	src, err := os.Open(source)
 	if err != nil {
@@ -47,9 +38,9 @@ func run(source, destination string) error {
 	}
 	defer src.Close()
 
-	dest, err := os.OpenFile(destination, os.O_WRONLY|os.O_CREATE, 0o755)
+	dest, err := os.Create(destination)
 	if err != nil {
-		return fmt.Errorf("failed to create destination file %q: %w", destination, err)
+		return fmt.Errorf("failed to create destination file: %w", err)
 	}
 	defer dest.Close()
 
@@ -58,5 +49,9 @@ func run(source, destination string) error {
 		return fmt.Errorf("failed to copy file contents: %w", err)
 	}
 
-	return dest.Close()
+	if err := dest.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %w", err)
+	}
+
+	return os.Chmod(destination, 0o755)
 }
