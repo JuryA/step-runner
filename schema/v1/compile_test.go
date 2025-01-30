@@ -35,7 +35,7 @@ steps:
       step:
           protocol: git
           url: "https://gitlab.com/components/script"
-          version: main
+          version: v2
           filename: step.yml
       inputs:
           script: echo hello world
@@ -86,7 +86,7 @@ steps:
       step:
           protocol: git
           url: "https://gitlab.com/components/script"
-          version: main
+          version: v2
           filename: step.yml
       inputs:
           script: echo hello world
