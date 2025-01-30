@@ -1,3 +1,8 @@
+## v0.4.0 (2025-01-30)
+
+- The `bootstrap` command is idempotent. See !170.
+- Script falls back to use `sh` when `bash` is not available. See [script!2](https://gitlab.com/components/script/-/merge_requests/2).
+
 ## v0.3.0 (2025-01-06)
 
 - Accept dir and file after /-/. See !169.

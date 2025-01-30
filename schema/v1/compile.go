@@ -309,7 +309,7 @@ func (s *Step) compileScriptKeywordToStep() error {
 	s.Step = &Reference{
 		Git: GitReference{
 			Url: "https://gitlab.com/components/script",
-			Rev: "main",
+			Rev: "v2",
 		},
 	}
 	s.Inputs = map[string]any{
