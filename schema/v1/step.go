@@ -34,47 +34,10 @@ func (j *Exec) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// GitReference is a reference to a step in a Git repository containing the full
-// set of configuration options.
-type GitReference struct {
-	// Dir corresponds to the JSON schema field "dir".
-	Dir *string `json:"dir,omitempty" yaml:"dir,omitempty" mapstructure:"dir,omitempty"`
-
-	// Rev corresponds to the JSON schema field "rev".
-	Rev string `json:"rev" yaml:"rev" mapstructure:"rev"`
-
-	// Url corresponds to the JSON schema field "url".
-	Url string `json:"url" yaml:"url" mapstructure:"url"`
-
-	// File corresponds to the JSON schema field "file".
-	File *string `json:"file,omitempty" yaml:"file,omitempty" mapstructure:"file,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *GitReference) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["rev"]; raw != nil && !ok {
-		return fmt.Errorf("field rev in git: required")
-	}
-	if _, ok := raw["url"]; raw != nil && !ok {
-		return fmt.Errorf("field url in git: required")
-	}
-	type Plain GitReference
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = GitReference(plain)
-	return nil
-}
-
 // Git a reference to a step in a Git repository.
 type Reference struct {
 	// Git corresponds to the JSON schema field "git".
-	Git GitReference `json:"git" yaml:"git" mapstructure:"git"`
+	Git *GitReference `json:"git,omitempty" yaml:"git,omitempty" mapstructure:"git,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.

@@ -44,12 +44,7 @@ step:
     url:    gitlab.com/components/script
     rev: v1
 `,
-		wantRef: &Reference{
-			Git: GitReference{
-				Url: "gitlab.com/components/script",
-				Rev: "v1",
-			},
-		},
+		wantRef: &Reference{Git: NewGitReference("gitlab.com/components/script", "v1")},
 	}, {
 		name: "long git reference with dir",
 		json: `
@@ -73,22 +68,14 @@ step:
     rev: v1
 `,
 		wantRef: &Reference{
-			Git: GitReference{
-				Url: "gitlab.com/components/script",
-				Dir: stringRef("bash"),
-				Rev: "v1",
-			},
+			Git: NewGitReference("gitlab.com/components/script", "v1", GitRefDir("bash")),
 		},
 	}, {
 		name: "long one-line git reference with dir",
 		json: `{"name":"my_step","step":{"git":{"url":"gitlab.com/components/script","dir":"bash","rev":"v1"}}}`,
 		yaml: `{name: my_step, step: {git: {url: gitlab.com/components/script, dir: bash, rev: v1}}}`,
 		wantRef: &Reference{
-			Git: GitReference{
-				Url: "gitlab.com/components/script",
-				Dir: stringRef("bash"),
-				Rev: "v1",
-			},
+			Git: NewGitReference("gitlab.com/components/script", "v1", GitRefDir("bash")),
 		},
 	}}
 
