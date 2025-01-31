@@ -9,16 +9,25 @@ import (
 // stepRunnerVersion is set when the step runner is compiled in the Dockerfile
 var stepRunnerVersion = "UNKNOWN (unset in build flags)"
 
+const suppressWelcomeKey = "suppress-welcome"
+
+var SuppressWelcomeCmdAnnotation = map[string]string{suppressWelcomeKey: "y"}
+
 func NewRootCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:          "step-runner",
 		Short:        "Step Runner executes a series of CI steps",
 		SilenceUsage: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			if cmd.CalledAs() != "proxy" {
+			if shouldPrintWelcome(cmd) {
 				fmt.Printf("\nStep Runner version: %s\n", stepRunnerVersion)
 				fmt.Printf("See https://gitlab.com/gitlab-org/step-runner/-/blob/main/CHANGELOG.md for changes.\n\n")
 			}
 		},
 	}
+}
+
+func shouldPrintWelcome(cmd *cobra.Command) bool {
+	_, suppressWelcome := cmd.Annotations[suppressWelcomeKey]
+	return !suppressWelcome
 }

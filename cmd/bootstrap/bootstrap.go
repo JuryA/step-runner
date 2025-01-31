@@ -7,13 +7,16 @@ import (
 	"path"
 
 	"github.com/spf13/cobra"
+
+	"gitlab.com/gitlab-org/step-runner/cmd"
 )
 
 func NewCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "bootstrap <destination>",
-		Short: "Copy the step-runner binary to the destination path",
-		Args:  cobra.ExactArgs(1),
+		Use:         "bootstrap <destination>",
+		Short:       "Copy the step-runner binary to the destination path",
+		Args:        cobra.ExactArgs(1),
+		Annotations: cmd.SuppressWelcomeCmdAnnotation,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			source, err := os.Executable()
 			if err != nil {

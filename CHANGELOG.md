@@ -2,6 +2,7 @@
 
 - The `bootstrap` command is idempotent. See !170.
 - Script falls back to use `sh` when `bash` is not available. See [script!2](https://gitlab.com/components/script/-/merge_requests/2).
+- Bootstrap command does not print version info. See !173.
 
 ## v0.3.0 (2025-01-06)
 
