@@ -7,16 +7,18 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"gitlab.com/gitlab-org/step-runner/cmd"
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	proxyapi "gitlab.com/gitlab-org/step-runner/pkg/api/proxy"
 )
 
 func NewCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "proxy",
-		Short: "Tunnel gRPC requests/responses from stdin/stdout to the service listening on a local socket",
-		Args:  cobra.ExactArgs(0),
-		RunE:  run,
+		Use:         "proxy",
+		Short:       "Tunnel gRPC requests/responses from stdin/stdout to the service listening on a local socket",
+		Annotations: cmd.SuppressWelcomeCmdAnnotation,
+		Args:        cobra.ExactArgs(0),
+		RunE:        run,
 	}
 }
 
