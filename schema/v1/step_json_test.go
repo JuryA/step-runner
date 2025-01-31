@@ -238,6 +238,33 @@ outputs:
     invalid name: foo
 `,
 		wantErr: true,
+	}, {
+		name: "oci step",
+		step: `
+name: my_step
+step:
+  oci:
+    url: registry.gitlab.com/gitlab-org/step-runner
+    tag: 0.3.0
+`,
+	}, {
+		name: "oci step with missing url",
+		step: `
+name: my_step
+step:
+  oci:
+    tag: 0.3.0
+`,
+		wantErr: true,
+	}, {
+		name: "oci step with missing tag",
+		step: `
+name: my_step
+step:
+  oci:
+    url: registry.gitlab.com/gitlab-org/step-runner
+`,
+		wantErr: true,
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

@@ -31,6 +31,9 @@
                                 },
                                 {
                                     "$ref": "#/definitions/gitReference"
+                                },
+                                {
+                                    "$ref": "#/definitions/ociReference"
                                 }
                             ]
                         }
@@ -180,6 +183,32 @@
                             "type": "string"
                         },
                         "file": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "ociReference": {
+            "type": "object",
+            "description": "OCIReference is a reference to a step hosted in an OCI repository.",
+            "additionalProperties": false,
+            "required": [
+                "oci"
+            ],
+            "properties": {
+                "oci": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "url",
+                        "tag"
+                    ],
+                    "properties": {
+                        "url": {
+                            "type": "string"
+                        },
+                        "tag": {
                             "type": "string"
                         }
                     }
