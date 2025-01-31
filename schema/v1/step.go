@@ -38,6 +38,9 @@ func (j *Exec) UnmarshalJSON(b []byte) error {
 type Reference struct {
 	// Git corresponds to the JSON schema field "git".
 	Git *GitReference `json:"git,omitempty" yaml:"git,omitempty" mapstructure:"git,omitempty"`
+
+	// OCI corresponds to the JSON schema field "oci".
+	OCI *OCIReference `json:"oci,omitempty" yaml:"oci,omitempty" mapstructure:"oci,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -46,9 +49,14 @@ func (j *Reference) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
-	if _, ok := raw["git"]; raw != nil && !ok {
-		return fmt.Errorf("field git: required")
+
+	_, gitDefined := raw["git"]
+	_, ociDefined := raw["oci"]
+
+	if !gitDefined && !ociDefined {
+		return fmt.Errorf("field git: or oci: required")
 	}
+
 	type Plain Reference
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {

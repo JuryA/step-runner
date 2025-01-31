@@ -10,15 +10,13 @@ import (
 )
 
 func TestReferenceCustomMethods(t *testing.T) {
-
 	myStep := "my_step"
 
 	cases := []struct {
-		name          string
-		json          string
-		yaml          string
-		wantRef       any
-		wantSchemaErr bool
+		name    string
+		json    string
+		yaml    string
+		wantRef any
 	}{{
 		name:    "short reference",
 		json:    `{"name":"my_step","step":"gitlab.com/components/script@v1"}`,
@@ -77,6 +75,27 @@ step:
 		wantRef: &Reference{
 			Git: NewGitReference("gitlab.com/components/script", "v1", GitRefDir("bash")),
 		},
+	}, {
+		name: "oci reference",
+		json: `
+{
+  "name": "my_step",
+  "step": {
+    "oci": {
+      "url":"registry.gitlab.com/project/my-repository",
+      "tag":"latest"
+    }
+  }
+}
+`,
+		yaml: `
+name: my_step
+step:
+  oci:
+    url: registry.gitlab.com/project/my-repository
+    tag: latest
+`,
+		wantRef: &Reference{OCI: NewOCIReference("registry.gitlab.com/project/my-repository", "latest")},
 	}}
 
 	data, err := os.ReadFile("step.json")
@@ -91,6 +110,7 @@ step:
 				Name: &myStep,
 				Step: tc.wantRef,
 			}
+
 			switch v := tc.wantRef.(type) {
 			case string:
 				step.Step = v

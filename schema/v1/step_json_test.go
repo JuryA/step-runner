@@ -265,6 +265,13 @@ step:
     url: registry.gitlab.com/gitlab-org/step-runner
 `,
 		wantErr: true,
+	}, {
+		name: "step with missing oci or git reference",
+		step: `
+name: my_step
+step: {}
+`,
+		wantErr: true,
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
