@@ -206,10 +206,16 @@
                     ],
                     "properties": {
                         "url": {
-                            "type": "string"
+                            "type": "string",
+                            "description": "The URL used to access the OCI repository."
                         },
                         "tag": {
-                            "type": "string"
+                            "type": "string",
+                            "description": "A pointer to the image manifest hosted in the OCI repository."
+                        },
+                        "dir": {
+                            "type": "string",
+                            "description": "A directory inside the OCI image where the step can be found."
                         }
                     }
                 }

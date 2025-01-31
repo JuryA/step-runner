@@ -246,6 +246,7 @@ step:
   oci:
     url: registry.gitlab.com/gitlab-org/step-runner
     tag: 0.3.0
+    dir: /path/to/step
 `,
 	}, {
 		name: "oci step with missing url",

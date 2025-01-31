@@ -12,6 +12,9 @@ type OCIReference struct {
 
 	// Tag corresponds to the JSON schema field "tag".
 	Tag string `json:"tag" yaml:"tag" mapstructure:"tag"`
+
+	// Dir corresponds to the JSON schema field "dir".
+	Dir string `json:"dir" yaml:"dir" mapstructure:"dir"`
 }
 
 func NewOCIReference(url, tag string) *OCIReference {
