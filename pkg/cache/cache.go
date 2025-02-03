@@ -7,30 +7,50 @@ import (
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
+const RunnerCacheDirKey = "STEP_RUNNER_CACHE_DIR"
+
 var _ runner.Cache = &cache{}
 
 type cache struct {
 	gitFetcher *git.GitFetcher
+	ociFetcher *oci.Fetcher
 }
 
-func New() (runner.Cache, error) {
-	cacheDir := filepath.Join(os.TempDir(), "step-runner-cache")
-	if err := os.MkdirAll(cacheDir, 0o750); err != nil {
-		return nil, fmt.Errorf("making cache dir %q: %w", cacheDir, err)
+func New(opts ...Option) (runner.Cache, error) {
+	var options options
+
+	options.dir = os.Getenv(RunnerCacheDirKey)
+
+	for _, o := range opts {
+		err := o(&options)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return NewWithOptions(git.New(cacheDir, git.CloneOptions{Depth: 1})), nil
-}
+	if options.dir == "" {
+		userCacheDir, err := os.UserCacheDir()
+		if err != nil {
+			return nil, fmt.Errorf("getting user cache dir: %w", err)
+		}
 
-func NewWithOptions(gitFetcher *git.GitFetcher) runner.Cache {
+		options.dir = filepath.Join(userCacheDir, "step-runner-cache")
+	}
+
+	if err := os.MkdirAll(options.dir, 0o750); err != nil {
+		return nil, fmt.Errorf("making cache dir %q: %w", options.dir, err)
+	}
+
 	return &cache{
-		gitFetcher: gitFetcher,
-	}
+		gitFetcher: git.New(options.dir, git.CloneOptions{Depth: options.gitDepth}),
+		ociFetcher: oci.New(options.dir),
+	}, nil
 }
 
 func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
@@ -59,14 +79,22 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 		return protoStepDef, nil
 	}
 
-	switch {
-	case stepRef.Protocol == proto.StepReferenceProtocol_local:
+	switch stepRef.Protocol {
+	case proto.StepReferenceProtocol_local:
 		return load(parentDir)
 
-	case stepRef.Protocol == proto.StepReferenceProtocol_git:
+	case proto.StepReferenceProtocol_git:
 		dir, err := c.gitFetcher.Get(ctx, stepRef.Url, stepRef.Version)
 		if err != nil {
-			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
+			return nil, fmt.Errorf("fetching step (git) %q: %w", stepRef, err)
+		}
+
+		return load(dir)
+
+	case proto.StepReferenceProtocol_oci:
+		dir, err := c.ociFetcher.Get(ctx, stepRef.Url, stepRef.Version)
+		if err != nil {
+			return nil, fmt.Errorf("fetching step (oci) %q: %w", stepRef, err)
 		}
 
 		return load(dir)

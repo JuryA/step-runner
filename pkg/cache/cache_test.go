@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -24,8 +23,9 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("loads Git step", func(t *testing.T) {
-		gitFetcher := git.New(t.TempDir(), git.CloneOptions{Depth: 0})
-		stepCache := cache.NewWithOptions(gitFetcher)
+		stepCache, err := cache.New(cache.WithDir(t.TempDir()))
+		require.NoError(t, err)
+
 		repo, worktree := bldr.GitRepository().Build(t)
 		gitServerURL := bldr.StartGitSmartHTTPServer(t, repo)
 
@@ -41,8 +41,9 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("loads Git step in sub-directory", func(t *testing.T) {
-		gitFetcher := git.New(t.TempDir(), git.CloneOptions{Depth: 0})
-		stepCache := cache.NewWithOptions(gitFetcher)
+		stepCache, err := cache.New(cache.WithDir(t.TempDir()))
+		require.NoError(t, err)
+
 		repo, worktree := bldr.GitRepository().Build(t)
 		gitServerURL := bldr.StartGitSmartHTTPServer(t, repo)
 
