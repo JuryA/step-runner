@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"gitlab.com/gitlab-org/step-runner/.gitlab/steps/changelog/pkg/changelog"
+	"gitlab.com/gitlab-org/step-runner/steps/changelog/pkg/changelog"
 )
 
 var changelogPath = flag.String("changelog", "", "")

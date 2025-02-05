@@ -8,7 +8,7 @@ go-fmt:
 
 go-lint:
   stage: test
-  image: golangci/golangci-lint:v1.59.1
+  image: golangci/golangci-lint:v1.63.4
   script:
     - golangci-lint run -v --timeout 5m
 
