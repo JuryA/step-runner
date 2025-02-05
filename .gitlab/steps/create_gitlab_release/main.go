@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"gitlab.com/gitlab-org/step-runner/.gitlab/steps/create_gitlab_release/pkg/gitlab"
+	"gitlab.com/gitlab-org/step-runner/steps/create_gitlab_release/pkg/gitlab"
 )
 
 var projectID = flag.String("projectID", "", "")
