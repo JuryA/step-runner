@@ -216,6 +216,10 @@
                         "dir": {
                             "type": "string",
                             "description": "A directory inside the OCI image where the step can be found."
+                        },
+                        "file": {
+                            "type": "string",
+                            "description": "The name of the file that defines the step, defaults to step.yml."
                         }
                     }
                 }

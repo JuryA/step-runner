@@ -11,7 +11,8 @@ func TestOCIReference_Unmarshal(t *testing.T) {
 		json := `{
 			"url": "registry.gitlab.com/project",
 			"tag": "3.0.0",
-			"dir": "/path/to/step" }`
+			"dir": "/path/to/step",
+			"file": "step.yml" }`
 
 		var ref OCIReference
 		err := ref.UnmarshalJSON([]byte(json))
@@ -19,6 +20,7 @@ func TestOCIReference_Unmarshal(t *testing.T) {
 		require.Equal(t, "registry.gitlab.com/project", ref.Url)
 		require.Equal(t, "3.0.0", ref.Tag)
 		require.Equal(t, "/path/to/step", ref.Dir)
+		require.Equal(t, "step.yml", ref.File)
 	})
 
 	t.Run("fails to unmarshal when no tag", func(t *testing.T) {
