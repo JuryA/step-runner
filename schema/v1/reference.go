@@ -24,6 +24,10 @@ func (j *Reference) UnmarshalJSON(b []byte) error {
 	_, gitDefined := raw["git"]
 	_, ociDefined := raw["oci"]
 
+	if gitDefined && ociDefined {
+		return fmt.Errorf("cannot use both git: and oci: fields, please specify only one step location")
+	}
+
 	if !gitDefined && !ociDefined {
 		return fmt.Errorf("field git: or oci: required")
 	}

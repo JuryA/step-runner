@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -99,9 +100,8 @@ step:
 	}}
 
 	data, err := os.ReadFile("step.json")
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
+
 	stepsSchema := jsonschema.MustCompileString("step.json", string(data))
 
 	for _, tc := range cases {
@@ -121,6 +121,42 @@ step:
 				check(t, json.Marshal, json.Unmarshal, []byte(tc.json), step, stepsSchema)
 				check(t, yaml.Marshal, yaml.Unmarshal, []byte(tc.yaml), step, stepsSchema)
 			}
+		})
+	}
+}
+
+func TestReferenceValidation(t *testing.T) {
+	cases := []struct {
+		name    string
+		json    string
+		wantErr string
+	}{{
+		name:    "supplying neither git or oci",
+		json:    `{}`,
+		wantErr: "field git: or oci: required",
+	}, {
+		name: "supplying both git and oci",
+		json: `
+{
+  "git": {
+    "url":"gitlab.com/components/script",
+    "rev":"v1"
+  },
+  "oci": {
+    "url":"registry.gitlab.com/components/my-program",
+    "tag":"1.0.0"
+  }
+}
+`,
+		wantErr: "cannot use both git: and oci: fields, please specify only one step location",
+	}}
+
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			var ref Reference
+			err := json.Unmarshal([]byte(test.json), &ref)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), test.wantErr)
 		})
 	}
 }
