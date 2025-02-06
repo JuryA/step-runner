@@ -3,6 +3,8 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Exec struct {
@@ -31,38 +33,6 @@ func (j *Exec) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("field %s length: must be >= %d", "command", 1)
 	}
 	*j = Exec(plain)
-	return nil
-}
-
-// Git a reference to a step in a Git repository.
-type Reference struct {
-	// Git corresponds to the JSON schema field "git".
-	Git *GitReference `json:"git,omitempty" yaml:"git,omitempty" mapstructure:"git,omitempty"`
-
-	// OCI corresponds to the JSON schema field "oci".
-	OCI *OCIReference `json:"oci,omitempty" yaml:"oci,omitempty" mapstructure:"oci,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *Reference) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-
-	_, gitDefined := raw["git"]
-	_, ociDefined := raw["oci"]
-
-	if !gitDefined && !ociDefined {
-		return fmt.Errorf("field git: or oci: required")
-	}
-
-	type Plain Reference
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = Reference(plain)
 	return nil
 }
 
@@ -98,6 +68,55 @@ type Step struct {
 
 	// Run is a list of sub-steps to run.
 	Run []Step `json:"run,omitempty" yaml:"run,omitempty" mapstructure:"run,omitempty"`
+}
+
+var (
+	_ yaml.Unmarshaler = &Step{}
+	_ json.Unmarshaler = &Step{}
+)
+
+func (s *Step) UnmarshalYAML(value *yaml.Node) error {
+	type Default Step
+	d := (*Default)(s)
+	err := value.Decode(d)
+	if err != nil {
+		return err
+	}
+	return s.unmarshalStep()
+}
+
+func (s *Step) UnmarshalJSON(data []byte) error {
+	type Default Step
+	d := (*Default)(s)
+	err := json.Unmarshal(data, d)
+	if err != nil {
+		return err
+	}
+	return s.unmarshalStep()
+}
+
+func (s *Step) unmarshalStep() error {
+	if s.Step == nil {
+		return nil
+	}
+	switch v := s.Step.(type) {
+	case string:
+		return nil
+	case map[string]any:
+		data, err := json.Marshal(v)
+		if err != nil {
+			return fmt.Errorf("reifying step: %w", err)
+		}
+		ref := &Reference{}
+		err = json.Unmarshal(data, ref)
+		if err != nil {
+			return fmt.Errorf("reifying step: %w", err)
+		}
+		s.Step = ref
+		return nil
+	default:
+		return fmt.Errorf("unsupported type: %T", v)
+	}
 }
 
 // Env is a map of environment variable names to string values.
