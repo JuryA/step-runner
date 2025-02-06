@@ -3,55 +3,40 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
-
-	"gopkg.in/yaml.v3"
 )
 
-var (
-	_ yaml.Unmarshaler = &Step{}
-	_ json.Unmarshaler = &Step{}
-)
+// Reference is a reference to a step in either a Git repository or an OCI image
+type Reference struct {
+	// Git corresponds to the JSON schema field "git".
+	Git *GitReference `json:"git,omitempty" yaml:"git,omitempty" mapstructure:"git,omitempty"`
 
-func (s *Step) UnmarshalYAML(value *yaml.Node) error {
-	type Default Step
-	d := (*Default)(s)
-	err := value.Decode(d)
-	if err != nil {
-		return err
-	}
-	return s.unmarshalStep()
+	// OCI corresponds to the JSON schema field "oci".
+	OCI *OCIReference `json:"oci,omitempty" yaml:"oci,omitempty" mapstructure:"oci,omitempty"`
 }
 
-func (s *Step) UnmarshalJSON(data []byte) error {
-	type Default Step
-	d := (*Default)(s)
-	err := json.Unmarshal(data, d)
-	if err != nil {
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *Reference) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
-	return s.unmarshalStep()
-}
 
-func (s *Step) unmarshalStep() error {
-	if s.Step == nil {
-		return nil
+	_, gitDefined := raw["git"]
+	_, ociDefined := raw["oci"]
+
+	if gitDefined && ociDefined {
+		return fmt.Errorf("cannot use both git: and oci: fields, please specify only one step location")
 	}
-	switch v := s.Step.(type) {
-	case string:
-		return nil
-	case map[string]any:
-		data, err := json.Marshal(v)
-		if err != nil {
-			return fmt.Errorf("reifying step: %w", err)
-		}
-		ref := &Reference{}
-		err = json.Unmarshal(data, ref)
-		if err != nil {
-			return fmt.Errorf("reifying step: %w", err)
-		}
-		s.Step = ref
-		return nil
-	default:
-		return fmt.Errorf("unsupported type: %T", v)
+
+	if !gitDefined && !ociDefined {
+		return fmt.Errorf("field git: or oci: required")
 	}
+
+	type Plain Reference
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = Reference(plain)
+	return nil
 }
