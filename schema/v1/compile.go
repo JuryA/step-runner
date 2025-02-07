@@ -306,12 +306,7 @@ func (s *Step) compileScriptKeywordToStep() error {
 	if len(s.Inputs) != 0 {
 		return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 	}
-	s.Step = &Reference{
-		Git: GitReference{
-			Url: "https://gitlab.com/components/script",
-			Rev: "v2",
-		},
-	}
+	s.Step = &Reference{Git: NewGitReference("https://gitlab.com/components/script", "v2")}
 	s.Inputs = map[string]any{
 		"script": s.Script,
 	}
@@ -329,12 +324,7 @@ func (s *Step) compileActionKeywordToStep() error {
 	if s.Script != nil && *s.Script != "" {
 		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
 	}
-	s.Step = &Reference{
-		Git: GitReference{
-			Url: "https://gitlab.com/components/action-runner",
-			Rev: "main",
-		},
-	}
+	s.Step = &Reference{Git: NewGitReference("https://gitlab.com/components/action-runner", "main")}
 	s.Inputs = map[string]any{
 		"action": s.Action,
 		"inputs": s.Inputs,
@@ -416,6 +406,10 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 }
 
 func (r *Reference) compile() (*proto.Step_Reference, error) {
+	if r.Git == nil {
+		return nil, fmt.Errorf("compiling reference: git not specified")
+	}
+
 	url := defaultHTTPS(r.Git.Url)
 	s := &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,
