@@ -139,7 +139,7 @@ func Test_StepRunnerClient_WaitForReady(t *testing.T) {
 	srvr := server.New(t)
 	t.Run("aborts waiting for ready when deadline has exceeded", func(t *testing.T) {
 		conn := srvr.NewConnection()
-		require.Eventually(t, func() bool { return conn.GetState() == connectivity.TransientFailure }, 2*time.Second, 100*time.Millisecond)
+		require.Eventually(t, func() bool { return conn.GetState() == connectivity.Idle }, 2*time.Second, 100*time.Millisecond)
 
 		step := "run:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"
 		runRequest := test.RunRequest(t, step, nil, nil)
@@ -155,7 +155,7 @@ func Test_StepRunnerClient_WaitForReady(t *testing.T) {
 
 	t.Run("blocks on send until server is ready", func(t *testing.T) {
 		conn := srvr.NewConnection()
-		require.Eventually(t, func() bool { return conn.GetState() == connectivity.TransientFailure }, 2*time.Second, 100*time.Millisecond)
+		require.Eventually(t, func() bool { return conn.GetState() == connectivity.Idle }, 2*time.Second, 100*time.Millisecond)
 
 		srvr.Serve()
 		step := "run:\n  - name: hello_world\n    step: ../../../runner/test_steps/greeting"

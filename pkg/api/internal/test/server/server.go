@@ -57,7 +57,7 @@ func (s *TestStepRunnerServer) Serve() *TestStepRunnerServer {
 }
 
 func (s *TestStepRunnerServer) NewConnection() *grpc.ClientConn {
-	conn, err := grpc.Dial("localhost:"+s.port, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("localhost:"+s.port, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(s.t, err)
 
 	s.t.Cleanup(func() { _ = conn.Close() })
