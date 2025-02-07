@@ -67,7 +67,7 @@ func (c Client) writeLayerToDisk(layer v1.Layer, dir string) error {
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
-			break
+			return nil
 		}
 
 		if err != nil {
@@ -89,8 +89,6 @@ func (c Client) writeLayerToDisk(layer v1.Layer, dir string) error {
 			return err
 		}
 	}
-
-	return nil
 }
 
 func (c Client) writeDir(dir string, perm fs.FileMode) error {
