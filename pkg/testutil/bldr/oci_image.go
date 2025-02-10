@@ -33,6 +33,11 @@ func (b *OCIImageBuilder) WithLayer(layer v1.Layer) *OCIImageBuilder {
 	return b
 }
 
+func (b *OCIImageBuilder) WithFile(path string, content []byte) *OCIImageBuilder {
+	b.layers = append(b.layers, OCIImageLayer(b.t).WithFile(path, content).Build())
+	return b
+}
+
 func (b *OCIImageBuilder) Build() v1.Image {
 	img := empty.Image
 

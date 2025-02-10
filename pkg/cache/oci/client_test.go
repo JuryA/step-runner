@@ -1,4 +1,4 @@
-package oci
+package oci_test
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -16,13 +17,10 @@ func TestOCIRegistry(t *testing.T) {
 		registry := bldr.StartOCIRegistryServer(t)
 		remoteImgRef := registry.RefToImage("my-image", "latest")
 
-		img := bldr.OCIImage(t).
-			WithLayer(bldr.OCIImageLayer(t).WithFile("/my-steps/step.yml", []byte("Hello, world")).Build()).
-			Build()
-
+		img := bldr.OCIImage(t).WithFile("/my-steps/step.yml", []byte("Hello, world")).Build()
 		registry.Push(remoteImgRef, img)
 
-		imageDir, err := NewClient(t.TempDir()).Pull(context.Background(), remoteImgRef)
+		imageDir, err := oci.NewClient(t.TempDir()).Pull(context.Background(), remoteImgRef)
 		require.NoError(t, err)
 
 		content, err := os.ReadFile(filepath.Join(imageDir, "my-steps", "step.yml"))
@@ -34,7 +32,7 @@ func TestOCIRegistry(t *testing.T) {
 		registry := bldr.StartOCIRegistryServer(t)
 		remoteImgRef := registry.RefToImage("my-image", "latest")
 
-		_, err := NewClient(t.TempDir()).Pull(context.Background(), remoteImgRef)
+		_, err := oci.NewClient(t.TempDir()).Pull(context.Background(), remoteImgRef)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cannot find remote OCI image matching local platform")
 	})
