@@ -8,8 +8,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-func FindManifestForPlatforms(forFor []platforms.Platform, manifests []v1.Descriptor) *v1.Descriptor {
-	for _, platform := range forFor {
+func FindManifestForPlatforms(findFor []platforms.Platform, manifests []v1.Descriptor) *v1.Descriptor {
+	for _, platform := range findFor {
 		matched := FindManifestForPlatform(platform, manifests)
 
 		if matched != nil {
@@ -20,11 +20,11 @@ func FindManifestForPlatforms(forFor []platforms.Platform, manifests []v1.Descri
 	return nil
 }
 
-func FindManifestForPlatform(forFor platforms.Platform, manifests []v1.Descriptor) *v1.Descriptor {
+func FindManifestForPlatform(findFor platforms.Platform, manifests []v1.Descriptor) *v1.Descriptor {
 	var matched *v1.Descriptor
 	var matchedPlatform platforms.Platform
 
-	matcher := platforms.Only(forFor)
+	matcher := platforms.Only(findFor)
 
 	for _, manifest := range manifests {
 		platform := ConvertPlatformV1ToCtrd(manifest.Platform)
