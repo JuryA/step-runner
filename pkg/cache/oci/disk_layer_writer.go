@@ -27,7 +27,7 @@ func (w *DiskLayerWriter) Write(layers []v1.Layer, outputDir string) error {
 	for _, layer := range layers {
 		if err := w.writeLayerToDisk(layer, outputDir); err != nil {
 			hash, _ := layer.Digest()
-			return fmt.Errorf("writing OCI image layer to disk %q: %w", hash, err)
+			return fmt.Errorf("layer %q: %w", hash, err)
 		}
 	}
 
@@ -35,14 +35,9 @@ func (w *DiskLayerWriter) Write(layers []v1.Layer, outputDir string) error {
 }
 
 func (w *DiskLayerWriter) writeLayerToDisk(layer v1.Layer, dir string) error {
-	digest, err := layer.Digest()
-	if err != nil {
-		return fmt.Errorf("getting layer digest: %w", err)
-	}
-
 	layerRd, err := layer.Uncompressed()
 	if err != nil {
-		return fmt.Errorf("opening uncompressed reader %v: %w", digest, err)
+		return fmt.Errorf("opening uncompressed reader: %w", err)
 	}
 	defer layerRd.Close()
 
@@ -55,7 +50,7 @@ func (w *DiskLayerWriter) writeLayerToDisk(layer v1.Layer, dir string) error {
 		}
 
 		if err != nil {
-			return fmt.Errorf("advancing to next entry in tar archive %v: %w", digest, err)
+			return fmt.Errorf("advancing to next tar entry: %w", err)
 		}
 
 		filePath := filepath.Join(dir, sanitizer.SanitizePath(hdr.Name))
