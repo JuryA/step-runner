@@ -95,6 +95,23 @@ func TestOCIRegistry_Pull_Platforms(t *testing.T) {
 			expectFileExists: "/arm64",
 		},
 		{
+			name: "downloads linux arm64v8 if arm64 isn't available",
+			imgIndex: bldr.OCIImageIndex(t).
+				WithPlatformImage(bldr.OCIPlatform.LinuxARM64v8, bldr.OCIImage(t).WithEmptyFile("/arm64v8").Build()).
+				Build(),
+			downloadFor:      []*v1.Platform{bldr.OCIPlatform.LinuxARM64},
+			expectFileExists: "/arm64v8",
+		},
+		{
+			name: "downloads the most specific arm64v8 compatible image",
+			imgIndex: bldr.OCIImageIndex(t).
+				WithPlatformImage(bldr.OCIPlatform.LinuxARM64v8, bldr.OCIImage(t).WithEmptyFile("/arm64v8").Build()).
+				WithPlatformImage(bldr.OCIPlatform.LinuxARM64, bldr.OCIImage(t).WithEmptyFile("/arm64").Build()).
+				Build(),
+			downloadFor:      []*v1.Platform{bldr.OCIPlatform.LinuxARM64v8},
+			expectFileExists: "/arm64v8",
+		},
+		{
 			name: "doesn't download linux arm64 if v7 isn't available",
 			imgIndex: bldr.OCIImageIndex(t).
 				WithPlatformImage(bldr.OCIPlatform.LinuxARM64, bldr.OCIImage(t).WithEmptyFile("/arm64").Build()).
@@ -111,19 +128,18 @@ func TestOCIRegistry_Pull_Platforms(t *testing.T) {
 			expectError: "didn't find an image matching platform linux/arm64/v8",
 		},
 		{
-			name: "downloads the most specific available image",
+			name: "falls back to generic",
 			imgIndex: bldr.OCIImageIndex(t).
-				WithPlatformImage(bldr.OCIPlatform.LinuxARM64v7, bldr.OCIImage(t).WithEmptyFile("/arm64v7").Build()).
-				WithPlatformImage(bldr.OCIPlatform.LinuxARM64, bldr.OCIImage(t).WithEmptyFile("/arm64").Build()).
+				WithPlatformImage(bldr.OCIPlatform.Generic, bldr.OCIImage(t).WithEmptyFile("/generic").Build()).
 				Build(),
-			downloadFor:      []*v1.Platform{bldr.OCIPlatform.LinuxARM64v8, bldr.OCIPlatform.LinuxARM64v7, bldr.OCIPlatform.LinuxARM64},
-			expectFileExists: "/arm64v7",
+			downloadFor:      []*v1.Platform{bldr.OCIPlatform.LinuxARM64v7, bldr.OCIPlatform.Generic},
+			expectFileExists: "/generic",
 		},
 		{
 			name:        "prints all platforms in error message",
-			imgIndex:    bldr.OCIImageIndex(t).WithPlatformImage(bldr.OCIPlatform.Generic, bldr.OCIImage(t).Build()).Build(),
-			downloadFor: []*v1.Platform{bldr.OCIPlatform.LinuxARM64v8, bldr.OCIPlatform.LinuxARM64v7, bldr.OCIPlatform.LinuxARM64},
-			expectError: "didn't find an image matching platform linux/arm64/v8 or linux/arm64/v7 or linux/arm64",
+			imgIndex:    bldr.OCIImageIndex(t).WithPlatformImage(bldr.OCIPlatform.WindowsAMD64, bldr.OCIImage(t).Build()).Build(),
+			downloadFor: []*v1.Platform{bldr.OCIPlatform.LinuxARM64v8, bldr.OCIPlatform.Generic},
+			expectError: "didn't find an image matching platform linux/arm64/v8 or generic",
 		},
 	}
 
