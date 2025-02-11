@@ -8,7 +8,41 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-func ConvertV1PlatformToContainerdPlatform(v1Platform *v1.Platform) platforms.Platform {
+func FindManifestForPlatforms(forFor []platforms.Platform, manifests []v1.Descriptor) *v1.Descriptor {
+	for _, platform := range forFor {
+		matched := FindManifestForPlatform(platform, manifests)
+
+		if matched != nil {
+			return matched
+		}
+	}
+
+	return nil
+}
+
+func FindManifestForPlatform(forFor platforms.Platform, manifests []v1.Descriptor) *v1.Descriptor {
+	var matched *v1.Descriptor
+	var matchedPlatform platforms.Platform
+
+	matcher := platforms.Only(forFor)
+
+	for _, manifest := range manifests {
+		platform := ConvertPlatformV1ToCtrd(manifest.Platform)
+
+		if !matcher.Match(platform) {
+			continue
+		}
+
+		if matched == nil || matcher.Less(platform, matchedPlatform) {
+			matched = &manifest
+			matchedPlatform = platform
+		}
+	}
+
+	return matched
+}
+
+func ConvertPlatformV1ToCtrd(v1Platform *v1.Platform) platforms.Platform {
 	return platforms.Platform{
 		Architecture: v1Platform.Architecture,
 		OS:           v1Platform.OS,
@@ -18,7 +52,7 @@ func ConvertV1PlatformToContainerdPlatform(v1Platform *v1.Platform) platforms.Pl
 	}
 }
 
-func DescribePlatforms(plats []platforms.Platform) string {
+func DescribePlatforms(plats ...platforms.Platform) string {
 	descriptions := []string{}
 
 	for _, platform := range plats {

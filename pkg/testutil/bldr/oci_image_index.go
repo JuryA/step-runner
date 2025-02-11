@@ -39,6 +39,7 @@ func (b *OCIImageIndexBuilder) Build() v1.ImageIndex {
 
 var OCIPlatform = struct {
 	LinuxAMD64   *v1.Platform
+	Linux386     *v1.Platform
 	LinuxARM64v8 *v1.Platform
 	LinuxARM64v7 *v1.Platform
 	LinuxARM64   *v1.Platform
@@ -46,6 +47,7 @@ var OCIPlatform = struct {
 	Generic      *v1.Platform
 }{
 	LinuxAMD64:   &v1.Platform{OS: "linux", Architecture: "amd64"},
+	Linux386:     &v1.Platform{OS: "linux", Architecture: "386"},
 	LinuxARM64v8: &v1.Platform{OS: "linux", Architecture: "arm64", Variant: "v8"},
 	LinuxARM64v7: &v1.Platform{OS: "linux", Architecture: "arm64", Variant: "v7"},
 	LinuxARM64:   &v1.Platform{OS: "linux", Architecture: "arm64"},

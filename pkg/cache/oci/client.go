@@ -60,7 +60,6 @@ func (c *Client) Pull(ctx context.Context, ref name.Reference, opts ...func(*Pul
 }
 
 // fetchImage is like 'remote.Image()' but uses github.com/containerd/platforms for better platform negotiation.
-// For example, containerd allows retrieving an image for multiple platforms at once.
 func (c *Client) fetchImage(ctx context.Context, ref name.Reference, findForPlatform []platforms.Platform) (v1.Image, error) {
 	idx, err := remote.Index(ref, remote.WithContext(ctx))
 	if err != nil {
@@ -79,20 +78,16 @@ func (c *Client) fetchImage(ctx context.Context, ref name.Reference, findForPlat
 		return nil, fmt.Errorf("getting index manifest: %w", err)
 	}
 
-	matcher := platforms.Ordered(findForPlatform...)
+	manifest := FindManifestForPlatforms(findForPlatform, indexManifest.Manifests)
 
-	for _, manifest := range indexManifest.Manifests {
-		platform := ConvertV1PlatformToContainerdPlatform(manifest.Platform)
-
-		if matcher.Match(platform) {
-			image, err := idx.Image(manifest.Digest)
-			if err != nil {
-				log.Fatalf("fetching image for manifest %v: %v", manifest.Digest, err)
-			}
-
-			return image, nil
-		}
+	if manifest == nil {
+		return nil, fmt.Errorf("didn't find an image matching platform %s", DescribePlatforms(findForPlatform...))
 	}
 
-	return nil, fmt.Errorf("didn't find an image matching platform %s", DescribePlatforms(findForPlatform))
+	image, err := idx.Image(manifest.Digest)
+	if err != nil {
+		log.Fatalf("fetching image for manifest %v: %v", manifest.Digest, err)
+	}
+
+	return image, nil
 }
