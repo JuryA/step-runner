@@ -21,6 +21,7 @@ func TestDiskLayerWriter(t *testing.T) {
 		require.NoError(t, err)
 
 		fileContent, err := os.ReadFile(filepath.Join(dir, "path/to/file"))
+		require.NoError(t, err)
 		require.Equal(t, []byte("foobar"), fileContent)
 	})
 
@@ -32,6 +33,7 @@ func TestDiskLayerWriter(t *testing.T) {
 		require.NoError(t, err)
 
 		fileContent, err := os.ReadFile(filepath.Join(dir, "/my-file"))
+		require.NoError(t, err)
 		require.Equal(t, []byte{}, fileContent)
 	})
 }
