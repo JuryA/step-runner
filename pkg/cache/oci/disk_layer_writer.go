@@ -83,9 +83,9 @@ func (w *DiskLayerWriter) writeFile(path string, content io.Reader, perm fs.File
 	if err != nil {
 		return fmt.Errorf("creating file %q: %w", path, err)
 	}
+	defer file.Close()
 
 	if _, err := io.Copy(file, content); err != nil {
-		_ = file.Close()
 		return fmt.Errorf("writing to file %q: %w", path, err)
 	}
 
