@@ -80,4 +80,29 @@ func TestCache(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})
+
+	t.Run("loads OCI step in sub-directory", func(t *testing.T) {
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		layer := bldr.
+			OCIImageLayer(t).
+			WithFile("/foo/bar/bob/step.yml", []byte("spec:\n---\nexec: {command: [bash]}")).
+			Build()
+		img := bldr.OCIImage(t).WithLayer(layer).Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		registry.PushImageIndex(remoteImgRef, imgIndex)
+
+		res := bldr.
+			OCIStepResource().
+			WithImgRef(remoteImgRef).
+			WithPath("foo", "bar", "bob").
+			Build()
+		ociFetcher := oci.NewOCIFetcher(t.TempDir())
+
+		stepCache := cache.NewWithOptions(cache.WithOCIFetcher(ociFetcher))
+		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
+		require.NoError(t, err)
+		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
+	})
 }

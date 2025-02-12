@@ -28,6 +28,11 @@ func (b *OCIStepResourceBuilder) WithImgRef(imgRef name.Reference) *OCIStepResou
 	return b
 }
 
+func (b *OCIStepResourceBuilder) WithPath(path ...string) *OCIStepResourceBuilder {
+	b.path = path
+	return b
+}
+
 func (b *OCIStepResourceBuilder) Build() *runner.OCIStepResource {
 	return runner.NewOCIStepResource(b.url, b.tag, b.path, "step.yml")
 }
