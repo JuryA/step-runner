@@ -5,7 +5,9 @@ go 1.23.0
 toolchain go1.23.5
 
 require (
+	github.com/containerd/platforms v0.2.1
 	github.com/distribution/distribution/v3 v3.0.0-rc.2
+	github.com/docker/docker v27.5.0+incompatible
 	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/google/go-containerregistry v0.20.3
@@ -32,6 +34,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
