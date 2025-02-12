@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -25,7 +26,7 @@ func TestCache(t *testing.T) {
 
 	t.Run("loads Git step", func(t *testing.T) {
 		gitFetcher := git.New(t.TempDir(), git.CloneOptions{Depth: 0})
-		stepCache := cache.NewWithOptions(gitFetcher)
+		stepCache := cache.NewWithOptions(cache.WithGitFetcher(gitFetcher))
 		repo, worktree := bldr.GitRepository().Build(t)
 		gitServerURL := bldr.StartGitSmartHTTPServer(t, repo)
 
@@ -42,7 +43,7 @@ func TestCache(t *testing.T) {
 
 	t.Run("loads Git step in sub-directory", func(t *testing.T) {
 		gitFetcher := git.New(t.TempDir(), git.CloneOptions{Depth: 0})
-		stepCache := cache.NewWithOptions(gitFetcher)
+		stepCache := cache.NewWithOptions(cache.WithGitFetcher(gitFetcher))
 		repo, worktree := bldr.GitRepository().Build(t)
 		gitServerURL := bldr.StartGitSmartHTTPServer(t, repo)
 
@@ -57,6 +58,23 @@ func TestCache(t *testing.T) {
 			WithPath("foo", "bar", "bob").
 			WithVersion(commit).
 			Build()
+		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
+		require.NoError(t, err)
+		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
+	})
+
+	t.Run("loads OCI step", func(t *testing.T) {
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		layer := bldr.OCIImageLayer(t).WithFile("/step.yml", []byte("spec:\n---\nexec: {command: [bash]}")).Build()
+		img := bldr.OCIImage(t).WithLayer(layer).Build()
+		registry.Push(remoteImgRef, img)
+
+		res := bldr.OCIStepResource().WithImgRef(remoteImgRef).Build()
+		ociFetcher := oci.NewOCIFetcher()
+
+		stepCache := cache.NewWithOptions(cache.WithOCIFetcher(ociFetcher))
 		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)

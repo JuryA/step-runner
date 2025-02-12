@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
@@ -16,6 +17,7 @@ var _ runner.Cache = &cache{}
 
 type cache struct {
 	gitFetcher *git.GitFetcher
+	ociFetcher *oci.OCIFetcher
 }
 
 func New() (runner.Cache, error) {
@@ -24,13 +26,30 @@ func New() (runner.Cache, error) {
 		return nil, fmt.Errorf("making cache dir %q: %w", cacheDir, err)
 	}
 
-	return NewWithOptions(git.New(cacheDir, git.CloneOptions{Depth: 1})), nil
+	gitFetcher := git.New(cacheDir, git.CloneOptions{Depth: 1})
+	return NewWithOptions(WithGitFetcher(gitFetcher)), nil
 }
 
-func NewWithOptions(gitFetcher *git.GitFetcher) runner.Cache {
-	return &cache{
-		gitFetcher: gitFetcher,
+func WithGitFetcher(fetcher *git.GitFetcher) func(*cache) {
+	return func(c *cache) {
+		c.gitFetcher = fetcher
 	}
+}
+
+func WithOCIFetcher(fetcher *oci.OCIFetcher) func(*cache) {
+	return func(c *cache) {
+		c.ociFetcher = fetcher
+	}
+}
+
+func NewWithOptions(options ...func(*cache)) runner.Cache {
+	c := &cache{}
+
+	for _, opt := range options {
+		opt(c)
+	}
+
+	return c
 }
 
 func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
