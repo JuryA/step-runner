@@ -84,6 +84,11 @@ func (s *OCIRegistryServer) Push(remoteImgRef name.Reference, img v1.Image) {
 	require.NoError(s.t, err)
 }
 
+func (s *OCIRegistryServer) PushImageIndex(remoteImgRef name.Reference, img v1.ImageIndex) {
+	err := remote.WriteIndex(remoteImgRef, img)
+	require.NoError(s.t, err)
+}
+
 func (s *OCIRegistryServer) Stop() {
 	s.cancelFn()
 
