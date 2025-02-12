@@ -1,4 +1,4 @@
-package oci_test
+package internal_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci/internal"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -101,10 +101,10 @@ func TestPlatform_FindManifestForPlatforms(t *testing.T) {
 
 			findFor := make([]platforms.Platform, len(test.findFor))
 			for i, platform := range test.findFor {
-				findFor[i] = oci.ConvertPlatformV1ToCtrd(platform)
+				findFor[i] = internal.ConvertPlatformV1ToCtrd(platform)
 			}
 
-			matched := oci.FindManifestForPlatforms(findFor, manifests)
+			matched := internal.FindManifestForPlatforms(findFor, manifests)
 			if test.expect == nil {
 				require.Nil(t, matched)
 			} else {

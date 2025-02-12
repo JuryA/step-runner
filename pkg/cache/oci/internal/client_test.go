@@ -1,4 +1,4 @@
-package oci_test
+package internal_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci/internal"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -23,7 +23,7 @@ func TestOCIRegistry_Pull_Image(t *testing.T) {
 		imgIndex := bldr.OCIImageIndex(t).WithPlatformImage(bldr.OCIPlatform.Generic, img).Build()
 		registry.PushImageIndex(remoteImgRef, imgIndex)
 
-		client := oci.NewClient(t.TempDir())
+		client := internal.NewClient(t.TempDir())
 		imageDir, err := client.Pull(context.Background(), remoteImgRef, WithPlatforms(bldr.OCIPlatform.Generic))
 		require.NoError(t, err)
 
@@ -38,7 +38,7 @@ func TestOCIRegistry_Pull_Image(t *testing.T) {
 
 		registry.Push(remoteImgRef, bldr.OCIImage(t).WithEmptyFile("/my-file").Build())
 
-		client := oci.NewClient(t.TempDir())
+		client := internal.NewClient(t.TempDir())
 		_, err := client.Pull(context.Background(), remoteImgRef, WithPlatforms(bldr.OCIPlatform.Generic))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "fetching index: unexpected media type for ImageIndex(): application/vnd.docker.distribution.manifest.v2+json; call Image() instead")
@@ -48,7 +48,7 @@ func TestOCIRegistry_Pull_Image(t *testing.T) {
 		registry := bldr.StartOCIRegistryServer(t)
 		remoteImgRef := registry.RefToImage("my-image", "latest")
 
-		_, err := oci.NewClient(t.TempDir()).Pull(context.Background(), remoteImgRef)
+		_, err := internal.NewClient(t.TempDir()).Pull(context.Background(), remoteImgRef)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "MANIFEST_UNKNOWN: manifest unknown; unknown tag=latest")
 	})
@@ -126,7 +126,7 @@ func TestOCIRegistry_Pull_Platforms(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			registry.PushImageIndex(remoteImgRef, test.imgIndex)
 
-			client := oci.NewClient(t.TempDir())
+			client := internal.NewClient(t.TempDir())
 			imageDir, err := client.Pull(ctx, remoteImgRef, WithPlatforms(test.downloadFor...))
 
 			if test.expectError == "" {
@@ -140,12 +140,12 @@ func TestOCIRegistry_Pull_Platforms(t *testing.T) {
 	}
 }
 
-func WithPlatforms(v1Platforms ...*v1.Platform) func(*oci.PullOption) {
-	return func(opt *oci.PullOption) {
+func WithPlatforms(v1Platforms ...*v1.Platform) func(*internal.PullOption) {
+	return func(opt *internal.PullOption) {
 		opt.Platforms = make([]platforms.Platform, len(v1Platforms))
 
 		for i := range v1Platforms {
-			opt.Platforms[i] = oci.ConvertPlatformV1ToCtrd(v1Platforms[i])
+			opt.Platforms[i] = internal.ConvertPlatformV1ToCtrd(v1Platforms[i])
 		}
 	}
 }
