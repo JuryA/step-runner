@@ -55,32 +55,9 @@ func NewWithOptions(options ...func(*cache)) runner.Cache {
 func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
 	stepRef := stepResource.ToProtoStepRef()
 
-	load := func(dir string) (*proto.SpecDefinition, error) {
-		path := filepath.Join(stepRef.Path...)
-		filename := filepath.Join(dir, path, stepRef.Filename)
-		spec, step, err := schema.LoadSteps(filename)
-		if err != nil {
-			return nil, fmt.Errorf("loading file %q: %w", filename, err)
-		}
-		protoSpec, err := spec.Compile()
-		if err != nil {
-			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
-		}
-		protoDef, err := step.Compile()
-		if err != nil {
-			return nil, fmt.Errorf("compiling file %q: %w", dir, err)
-		}
-		protoStepDef := &proto.SpecDefinition{
-			Spec:       protoSpec,
-			Definition: protoDef,
-		}
-		protoStepDef.Dir = filepath.Join(dir, path)
-		return protoStepDef, nil
-	}
-
 	switch {
 	case stepRef.Protocol == proto.StepReferenceProtocol_local:
-		return load(parentDir)
+		return c.load(stepRef, parentDir)
 
 	case stepRef.Protocol == proto.StepReferenceProtocol_git:
 		dir, err := c.gitFetcher.Get(ctx, stepRef.Url, stepRef.Version)
@@ -88,9 +65,44 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}
 
-		return load(dir)
+		return c.load(stepRef, dir)
+
+	case stepRef.Protocol == proto.StepReferenceProtocol_oci:
+		dir, err := c.ociFetcher.Fetch(ctx, stepRef.Url, stepRef.Version)
+		if err != nil {
+			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
+		}
+
+		return c.load(stepRef, dir)
 
 	default:
 		return nil, fmt.Errorf("invalid step reference: %v", stepRef)
 	}
+}
+
+func (c *cache) load(stepRef *proto.Step_Reference, stepDir string) (*proto.SpecDefinition, error) {
+	path := filepath.Join(stepRef.Path...)
+	filename := filepath.Join(stepDir, path, stepRef.Filename)
+
+	spec, step, err := schema.LoadSteps(filename)
+	if err != nil {
+		return nil, fmt.Errorf("loading file %q: %w", filename, err)
+	}
+
+	protoSpec, err := spec.Compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling file %q: %w", stepDir, err)
+	}
+
+	protoDef, err := step.Compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling file %q: %w", stepDir, err)
+	}
+
+	protoStepDef := &proto.SpecDefinition{
+		Spec:       protoSpec,
+		Definition: protoDef,
+		Dir:        filepath.Join(stepDir, path),
+	}
+	return protoStepDef, nil
 }

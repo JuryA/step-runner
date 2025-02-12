@@ -69,10 +69,11 @@ func TestCache(t *testing.T) {
 
 		layer := bldr.OCIImageLayer(t).WithFile("/step.yml", []byte("spec:\n---\nexec: {command: [bash]}")).Build()
 		img := bldr.OCIImage(t).WithLayer(layer).Build()
-		registry.Push(remoteImgRef, img)
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		registry.PushImageIndex(remoteImgRef, imgIndex)
 
 		res := bldr.OCIStepResource().WithImgRef(remoteImgRef).Build()
-		ociFetcher := oci.NewOCIFetcher()
+		ociFetcher := oci.NewOCIFetcher(t.TempDir())
 
 		stepCache := cache.NewWithOptions(cache.WithOCIFetcher(ociFetcher))
 		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
