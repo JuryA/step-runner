@@ -27,7 +27,8 @@ func New() (runner.Cache, error) {
 	}
 
 	gitFetcher := git.New(cacheDir, git.CloneOptions{Depth: 1})
-	return NewWithOptions(WithGitFetcher(gitFetcher)), nil
+	ociFetcher := oci.NewOCIFetcher(cacheDir)
+	return NewWithOptions(WithGitFetcher(gitFetcher), WithOCIFetcher(ociFetcher)), nil
 }
 
 func WithGitFetcher(fetcher *git.GitFetcher) func(*cache) {
