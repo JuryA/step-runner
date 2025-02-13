@@ -1,6 +1,7 @@
 ## v0.5.0 (2025-02-05)
 
 - Upgrade Go to use version `1.23`. See !176.
+- Steps can be loaded from OCI images. See !178. 
 
 ## v0.4.0 (2025-01-30)
 
