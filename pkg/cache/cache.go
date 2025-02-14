@@ -56,11 +56,11 @@ func NewWithOptions(options ...func(*cache)) runner.Cache {
 func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
 	stepRef := stepResource.ToProtoStepRef()
 
-	switch {
-	case stepRef.Protocol == proto.StepReferenceProtocol_local:
+	switch stepRef.Protocol {
+	case proto.StepReferenceProtocol_local:
 		return c.load(stepRef, parentDir)
 
-	case stepRef.Protocol == proto.StepReferenceProtocol_git:
+	case proto.StepReferenceProtocol_git:
 		dir, err := c.gitFetcher.Get(ctx, stepRef.Url, stepRef.Version)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
@@ -68,7 +68,7 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 
 		return c.load(stepRef, dir)
 
-	case stepRef.Protocol == proto.StepReferenceProtocol_oci:
+	case proto.StepReferenceProtocol_oci:
 		dir, err := c.ociFetcher.Fetch(ctx, stepRef.Url, stepRef.Version)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
