@@ -480,7 +480,55 @@ step: http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/josephburnett/he
 			Filename: "step.yml",
 			Version:  "main",
 		},
-	}}
+	}, {
+		step: `
+step:
+    oci:
+        url: registry.gitlab.com/steps/my-step
+        tag: latest
+`,
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_oci,
+			Url:      "registry.gitlab.com/steps/my-step",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "latest",
+		},
+	}, {
+		step: `
+step:
+    oci:
+        url: registry.gitlab.com/steps/my-step
+        tag: ""
+`,
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_oci,
+			Url:      "registry.gitlab.com/steps/my-step",
+			Path:     nil,
+			Filename: "step.yml",
+			Version:  "latest",
+		},
+	}, {
+		step: `
+step:
+    oci:
+        url: registry.gitlab.com/steps/my-step
+        tag: latest
+        dir: "steps"
+        filename: step.yml
+`,
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_oci,
+			Url:      "registry.gitlab.com/steps/my-step",
+			Path:     []string{"steps"},
+			Filename: "step.yml",
+			Version:  "latest",
+		},
+	}, {
+		step: `
+step:
+`,
+		wantErr: true}}
 
 	for _, c := range cases {
 		t.Run(c.step, func(t *testing.T) {
