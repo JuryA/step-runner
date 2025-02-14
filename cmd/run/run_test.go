@@ -1,10 +1,13 @@
 package run
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/report"
+	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/stretchr/testify/require"
@@ -121,5 +124,90 @@ func TestRunCmd(t *testing.T) {
 		require.Len(t, result.SubStepResults, 2)
 		require.Contains(t, result.SubStepResults[1].Outputs, "echo")
 		require.Equal(t, "hello world", result.SubStepResults[1].Outputs["echo"].GetStringValue(), string(data))
+	})
+
+	t.Run("runs step loaded from OCI image", func(t *testing.T) {
+		_ = os.Remove(stepResultsFileJSON)
+
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		echoStepContents, err := os.ReadFile("../../pkg/runner/test_steps/echo/step.yml")
+		require.NoError(t, err)
+
+		img := bldr.OCIImage(t).WithFile("/step.yml", echoStepContents).Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		registry.PushImageIndex(remoteImgRef, imgIndex)
+
+		cmd := NewCmd()
+		cmd.SetArgs([]string{
+			"--write-steps-results",
+			"--oci-url", strings.TrimSuffix(remoteImgRef.Name(), ":"+remoteImgRef.Identifier()),
+			"--oci-tag", remoteImgRef.Identifier(),
+			"--inputs",
+			"echo=hello world",
+			"--step-results-file",
+			stepResultsFileJSON,
+		})
+		err = cmd.Execute()
+		require.NoError(t, err)
+
+		file, err := os.ReadFile(stepResultsFileJSON)
+		require.NoError(t, err)
+
+		var result proto.StepResult
+		err = protojson.Unmarshal(file, &result)
+		require.NoError(t, err)
+		require.Equal(t, proto.StepResult_success, result.Status)
+		require.Len(t, result.SubStepResults, 1)
+		require.Equal(t, "hello world", result.SubStepResults[0].Outputs["echo"].GetStringValue(), string(file))
+	})
+
+	t.Run("runs step loaded from OCI image in subdirectory with different filename", func(t *testing.T) {
+		_ = os.Remove(stepResultsFileJSON)
+
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		stepYAML := `
+spec:
+  outputs:
+    echo:
+      type: string
+---
+exec:
+  command: [ sh, -c, "cat ${{step_dir}}/foo.json >${{output_file}}" ]`
+
+		fooJSON := fmt.Sprintf("%s\n", `{"name": "echo", "value": "hello world!"}`)
+
+		img := bldr.OCIImage(t).
+			WithFile("/foo/bar/foo-step.yml", []byte(stepYAML)).
+			WithFile("/foo/bar/foo.json", []byte(fooJSON)).
+			Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		registry.PushImageIndex(remoteImgRef, imgIndex)
+
+		cmd := NewCmd()
+		cmd.SetArgs([]string{
+			"--write-steps-results",
+			"--oci-url", strings.TrimSuffix(remoteImgRef.Name(), ":"+remoteImgRef.Identifier()),
+			"--oci-tag", remoteImgRef.Identifier(),
+			"--oci-dir", "/foo/bar",
+			"--oci-filename", "foo-step.yml",
+			"--step-results-file",
+			stepResultsFileJSON,
+		})
+		err := cmd.Execute()
+		require.NoError(t, err)
+
+		file, err := os.ReadFile(stepResultsFileJSON)
+		require.NoError(t, err)
+
+		var result proto.StepResult
+		err = protojson.Unmarshal(file, &result)
+		require.NoError(t, err)
+		require.Equal(t, proto.StepResult_success, result.Status)
+		require.Len(t, result.SubStepResults, 1)
+		require.Equal(t, "hello world!", result.SubStepResults[0].Outputs["echo"].GetStringValue(), string(file))
 	})
 }

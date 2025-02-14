@@ -78,6 +78,9 @@ func (p *Parser) parseStepResource(stepRef *proto.Step_Reference) (StepResource,
 
 	case proto.StepReferenceProtocol_git:
 		return NewGitStepResource(stepRef.Url, stepRef.Version, stepRef.Path, stepRef.Filename), nil
+
+	case proto.StepReferenceProtocol_oci:
+		return NewOCIStepResource(stepRef.Url, stepRef.Version, stepRef.Path, stepRef.Filename), nil
 	}
 
 	return nil, fmt.Errorf("unknown step reference protocol: %s", stepRef.Protocol)

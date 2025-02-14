@@ -3,6 +3,7 @@ package bldr
 import (
 	"testing"
 
+	"github.com/containerd/platforms"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -31,6 +32,20 @@ func (b *OCIImageIndexBuilder) WithPlatformImage(platform *v1.Platform, image v1
 	})
 
 	return b
+}
+
+func (b *OCIImageIndexBuilder) WithImageForThisPlatform(img v1.Image) *OCIImageIndexBuilder {
+	thisPlatform := platforms.DefaultSpec()
+	v1Platform := &v1.Platform{
+		OS:           thisPlatform.OS,
+		Architecture: thisPlatform.Architecture,
+		Variant:      thisPlatform.Variant,
+		OSVersion:    thisPlatform.OSVersion,
+		OSFeatures:   thisPlatform.OSFeatures,
+		Features:     nil,
+	}
+
+	return b.WithPlatformImage(v1Platform, img)
 }
 
 func (b *OCIImageIndexBuilder) Build() v1.ImageIndex {

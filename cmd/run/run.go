@@ -23,6 +23,10 @@ import (
 
 type Options struct {
 	Step              string
+	OCIURL            string
+	OCITag            string
+	OCIDir            string
+	OCIFilename       string
 	GitURL            string
 	GitRev            string
 	GitDir            string
@@ -50,6 +54,10 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&options.OCIURL, "oci-url", "", "oci url of step, without the tag")
+	cmd.Flags().StringVar(&options.OCITag, "oci-tag", "", "oci tag of step")
+	cmd.Flags().StringVar(&options.OCIDir, "oci-dir", "", "oci dir of step")
+	cmd.Flags().StringVar(&options.OCIFilename, "oci-filename", "", "oci filename of step yaml")
 	cmd.Flags().StringVar(&options.GitURL, "git-url", "", "git url of step")
 	cmd.Flags().StringVar(&options.GitRev, "git-rev", "", "git revision of step")
 	cmd.Flags().StringVar(&options.GitDir, "git-dir", "", "git directory of step")
@@ -206,6 +214,19 @@ func yamlStep(options *Options) ([]byte, error) {
 
 		if options.GitDir != "" {
 			yml.WriteString(fmt.Sprintf("      dir: %s\n", options.GitDir))
+		}
+	} else if options.OCIURL != "" {
+		yml.WriteString("- step:\n")
+		yml.WriteString("    oci:\n")
+		yml.WriteString(fmt.Sprintf("      url: %s\n", options.OCIURL))
+		yml.WriteString(fmt.Sprintf("      tag: %s\n", options.OCITag))
+
+		if options.OCIDir != "" {
+			yml.WriteString(fmt.Sprintf("      dir: %s\n", options.OCIDir))
+		}
+
+		if options.OCIFilename != "" {
+			yml.WriteString(fmt.Sprintf("      file: %s\n", options.OCIFilename))
 		}
 	} else {
 		return nil, fmt.Errorf("no step specified")

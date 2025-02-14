@@ -19,8 +19,8 @@ func TestOCIReference_Unmarshal(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "registry.gitlab.com/project", ref.Url)
 		require.Equal(t, "3.0.0", ref.Tag)
-		require.Equal(t, "/path/to/step", ref.Dir)
-		require.Equal(t, "step.yml", ref.File)
+		require.Equal(t, "/path/to/step", *ref.Dir)
+		require.Equal(t, "step.yml", *ref.File)
 	})
 
 	t.Run("fails to unmarshal when no tag", func(t *testing.T) {
