@@ -91,3 +91,22 @@ func (c *Client) fetchImage(ctx context.Context, ref name.Reference, findForPlat
 
 	return image, nil
 }
+
+func WithPlatforms(v1Platforms ...*v1.Platform) func(*PullOption) {
+	return func(opt *PullOption) {
+		opt.Platforms = make([]platforms.Platform, len(v1Platforms))
+
+		for i := range v1Platforms {
+			opt.Platforms[i] = ConvertPlatformV1ToCtrd(v1Platforms[i])
+		}
+	}
+}
+
+func (c *Client) PushImageIndex(ctx context.Context, ref name.Reference, index v1.ImageIndex) error {
+	err := remote.WriteIndex(ref, index, remote.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("push index image: %w", err)
+	}
+
+	return nil
+}
