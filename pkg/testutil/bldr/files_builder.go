@@ -1,6 +1,7 @@
 package bldr
 
 import (
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -59,4 +60,9 @@ func (b *FilesBuilder) Build() string {
 	}
 
 	return b.baseDir
+}
+
+func (b *FilesBuilder) BuildFS() fs.FS {
+	dir := b.Build()
+	return os.DirFS(dir)
 }
