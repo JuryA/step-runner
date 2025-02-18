@@ -2,9 +2,7 @@ package internal
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/containerd/platforms"
@@ -63,13 +61,6 @@ func (c *Client) Pull(ctx context.Context, ref name.Reference, opts ...func(*Pul
 func (c *Client) fetchImage(ctx context.Context, ref name.Reference, findForPlatform []platforms.Platform) (v1.Image, error) {
 	idx, err := remote.Index(ref, remote.WithContext(ctx))
 	if err != nil {
-		e := err
-
-		for e != nil {
-			fmt.Printf("error is: %v\n", e)
-			e = errors.Unwrap(e)
-		}
-
 		return nil, fmt.Errorf("fetching index: %w", err)
 	}
 
@@ -86,7 +77,7 @@ func (c *Client) fetchImage(ctx context.Context, ref name.Reference, findForPlat
 
 	image, err := idx.Image(manifest.Digest)
 	if err != nil {
-		log.Fatalf("fetching image for manifest %v: %v", manifest.Digest, err)
+		return nil, fmt.Errorf("fetching image for manifest %v: %v", manifest.Digest, err)
 	}
 
 	return image, nil
