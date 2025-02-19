@@ -2,18 +2,25 @@ package run
 
 import (
 	"bytes"
+	"context"
 	ctx "context"
 	"fmt"
+	"math"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/types/known/structpb"
 	"gopkg.in/yaml.v3"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/client/basic"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/report"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
@@ -37,6 +44,7 @@ type Options struct {
 	WriteStepResults  bool
 	StepResultsFile   string
 	StepResultsFormat string
+	Endpoint          string
 }
 
 func NewCmd() *cobra.Command {
@@ -44,7 +52,7 @@ func NewCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "run [local or remote step, step starting with 'step: [location]', or omit if using git flags]",
-		Short: "Run a step locally",
+		Short: "Run a step locally or at endpoint",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				options.Step = args[0]
@@ -70,6 +78,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&options.WriteStepResults, "write-steps-results", defaultWriteStepsFile, "write step-results.json file, note this file may contain secrets")
 	cmd.Flags().StringVar(&options.StepResultsFile, "step-results-file", "", "file to write step results")
 	cmd.Flags().StringVar(&options.StepResultsFormat, "step-results-format", "json", "format in which to write step results (`json` or `prototext`)")
+	cmd.Flags().StringVar(&options.Endpoint, "endpoint", "", "endpoint of remote step runner")
 	return cmd
 }
 
@@ -77,7 +86,38 @@ func run(options *Options) error {
 
 	var specDef *proto.SpecDefinition
 
-	if options.TextProtoStepFile != "" {
+	switch {
+	case options.Endpoint != "":
+
+		yml, err := yamlStep(options)
+		if err != nil {
+			return err
+		}
+		steps := "spec: {}\n---\nrun:\n" + string(yml)
+
+		conn, err := grpc.Dial(options.Endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return fmt.Errorf("error connecting to endpoint: %w", err)
+		}
+
+		basicClient := basic.New(conn)
+		id := strconv.Itoa(rand.Intn(math.MaxInt32))
+		err = basicClient.Run(ctx.Background(), &client.RunRequest{
+			Id:    id,
+			Steps: steps,
+		})
+		if err != nil {
+			return fmt.Errorf("error running steps: %w", err)
+		}
+
+		_, err = basicClient.FollowLogs(context.Background(), id, 0, os.Stdout)
+		if err != nil {
+			return fmt.Errorf("error following logs: %w", err)
+		}
+
+		return nil
+
+	case options.TextProtoStepFile != "":
 
 		data, err := os.ReadFile(options.TextProtoStepFile)
 		if err != nil {
@@ -97,7 +137,7 @@ func run(options *Options) error {
 
 		specDef.Dir = filepath.Dir(options.TextProtoStepFile)
 
-	} else {
+	default:
 
 		yml, err := yamlStep(options)
 		if err != nil {
@@ -231,6 +271,8 @@ func yamlStep(options *Options) ([]byte, error) {
 	} else {
 		return nil, fmt.Errorf("no step specified")
 	}
+
+	yml.WriteString("  name: run\n")
 
 	yml.WriteString(yamlObject("inputs", options.Inputs))
 	yml.WriteString(yamlObject("env", options.Env))

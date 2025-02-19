@@ -7,6 +7,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/variables"
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/syncmap"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -156,4 +157,65 @@ func (s *StepRunnerService) Status(ctx context.Context, request *proto.StatusReq
 	}
 
 	return &proto.StatusResponse{Jobs: stats}, nil
+}
+
+func (s *StepRunnerService) Debug(debugServer proto.StepRunner_DebugServer) error {
+	for {
+		req, err := debugServer.Recv()
+		if err != nil {
+			return err
+		}
+		sendState := func() {
+			specDef, message := specDef()
+			debugServer.Send(&proto.DebugResponse{
+				SpecDef: specDef,
+				Message: message,
+			})
+		}
+		switch req.CommandOneof.(type) {
+		case *proto.DebugRequest_Stop_:
+			runner.Breakpoint.Stop()
+			sendState()
+		case *proto.DebugRequest_Step_:
+			runner.Breakpoint.Step()
+			sendState()
+		case *proto.DebugRequest_View_:
+			sendState()
+		case *proto.DebugRequest_Continue_:
+			runner.Breakpoint.Continue()
+		case *proto.DebugRequest_Print_:
+			debugServer.Send(&proto.DebugResponse{
+				Message: eval(req.GetPrint().Expression) + "\n",
+			})
+		case *proto.DebugRequest_Set_:
+			err = runner.Breakpoint.Set(req.GetSet().Path, req.GetSet().Value)
+			if err != nil {
+				debugServer.Send(&proto.DebugResponse{
+					Message: err.Error() + "\n",
+				})
+			} else {
+				sendState()
+			}
+		}
+	}
+}
+
+func specDef() (*proto.SpecDefinition, string) {
+	s := <-runner.Breakpoint.State()
+	if s.Point == nil || s.Point.SpecDef == nil {
+		return nil, "(no breakpoint)\n"
+	}
+	return s.Point.SpecDef, ""
+}
+
+func eval(exp string) string {
+	s := <-runner.Breakpoint.State()
+	if s.Point == nil || s.Point.StepsContext == nil {
+		return "(no breakpoint)\n"
+	}
+	res, err := expression.ExpandString(s.Point.StepsContext.View(), exp)
+	if err != nil {
+		return err.Error() + "\n"
+	}
+	return res
 }

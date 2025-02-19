@@ -6,6 +6,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/cmd"
 	"gitlab.com/gitlab-org/step-runner/cmd/bootstrap"
 	"gitlab.com/gitlab-org/step-runner/cmd/ci"
+	"gitlab.com/gitlab-org/step-runner/cmd/debug"
 	"gitlab.com/gitlab-org/step-runner/cmd/proxy"
 	"gitlab.com/gitlab-org/step-runner/cmd/run"
 	"gitlab.com/gitlab-org/step-runner/cmd/serve"
@@ -13,11 +14,12 @@ import (
 
 func main() {
 	rootCmd := cmd.NewRootCmd()
+	rootCmd.AddCommand(bootstrap.NewCmd())
 	rootCmd.AddCommand(ci.NewCmd())
+	rootCmd.AddCommand(debug.NewCmd())
+	rootCmd.AddCommand(proxy.NewCmd())
 	rootCmd.AddCommand(run.NewCmd())
 	rootCmd.AddCommand(serve.NewCmd())
-	rootCmd.AddCommand(proxy.NewCmd())
-	rootCmd.AddCommand(bootstrap.NewCmd())
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
