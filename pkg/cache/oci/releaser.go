@@ -12,28 +12,29 @@ import (
 )
 
 type Releaser struct {
-	client       *internal.Client
-	imageFactory *internal.ImageFactory
+	client *internal.Client
 }
 
 func NewReleaser(downloadDir string) *Releaser {
 	return &Releaser{
-		client:       internal.NewClient(downloadDir),
-		imageFactory: internal.NewImageFactory(),
+		client: internal.NewClient(downloadDir),
 	}
 }
 
 func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts *Artifacts) error {
-	createdAt := time.Now()
+	factory := internal.NewImageFactory()
+	defer factory.CleanUp()
+
 	imagePlatforms := make([]internal.PlatformImage, 0)
+	createdAt := time.Now()
 
 	for _, platform := range artifacts.Platforms() {
-		layers, err := r.buildImageLayers(artifacts.Generic().And(artifacts.ForPlatform(platform)))
+		layers, err := r.buildImageLayers(factory, artifacts.Generic().And(artifacts.ForPlatform(platform)))
 		if err != nil {
 			return err
 		}
 
-		image, err := r.imageFactory.BuildImage(createdAt, layers...)
+		image, err := factory.BuildImage(createdAt, layers...)
 		if err != nil {
 			return err
 		}
@@ -41,7 +42,7 @@ func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts
 		imagePlatforms = append(imagePlatforms, internal.PlatformImage{Image: image, Platform: platform})
 	}
 
-	imageIndex := r.imageFactory.BuildImageIndex(createdAt, imagePlatforms...)
+	imageIndex := factory.BuildImageIndex(createdAt, imagePlatforms...)
 
 	err := r.client.PushImageIndex(ctx, imgRef, imageIndex)
 	if err != nil {
@@ -51,11 +52,11 @@ func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts
 	return nil
 }
 
-func (r *Releaser) buildImageLayers(artifacts *Artifacts) ([]v1.Layer, error) {
+func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts *Artifacts) ([]v1.Layer, error) {
 	layers := make([]v1.Layer, 0)
 
 	for _, artifact := range artifacts.Values() {
-		layer, err := r.imageFactory.BuildLayer(artifact.DirFS())
+		layer, err := factory.BuildLayer(artifact.DirFS())
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", artifact, err)
 		}

@@ -31,13 +31,13 @@ type PlatformImage struct {
 }
 
 type ImageFactory struct {
-	buildDirMu sync.Mutex
-	buildDir   string
+	workDirMu sync.Mutex
+	workDir   string
 }
 
 func NewImageFactory() *ImageFactory {
 	return &ImageFactory{
-		buildDir: "",
+		workDir: "",
 	}
 }
 
@@ -105,34 +105,40 @@ func (f *ImageFactory) BuildLayer(archiveFS fs.FS) (v1.Layer, error) {
 	return layer, nil
 }
 
-func (f *ImageFactory) createBuildDir() (string, error) {
-	f.buildDirMu.Lock()
-	defer f.buildDirMu.Unlock()
+func (f *ImageFactory) CleanUp() {
+	f.workDirMu.Lock()
+	defer f.workDirMu.Unlock()
 
-	if f.buildDir == "" {
+	_ = os.RemoveAll(f.workDir)
+	f.workDir = ""
+}
+
+func (f *ImageFactory) createWorkDir() (string, error) {
+	f.workDirMu.Lock()
+	defer f.workDirMu.Unlock()
+
+	if f.workDir == "" {
 		tempDir, err := os.MkdirTemp("", "")
 		if err != nil {
-			return "", fmt.Errorf("creating build dir: %w", err)
+			return "", fmt.Errorf("creating work dir: %w", err)
 		}
 
-		f.buildDir = tempDir
+		f.workDir = tempDir
 	}
 
-	return f.buildDir, nil
+	return f.workDir, nil
 }
 
 func (f *ImageFactory) archive(archiveFS fs.FS) (string, error) {
-	outputDir, err := f.createBuildDir()
+	workDir, err := f.createWorkDir()
 	if err != nil {
 		return "", fmt.Errorf("archive %s: %w", archiveFS, err)
 	}
 
-	// potentially unreliable, however in practice, fs.FS will always be os.dirFS (a string)
+	// potentially unreliable, however in practice, fs.FS will be os.dirFS (a string)
 	hash := sha256.New()
 	hash.Write([]byte(fmt.Sprintf("%s", archiveFS)))
-
-	filename := fmt.Sprintf("%x.tar.zstd", hash.Sum([]byte{}))
-	archiveName := filepath.Join(outputDir, filename)
+	archiveName := filepath.Join(workDir, fmt.Sprintf("%x.tar.zstd", hash.Sum([]byte{})))
 
 	if _, err := os.Stat(archiveName); err == nil {
 		return archiveName, nil
