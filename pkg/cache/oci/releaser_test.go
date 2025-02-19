@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
@@ -22,28 +24,72 @@ func TestReleaser_Release(t *testing.T) {
 
 		baseDir := bldr.Files(t).
 			WriteFileWithPerms("dist/common/step.yml", "spec:", 0600).
-			WriteFile("dist/linux/amd64/program", []byte{1, 2, 3}).
+			WriteFile("dist/linux/amd64/program", "123").
 			Build()
 
+		artifacts := oci.NewArtifacts(
+			oci.NewArtifact(filepath.Join(baseDir, "dist/common"), bldr.OCIPlatform.Generic),
+			oci.NewArtifact(filepath.Join(baseDir, "dist/linux/amd64"), bldr.OCIPlatform.LinuxAMD64))
+
 		downloadDir := t.TempDir()
-		err := oci.NewReleaser(downloadDir).Release(ctx, remoteImgRef, baseDir)
+		err := oci.NewReleaser(downloadDir).Release(ctx, remoteImgRef, artifacts)
 		require.NoError(t, err)
 
-		imageURL := strings.TrimSuffix(remoteImgRef.Name(), ":"+remoteImgRef.Identifier())
-		fetcher := oci.NewOCIFetcher(downloadDir)
-		imageDir, err := fetcher.Fetch(ctx, imageURL, remoteImgRef.Identifier(), internal.WithPlatforms(bldr.OCIPlatform.LinuxAMD64))
-		require.NoError(t, err)
-
+		imageDir := fetch(t, remoteImgRef, bldr.OCIPlatform.LinuxAMD64)
 		stat, err := os.Stat(filepath.Join(imageDir, "step.yml"))
 		require.NoError(t, err)
 		require.Equal(t, os.FileMode(0600), stat.Mode())
 
-		stepFile, err := os.ReadFile(filepath.Join(imageDir, "step.yml"))
-		require.NoError(t, err)
-		require.Equal(t, "spec:", string(stepFile))
-
-		programFile, err := os.ReadFile(filepath.Join(imageDir, "program"))
-		require.NoError(t, err)
-		require.Equal(t, []byte{1, 2, 3}, programFile)
+		require.Equal(t, "spec:", readFile(t, filepath.Join(imageDir, "step.yml")))
+		require.Equal(t, "123", readFile(t, filepath.Join(imageDir, "program")))
 	})
+
+	t.Run("publishes images for many architectures", func(t *testing.T) {
+		ctx := context.Background()
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		baseDir := bldr.Files(t).
+			WriteFile("dist/common/step.yml", "spec:").
+			WriteFile("dist/linux/amd64/program", "amd64").
+			WriteFile("dist/linux/arm64/program", "arm64").
+			Build()
+
+		artifacts := oci.NewArtifacts(
+			oci.NewArtifact(filepath.Join(baseDir, "dist/common"), bldr.OCIPlatform.Generic),
+			oci.NewArtifact(filepath.Join(baseDir, "dist/linux/amd64"), bldr.OCIPlatform.LinuxAMD64),
+			oci.NewArtifact(filepath.Join(baseDir, "dist/linux/arm64"), bldr.OCIPlatform.LinuxARM64))
+
+		downloadDir := t.TempDir()
+		err := oci.NewReleaser(downloadDir).Release(ctx, remoteImgRef, artifacts)
+		require.NoError(t, err)
+
+		amd64Dir := fetch(t, remoteImgRef, bldr.OCIPlatform.LinuxAMD64)
+		require.Equal(t, "spec:", readFile(t, filepath.Join(amd64Dir, "step.yml")))
+		require.Equal(t, "amd64", readFile(t, filepath.Join(amd64Dir, "program")))
+
+		arm64Dir := fetch(t, remoteImgRef, bldr.OCIPlatform.LinuxARM64)
+		require.Equal(t, "spec:", readFile(t, filepath.Join(arm64Dir, "step.yml")))
+		require.Equal(t, "arm64", readFile(t, filepath.Join(arm64Dir, "program")))
+	})
+}
+
+func readFile(t *testing.T, path string) string {
+	require.FileExists(t, path)
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+
+	return string(data)
+}
+
+func fetch(t *testing.T, remoteImgRef name.Reference, forPlatforms ...*v1.Platform) string {
+	url := strings.TrimSuffix(remoteImgRef.Name(), ":"+remoteImgRef.Identifier())
+	tag := remoteImgRef.Identifier()
+	platform := internal.WithPlatforms(forPlatforms...)
+
+	imageDir, err := oci.NewOCIFetcher(t.TempDir()).Fetch(context.Background(), url, tag, platform)
+	require.NoError(t, err)
+
+	return imageDir
 }

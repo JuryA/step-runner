@@ -1,4 +1,4 @@
-package internal
+package internal_test
 
 import (
 	"archive/tar"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci/internal"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -15,7 +16,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 	t.Run("builds empty layer", func(t *testing.T) {
 		archiveFS := bldr.Files(t).BuildFS()
 
-		layer, err := NewImageFactory().BuildLayer(archiveFS, ".")
+		layer, err := internal.NewImageFactory().BuildLayer(archiveFS)
 		require.NoError(t, err)
 
 		uncompressed, err := layer.Uncompressed()
@@ -27,7 +28,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 	})
 
 	t.Run("has steps media type", func(t *testing.T) {
-		layer, err := NewImageFactory().BuildLayer(bldr.Files(t).BuildFS(), ".")
+		layer, err := internal.NewImageFactory().BuildLayer(bldr.Files(t).BuildFS())
 		require.NoError(t, err)
 
 		mediaType, err := layer.MediaType()
@@ -37,10 +38,10 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 
 	t.Run("archives using tar format", func(t *testing.T) {
 		archiveFS := bldr.Files(t).
-			WriteFile("/files/animals/sheep.txt", "how now brown cow").
+			WriteFile("/animals/sheep.txt", "how now brown cow").
 			BuildFS()
 
-		layer, err := NewImageFactory().BuildLayer(archiveFS, "files")
+		layer, err := internal.NewImageFactory().BuildLayer(archiveFS)
 		require.NoError(t, err)
 
 		mediaType, err := layer.MediaType()
@@ -61,9 +62,9 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 	})
 
 	t.Run("compresses using zstd", func(t *testing.T) {
-		archiveFS := bldr.Files(t).WriteFile("/files/sheep.txt", "baa").BuildFS()
+		archiveFS := bldr.Files(t).WriteFile("/sheep.txt", "baa").BuildFS()
 
-		layer, err := NewImageFactory().BuildLayer(archiveFS, "files")
+		layer, err := internal.NewImageFactory().BuildLayer(archiveFS)
 		require.NoError(t, err)
 
 		compressed, err := layer.Compressed()
@@ -75,14 +76,14 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 	})
 
 	t.Run("can rebuild the same folder", func(t *testing.T) {
-		archiveFS := bldr.Files(t).WriteFile("/files/sheep.txt", "baa").BuildFS()
+		archiveFS := bldr.Files(t).WriteFile("/sheep.txt", "baa").BuildFS()
 
-		factory := NewImageFactory()
-		layerA, err := factory.BuildLayer(archiveFS, "files")
+		factory := internal.NewImageFactory()
+		layerA, err := factory.BuildLayer(archiveFS)
 		require.NoError(t, err)
 		require.NotNil(t, layerA)
 
-		layerB, err := factory.BuildLayer(archiveFS, "files")
+		layerB, err := factory.BuildLayer(archiveFS)
 		require.NoError(t, err)
 		require.NotNil(t, layerB)
 
@@ -102,7 +103,7 @@ func TestImageFactory_BuildImage(t *testing.T) {
 	layerA := bldr.OCIImageLayer(t).WithFile("/foo", []byte("foo")).Build()
 	layerB := bldr.OCIImageLayer(t).WithFile("/bar", []byte("bar")).Build()
 
-	image, err := NewImageFactory().BuildImage(createdAt, layerA, layerB)
+	image, err := internal.NewImageFactory().BuildImage(createdAt, layerA, layerB)
 	require.NoError(t, err)
 
 	layers, err := image.Layers()
@@ -121,7 +122,8 @@ func TestImageFactory_BuildImageIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	image := bldr.OCIImage(t).WithFile("/foo", []byte("foo")).Build()
-	imageIndex := NewImageFactory().BuildImageIndex(createdAt, bldr.OCIPlatform.LinuxARM64v7, image)
+	imagePlatform := internal.PlatformImage{Image: image, Platform: bldr.OCIPlatform.LinuxARM64v7}
+	imageIndex := internal.NewImageFactory().BuildImageIndex(createdAt, imagePlatform)
 
 	mediaType, err := imageIndex.MediaType()
 	require.NoError(t, err)

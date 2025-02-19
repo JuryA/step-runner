@@ -1,13 +1,12 @@
 package internal
 
 import (
-	"errors"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -26,6 +25,11 @@ const (
 	StepsOCILayerZSTD types.MediaType = "application/vnd.gitlab.step.layer.v1.tar+zstd"
 )
 
+type PlatformImage struct {
+	Image    v1.Image
+	Platform *v1.Platform
+}
+
 type ImageFactory struct {
 	buildDirMu sync.Mutex
 	buildDir   string
@@ -37,21 +41,23 @@ func NewImageFactory() *ImageFactory {
 	}
 }
 
-func (f *ImageFactory) BuildImageIndex(createdAt time.Time, platform *v1.Platform, image v1.Image) v1.ImageIndex {
+func (f *ImageFactory) BuildImageIndex(createdAt time.Time, imagePlatforms ...PlatformImage) v1.ImageIndex {
 	annotations := map[string]string{
 		"org.opencontainers.image.created": createdAt.UTC().Format(time.RFC3339),
 	}
 
 	index := mutate.Annotations(empty.Index, annotations).(v1.ImageIndex)
 
-	index = mutate.AppendManifests(index, mutate.IndexAddendum{
-		Add: image,
-		Descriptor: v1.Descriptor{
-			MediaType: types.OCIManifestSchema1,
-			Platform:  platform,
-			// we could add artifact type here too, github.com/google/go-containerregistry does not support this
-		},
-	})
+	for _, imgPlatform := range imagePlatforms {
+		index = mutate.AppendManifests(index, mutate.IndexAddendum{
+			Add: imgPlatform.Image,
+			Descriptor: v1.Descriptor{
+				MediaType: types.OCIManifestSchema1,
+				Platform:  imgPlatform.Platform,
+				// we could add artifact type here too, github.com/google/go-containerregistry does not support this
+			},
+		})
+	}
 
 	return index
 }
@@ -83,8 +89,8 @@ func (f *ImageFactory) BuildImage(createdAt time.Time, layers ...v1.Layer) (v1.I
 	return image, nil
 }
 
-func (f *ImageFactory) BuildLayer(archiveFS fs.FS, subDir string) (v1.Layer, error) {
-	archive, err := f.archive(archiveFS, subDir)
+func (f *ImageFactory) BuildLayer(archiveFS fs.FS) (v1.Layer, error) {
+	archive, err := f.archive(archiveFS)
 	if err != nil {
 		return nil, fmt.Errorf("creating layer: %w", err)
 	}
@@ -115,22 +121,21 @@ func (f *ImageFactory) createBuildDir() (string, error) {
 	return f.buildDir, nil
 }
 
-func (f *ImageFactory) archive(archiveFS fs.FS, subDir string) (string, error) {
+func (f *ImageFactory) archive(archiveFS fs.FS) (string, error) {
 	outputDir, err := f.createBuildDir()
 	if err != nil {
-		return "", fmt.Errorf("archive %s: %w", subDir, err)
+		return "", fmt.Errorf("archive %s: %w", archiveFS, err)
 	}
 
-	filename := fmt.Sprintf("%s.tar.zstd", strings.ReplaceAll(subDir, "/", "_"))
+	// potentially unreliable, however in practice, fs.FS will always be os.dirFS (a string)
+	hash := sha256.New()
+	hash.Write([]byte(fmt.Sprintf("%s", archiveFS)))
+
+	filename := fmt.Sprintf("%x.tar.zstd", hash.Sum([]byte{}))
 	archiveName := filepath.Join(outputDir, filename)
 
-	if _, err := fs.Stat(archiveFS, subDir); errors.Is(err, fs.ErrNotExist) {
+	if _, err := os.Stat(archiveName); err == nil {
 		return archiveName, nil
-	}
-
-	subDirFS, err := fs.Sub(archiveFS, subDir)
-	if err != nil {
-		return "", fmt.Errorf("archive %s: reading dir: %w", subDir, err)
 	}
 
 	file, err := os.Create(archiveName)
@@ -148,8 +153,8 @@ func (f *ImageFactory) archive(archiveFS fs.FS, subDir string) (string, error) {
 	tw := tar.NewWriter(zw)
 	defer tw.Close()
 
-	if err := tw.AddFS(subDirFS); err != nil {
-		return "", fmt.Errorf("archive: taring directory %s: %w", subDirFS, err)
+	if err := tw.AddFS(archiveFS); err != nil {
+		return "", fmt.Errorf("archive: taring directory %s: %w", archiveFS, err)
 	}
 
 	if err := tw.Close(); err != nil {
