@@ -29,7 +29,7 @@ func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts
 	createdAt := time.Now()
 
 	for _, platform := range artifacts.Platforms() {
-		layers, err := r.buildImageLayers(factory, artifacts.Generic().And(artifacts.ForPlatform(platform)))
+		layers, err := r.buildImageLayers(factory, artifacts.Generic().Add(artifacts.ForPlatform(platform)))
 		if err != nil {
 			return err
 		}

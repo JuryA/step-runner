@@ -60,7 +60,7 @@ func TestArtifacts_Generic(t *testing.T) {
 	require.Equal(t, genericB, artifacts.Values()[1])
 }
 
-func TestArtifacts_And(t *testing.T) {
+func TestArtifacts_Add(t *testing.T) {
 	a := oci.NewArtifact("/common/a", bldr.OCIPlatform.Generic)
 	b := oci.NewArtifact("/common/b", bldr.OCIPlatform.Generic)
 	c := oci.NewArtifact("/linux/arm64", bldr.OCIPlatform.LinuxARM64)
@@ -69,7 +69,7 @@ func TestArtifacts_And(t *testing.T) {
 	artifactsB := oci.NewArtifacts(c)
 	artifactsC := oci.NewArtifacts()
 
-	artifacts := artifactsA.And(artifactsB).And(artifactsC)
+	artifacts := artifactsA.Add(artifactsB).Add(artifactsC)
 	require.Len(t, artifacts.Values(), 3)
 	require.Equal(t, a, artifacts.Values()[0])
 	require.Equal(t, b, artifacts.Values()[1])

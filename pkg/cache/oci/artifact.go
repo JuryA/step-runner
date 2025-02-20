@@ -59,7 +59,7 @@ func (a *Artifacts) Platforms() []*v1.Platform {
 	return unique
 }
 
-func (a *Artifacts) And(artifacts *Artifacts) *Artifacts {
+func (a *Artifacts) Add(artifacts *Artifacts) *Artifacts {
 	combined := make([]*Artifact, 0, len(a.values)+len(artifacts.values))
 	combined = append(combined, a.values...)
 	combined = append(combined, artifacts.values...)
