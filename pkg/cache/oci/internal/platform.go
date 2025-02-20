@@ -8,6 +8,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
+var PlatformGeneric = &v1.Platform{OS: "generic", Architecture: "generic"}
+
 func FindManifestForPlatforms(findFor []platforms.Platform, manifests []v1.Descriptor) *v1.Descriptor {
 	for _, platform := range findFor {
 		matched := FindManifestForPlatform(platform, manifests)

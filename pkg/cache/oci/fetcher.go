@@ -19,14 +19,14 @@ func NewOCIFetcher(downloadDir string) *OCIFetcher {
 	}
 }
 
-func (f *OCIFetcher) Fetch(ctx context.Context, url, tag string) (string, error) {
+func (f *OCIFetcher) Fetch(ctx context.Context, url, tag string, opts ...func(*internal.PullOption)) (string, error) {
 	urlAndTag := fmt.Sprintf("%s:%s", url, tag)
 	imgRef, err := name.ParseReference(urlAndTag)
 	if err != nil {
 		return "", fmt.Errorf("OCI image: %w", err)
 	}
 
-	dir, err := f.client.Pull(ctx, imgRef)
+	dir, err := f.client.Pull(ctx, imgRef, opts...)
 	if err != nil {
 		return "", err
 	}

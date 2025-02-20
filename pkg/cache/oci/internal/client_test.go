@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/containerd/platforms"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
 
@@ -24,7 +23,7 @@ func TestOCIRegistry_Pull_Image(t *testing.T) {
 		registry.PushImageIndex(remoteImgRef, imgIndex)
 
 		client := internal.NewClient(t.TempDir())
-		imageDir, err := client.Pull(context.Background(), remoteImgRef, WithPlatforms(bldr.OCIPlatform.Generic))
+		imageDir, err := client.Pull(context.Background(), remoteImgRef, internal.WithPlatforms(bldr.OCIPlatform.Generic))
 		require.NoError(t, err)
 
 		content, err := os.ReadFile(filepath.Join(imageDir, "my-steps", "step.yml"))
@@ -39,7 +38,7 @@ func TestOCIRegistry_Pull_Image(t *testing.T) {
 		registry.Push(remoteImgRef, bldr.OCIImage(t).WithEmptyFile("/my-file").Build())
 
 		client := internal.NewClient(t.TempDir())
-		_, err := client.Pull(context.Background(), remoteImgRef, WithPlatforms(bldr.OCIPlatform.Generic))
+		_, err := client.Pull(context.Background(), remoteImgRef, internal.WithPlatforms(bldr.OCIPlatform.Generic))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "fetching index: unexpected media type for ImageIndex(): application/vnd.docker.distribution.manifest.v2+json; call Image() instead")
 	})
@@ -127,7 +126,7 @@ func TestOCIRegistry_Pull_Platforms(t *testing.T) {
 			registry.PushImageIndex(remoteImgRef, test.imgIndex)
 
 			client := internal.NewClient(t.TempDir())
-			imageDir, err := client.Pull(ctx, remoteImgRef, WithPlatforms(test.downloadFor...))
+			imageDir, err := client.Pull(ctx, remoteImgRef, internal.WithPlatforms(test.downloadFor...))
 
 			if test.expectError == "" {
 				require.NoError(t, err)
@@ -137,15 +136,5 @@ func TestOCIRegistry_Pull_Platforms(t *testing.T) {
 				require.Contains(t, err.Error(), test.expectError)
 			}
 		})
-	}
-}
-
-func WithPlatforms(v1Platforms ...*v1.Platform) func(*internal.PullOption) {
-	return func(opt *internal.PullOption) {
-		opt.Platforms = make([]platforms.Platform, len(v1Platforms))
-
-		for i := range v1Platforms {
-			opt.Platforms[i] = internal.ConvertPlatformV1ToCtrd(v1Platforms[i])
-		}
 	}
 }
