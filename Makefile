@@ -40,6 +40,8 @@ $(TARGETS): GOOS=$(firstword $(subst /, ,$@))
 $(TARGETS): GOARCH=$(lastword $(subst /, ,$@))
 $(TARGETS): BINARY=$(BIN_PATH)/step-runner-$(subst /,-,$@)
 $(TARGETS):
+	@TARGET=$@ $(MAKE) build-builtin-steps
+
 	@mkdir -p $(BIN_PATH)
 	CGO_ENABLED=0 GOOS="$(GOOS)" GOARCH="$(GOARCH)" go build \
 		-ldflags '-X "$(MODULE_NAME)/cmd.stepRunnerVersion=$(STEP_RUNNER_VERSION)"' \
@@ -74,7 +76,7 @@ generate:
 	$(MAKE) .generate-proto
 
 .PHONY: test
-test: generate
+test: generate build-builtin-steps
 	CI_STEPS_DEBUG=true go test ./...
 	@git --no-pager diff --compact-summary --exit-code -- go.mod go.sum && echo 'Go modules are tidy and complete!'
 	@git --no-pager diff --compact-summary --exit-code -- ./internal/plugin/proto && echo 'proto code is up-to-date!'
@@ -113,7 +115,7 @@ $(PROTOVALIDATE_DIST):
 	@rm "$(local)/protovalidate.zip"
 
 .PHONY: clean
-clean:
+clean: clean-builtin-steps
 	@rm -rf $(BIN_PATH)
 
 .PHONY: image
@@ -134,3 +136,15 @@ $(GOIMPORTS):
 go-fmt: DIRECTORY := ./pkg ./cmd main.go
 go-fmt: $(GOIMPORTS)
 	$(GOIMPORTS) -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
+
+.PHONY: build-builtin-steps
+build-builtin-steps: TARGET ?= $(LOCAL_OS_ARCH)
+build-builtin-steps: STEP_DIRS = $(shell find steps/source -type f -name Makefile -exec dirname {} \;)
+build-builtin-steps:
+	@for dir in $(STEP_DIRS); do \
+		TARGET="$(TARGET)" $(MAKE) -C $$dir build; \
+	done
+
+.PHONY: clean-builtin-steps
+clean-builtin-steps:
+	@find steps/bin -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
