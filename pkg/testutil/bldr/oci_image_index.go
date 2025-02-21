@@ -67,5 +67,5 @@ var OCIPlatform = struct {
 	LinuxARM64v7: &v1.Platform{OS: "linux", Architecture: "arm64", Variant: "v7"},
 	LinuxARM64:   &v1.Platform{OS: "linux", Architecture: "arm64"},
 	WindowsAMD64: &v1.Platform{OS: "windows", Architecture: "amd64", OSVersion: "10.0.26100.2894"},
-	Generic:      &v1.Platform{OS: "generic"},
+	Generic:      &v1.Platform{OS: "generic", Architecture: "generic"},
 }
