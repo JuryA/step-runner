@@ -6,18 +6,21 @@ import (
 	"os"
 	"path/filepath"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/builtin"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
+	"gitlab.com/gitlab-org/step-runner/steps"
 )
 
 var _ runner.Cache = &cache{}
 
 type cache struct {
-	gitFetcher *git.GitFetcher
-	ociFetcher *oci.OCIFetcher
+	gitFetcher     *git.GitFetcher
+	ociFetcher     *oci.OCIFetcher
+	builtInFetcher *builtin.Fetcher
 }
 
 func New() (runner.Cache, error) {
@@ -26,9 +29,11 @@ func New() (runner.Cache, error) {
 		return nil, fmt.Errorf("making cache dir %q: %w", cacheDir, err)
 	}
 
-	gitFetcher := git.New(cacheDir, git.CloneOptions{Depth: 1})
-	ociFetcher := oci.NewOCIFetcher(cacheDir)
-	return NewWithOptions(WithGitFetcher(gitFetcher), WithOCIFetcher(ociFetcher)), nil
+	return NewWithOptions(
+		WithGitFetcher(git.New(cacheDir, git.CloneOptions{Depth: 1})),
+		WithOCIFetcher(oci.NewOCIFetcher(cacheDir)),
+		WithBuiltInFetcher(builtin.NewFetcher(steps.FindBuiltInStep)),
+	), nil
 }
 
 func WithGitFetcher(fetcher *git.GitFetcher) func(*cache) {
@@ -40,6 +45,12 @@ func WithGitFetcher(fetcher *git.GitFetcher) func(*cache) {
 func WithOCIFetcher(fetcher *oci.OCIFetcher) func(*cache) {
 	return func(c *cache) {
 		c.ociFetcher = fetcher
+	}
+}
+
+func WithBuiltInFetcher(fetcher *builtin.Fetcher) func(*cache) {
+	return func(c *cache) {
+		c.builtInFetcher = fetcher
 	}
 }
 
@@ -70,6 +81,14 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 
 	case proto.StepReferenceProtocol_oci:
 		dir, err := c.ociFetcher.Fetch(ctx, stepRef.Url, stepRef.Version)
+		if err != nil {
+			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
+		}
+
+		return c.load(stepRef, dir)
+
+	case proto.StepReferenceProtocol_builtin:
+		dir, err := c.builtInFetcher.Fetch(stepRef.Path)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}

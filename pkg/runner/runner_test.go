@@ -441,6 +441,19 @@ run:
 		wantResults: func(t *testing.T, results *proto.StepResult) {
 			require.NotNil(t, results)
 		},
+	}, {
+		name: "runs builtin steps",
+		yaml: `
+spec:
+---
+run:
+  - name: publish_step
+    step: builtin://oci/publish
+`,
+		wantResults: func(t *testing.T, results *proto.StepResult) {
+			require.Equal(t, proto.StepResult_success, results.Status)
+			require.Equal(t, "publish step", results.SubStepResults[0].Outputs["message"].GetStringValue())
+		},
 	}}
 
 	for _, c := range cases {
