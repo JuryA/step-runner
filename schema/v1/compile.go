@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -458,7 +459,7 @@ func (r *Reference) compileGit() (*proto.Step_Reference, error) {
 func (r *Reference) compileOCI() (*proto.Step_Reference, error) {
 	s := &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_oci,
-		Url:      r.OCI.Url,
+		Url:      filepath.Join(r.OCI.Registry, r.OCI.Repository),
 		Version:  r.OCI.Tag,
 		Filename: "step.yml",
 	}

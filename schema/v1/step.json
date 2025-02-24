@@ -201,25 +201,35 @@
                     "type": "object",
                     "additionalProperties": false,
                     "required": [
-                        "url",
+                        "registry",
+                        "repository",
                         "tag"
                     ],
                     "properties": {
-                        "url": {
+                        "registry": {
                             "type": "string",
-                            "description": "The URL used to access the OCI repository."
+                            "description": "The <host>[:<port>] of the container registry server.",
+                            "examples": ["registry.gitlab.com"]
+                        },
+                        "repository": {
+                            "type": "string",
+                            "description": "A path within the registry containing related OCI images. Typically the namespace, project, and image name.",
+                            "examples": ["my_group/my_project/image"]
                         },
                         "tag": {
                             "type": "string",
-                            "description": "A pointer to the image manifest hosted in the OCI repository."
+                            "description": "A pointer to the image manifest hosted in the OCI repository.",
+                            "examples": ["latest", "1", "1.5", "1.5.0"]
                         },
                         "dir": {
                             "type": "string",
-                            "description": "A directory inside the OCI image where the step can be found."
+                            "description": "A directory inside the OCI image where the step can be found.",
+                            "examples": ["/my_steps/hello_world"]
                         },
                         "file": {
                             "type": "string",
-                            "description": "The name of the file that defines the step, defaults to step.yml."
+                            "description": "The name of the file that defines the step, defaults to step.yml.",
+                            "examples": ["step.yml"]
                         }
                     }
                 }

@@ -484,7 +484,8 @@ step: http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/josephburnett/he
 		step: `
 step:
     oci:
-        url: registry.gitlab.com/steps/my-step
+        registry: registry.gitlab.com
+        repository: steps/my-step
         tag: latest
 `,
 		want: &proto.Step_Reference{
@@ -498,7 +499,8 @@ step:
 		step: `
 step:
     oci:
-        url: registry.gitlab.com/steps/my-step
+        registry: registry.gitlab.com
+        repository: steps/my-step
         tag: ""
 `,
 		want: &proto.Step_Reference{
@@ -512,14 +514,15 @@ step:
 		step: `
 step:
     oci:
-        url: registry.gitlab.com/steps/my-step
+        registry: registry.gitlab.com:8080
+        repository: steps/my-step
         tag: latest
         dir: "steps"
         filename: step.yml
 `,
 		want: &proto.Step_Reference{
 			Protocol: proto.StepReferenceProtocol_oci,
-			Url:      "registry.gitlab.com/steps/my-step",
+			Url:      "registry.gitlab.com:8080/steps/my-step",
 			Path:     []string{"steps"},
 			Filename: "step.yml",
 			Version:  "latest",
