@@ -24,6 +24,9 @@ func NewFetcher(stepsFinder builtinsteps.StepFinder) *Fetcher {
 }
 
 func (f *Fetcher) Fetch(path []string) (string, error) {
+	f.workDirMu.Lock()
+	defer f.workDirMu.Unlock()
+
 	step := filepath.Join(path...)
 
 	workDir, err := f.createWorkDir()
@@ -62,9 +65,6 @@ func (f *Fetcher) CleanUp() {
 }
 
 func (f *Fetcher) createWorkDir() (string, error) {
-	f.workDirMu.Lock()
-	defer f.workDirMu.Unlock()
-
 	if f.workDir == "" {
 		tempDir, err := os.MkdirTemp("", "")
 		if err != nil {
