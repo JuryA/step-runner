@@ -38,6 +38,7 @@ enum StepReferenceProtocol {
   git = 2;
   zip = 3;
   oci = 4;
+  builtin = 5;
 }
 
 // Definition is the implementation of a step.

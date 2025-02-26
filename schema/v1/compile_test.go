@@ -528,7 +528,16 @@ step:
 		step: `
 step:
 `,
-		wantErr: true}}
+		wantErr: true,
+	}, {
+		step: `step: builtin://oci/publish`,
+		want: &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_builtin,
+			Path:     []string{"oci", "publish"},
+			Filename: "step.yml",
+			Version:  "",
+		},
+	}}
 
 	for _, c := range cases {
 		t.Run(c.step, func(t *testing.T) {

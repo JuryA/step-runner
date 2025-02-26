@@ -114,9 +114,6 @@ func (f *ImageFactory) CleanUp() {
 }
 
 func (f *ImageFactory) createWorkDir() (string, error) {
-	f.workDirMu.Lock()
-	defer f.workDirMu.Unlock()
-
 	if f.workDir == "" {
 		tempDir, err := os.MkdirTemp("", "")
 		if err != nil {
@@ -130,6 +127,9 @@ func (f *ImageFactory) createWorkDir() (string, error) {
 }
 
 func (f *ImageFactory) archive(archiveFS fs.FS) (string, error) {
+	f.workDirMu.Lock()
+	defer f.workDirMu.Unlock()
+
 	workDir, err := f.createWorkDir()
 	if err != nil {
 		return "", fmt.Errorf("archive %s: %w", archiveFS, err)
