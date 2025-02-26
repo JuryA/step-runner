@@ -1,24 +1,15 @@
 package main
 
 import (
-	"flag"
-	"fmt"
+	"log"
 	"os"
-)
 
-var (
-	outputFile = flag.String("output", "", "")
+	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
 )
 
 func main() {
-	flag.Parse()
-
-	if outputFile == nil || *outputFile == "" {
-		panic("must specify an output file to write to")
-	}
-
-	err := os.WriteFile(*outputFile, []byte(`{"name":"message", "value":"publish step"}`), 0640)
+	_, err := pkg.ParseInputs(os.Args[1:])
 	if err != nil {
-		panic(fmt.Errorf("cannot write to output file: %w", err))
+		log.Fatal(err)
 	}
 }
