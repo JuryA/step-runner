@@ -9,6 +9,8 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
+const builtInPrefix = "builtin://"
+
 func (spec *Spec) Compile() (*proto.Spec, error) {
 	protoSpec := &proto.Spec{Spec: &proto.Spec_Content{}}
 	inputs := map[string]*proto.Spec_Content_Input{}
@@ -373,7 +375,22 @@ func (sr shortReference) compile() (*proto.Step_Reference, error) {
 	if strings.HasPrefix(string(sr), ".") {
 		return sr.compileLocal()
 	}
+
+	if strings.HasPrefix(string(sr), builtInPrefix) {
+		return sr.compileBuiltIn()
+	}
+
 	return sr.compileRemote()
+}
+
+func (sr shortReference) compileBuiltIn() (*proto.Step_Reference, error) {
+	stepDir := strings.TrimPrefix(string(sr), builtInPrefix)
+
+	return &proto.Step_Reference{
+		Protocol: proto.StepReferenceProtocol_builtin,
+		Path:     strings.Split(stepDir, "/"),
+		Filename: "step.yml",
+	}, nil
 }
 
 func (sr shortReference) compileLocal() (*proto.Step_Reference, error) {

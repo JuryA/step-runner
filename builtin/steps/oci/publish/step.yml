@@ -1,0 +1,7 @@
+spec:
+  outputs:
+    message:
+      type: string
+---
+exec:
+  command: ["${{step_dir}}/run", "--output", "${{output_file}}"]
