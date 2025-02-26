@@ -6,13 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
+	builtinsteps "gitlab.com/gitlab-org/step-runner/builtin"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/builtin"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
-	"gitlab.com/gitlab-org/step-runner/steps"
 )
 
 var _ runner.Cache = &cache{}
@@ -32,7 +32,7 @@ func New() (runner.Cache, error) {
 	return NewWithOptions(
 		WithGitFetcher(git.New(cacheDir, git.CloneOptions{Depth: 1})),
 		WithOCIFetcher(oci.NewOCIFetcher(cacheDir)),
-		WithBuiltInFetcher(builtin.NewFetcher(steps.FindBuiltInStep)),
+		WithBuiltInFetcher(builtin.NewFetcher(builtinsteps.FindBuiltInStep)),
 	), nil
 }
 

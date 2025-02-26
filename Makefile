@@ -139,7 +139,7 @@ go-fmt: $(GOIMPORTS)
 
 .PHONY: build-builtin-steps
 build-builtin-steps: TARGET ?= $(LOCAL_OS_ARCH)
-build-builtin-steps: STEP_DIRS = $(shell find steps/source -type f -name Makefile -exec dirname {} \;)
+build-builtin-steps: STEP_DIRS = $(shell find builtin/steps -type f -name Makefile -exec dirname {} \;)
 build-builtin-steps:
 	@for dir in $(STEP_DIRS); do \
 		TARGET="$(TARGET)" $(MAKE) -C $$dir build; \
@@ -147,4 +147,4 @@ build-builtin-steps:
 
 .PHONY: clean-builtin-steps
 clean-builtin-steps:
-	@find steps/bin -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
+	@find builtin/bin -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;

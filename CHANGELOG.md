@@ -1,3 +1,7 @@
+## v0.6.0 (2025-02-24)
+
+- Support steps built-in to the step-runner. See !180.
+
 ## v0.5.0 (2025-02-05)
 
 - Upgrade Go to use version `1.23`. See !176.

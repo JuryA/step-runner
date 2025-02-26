@@ -5,8 +5,8 @@ directive has something to embed on a new machine when built-in steps have not b
 
 ## What is the bin folder for?
 
-The `steps/bin` directory hosts "built-in" steps. These are generated from the built-in steps found in
-`steps/source`.
+The `builtin/bin` directory hosts "built-in" steps. These are generated from the built-in steps found in
+`builtin/steps`.
 
 Like any other steps, built-in steps are run in a separate process to the step-runner. Each built-in step
 is written to the file system before being executed.

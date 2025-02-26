@@ -8,18 +8,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-git/go-git/v5/plumbing/filemode"
-
-	"gitlab.com/gitlab-org/step-runner/steps"
+	builtinsteps "gitlab.com/gitlab-org/step-runner/builtin"
 )
 
 type Fetcher struct {
 	workDirMu   sync.Mutex
 	workDir     string
-	stepsFinder steps.BuiltInStepFinder
+	stepsFinder builtinsteps.StepFinder
 }
 
-func NewFetcher(stepsFinder steps.BuiltInStepFinder) *Fetcher {
+func NewFetcher(stepsFinder builtinsteps.StepFinder) *Fetcher {
 	return &Fetcher{
 		stepsFinder: stepsFinder,
 	}
@@ -80,7 +78,7 @@ func (f *Fetcher) createWorkDir() (string, error) {
 }
 
 func (f *Fetcher) chmodFiles(stepDir string) error {
-	permissions := map[string]filemode.FileMode{}
+	permissions := map[string]fs.FileMode{}
 
 	err := filepath.WalkDir(stepDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

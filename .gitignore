@@ -6,5 +6,5 @@ step-runner
 .docker-env
 Library/
 out/
-steps/bin/*
-!steps/bin/README.md
+builtin/bin/*
+!builtin/bin/README.md

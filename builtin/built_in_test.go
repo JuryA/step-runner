@@ -1,4 +1,4 @@
-package steps_test
+package builtin_test
 
 import (
 	"io"
@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/step-runner/builtin"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
-	"gitlab.com/gitlab-org/step-runner/steps"
 )
 
 func TestFindBuiltInStep(t *testing.T) {
@@ -16,7 +16,7 @@ func TestFindBuiltInStep(t *testing.T) {
 			WriteFile("/bin/my_steps/step/files/hello.txt", "hello world").
 			BuildFS()
 
-		stepFS, err := steps.FindBuiltInStep("my_steps/step", steps.WithFileSystem(embeddedFS))
+		stepFS, err := builtin.FindBuiltInStep("my_steps/step", builtin.WithFileSystem(embeddedFS))
 		require.NoError(t, err)
 
 		helloTxt, err := stepFS.Open("files/hello.txt")
@@ -66,7 +66,7 @@ func TestFindBuiltInStep(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				embeddedFS := bldr.Files(t).WriteFile("/bin/.keep", "").BuildFS()
 
-				_, err := steps.FindBuiltInStep(test.step, steps.WithFileSystem(embeddedFS))
+				_, err := builtin.FindBuiltInStep(test.step, builtin.WithFileSystem(embeddedFS))
 				require.Error(t, err)
 				require.Contains(t, err.Error(), test.err)
 			})

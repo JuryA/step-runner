@@ -1,4 +1,4 @@
-package steps
+package builtin
 
 import (
 	"embed"
@@ -11,7 +11,7 @@ import (
 //go:embed bin
 var builtInSteps embed.FS
 
-type BuiltInStepFinder func(step string, options ...func(*FindStepsOptions)) (fs.FS, error)
+type StepFinder func(step string, options ...func(*FindStepsOptions)) (fs.FS, error)
 
 type FindStepsOptions struct {
 	FindIn fs.FS
