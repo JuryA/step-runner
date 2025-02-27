@@ -4,7 +4,8 @@ go 1.23.0
 
 toolchain go1.23.5
 
-replace github.com/in-toto/go-witness => ../../witness-project/go-witness
+//NOTE (ChaosInTheCRD): needs to be upstreamed on go-witness
+replace github.com/in-toto/go-witness => github.com/in-toto/go-witness v0.3.2-0.20250227142859-2bfa3ee6d347
 
 require (
 	github.com/containerd/platforms v0.2.1

@@ -12,6 +12,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 
 	"github.com/in-toto/go-witness"
+
 	iwitness "gitlab.com/gitlab-org/step-runner/internal/witness"
 
 	attest "github.com/in-toto/go-witness/attestation"

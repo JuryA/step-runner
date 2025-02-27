@@ -2,9 +2,10 @@ package runner
 
 import (
 	"fmt"
-	"gitlab.com/gitlab-org/step-runner/proto"
 	"io"
 	"os"
+
+	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type GlobalContext struct {
