@@ -43,7 +43,11 @@ func (s *TestStepRunnerServer) Serve() *TestStepRunnerServer {
 	require.NoError(s.t, err)
 
 	s.server = grpc.NewServer()
-	s.StepRunnerService = service.New(stepCache, runner.NewEmptyEnvironment())
+	//NOTE (ChaosInTheCRD) I had to insert the os environment for the tests to pass
+	// in my local env (MacOS)
+	env, err := runner.NewEnvironmentFromOS()
+	require.NoError(s.t, err)
+	s.StepRunnerService = service.New(stepCache, env)
 	proto.RegisterStepRunnerServer(s.server, s.StepRunnerService)
 
 	listener, _ := bldr.TCPPort(s.t).Listen(s.port)

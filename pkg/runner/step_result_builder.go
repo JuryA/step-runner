@@ -67,6 +67,7 @@ func (bldr *StepResultBuilder) ObserveEnv(env *Environment, err error) error {
 
 func (bldr *StepResultBuilder) ObserveExecutedCmd(execResult *ExecResult, err error) error {
 	bldr.WithExecResult(execResult)
+
 	return err
 }
 
@@ -74,7 +75,6 @@ func (bldr *StepResultBuilder) ObserveOutputs(outputs map[string]*structpb.Value
 	bldr.WithOutputs(outputs)
 	return err
 }
-
 func (bldr *StepResultBuilder) ObserveExports(exports *Environment, err error) (*Environment, error) {
 	bldr.WithExports(exports)
 	return exports, err
@@ -90,6 +90,7 @@ func (bldr *StepResultBuilder) BuildFailure() *proto.StepResult {
 }
 
 func (bldr *StepResultBuilder) Build() *proto.StepResult {
+
 	return bldr.buildResult(proto.StepResult_success)
 }
 

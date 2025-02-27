@@ -62,9 +62,6 @@ message Definition {
   map<string,string> env = 5;
   // Delegate selects a step by name which will produce the outputs for this step.
   string delegate = 6;
-
-  // Attestation is the attestation generation configuration for a step
-  Attestation attestation = 7;
 }
 
 
@@ -170,6 +167,8 @@ message StepResult {
     string work_dir = 2;
     // ExitCode is the exit code of the exec process.
     int32 exit_code = 3;
+    // UnsignedAtt is the unsigned attestation that is streamed back to the main runner process for signing
+    bytes unsigned_att = 4;
   }
   // ExecResult is the details of an exec type step.
   ExecResult exec_result = 8;
@@ -202,6 +201,7 @@ message RunRequest {
   map<string,string> env = 3;
   Job job = 5;
   string steps = 6;
+  Attestation attestation = 7;
 }
 
 message RunResponse {
@@ -227,6 +227,7 @@ message Status {
     string id = 1;
     string message = 2;
     StepResult.Status status = 3;
+    repeated bytes unsigned_atts = 4;
     google.protobuf.Timestamp start_time = 5;
     google.protobuf.Timestamp end_time = 6;
 }

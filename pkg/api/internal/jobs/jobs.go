@@ -37,7 +37,8 @@ type Job struct {
 
 	logs *file.Streamer
 
-	status proto.StepResult_Status
+	unsignedAtts [][]byte
+	status       proto.StepResult_Status
 }
 
 func New(jobID, workDir string) (*Job, error) {
@@ -68,14 +69,15 @@ func New(jobID, workDir string) (*Job, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Job{
-		TmpDir:  tmpDir,
-		WorkDir: workDir,
-		ID:      jobID,
-		Ctx:     ctx,
-		cancel:  cancel,
-		logs:    logs,
-		status:  proto.StepResult_unspecified,
-		finishC: make(chan struct{}, 1),
+		TmpDir:       tmpDir,
+		WorkDir:      workDir,
+		ID:           jobID,
+		Ctx:          ctx,
+		cancel:       cancel,
+		logs:         logs,
+		status:       proto.StepResult_unspecified,
+		unsignedAtts: [][]byte{},
+		finishC:      make(chan struct{}, 1),
 	}, nil
 }
 
@@ -133,6 +135,20 @@ func (j *Job) onRunCompletion(stepResult *proto.StepResult, err error) {
 	defer j.mux.Unlock()
 
 	j.finishTime = time.Now()
+	// NOTE: This is probably not how we should do it, would be best to discuss the best
+	// way to adjust the protobuf to facilitate
+	if len(stepResult.SubStepResults) == 0 {
+		//NOTE: if there are no substeps we assume that there is one single step execution
+		if stepResult.ExecResult != nil && stepResult.ExecResult.UnsignedAtt != nil {
+			j.unsignedAtts = append(j.unsignedAtts, stepResult.ExecResult.UnsignedAtt)
+		}
+	} else {
+		for _, step := range stepResult.SubStepResults {
+			if step.ExecResult != nil && step.ExecResult.UnsignedAtt != nil {
+				j.unsignedAtts = append(j.unsignedAtts, step.ExecResult.UnsignedAtt)
+			}
+		}
+	}
 
 	switch stepResult.Status {
 	case proto.StepResult_unspecified:
@@ -221,5 +237,10 @@ func (j *Job) Status() *proto.Status {
 	if j.err != nil {
 		st.Message = j.err.Error()
 	}
+
+	if len(j.unsignedAtts) != 0 {
+		st.UnsignedAtts = j.unsignedAtts
+	}
+
 	return &st
 }

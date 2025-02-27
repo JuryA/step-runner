@@ -2,9 +2,6 @@ package runner
 
 import (
 	ctx "context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -68,7 +65,9 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.St
 	}
 
 	stepsCtx.GlobalContext.Env.Mutate(exports)
-	return result.Build(), nil
+	res := result.Build()
+
+	return res, nil
 }
 
 func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*ExecResult, error) {
@@ -89,16 +88,13 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 		return nil, err
 	}
 
-	attestation := s.specDef.Definition.Attestation
-
 	var execResult *ExecResult
-	if attestation != nil && attestation.Enable {
-		log.Info("Executing step with attestation enabled")
+	if stepsCtx.Attestation != nil && stepsCtx.Attestation.Enable {
 		l := iwitness.NewLogger(stepsCtx.Stdout)
 		log.SetLogger(l)
 
 		attestors := []attest.Attestor{product.New(), material.New(), commandrun.New(commandrun.WithCommand(cmdArgs))}
-		for _, att := range attestation.Attestors {
+		for _, att := range stepsCtx.Attestation.Attestors {
 			attestor, err := attest.GetAttestor(att)
 			if err != nil {
 				return nil, fmt.Errorf("error getting attestation: %w", err)
@@ -108,40 +104,21 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 		}
 
 		res, err := witness.Run(
-			//NOTE: Taken this from above log line - might be incorrect identifier
-			s.loadedFrom.Describe(),
+			//NOTE: Not sure if this is the correct identifier
+			s.loadedFrom.ToProtoStep(&Params{}).Name,
 			// NOTE: We don't pass a signer in as we want to let the runner sign
 			nil,
 			witness.RunWithAttestors(attestors),
 			witness.RunWithAttestationOpts(attest.WithWorkingDir(workDir), attest.WithEnvVars(stepsCtx.GetEnvs())),
 		)
-
 		if err != nil {
 			fmt.Println("Error running witness", err.Error())
-			return NewExecResult(workDir, cmdArgs, 1), err
+			return NewExecResult(workDir, cmdArgs, 1, nil), err
 		}
 
-		// The witness run result will be our final message, because the run will have completed
-		resJson, err := json.Marshal(res)
-		if err != nil {
-			return nil, err
-		}
-
-		h := sha256.New()
-		h.Write(resJson)
-		sha := hex.EncodeToString(h.Sum(nil))
-
-		out, err := structpb.NewValue(resJson)
-		if err != nil {
-			return nil, err
-		}
-
-		execResult = NewExecResult(workDir, cmdArgs, 1)
-
-		//NOTE: Not sure if setting it here will set it in the outputs correctly...
-		s.specDef.Definition.Outputs[sha] = out
+		//NOTE: we could probably do with returning the payload type here also
+		execResult = NewExecResult(workDir, cmdArgs, 0, res.UnsignedStatement)
 	} else {
-
 		cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
 		cmd.Dir = workDir
 
@@ -150,7 +127,7 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 		cmd.Stderr = stepsCtx.GlobalContext.Stderr
 
 		err = cmd.Run()
-		execResult := NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode())
+		execResult = NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode(), nil)
 
 		if err != nil {
 			return execResult, err
