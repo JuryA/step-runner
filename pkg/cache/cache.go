@@ -64,13 +64,15 @@ func NewWithOptions(options ...func(*cache)) runner.Cache {
 	return c
 }
 
+// NOTE: In earlier draft I passed the attestation configuration into this cache get:
+// `func (c *cache) Get(ctx context.Context, parentDir string, attestation *proto.Attestation`...
+// Removing this to avoid changing the interface. Attestation configuration should already be in there?...
 func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
 	stepRef := stepResource.ToProtoStepRef()
 
 	switch stepRef.Protocol {
 	case proto.StepReferenceProtocol_local:
 		return c.load(stepRef, parentDir)
-
 	case proto.StepReferenceProtocol_git:
 		dir, err := c.gitFetcher.Get(ctx, stepRef.Url, stepRef.Version)
 		if err != nil {

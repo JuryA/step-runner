@@ -4,20 +4,27 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type GlobalContext struct {
-	WorkDir string
-	Job     map[string]string
-	Env     *Environment
-	Stdout  io.Writer
-	Stderr  io.Writer
+	WorkDir     string
+	Job         map[string]string
+	Attestation *proto.Attestation
+	Env         *Environment
+	Stdout      io.Writer
+	Stderr      io.Writer
 }
 
 func NewGlobalContext(env *Environment) *GlobalContext {
 	return &GlobalContext{
-		Job:    map[string]string{},
-		Env:    env,
+		Job: map[string]string{},
+		Env: env,
+		Attestation: &proto.Attestation{
+			Enable:    false,
+			Attestors: []string{},
+		},
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}

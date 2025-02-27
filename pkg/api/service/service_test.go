@@ -3,6 +3,7 @@ package service_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/in-toto/go-witness/attestation"
+	"github.com/in-toto/go-witness/attestation/commandrun"
+	"github.com/in-toto/go-witness/attestation/environment"
+	"github.com/in-toto/go-witness/attestation/material"
+	"github.com/in-toto/go-witness/attestation/product"
+	"github.com/in-toto/go-witness/intoto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -226,6 +233,107 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			data, err := os.ReadFile(path.Join(job.WorkDir, "blammo.txt"))
 			require.NoError(t, err)
 			assert.Equal(t, "foobarbaz", strings.TrimSpace(string(data)))
+
+			apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
+			assert.NoDirExists(t, job.TmpDir)
+		})
+	}
+}
+
+func Test_StepRunnerService_Run_Attest(t *testing.T) {
+	defer cleanup(t, "test.txt")
+
+	tests := map[string]struct {
+		jobWorkDir bool
+		script     string
+		setup      func(*proto.RunRequest)
+		validate   func(*jobs.Job, [][]byte)
+	}{
+		"attestation enabled": {
+			script: "echo 'attest it!' > test.txt",
+			setup: func(rr *proto.RunRequest) {
+				rr.Attestation = &proto.Attestation{
+					Enable:    true,
+					Attestors: []string{"product", "environment"},
+				}
+				rr.Attestation.Enable = true
+				rr.Attestation.Attestors = []string{"product", "environment"}
+			},
+			validate: func(j *jobs.Job, atts [][]byte) {
+				data, err := os.ReadFile(path.Join(j.WorkDir, "test.txt"))
+				require.NoError(t, err)
+				assert.Equal(t, "attest it!", strings.TrimSpace(string(data)))
+
+				require.NotNil(t, atts, "attestation should not be nil")
+
+				//NOTE: we know that witness will always pass back an intoto statement
+				for _, att := range atts {
+					var stat intoto.Statement
+					err = json.Unmarshal(att, &stat)
+					require.NoError(t, err)
+
+					require.Equal(t, attestation.CollectionType, stat.PredicateType)
+
+					var coll attestation.Collection
+					err = json.Unmarshal(stat.Predicate, &coll)
+					require.NoError(t, err)
+
+					types := []string{product.Type, material.Type, commandrun.Type, environment.Type}
+					for _, att := range coll.Attestations {
+						if cmr, ok := att.Attestation.(*commandrun.CommandRun); ok {
+							require.Contains(t, cmr.Cmd, "echo 'attest it!' > test.txt")
+						}
+						require.Contains(t, types, att.Type)
+					}
+				}
+
+			},
+		},
+		"attestation disabled": {
+			script: "echo 'dont attest it!' > test.txt",
+			setup: func(rr *proto.RunRequest) {
+				rr.Attestation = &proto.Attestation{
+					Enable:    false,
+					Attestors: []string{"product", "environment"},
+				}
+			},
+			validate: func(j *jobs.Job, atts [][]byte) {
+				data, err := os.ReadFile(path.Join(j.WorkDir, "test.txt"))
+				require.NoError(t, err)
+				assert.Equal(t, "dont attest it!", strings.TrimSpace(string(data)))
+				require.NoError(t, err)
+
+				require.Len(t, atts, 0, "expected no attestations")
+			},
+		},
+	}
+
+	server := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(server.NewConnection())
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			bg := context.Background()
+
+			rr := test.ProtoRunRequest(t, makeScriptStep(tt.script), tt.jobWorkDir)
+			tt.setup(rr)
+
+			_, err := apiClient.Run(bg, rr)
+			require.NoError(t, err)
+
+			job, ok := server.GetJob(rr.Id)
+			require.True(t, ok)
+
+			assert.Eventually(t, jobFinished(job), time.Millisecond*500, time.Millisecond*50)
+			assert.NoError(t, job.Ctx.Err())
+
+			stat := job.Status()
+			assert.Empty(t, stat.Message)
+			assert.Equal(t, proto.StepResult_success, stat.Status)
+
+			assert.FileExists(t, path.Join(job.WorkDir, "test.txt"))
+
+			tt.validate(job, stat.UnsignedAtts)
 
 			apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
 			assert.NoDirExists(t, job.TmpDir)

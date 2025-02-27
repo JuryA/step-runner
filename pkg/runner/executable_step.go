@@ -10,6 +10,16 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
+
+	"github.com/in-toto/go-witness"
+
+	iwitness "gitlab.com/gitlab-org/step-runner/internal/witness"
+
+	attest "github.com/in-toto/go-witness/attestation"
+	"github.com/in-toto/go-witness/attestation/commandrun"
+	"github.com/in-toto/go-witness/attestation/material"
+	"github.com/in-toto/go-witness/attestation/product"
+	"github.com/in-toto/go-witness/log"
 )
 
 // ExecutableStep is a step that executes a command.
@@ -56,7 +66,9 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.St
 	}
 
 	stepsCtx.GlobalContext.Env.Mutate(exports)
-	return result.Build(), nil
+	res := result.Build()
+
+	return res, nil
 }
 
 func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*ExecResult, error) {
@@ -77,18 +89,50 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 		return nil, err
 	}
 
-	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = workDir
+	var execResult *ExecResult
+	if stepsCtx.Attestation != nil && stepsCtx.Attestation.Enable {
+		l := iwitness.NewLogger(stepsCtx.Stdout)
+		log.SetLogger(l)
 
-	cmd.Env = stepsCtx.GetEnvList()
-	cmd.Stdout = stepsCtx.GlobalContext.Stdout
-	cmd.Stderr = stepsCtx.GlobalContext.Stderr
+		attestors := []attest.Attestor{product.New(), material.New(), commandrun.New(commandrun.WithCommand(cmdArgs))}
+		for _, att := range stepsCtx.Attestation.Attestors {
+			attestor, err := attest.GetAttestor(att)
+			if err != nil {
+				return nil, fmt.Errorf("error getting attestation: %w", err)
+			}
 
-	err = cmd.Run()
-	execResult := NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode())
+			attestors = append(attestors, attestor)
+		}
 
-	if err != nil {
-		return execResult, err
+		res, err := witness.Run(
+			//NOTE: Not sure if this is the correct identifier
+			s.loadedFrom.ToProtoStep(&Params{}).Name,
+			// NOTE: We don't pass a signer in as we want to let the runner sign
+			nil,
+			witness.RunWithAttestors(attestors),
+			witness.RunWithAttestationOpts(attest.WithWorkingDir(workDir), attest.WithEnvVars(stepsCtx.GetEnvs())),
+		)
+		if err != nil {
+			fmt.Println("Error running witness", err.Error())
+			return NewExecResult(workDir, cmdArgs, 1, nil), err
+		}
+
+		//NOTE: we could probably do with returning the payload type here also
+		execResult = NewExecResult(workDir, cmdArgs, 0, res.UnsignedStatement)
+	} else {
+		cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
+		cmd.Dir = workDir
+
+		cmd.Env = stepsCtx.GetEnvList()
+		cmd.Stdout = stepsCtx.GlobalContext.Stdout
+		cmd.Stderr = stepsCtx.GlobalContext.Stderr
+
+		err = cmd.Run()
+		execResult = NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode(), nil)
+
+		if err != nil {
+			return execResult, err
+		}
 	}
 
 	return execResult, nil
