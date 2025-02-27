@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -84,27 +83,6 @@ func New(jobID, workDir string) (*Job, error) {
 
 // Logs returns a pair of io.Writers corresponding to the Job's stdout and stderr (in that order).
 func (j *Job) Logs() (io.Writer, io.Writer) { return j.logs, j.logs }
-
-// Logs returns the outputs for a job
-func (j *Job) GetOutputs() (map[string][]byte, error) {
-	outPath := path.Join(os.TempDir(), "step-runner-output-"+j.ID)
-	outputs := map[string][]byte{}
-
-	if err := filepath.Walk(outPath, func(path string, f os.FileInfo, err error) error {
-		name := filepath.Base(path)
-		fb, err := os.ReadFile(outPath)
-		if err != nil {
-			return err
-		}
-
-		outputs[name] = fb
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return outputs, nil
-}
 
 // Run actually starts execution of the steps request and captures the result. It is intended to be run in a
 // goroutine.
