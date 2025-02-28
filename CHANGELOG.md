@@ -1,6 +1,8 @@
 ## v0.6.0 (2025-02-24)
 
 - Support steps built-in to the step-runner. See !180.
+- Change OCI fetching syntax to use registry, repository and tag
+  instead of url and version. See !181.
 
 ## v0.5.0 (2025-02-05)
 

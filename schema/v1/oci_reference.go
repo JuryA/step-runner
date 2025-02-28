@@ -7,8 +7,11 @@ import (
 
 // OCIReference is a reference to a step in an OCI image that is hosted in an OCI repository.
 type OCIReference struct {
-	// Url corresponds to the JSON schema field "url".
-	Url string `json:"url" yaml:"url" mapstructure:"url"`
+	// Registry corresponds to the JSON schema field "registry".
+	Registry string `json:"registry" yaml:"registry" mapstructure:"registry"`
+
+	// Repository corresponds to the JSON schema field "repository".
+	Repository string `json:"repository" yaml:"repository" mapstructure:"repository"`
 
 	// Tag corresponds to the JSON schema field "tag".
 	Tag string `json:"tag" yaml:"tag" mapstructure:"tag"`
@@ -20,10 +23,11 @@ type OCIReference struct {
 	File *string `json:"file,omitempty" yaml:"file,omitempty" mapstructure:"file,omitempty"`
 }
 
-func NewOCIReference(url, tag string) *OCIReference {
+func NewOCIReference(registry, repository, tag string) *OCIReference {
 	return &OCIReference{
-		Url: url,
-		Tag: tag,
+		Registry:   registry,
+		Repository: repository,
+		Tag:        tag,
 	}
 }
 
@@ -38,8 +42,12 @@ func (j *OCIReference) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("field tag in oci: required")
 	}
 
-	if _, ok := raw["url"]; raw != nil && !ok {
-		return fmt.Errorf("field url in oci: required")
+	if _, ok := raw["registry"]; raw != nil && !ok {
+		return fmt.Errorf("field registry in oci: required")
+	}
+
+	if _, ok := raw["repository"]; raw != nil && !ok {
+		return fmt.Errorf("field repository in oci: required")
 	}
 
 	type Plain OCIReference

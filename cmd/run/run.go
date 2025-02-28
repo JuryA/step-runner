@@ -23,7 +23,8 @@ import (
 
 type Options struct {
 	Step              string
-	OCIURL            string
+	OCIRegistry       string
+	OCIRepository     string
 	OCITag            string
 	OCIDir            string
 	OCIFilename       string
@@ -54,7 +55,8 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&options.OCIURL, "oci-url", "", "oci url of step, without the tag")
+	cmd.Flags().StringVar(&options.OCIRegistry, "oci-registry", "", "oci registry of step, <host>[:<port>]")
+	cmd.Flags().StringVar(&options.OCIRepository, "oci-repository", "", "oci repository of step")
 	cmd.Flags().StringVar(&options.OCITag, "oci-tag", "", "oci tag of step")
 	cmd.Flags().StringVar(&options.OCIDir, "oci-dir", "", "oci dir of step")
 	cmd.Flags().StringVar(&options.OCIFilename, "oci-filename", "", "oci filename of step yaml")
@@ -215,10 +217,11 @@ func yamlStep(options *Options) ([]byte, error) {
 		if options.GitDir != "" {
 			yml.WriteString(fmt.Sprintf("      dir: %s\n", options.GitDir))
 		}
-	} else if options.OCIURL != "" {
+	} else if options.OCIRegistry != "" {
 		yml.WriteString("- step:\n")
 		yml.WriteString("    oci:\n")
-		yml.WriteString(fmt.Sprintf("      url: %s\n", options.OCIURL))
+		yml.WriteString(fmt.Sprintf("      registry: %s\n", options.OCIRegistry))
+		yml.WriteString(fmt.Sprintf("      repository: %s\n", options.OCIRepository))
 		yml.WriteString(fmt.Sprintf("      tag: %s\n", options.OCITag))
 
 		if options.OCIDir != "" {
