@@ -83,7 +83,8 @@ step:
   "name": "my_step",
   "step": {
     "oci": {
-      "url":"registry.gitlab.com/project/my-repository",
+      "registry":"registry.gitlab.com",
+      "repository":"project/my-repository",
       "tag":"latest"
     }
   }
@@ -93,10 +94,11 @@ step:
 name: my_step
 step:
   oci:
-    url: registry.gitlab.com/project/my-repository
+    registry: registry.gitlab.com
+    repository: project/my-repository
     tag: latest
 `,
-		wantRef: &Reference{OCI: NewOCIReference("registry.gitlab.com/project/my-repository", "latest")},
+		wantRef: &Reference{OCI: NewOCIReference("registry.gitlab.com", "project/my-repository", "latest")},
 	}}
 
 	data, err := os.ReadFile("step.json")

@@ -457,10 +457,11 @@ func (r *Reference) compileGit() (*proto.Step_Reference, error) {
 
 func (r *Reference) compileOCI() (*proto.Step_Reference, error) {
 	s := &proto.Step_Reference{
-		Protocol: proto.StepReferenceProtocol_oci,
-		Url:      r.OCI.Url,
-		Version:  r.OCI.Tag,
-		Filename: "step.yml",
+		Protocol:   proto.StepReferenceProtocol_oci,
+		Registry:   r.OCI.Registry,
+		Repository: r.OCI.Repository,
+		Tag:        r.OCI.Tag,
+		Filename:   "step.yml",
 	}
 	if r.OCI.Dir != nil {
 		s.Path = strings.Split(*r.OCI.Dir, "/")
@@ -469,7 +470,7 @@ func (r *Reference) compileOCI() (*proto.Step_Reference, error) {
 		s.Filename = *r.OCI.File
 	}
 	if r.OCI.Tag == "" {
-		s.Version = "latest"
+		s.Tag = "latest"
 	}
 	return s, nil
 }

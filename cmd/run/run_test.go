@@ -3,7 +3,6 @@ package run
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/report"
@@ -142,7 +141,8 @@ func TestRunCmd(t *testing.T) {
 		cmd := NewCmd()
 		cmd.SetArgs([]string{
 			"--write-steps-results",
-			"--oci-url", strings.TrimSuffix(remoteImgRef.Name(), ":"+remoteImgRef.Identifier()),
+			"--oci-registry", registry.Address(),
+			"--oci-repository", remoteImgRef.Context().RepositoryStr(),
 			"--oci-tag", remoteImgRef.Identifier(),
 			"--inputs",
 			"echo=hello world",
@@ -190,7 +190,8 @@ exec:
 		cmd := NewCmd()
 		cmd.SetArgs([]string{
 			"--write-steps-results",
-			"--oci-url", strings.TrimSuffix(remoteImgRef.Name(), ":"+remoteImgRef.Identifier()),
+			"--oci-registry", registry.Address(),
+			"--oci-repository", remoteImgRef.Context().RepositoryStr(),
 			"--oci-tag", remoteImgRef.Identifier(),
 			"--oci-dir", "/foo/bar",
 			"--oci-filename", "foo-step.yml",

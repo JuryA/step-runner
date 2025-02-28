@@ -2,7 +2,6 @@ package oci
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
 
@@ -19,13 +18,7 @@ func NewOCIFetcher(downloadDir string) *OCIFetcher {
 	}
 }
 
-func (f *OCIFetcher) Fetch(ctx context.Context, url, tag string, opts ...func(*internal.PullOption)) (string, error) {
-	urlAndTag := fmt.Sprintf("%s:%s", url, tag)
-	imgRef, err := name.ParseReference(urlAndTag)
-	if err != nil {
-		return "", fmt.Errorf("OCI image: %w", err)
-	}
-
+func (f *OCIFetcher) Fetch(ctx context.Context, imgRef name.Reference, opts ...func(*internal.PullOption)) (string, error) {
 	dir, err := f.client.Pull(ctx, imgRef, opts...)
 	if err != nil {
 		return "", err
