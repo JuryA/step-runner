@@ -28,6 +28,12 @@ message Step {
     string filename = 4;
     // Version is which version of the step to use.
     string version = 5;
+    // Registry is the host and optionally port of the server hosting OCI images.
+    string registry = 6;
+    // Repository is the path to find an image on an OCI server.
+    string repository = 7;
+    // Tag is the version of the which version of the step OCI image to use.
+    string tag = 8;
   }
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -83,12 +82,9 @@ func readFile(t *testing.T, path string) string {
 	return string(data)
 }
 
-func fetch(t *testing.T, remoteImgRef name.Reference, forPlatforms ...*v1.Platform) string {
-	url := strings.TrimSuffix(remoteImgRef.Name(), ":"+remoteImgRef.Identifier())
-	tag := remoteImgRef.Identifier()
+func fetch(t *testing.T, imgRef name.Reference, forPlatforms ...*v1.Platform) string {
 	platform := internal.WithPlatforms(forPlatforms...)
-
-	imageDir, err := oci.NewOCIFetcher(t.TempDir()).Fetch(context.Background(), url, tag, platform)
+	imageDir, err := oci.NewOCIFetcher(t.TempDir()).Fetch(context.Background(), imgRef, platform)
 	require.NoError(t, err)
 
 	return imageDir

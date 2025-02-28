@@ -489,11 +489,12 @@ step:
         tag: latest
 `,
 		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_oci,
-			Url:      "registry.gitlab.com/steps/my-step",
-			Path:     nil,
-			Filename: "step.yml",
-			Version:  "latest",
+			Protocol:   proto.StepReferenceProtocol_oci,
+			Registry:   "registry.gitlab.com",
+			Repository: "steps/my-step",
+			Tag:        "latest",
+			Path:       nil,
+			Filename:   "step.yml",
 		},
 	}, {
 		step: `
@@ -504,11 +505,12 @@ step:
         tag: ""
 `,
 		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_oci,
-			Url:      "registry.gitlab.com/steps/my-step",
-			Path:     nil,
-			Filename: "step.yml",
-			Version:  "latest",
+			Protocol:   proto.StepReferenceProtocol_oci,
+			Registry:   "registry.gitlab.com",
+			Repository: "steps/my-step",
+			Tag:        "latest",
+			Path:       nil,
+			Filename:   "step.yml",
 		},
 	}, {
 		step: `
@@ -521,11 +523,12 @@ step:
         filename: step.yml
 `,
 		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_oci,
-			Url:      "registry.gitlab.com:8080/steps/my-step",
-			Path:     []string{"steps"},
-			Filename: "step.yml",
-			Version:  "latest",
+			Protocol:   proto.StepReferenceProtocol_oci,
+			Registry:   "registry.gitlab.com:8080",
+			Repository: "steps/my-step",
+			Tag:        "latest",
+			Path:       []string{"steps"},
+			Filename:   "step.yml",
 		},
 	}, {
 		step: `

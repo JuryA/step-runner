@@ -80,7 +80,12 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 		return c.load(stepRef, dir)
 
 	case proto.StepReferenceProtocol_oci:
-		dir, err := c.ociFetcher.Fetch(ctx, stepRef.Url, stepRef.Version)
+		imgRef, err := stepResource.(*runner.OCIStepResource).NamedReference()
+		if err != nil {
+			return nil, fmt.Errorf("OCI image: %w", err)
+		}
+
+		dir, err := c.ociFetcher.Fetch(ctx, imgRef)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}
