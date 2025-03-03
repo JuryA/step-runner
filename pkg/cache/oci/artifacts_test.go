@@ -11,8 +11,8 @@ import (
 
 func TestArtifacts_ForPlatform(t *testing.T) {
 	t.Run("filters by platform", func(t *testing.T) {
-		generic := oci.NewArtifact("/common", bldr.OCIPlatform.Generic)
-		linuxAmd64 := oci.NewArtifact("/linux/amd64", bldr.OCIPlatform.LinuxAMD64)
+		generic := bldr.OCIArtifact(t).Generic().Build()
+		linuxAmd64 := bldr.OCIArtifact(t).LinuxAMD64().Build()
 
 		artifacts := oci.NewArtifacts(generic, linuxAmd64).ForPlatform(bldr.OCIPlatform.Generic)
 		require.Len(t, artifacts.Values(), 1)
@@ -20,7 +20,7 @@ func TestArtifacts_ForPlatform(t *testing.T) {
 	})
 
 	t.Run("returns zero artifacts when none match", func(t *testing.T) {
-		generic := oci.NewArtifact("/common", bldr.OCIPlatform.Generic)
+		generic := bldr.OCIArtifact(t).Generic().Build()
 
 		artifacts := oci.NewArtifacts(generic).ForPlatform(bldr.OCIPlatform.LinuxARM64)
 		require.Len(t, artifacts.Values(), 0)
@@ -29,9 +29,9 @@ func TestArtifacts_ForPlatform(t *testing.T) {
 
 func TestArtifacts_Platforms(t *testing.T) {
 	t.Run("returns unique platforms", func(t *testing.T) {
-		linuxAmd64A := oci.NewArtifact("/linux/amd64", bldr.OCIPlatform.LinuxAMD64)
-		linuxArm64A := oci.NewArtifact("/linux/arm64/a", bldr.OCIPlatform.LinuxARM64)
-		linuxAmd64B := oci.NewArtifact("/linux/arm64/b", bldr.OCIPlatform.LinuxARM64)
+		linuxAmd64A := bldr.OCIArtifact(t).LinuxAMD64().Build()
+		linuxArm64A := bldr.OCIArtifact(t).LinuxARM64().Build()
+		linuxAmd64B := bldr.OCIArtifact(t).LinuxAMD64().Build()
 
 		platforms := oci.NewArtifacts(linuxAmd64A, linuxArm64A, linuxAmd64B).Platforms()
 		require.Len(t, platforms, 2)
@@ -40,8 +40,8 @@ func TestArtifacts_Platforms(t *testing.T) {
 	})
 
 	t.Run("excludes generic as a platform", func(t *testing.T) {
-		generic := oci.NewArtifact("/common", bldr.OCIPlatform.Generic)
-		linuxAmd64 := oci.NewArtifact("/linux/amd64", bldr.OCIPlatform.LinuxAMD64)
+		generic := bldr.OCIArtifact(t).Generic().Build()
+		linuxAmd64 := bldr.OCIArtifact(t).LinuxAMD64().Build()
 
 		platforms := oci.NewArtifacts(generic, linuxAmd64).Platforms()
 		require.Len(t, platforms, 1)
@@ -50,9 +50,9 @@ func TestArtifacts_Platforms(t *testing.T) {
 }
 
 func TestArtifacts_Generic(t *testing.T) {
-	genericA := oci.NewArtifact("/common/a", bldr.OCIPlatform.Generic)
-	genericB := oci.NewArtifact("/common/b", bldr.OCIPlatform.Generic)
-	linuxArm64 := oci.NewArtifact("/linux/arm64", bldr.OCIPlatform.LinuxARM64)
+	genericA := bldr.OCIArtifact(t).Generic().Build()
+	genericB := bldr.OCIArtifact(t).Generic().Build()
+	linuxArm64 := bldr.OCIArtifact(t).LinuxARM64().Build()
 
 	artifacts := oci.NewArtifacts(genericA, genericB, linuxArm64).Generic()
 	require.Len(t, artifacts.Values(), 2)
@@ -61,9 +61,9 @@ func TestArtifacts_Generic(t *testing.T) {
 }
 
 func TestArtifacts_Add(t *testing.T) {
-	a := oci.NewArtifact("/common/a", bldr.OCIPlatform.Generic)
-	b := oci.NewArtifact("/common/b", bldr.OCIPlatform.Generic)
-	c := oci.NewArtifact("/linux/arm64", bldr.OCIPlatform.LinuxARM64)
+	a := bldr.OCIArtifact(t).Generic().Build()
+	b := bldr.OCIArtifact(t).Generic().Build()
+	c := bldr.OCIArtifact(t).LinuxARM64().Build()
 
 	artifactsA := oci.NewArtifacts(a, b)
 	artifactsB := oci.NewArtifacts(c)
