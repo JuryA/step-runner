@@ -266,6 +266,11 @@ func TestParseInputs(t *testing.T) {
 					platformsJSON: `{"linux/amd64": {"filess": {"step.yml": "step.yml"}}}`,
 					expectErr:     `platforms input: json: unknown field "filess"`,
 				},
+				{
+					name:          "same platform defined more than once",
+					platformsJSON: `{"linux/amd64": {"files": {"step.yml": "step.yml"}}, "  linux/amd64  ": {"files": {"step.yml": "step.yml"}}}`,
+					expectErr:     `platform "linux/amd64" defined more than once`,
+				},
 			}
 
 			for _, test := range tests {

@@ -6,9 +6,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"maps"
 	"path"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -17,7 +18,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 )
 
-var semVerRe = regexp.MustCompile(`^\d+\.\d+\.\d+(-.*)?`)
+var semVerRe = regexp.MustCompile(`^\d+\.\d+\.\d+(-.*)?$`)
 
 type Inputs struct {
 	Registry         string
@@ -105,16 +106,13 @@ func parsePlatforms(platformsJSON string) (*oci.Artifacts, error) {
 		return nil, err
 	}
 
-	names := make([]string, 0, len(parsed))
-	for name := range parsed {
-		names = append(names, name)
+	if len(parsed) == 0 {
+		return nil, errors.New("must have at least one platform")
 	}
-
-	sort.Strings(names)
 
 	allArtifacts := oci.NewArtifacts()
 
-	for _, name := range names {
+	for _, name := range slices.Sorted(maps.Keys(parsed)) {
 		nameParts := strings.Split(name, "/")
 
 		if len(nameParts) != 2 {
@@ -130,16 +128,16 @@ func parsePlatforms(platformsJSON string) (*oci.Artifacts, error) {
 			Features:     nil,
 		}
 
+		if allArtifacts.ForPlatform(platform).Len() > 0 {
+			return nil, fmt.Errorf(`platform "%s/%s" defined more than once`, platform.OS, platform.Architecture)
+		}
+
 		artifacts, err := buildArtifacts(platform, parsed[name].Files)
 		if err != nil {
 			return nil, fmt.Errorf(": %w", err)
 		}
 
 		allArtifacts = allArtifacts.Add(artifacts)
-	}
-
-	if allArtifacts.Len() == 0 {
-		return nil, errors.New("must have at least one platform")
 	}
 
 	return allArtifacts, nil
@@ -171,16 +169,9 @@ func unmarshal(jsonInput string, into any) error {
 }
 
 func buildArtifacts(platform *v1.Platform, parsed map[string]string) (*oci.Artifacts, error) {
-	fromPaths := make([]string, 0, len(parsed))
-	for fromPath := range parsed {
-		fromPaths = append(fromPaths, fromPath)
-	}
+	artifacts := make([]*oci.Artifact, 0, len(parsed))
 
-	sort.Strings(fromPaths)
-
-	artifacts := make([]*oci.Artifact, 0, len(fromPaths))
-
-	for _, fromPath := range fromPaths {
+	for _, fromPath := range slices.Sorted(maps.Keys(parsed)) {
 		from := strings.TrimSpace(fromPath)
 		to := strings.TrimSpace(parsed[fromPath])
 
