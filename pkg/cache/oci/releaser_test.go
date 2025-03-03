@@ -28,8 +28,8 @@ func TestReleaser_Release(t *testing.T) {
 			Build()
 
 		artifacts := oci.NewArtifacts(
-			bldr.OCIArtifact(t).WithDir(filepath.Join(baseDir, "dist/common")).Generic().Build(),
-			bldr.OCIArtifact(t).WithDir(filepath.Join(baseDir, "dist/linux/amd64")).LinuxAMD64().Build())
+			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/common")).Generic().Build(),
+			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/linux/amd64")).LinuxAMD64().Build())
 
 		downloadDir := t.TempDir()
 		err := oci.NewReleaser(downloadDir).Release(ctx, remoteImgRef, artifacts)
@@ -56,9 +56,9 @@ func TestReleaser_Release(t *testing.T) {
 			Build()
 
 		artifacts := oci.NewArtifacts(
-			bldr.OCIArtifact(t).WithDir(filepath.Join(baseDir, "dist/common")).Generic().Build(),
-			bldr.OCIArtifact(t).WithDir(filepath.Join(baseDir, "dist/linux/amd64")).LinuxAMD64().Build(),
-			bldr.OCIArtifact(t).WithDir(filepath.Join(baseDir, "dist/linux/arm64")).LinuxARM64().Build())
+			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/common")).Generic().Build(),
+			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/linux/amd64")).LinuxAMD64().Build(),
+			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/linux/arm64")).LinuxARM64().Build())
 
 		downloadDir := t.TempDir()
 		err := oci.NewReleaser(downloadDir).Release(ctx, remoteImgRef, artifacts)

@@ -9,16 +9,20 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 )
 
 var semVerRe = regexp.MustCompile(`^\d+\.\d+\.\d+(-.*)?`)
 
 type Inputs struct {
-	Registry   string
-	Repository string
-	Tag        string
-	Common     []*File
-	Platforms  []*Platform
+	Registry         string
+	Repository       string
+	Tag              string
+	Common           *oci.Artifacts
+	PlatformSpecific *oci.Artifacts
 }
 
 func (i *Inputs) Validate() error {
@@ -56,22 +60,22 @@ func ParseInputs(args []string) (*Inputs, error) {
 		return nil, err
 	}
 
-	common, err := parseFiles(commonJSON)
+	common, err := parseFiles(oci.PlatformGeneric, commonJSON)
 	if err != nil {
 		return nil, fmt.Errorf("common input: %w", err)
 	}
 
-	platforms, err := parsePlatforms(platformsJSON)
+	platform, err := parsePlatforms(platformsJSON)
 	if err != nil {
 		return nil, fmt.Errorf("platforms input: %w", err)
 	}
 
 	inputs := &Inputs{
-		Registry:   strings.TrimSpace(registry),
-		Repository: strings.TrimSpace(repository),
-		Tag:        strings.TrimSpace(tag),
-		Common:     common,
-		Platforms:  platforms,
+		Registry:         strings.TrimSpace(registry),
+		Repository:       strings.TrimSpace(repository),
+		Tag:              strings.TrimSpace(tag),
+		Common:           common,
+		PlatformSpecific: platform,
 	}
 
 	if err := inputs.Validate(); err != nil {
@@ -81,7 +85,7 @@ func ParseInputs(args []string) (*Inputs, error) {
 	return inputs, nil
 }
 
-func parsePlatforms(platformsJSON string) ([]*Platform, error) {
+func parsePlatforms(platformsJSON string) (*oci.Artifacts, error) {
 	var parsed map[string]struct {
 		Files map[string]string `json:"files"`
 	}
@@ -97,7 +101,7 @@ func parsePlatforms(platformsJSON string) ([]*Platform, error) {
 
 	sort.Strings(names)
 
-	platforms := make([]*Platform, 0, len(names))
+	allArtifacts := oci.NewArtifacts()
 
 	for _, name := range names {
 		nameParts := strings.Split(name, "/")
@@ -106,26 +110,31 @@ func parsePlatforms(platformsJSON string) ([]*Platform, error) {
 			return nil, fmt.Errorf("invalid platform os/arch: %s", name)
 		}
 
-		files, err := buildFiles(parsed[name].Files)
+		platform := &v1.Platform{
+			OS:           strings.TrimSpace(nameParts[0]),
+			Architecture: strings.TrimSpace(nameParts[1]),
+			OSVersion:    "",
+			OSFeatures:   nil,
+			Variant:      "",
+			Features:     nil,
+		}
+
+		artifacts, err := buildArtifacts(platform, parsed[name].Files)
 		if err != nil {
 			return nil, fmt.Errorf(": %w", err)
 		}
 
-		platforms = append(platforms, &Platform{
-			OS:    strings.TrimSpace(nameParts[0]),
-			Arch:  strings.TrimSpace(nameParts[1]),
-			Files: files,
-		})
+		allArtifacts = allArtifacts.Add(artifacts)
 	}
 
-	if len(platforms) == 0 {
+	if allArtifacts.Len() == 0 {
 		return nil, errors.New("must have at least one platform")
 	}
 
-	return platforms, nil
+	return allArtifacts, nil
 }
 
-func parseFiles(filesJSON string) ([]*File, error) {
+func parseFiles(platform *v1.Platform, filesJSON string) (*oci.Artifacts, error) {
 	var parsed struct {
 		FromTo map[string]string `json:"files"`
 	}
@@ -134,7 +143,7 @@ func parseFiles(filesJSON string) ([]*File, error) {
 		return nil, err
 	}
 
-	return buildFiles(parsed.FromTo)
+	return buildArtifacts(platform, parsed.FromTo)
 }
 
 func unmarshal(jsonInput string, into any) error {
@@ -150,7 +159,7 @@ func unmarshal(jsonInput string, into any) error {
 	return err
 }
 
-func buildFiles(parsed map[string]string) ([]*File, error) {
+func buildArtifacts(platform *v1.Platform, parsed map[string]string) (*oci.Artifacts, error) {
 	fromPaths := make([]string, 0, len(parsed))
 	for fromPath := range parsed {
 		fromPaths = append(fromPaths, fromPath)
@@ -158,7 +167,7 @@ func buildFiles(parsed map[string]string) ([]*File, error) {
 
 	sort.Strings(fromPaths)
 
-	files := make([]*File, 0, len(fromPaths))
+	artifacts := make([]*oci.Artifact, 0, len(fromPaths))
 
 	for _, fromPath := range fromPaths {
 		from := strings.TrimSpace(fromPath)
@@ -172,8 +181,8 @@ func buildFiles(parsed map[string]string) ([]*File, error) {
 			return nil, fmt.Errorf("empty to path: %q: %q", fromPath, parsed[fromPath])
 		}
 
-		files = append(files, NewFile(from, to))
+		artifacts = append(artifacts, oci.NewArtifact(platform, from, to))
 	}
 
-	return files, nil
+	return oci.NewArtifacts(artifacts...), nil
 }

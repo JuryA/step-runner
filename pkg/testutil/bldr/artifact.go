@@ -9,13 +9,15 @@ import (
 )
 
 type OCIArtifactBuilder struct {
-	dir      string
+	from     string
+	to       string
 	platform *v1.Platform
 }
 
 func OCIArtifact(t *testing.T) *OCIArtifactBuilder {
 	return &OCIArtifactBuilder{
-		dir:      t.TempDir(),
+		from:     t.TempDir(),
+		to:       "/my_step",
 		platform: OCIPlatform.LinuxARM64,
 	}
 }
@@ -37,11 +39,11 @@ func (bldr *OCIArtifactBuilder) WithPlatform(platform *v1.Platform) *OCIArtifact
 	return bldr
 }
 
-func (bldr *OCIArtifactBuilder) WithDir(dir string) *OCIArtifactBuilder {
-	bldr.dir = dir
+func (bldr *OCIArtifactBuilder) WithFrom(from string) *OCIArtifactBuilder {
+	bldr.from = from
 	return bldr
 }
 
 func (bldr *OCIArtifactBuilder) Build() *oci.Artifact {
-	return oci.NewArtifact(bldr.dir, bldr.platform)
+	return oci.NewArtifact(bldr.platform, bldr.from, bldr.to)
 }

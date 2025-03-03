@@ -2,9 +2,9 @@ package oci
 
 import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci/internal"
 )
+
+var PlatformGeneric = &v1.Platform{OS: "generic", Architecture: "generic"}
 
 type Artifacts struct {
 	values []*Artifact
@@ -20,7 +20,7 @@ func (a *Artifacts) ForPlatform(platform *v1.Platform) *Artifacts {
 	values := make([]*Artifact, 0)
 
 	for _, artifact := range a.values {
-		if artifact.platform.Equals(*platform) {
+		if artifact.Platform.Equals(*platform) {
 			values = append(values, artifact)
 		}
 	}
@@ -29,7 +29,7 @@ func (a *Artifacts) ForPlatform(platform *v1.Platform) *Artifacts {
 }
 
 func (a *Artifacts) Generic() *Artifacts {
-	return a.ForPlatform(internal.PlatformGeneric)
+	return a.ForPlatform(PlatformGeneric)
 }
 
 // Platforms returns a unique list of platforms represented by the artifacts.
@@ -42,14 +42,14 @@ func (a *Artifacts) Platforms() []*v1.Platform {
 		seen := false
 
 		for _, platform := range unique {
-			if artifact.platform.Equals(*platform) {
+			if artifact.Platform.Equals(*platform) {
 				seen = true
 				continue
 			}
 		}
 
-		if !seen && !artifact.platform.Equals(*internal.PlatformGeneric) {
-			unique = append(unique, artifact.platform)
+		if !seen && !artifact.Platform.Equals(*PlatformGeneric) {
+			unique = append(unique, artifact.Platform)
 		}
 	}
 
@@ -65,4 +65,12 @@ func (a *Artifacts) Add(artifacts *Artifacts) *Artifacts {
 
 func (a *Artifacts) Values() []*Artifact {
 	return a.values
+}
+
+func (a *Artifacts) Len() int {
+	return len(a.values)
+}
+
+func (a *Artifacts) Nth(i int) *Artifact {
+	return a.values[i]
 }

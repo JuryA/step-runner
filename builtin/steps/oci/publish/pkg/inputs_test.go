@@ -138,36 +138,36 @@ func TestParseInputs(t *testing.T) {
 		}
 	})
 
-	t.Run("common", func(t *testing.T) {
+	t.Run("common artifacts", func(t *testing.T) {
 		t.Run("parses files", func(t *testing.T) {
 			commonJSON := `{"files": {"step.yml": "step.yml", " files/templates ": " /templates "}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(commonJSON).Build())
 			require.NoError(t, err)
-			require.Len(t, inputs.Common, 2)
-			require.Equal(t, "files/templates", inputs.Common[0].From)
-			require.Equal(t, "/templates", inputs.Common[0].To)
-			require.Equal(t, "step.yml", inputs.Common[1].From)
-			require.Equal(t, "step.yml", inputs.Common[1].To)
+			require.Equal(t, 2, inputs.Common.Len())
+			require.Equal(t, "files/templates", inputs.Common.Nth(0).From)
+			require.Equal(t, "/templates", inputs.Common.Nth(0).To)
+			require.Equal(t, "step.yml", inputs.Common.Nth(1).From)
+			require.Equal(t, "step.yml", inputs.Common.Nth(1).To)
 		})
 
 		t.Run("trims space", func(t *testing.T) {
 			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(`{"files": {"  step.yml  ": "  step.yml  "}}`).Build())
 			require.NoError(t, err)
-			require.Len(t, inputs.Common, 1)
-			require.Equal(t, "step.yml", inputs.Common[0].From)
-			require.Equal(t, "step.yml", inputs.Common[0].To)
+			require.Equal(t, 1, inputs.Common.Len())
+			require.Equal(t, "step.yml", inputs.Common.Nth(0).From)
+			require.Equal(t, "step.yml", inputs.Common.Nth(0).To)
 		})
 
 		t.Run("can be empty", func(t *testing.T) {
 			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(`{}`).Build())
 			require.NoError(t, err)
-			require.Len(t, inputs.Common, 0)
+			require.Equal(t, 0, inputs.Common.Len())
 		})
 
 		t.Run("can have no files", func(t *testing.T) {
 			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(`{"files": {}}`).Build())
 			require.NoError(t, err)
-			require.Len(t, inputs.Common, 0)
+			require.Equal(t, 0, inputs.Common.Len())
 		})
 
 		t.Run("errors", func(t *testing.T) {
@@ -207,33 +207,32 @@ func TestParseInputs(t *testing.T) {
 		})
 	})
 
-	t.Run("platforms", func(t *testing.T) {
+	t.Run("platform artifacts", func(t *testing.T) {
 		t.Run("parses platform", func(t *testing.T) {
 			platformsJSON := `{"linux/amd64": {"files": {"my_program": "run"}}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
-			require.Len(t, inputs.Platforms, 1)
-			require.Equal(t, "linux", inputs.Platforms[0].OS)
-			require.Equal(t, "amd64", inputs.Platforms[0].Arch)
-			require.Len(t, inputs.Platforms[0].Files, 1)
-			require.Equal(t, "my_program", inputs.Platforms[0].Files[0].From)
-			require.Equal(t, "run", inputs.Platforms[0].Files[0].To)
+			require.Equal(t, 1, inputs.PlatformSpecific.Len())
+			require.Equal(t, "linux", inputs.PlatformSpecific.Nth(0).Platform.OS)
+			require.Equal(t, "amd64", inputs.PlatformSpecific.Nth(0).Platform.Architecture)
+			require.Equal(t, "my_program", inputs.PlatformSpecific.Nth(0).From)
+			require.Equal(t, "run", inputs.PlatformSpecific.Nth(0).To)
 		})
 
 		t.Run("trims space", func(t *testing.T) {
 			platformsJSON := `{" linux / amd64 ": {"files": {"my_program": "run"}}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
-			require.Len(t, inputs.Platforms, 1)
-			require.Equal(t, "linux", inputs.Platforms[0].OS)
-			require.Equal(t, "amd64", inputs.Platforms[0].Arch)
+			require.Equal(t, 1, inputs.PlatformSpecific.Len())
+			require.Equal(t, "linux", inputs.PlatformSpecific.Nth(0).Platform.OS)
+			require.Equal(t, "amd64", inputs.PlatformSpecific.Nth(0).Platform.Architecture)
 		})
 
 		t.Run("parses many platforms", func(t *testing.T) {
 			platformsJSON := `{"linux/arm64": {"files": {"amd_run": "run"}}, "linux/amd64": {"files": {"arm_run": "run"}}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
-			require.Len(t, inputs.Platforms, 2)
+			require.Equal(t, 2, inputs.PlatformSpecific.Len())
 		})
 
 		t.Run("errors", func(t *testing.T) {

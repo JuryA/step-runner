@@ -1,6 +1,7 @@
 package oci
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 
@@ -8,25 +9,23 @@ import (
 )
 
 type Artifact struct {
-	dir      string
-	platform *v1.Platform
+	From     string
+	To       string
+	Platform *v1.Platform
 }
 
-func NewArtifact(dir string, platform *v1.Platform) *Artifact {
-	if platform == nil {
-		panic("artifact must have a platform")
-	}
-
+func NewArtifact(platform *v1.Platform, from, to string) *Artifact {
 	return &Artifact{
-		dir:      dir,
-		platform: platform,
+		From:     from,
+		To:       to,
+		Platform: platform,
 	}
 }
 
 func (a *Artifact) DirFS() fs.FS {
-	return os.DirFS(a.dir)
+	return os.DirFS(a.From)
 }
 
 func (a *Artifact) String() string {
-	return a.dir
+	return fmt.Sprintf("%s[%s->%s]", a.Platform, a.From, a.To)
 }
