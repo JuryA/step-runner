@@ -15,15 +15,15 @@ func TestArtifacts_ForPlatform(t *testing.T) {
 		linuxAmd64 := bldr.OCIArtifact(t).LinuxAMD64().Build()
 
 		artifacts := oci.NewArtifacts(generic, linuxAmd64).ForPlatform(bldr.OCIPlatform.Generic)
-		require.Len(t, artifacts.Values(), 1)
-		require.Equal(t, generic, artifacts.Values()[0])
+		require.Len(t, artifacts, 1)
+		require.Equal(t, generic, artifacts[0])
 	})
 
 	t.Run("returns zero artifacts when none match", func(t *testing.T) {
 		generic := bldr.OCIArtifact(t).Generic().Build()
 
 		artifacts := oci.NewArtifacts(generic).ForPlatform(bldr.OCIPlatform.LinuxARM64)
-		require.Len(t, artifacts.Values(), 0)
+		require.Len(t, artifacts, 0)
 	})
 }
 
@@ -55,9 +55,9 @@ func TestArtifacts_Generic(t *testing.T) {
 	linuxArm64 := bldr.OCIArtifact(t).LinuxARM64().Build()
 
 	artifacts := oci.NewArtifacts(genericA, genericB, linuxArm64).Generic()
-	require.Len(t, artifacts.Values(), 2)
-	require.Equal(t, genericA, artifacts.Values()[0])
-	require.Equal(t, genericB, artifacts.Values()[1])
+	require.Len(t, artifacts, 2)
+	require.Equal(t, genericA, artifacts[0])
+	require.Equal(t, genericB, artifacts[1])
 }
 
 func TestArtifacts_Add(t *testing.T) {
@@ -70,8 +70,8 @@ func TestArtifacts_Add(t *testing.T) {
 	artifactsC := oci.NewArtifacts()
 
 	artifacts := artifactsA.Add(artifactsB).Add(artifactsC)
-	require.Len(t, artifacts.Values(), 3)
-	require.Equal(t, a, artifacts.Values()[0])
-	require.Equal(t, b, artifacts.Values()[1])
-	require.Equal(t, c, artifacts.Values()[2])
+	require.Len(t, artifacts, 3)
+	require.Equal(t, a, artifacts[0])
+	require.Equal(t, b, artifacts[1])
+	require.Equal(t, c, artifacts[2])
 }

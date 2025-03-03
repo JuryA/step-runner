@@ -24,8 +24,8 @@ type Inputs struct {
 	Registry         string
 	Repository       string
 	Tag              string
-	Common           *oci.Artifacts
-	PlatformSpecific *oci.Artifacts
+	Common           oci.Artifacts
+	PlatformSpecific oci.Artifacts
 }
 
 func (i *Inputs) Validate() error {
@@ -97,7 +97,7 @@ func ParseInputs(args []string) (*Inputs, error) {
 	return inputs, nil
 }
 
-func parsePlatforms(platformsJSON string) (*oci.Artifacts, error) {
+func parsePlatforms(platformsJSON string) (oci.Artifacts, error) {
 	var parsed map[string]struct {
 		Files map[string]string `json:"files"`
 	}
@@ -128,7 +128,7 @@ func parsePlatforms(platformsJSON string) (*oci.Artifacts, error) {
 			Features:     nil,
 		}
 
-		if allArtifacts.ForPlatform(platform).Len() > 0 {
+		if len(allArtifacts.ForPlatform(platform)) > 0 {
 			return nil, fmt.Errorf(`platform "%s/%s" defined more than once`, platform.OS, platform.Architecture)
 		}
 
@@ -143,7 +143,7 @@ func parsePlatforms(platformsJSON string) (*oci.Artifacts, error) {
 	return allArtifacts, nil
 }
 
-func parseFiles(platform *v1.Platform, filesJSON string) (*oci.Artifacts, error) {
+func parseFiles(platform *v1.Platform, filesJSON string) (oci.Artifacts, error) {
 	var parsed struct {
 		FromTo map[string]string `json:"files"`
 	}
@@ -168,7 +168,7 @@ func unmarshal(jsonInput string, into any) error {
 	return err
 }
 
-func buildArtifacts(platform *v1.Platform, parsed map[string]string) (*oci.Artifacts, error) {
+func buildArtifacts(platform *v1.Platform, parsed map[string]string) (oci.Artifacts, error) {
 	artifacts := make([]*oci.Artifact, 0, len(parsed))
 
 	for _, fromPath := range slices.Sorted(maps.Keys(parsed)) {
