@@ -8,7 +8,12 @@ import (
 )
 
 func main() {
-	_, err := pkg.ParseInputs(os.Args[1:])
+	inputs, err := pkg.ParseInputs(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = inputs.ImgRef()
 	if err != nil {
 		log.Fatal(err)
 	}

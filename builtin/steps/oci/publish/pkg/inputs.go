@@ -6,10 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
@@ -43,6 +45,15 @@ func (i *Inputs) Validate() error {
 	}
 
 	return nil
+}
+
+func (i *Inputs) ImgRef() (name.Reference, error) {
+	imgRef, err := name.ParseReference(fmt.Sprintf("%s:%s", path.Join(i.Registry, i.Repository), i.Tag))
+	if err != nil {
+		return nil, fmt.Errorf("parsing image reference: %w", err)
+	}
+
+	return imgRef, nil
 }
 
 func ParseInputs(args []string) (*Inputs, error) {

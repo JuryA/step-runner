@@ -22,7 +22,7 @@ func NewArtifact(platform *v1.Platform, from, to string) *Artifact {
 	}
 }
 
-func (a *Artifact) DirFS() fs.FS {
+func (a *Artifact) FS() fs.FS {
 	return os.DirFS(a.From)
 }
 

@@ -278,3 +278,42 @@ func TestParseInputs(t *testing.T) {
 		})
 	})
 }
+
+func TestInputs_ImgRef(t *testing.T) {
+	tests := []struct {
+		name       string
+		registry   string
+		repository string
+		tag        string
+		expect     string
+	}{
+		{
+			name:       "combined registry, repository, and tag",
+			registry:   "gitlab.registry.com",
+			repository: "my_group/my_project",
+			tag:        "3.4.0",
+			expect:     "gitlab.registry.com/my_group/my_project:3.4.0",
+		},
+		{
+			name:       "removes unnecessary forward slashes",
+			registry:   "gitlab.registry.com/",
+			repository: "/my_project/",
+			tag:        "1.0.0-rc1",
+			expect:     "gitlab.registry.com/my_project:1.0.0-rc1",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			inputs := &Inputs{
+				Registry:   test.registry,
+				Repository: test.repository,
+				Tag:        test.tag,
+			}
+
+			imgRef, err := inputs.ImgRef()
+			require.NoError(t, err)
+			require.Equal(t, test.expect, imgRef.String())
+		})
+	}
+}

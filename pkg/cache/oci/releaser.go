@@ -56,7 +56,7 @@ func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts *A
 	layers := make([]v1.Layer, 0)
 
 	for _, artifact := range artifacts.Values() {
-		layer, err := factory.BuildLayer(artifact.DirFS())
+		layer, err := factory.BuildLayer(artifact.FS())
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", artifact, err)
 		}
