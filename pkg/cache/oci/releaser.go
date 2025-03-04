@@ -21,7 +21,7 @@ func NewReleaser(downloadDir string) *Releaser {
 	}
 }
 
-func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts *Artifacts) error {
+func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts Artifacts) error {
 	factory := internal.NewImageFactory()
 	defer factory.CleanUp()
 
@@ -52,11 +52,11 @@ func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts
 	return nil
 }
 
-func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts *Artifacts) ([]v1.Layer, error) {
+func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts Artifacts) ([]v1.Layer, error) {
 	layers := make([]v1.Layer, 0)
 
-	for _, artifact := range artifacts.Values() {
-		layer, err := factory.BuildLayer(artifact.DirFS())
+	for _, artifact := range artifacts {
+		layer, err := factory.BuildLayer(artifact.FS())
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", artifact, err)
 		}

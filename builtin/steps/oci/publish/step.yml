@@ -1,7 +1,29 @@
 spec:
-  outputs:
-    message:
+  inputs:
+    registry:
       type: string
+    repository:
+      type: string
+    tag:
+      type: string
+    common:
+      type: struct
+      default: {}
+    platforms:
+      type: struct
+      default: {}
 ---
 exec:
-  command: ["${{step_dir}}/run", "--output", "${{output_file}}"]
+  work_dir: ${{step_dir}}
+  command:
+    - "${{step_dir}}/run"
+    - "--registry"
+    - "${{inputs.registry}}"
+    - "--repository"
+    - "${{inputs.repository}}"
+    - "--tag"
+    - "${{inputs.tag}}"
+    - "--common"
+    - "${{inputs.common}}"
+    - "--platform"
+    - "${{inputs.platform}}"
