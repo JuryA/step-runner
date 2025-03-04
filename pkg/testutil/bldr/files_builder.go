@@ -29,6 +29,10 @@ func Files(t *testing.T) *FilesBuilder {
 	}
 }
 
+func (b *FilesBuilder) TouchFile(path string) *FilesBuilder {
+	return b.WriteFile(path, "")
+}
+
 func (b *FilesBuilder) WriteFile(path string, data any) *FilesBuilder {
 	return b.WriteFileWithPerms(path, data, 0o644)
 }

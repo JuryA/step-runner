@@ -56,7 +56,7 @@ func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts Ar
 	layers := make([]v1.Layer, 0)
 
 	for _, artifact := range artifacts {
-		layer, err := factory.BuildLayer(artifact.FS())
+		layer, err := r.buildImageLayer(factory, artifact)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", artifact, err)
 		}
@@ -65,4 +65,23 @@ func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts Ar
 	}
 
 	return layers, nil
+}
+
+func (r *Releaser) buildImageLayer(factory *internal.ImageFactory, artifact *Artifact) (v1.Layer, error) {
+	fs, cleanup, err := artifact.FS()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cleanup() }()
+
+	layer, err := factory.BuildLayer(fs)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cleanup(); err != nil {
+		return nil, err
+	}
+
+	return layer, nil
 }
