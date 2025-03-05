@@ -91,6 +91,36 @@ func TestReleaser_Release(t *testing.T) {
 		require.Equal(t, "spec:", readFile(t, filepath.Join(arm64Dir, "step.yml")))
 		require.Equal(t, "arm64", readFile(t, filepath.Join(arm64Dir, "program")))
 	})
+
+	t.Run("writes an empty directory", func(t *testing.T) {
+		ctx := context.Background()
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		baseDir := bldr.Files(t).WriteDir("/my/files").Build()
+
+		artifacts := oci.NewArtifacts(
+			bldr.OCIArtifact(t).
+				LinuxAMD64().
+				WithFrom(filepath.Join(baseDir, "my", "files")).
+				WithTo("/app/my/files").
+				Build())
+
+		downloadDir := t.TempDir()
+		err := oci.NewReleaser(downloadDir).Release(ctx, remoteImgRef, artifacts)
+		require.NoError(t, err)
+
+		imageDir := fetch(t, remoteImgRef, bldr.OCIPlatform.LinuxAMD64)
+		myFiles := filepath.Join(imageDir, "app", "my", "files")
+
+		stat, err := os.Stat(myFiles)
+		require.NoError(t, err)
+		require.True(t, stat.Mode().IsDir())
+
+		entries, err := os.ReadDir(myFiles)
+		require.NoError(t, err)
+		require.Len(t, entries, 0)
+	})
 }
 
 func readFile(t *testing.T, path string) string {
