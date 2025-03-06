@@ -25,5 +25,5 @@ exec:
     - "${{inputs.tag}}"
     - "--common"
     - "${{inputs.common}}"
-    - "--platform"
-    - "${{inputs.platform}}"
+    - "--platforms"
+    - "${{inputs.platforms}}"

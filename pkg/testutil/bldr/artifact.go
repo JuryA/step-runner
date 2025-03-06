@@ -44,6 +44,11 @@ func (bldr *OCIArtifactBuilder) WithFrom(from string) *OCIArtifactBuilder {
 	return bldr
 }
 
+func (bldr *OCIArtifactBuilder) WithTo(to string) *OCIArtifactBuilder {
+	bldr.to = to
+	return bldr
+}
+
 func (bldr *OCIArtifactBuilder) Build() *oci.Artifact {
 	return oci.NewArtifact(bldr.platform, bldr.from, bldr.to)
 }

@@ -159,8 +159,8 @@ func (f *ImageFactory) archive(archiveFS fs.FS) (string, error) {
 	tw := tar.NewWriter(zw)
 	defer tw.Close()
 
-	if err := tw.AddFS(archiveFS); err != nil {
-		return "", fmt.Errorf("archive: taring directory %s: %w", archiveFS, err)
+	if err := f.tarFS(archiveFS, tw); err != nil {
+		return "", fmt.Errorf("archive: tar directory %s: %w", archiveFS, err)
 	}
 
 	if err := tw.Close(); err != nil {
@@ -176,4 +176,90 @@ func (f *ImageFactory) archive(archiveFS fs.FS) (string, error) {
 	}
 
 	return archiveName, nil
+}
+
+// tarFS adds all files in the fs.FS to the tar.Writer.
+// tar.Writer.AddFS is not called because it does not add tar header entries for directories,
+// preventing empty directories from being added to the tar archive
+func (f *ImageFactory) tarFS(fsys fs.FS, tw *tar.Writer) error {
+	return fs.WalkDir(fsys, ".", func(name string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if name == "." {
+			return nil
+		}
+
+		info, err := d.Info()
+		if err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+
+		header, err := tar.FileInfoHeader(info, "")
+		if err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+
+		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeDir {
+			return fmt.Errorf("%s: type %s, only regular files and directories are supported", name, f.describeFileType(header.Typeflag))
+		}
+
+		header.Name = name
+
+		if err := tw.WriteHeader(header); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+
+		if header.Typeflag == tar.TypeDir {
+			return nil
+		}
+
+		file, err := fsys.Open(name)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		if _, err = io.Copy(tw, file); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+
+		return nil
+	})
+}
+
+func (f *ImageFactory) describeFileType(typeFlag byte) string {
+	switch typeFlag {
+	case tar.TypeReg:
+		return "regular file"
+	case tar.TypeRegA:
+		return "regular file"
+	case tar.TypeLink:
+		return "hard link"
+	case tar.TypeSymlink:
+		return "symbolic link"
+	case tar.TypeChar:
+		return "character device"
+	case tar.TypeBlock:
+		return "block device"
+	case tar.TypeDir:
+		return "directory"
+	case tar.TypeFifo:
+		return "fifo"
+	case tar.TypeCont:
+		return "cont"
+	case tar.TypeXHeader:
+		return "x header"
+	case tar.TypeXGlobalHeader:
+		return "x global header"
+	case tar.TypeGNUSparse:
+		return "gnu sparse file"
+	case tar.TypeGNULongName:
+		return "gnu long name"
+	case tar.TypeGNULongLink:
+		return "gnu long link"
+	default:
+		return "unknown type"
+	}
 }

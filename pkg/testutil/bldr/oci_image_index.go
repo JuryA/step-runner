@@ -10,6 +10,16 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
+var thisPlatform = platforms.DefaultSpec()
+var thisV1Platform = &v1.Platform{
+	OS:           thisPlatform.OS,
+	Architecture: thisPlatform.Architecture,
+	Variant:      thisPlatform.Variant,
+	OSVersion:    thisPlatform.OSVersion,
+	OSFeatures:   thisPlatform.OSFeatures,
+	Features:     nil,
+}
+
 type OCIImageIndexBuilder struct {
 	t     *testing.T
 	index v1.ImageIndex
@@ -35,17 +45,7 @@ func (b *OCIImageIndexBuilder) WithPlatformImage(platform *v1.Platform, image v1
 }
 
 func (b *OCIImageIndexBuilder) WithImageForThisPlatform(img v1.Image) *OCIImageIndexBuilder {
-	thisPlatform := platforms.DefaultSpec()
-	v1Platform := &v1.Platform{
-		OS:           thisPlatform.OS,
-		Architecture: thisPlatform.Architecture,
-		Variant:      thisPlatform.Variant,
-		OSVersion:    thisPlatform.OSVersion,
-		OSFeatures:   thisPlatform.OSFeatures,
-		Features:     nil,
-	}
-
-	return b.WithPlatformImage(v1Platform, img)
+	return b.WithPlatformImage(OCIPlatform.ThisPlatform, img)
 }
 
 func (b *OCIImageIndexBuilder) Build() v1.ImageIndex {
@@ -60,6 +60,7 @@ var OCIPlatform = struct {
 	LinuxARM64   *v1.Platform
 	WindowsAMD64 *v1.Platform
 	Generic      *v1.Platform
+	ThisPlatform *v1.Platform
 }{
 	LinuxAMD64:   &v1.Platform{OS: "linux", Architecture: "amd64"},
 	Linux386:     &v1.Platform{OS: "linux", Architecture: "386"},
@@ -68,4 +69,5 @@ var OCIPlatform = struct {
 	LinuxARM64:   &v1.Platform{OS: "linux", Architecture: "arm64"},
 	WindowsAMD64: &v1.Platform{OS: "windows", Architecture: "amd64", OSVersion: "10.0.26100.2894"},
 	Generic:      &v1.Platform{OS: "generic", Architecture: "generic"},
+	ThisPlatform: thisV1Platform,
 }

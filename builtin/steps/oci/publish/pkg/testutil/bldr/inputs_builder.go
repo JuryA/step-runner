@@ -14,7 +14,7 @@ func CLIInputs() *CLIInputsBuilder {
 		repository: "my_group/my_project",
 		tag:        "1.0.0",
 		common:     `{"files": {"step.yml": "step.yml"}}`,
-		platforms:  `{"linux/arm64": {"files": {"amd_run": "run"}}, "linux/amd64": {"files": {"arm_run": "run"}}}`,
+		platforms:  `{"linux_arm64": {"files": {"amd_run": "run"}}, "linux_amd64": {"files": {"arm_run": "run"}}}`,
 	}
 }
 
