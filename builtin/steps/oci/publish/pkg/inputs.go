@@ -145,14 +145,14 @@ func parsePlatforms(platformsJSON string) (oci.Artifacts, error) {
 
 func parseFiles(platform *v1.Platform, filesJSON string) (oci.Artifacts, error) {
 	var parsed struct {
-		FromTo map[string]string `json:"files"`
+		SrcDst map[string]string `json:"files"`
 	}
 
 	if err := unmarshal(filesJSON, &parsed); err != nil {
 		return nil, err
 	}
 
-	return buildArtifacts(platform, parsed.FromTo)
+	return buildArtifacts(platform, parsed.SrcDst)
 }
 
 func unmarshal(jsonInput string, into any) error {
@@ -168,22 +168,22 @@ func unmarshal(jsonInput string, into any) error {
 	return err
 }
 
-func buildArtifacts(platform *v1.Platform, parsed map[string]string) (oci.Artifacts, error) {
-	artifacts := make([]*oci.Artifact, 0, len(parsed))
+func buildArtifacts(platform *v1.Platform, srcDst map[string]string) (oci.Artifacts, error) {
+	artifacts := make([]*oci.Artifact, 0, len(srcDst))
 
-	for _, fromPath := range slices.Sorted(maps.Keys(parsed)) {
-		from := strings.TrimSpace(fromPath)
-		to := strings.TrimSpace(parsed[fromPath])
+	for _, srcPath := range slices.Sorted(maps.Keys(srcDst)) {
+		src := strings.TrimSpace(srcPath)
+		dst := strings.TrimSpace(srcDst[srcPath])
 
-		if from == "" {
-			return nil, fmt.Errorf("empty from path: %q: %q", fromPath, parsed[fromPath])
+		if src == "" {
+			return nil, fmt.Errorf("empty source path: %q: %q", srcPath, srcDst[srcPath])
 		}
 
-		if to == "" {
-			return nil, fmt.Errorf("empty to path: %q: %q", fromPath, parsed[fromPath])
+		if dst == "" {
+			return nil, fmt.Errorf("empty destination path: %q: %q", srcPath, srcDst[srcPath])
 		}
 
-		artifacts = append(artifacts, oci.NewArtifact(platform, from, to))
+		artifacts = append(artifacts, oci.NewArtifact(platform, src, dst))
 	}
 
 	return oci.NewArtifacts(artifacts...), nil

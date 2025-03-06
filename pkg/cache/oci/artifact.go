@@ -11,15 +11,15 @@ import (
 )
 
 type Artifact struct {
-	From     string
-	To       string
+	Src      string
+	Dst      string
 	Platform *v1.Platform
 }
 
-func NewArtifact(platform *v1.Platform, from, to string) *Artifact {
+func NewArtifact(platform *v1.Platform, src, dst string) *Artifact {
 	return &Artifact{
-		From:     from,
-		To:       to,
+		Src:      src,
+		Dst:      dst,
 		Platform: platform,
 	}
 }
@@ -30,27 +30,27 @@ func (a *Artifact) FS() (fs.FS, func() error, error) {
 		return nil, func() error { return nil }, fmt.Errorf("create temporary directory: %w", err)
 	}
 
-	fromPath := filepath.Clean(a.From)
-	toPath := filepath.Join(baseDir, filepath.Clean(a.To))
-	toDir, _ := filepath.Split(toPath)
+	src := filepath.Clean(a.Src)
+	dst := filepath.Join(baseDir, filepath.Clean(a.Dst))
+	dstDir, _ := filepath.Split(dst)
 	cleanup := a.removeDir(baseDir)
 
-	fromStat, err := os.Stat(fromPath)
+	statSrc, err := os.Stat(src)
 	if err != nil {
 		_ = cleanup()
 		return nil, func() error { return nil }, err
 	}
 
-	if err := os.MkdirAll(toDir, 0755); err != nil {
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		_ = cleanup()
-		return nil, func() error { return nil }, fmt.Errorf(`create "to" directories: %w`, err)
+		return nil, func() error { return nil }, fmt.Errorf(`create destination directories: %w`, err)
 	}
 
-	switch fromStat.IsDir() {
+	switch statSrc.IsDir() {
 	case true:
-		err = a.copyDir(fromPath, toPath)
+		err = a.copyDir(src, dst)
 	case false:
-		err = a.copyFile(fromPath, toPath)
+		err = a.copyFile(src, dst)
 	}
 
 	if err != nil {
@@ -61,48 +61,48 @@ func (a *Artifact) FS() (fs.FS, func() error, error) {
 	return os.DirFS(baseDir), cleanup, nil
 }
 
-func (a *Artifact) copyFile(fromPath string, toPath string) error {
-	fromFile, err := os.OpenFile(fromPath, os.O_RDONLY, 0000)
+func (a *Artifact) copyFile(src string, dst string) error {
+	srcFile, err := os.OpenFile(src, os.O_RDONLY, 0000)
 	if err != nil {
-		return fmt.Errorf(`open "from" file: %w`, err)
+		return fmt.Errorf(`open source file: %w`, err)
 	}
-	defer fromFile.Close()
+	defer srcFile.Close()
 
-	toFile, err := os.OpenFile(toPath, os.O_WRONLY|os.O_CREATE, 0444)
+	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE, 0444)
 	if err != nil {
-		return fmt.Errorf(`open "to" file: %w`, err)
+		return fmt.Errorf(`open destination file: %w`, err)
 	}
-	defer toFile.Close()
+	defer dstFile.Close()
 
-	if _, err := io.Copy(toFile, fromFile); err != nil {
-		return fmt.Errorf(`copy "from" file to "to" file: %w`, err)
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf(`copy source file to destination file: %w`, err)
 	}
 
-	if err := toFile.Close(); err != nil {
-		return fmt.Errorf(`close "to" file: %w`, err)
+	if err := dstFile.Close(); err != nil {
+		return fmt.Errorf(`close destination file: %w`, err)
 	}
 
 	return nil
 }
 
-func (a *Artifact) removeDir(toDir string) func() error {
+func (a *Artifact) removeDir(dstDir string) func() error {
 	return func() error {
-		if err := os.RemoveAll(toDir); err != nil {
-			return fmt.Errorf(`remove "to" directory %q: %w`, toDir, err)
+		if err := os.RemoveAll(dstDir); err != nil {
+			return fmt.Errorf(`remove destination directory %q: %w`, dstDir, err)
 		}
 
 		return nil
 	}
 }
 
-func (a *Artifact) copyDir(fromPath string, toPath string) error {
-	if err := os.CopyFS(toPath, os.DirFS(fromPath)); err != nil {
-		return fmt.Errorf(`copy "from" dir to "to" dir: %w`, err)
+func (a *Artifact) copyDir(src string, dst string) error {
+	if err := os.CopyFS(dst, os.DirFS(src)); err != nil {
+		return fmt.Errorf(`copy source dir to destination dir: %w`, err)
 	}
 
 	return nil
 }
 
 func (a *Artifact) String() string {
-	return fmt.Sprintf("%s[%s->%s]", a.Platform, a.From, a.To)
+	return fmt.Sprintf("%s[%s->%s]", a.Platform, a.Src, a.Dst)
 }

@@ -13,66 +13,64 @@ import (
 )
 
 func TestArtifact_FS(t *testing.T) {
-	t.Run("from is a file", func(t *testing.T) {
-		t.Run("writes files", func(t *testing.T) {
-			baseDir := bldr.Files(t).WriteFile("cow", "moo").Build()
-			cowFile := filepath.Join(baseDir, "cow")
+	t.Run("src is a file", func(t *testing.T) {
+		baseDir := bldr.Files(t).WriteFile("cow", "moo").Build()
+		cowFile := filepath.Join(baseDir, "cow")
 
-			tests := []struct {
-				name       string
-				from       string
-				to         string
-				resultFile string
-			}{
-				{
-					name:       "writes to root folder",
-					from:       cowFile,
-					to:         "cow",
-					resultFile: "cow",
-				},
-				{
-					name:       "writes with additional slash in from path",
-					from:       cowFile + "/",
-					to:         "cow",
-					resultFile: "cow",
-				},
-				{
-					name:       "cleans paths",
-					from:       cowFile + "/directory/..",
-					to:         "directory/../cow",
-					resultFile: "cow",
-				},
-				{
-					name:       "creates new directories",
-					from:       cowFile,
-					to:         "my/animals/cow",
-					resultFile: "my/animals/cow",
-				},
-				{
-					name:       "writes when to path has slash prefix",
-					from:       cowFile,
-					to:         "/cow",
-					resultFile: "cow",
-				},
-			}
+		tests := []struct {
+			name       string
+			src        string
+			dst        string
+			resultFile string
+		}{
+			{
+				name:       "writes to root folder",
+				src:        cowFile,
+				dst:        "cow",
+				resultFile: "cow",
+			},
+			{
+				name:       "writes with additional slash in from path",
+				src:        cowFile + "/",
+				dst:        "cow",
+				resultFile: "cow",
+			},
+			{
+				name:       "cleans paths",
+				src:        cowFile + "/directory/..",
+				dst:        "directory/../cow",
+				resultFile: "cow",
+			},
+			{
+				name:       "creates new directories",
+				src:        cowFile,
+				dst:        "my/animals/cow",
+				resultFile: "my/animals/cow",
+			},
+			{
+				name:       "writes when to path has slash prefix",
+				src:        cowFile,
+				dst:        "/cow",
+				resultFile: "cow",
+			},
+		}
 
-			for _, test := range tests {
-				t.Run(test.name, func(t *testing.T) {
-					artifact := oci.NewArtifact(bldr.OCIPlatform.Generic, test.from, test.to)
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				artifact := oci.NewArtifact(bldr.OCIPlatform.Generic, test.src, test.dst)
 
-					fsys, cleanup, err := artifact.FS()
-					require.NoError(t, err)
-					t.Cleanup(func() { _ = cleanup() })
+				fsys, cleanup, err := artifact.FS()
+				require.NoError(t, err)
+				t.Cleanup(func() { _ = cleanup() })
 
-					data, err := fs.ReadFile(fsys, test.resultFile)
-					require.NoError(t, err)
-					require.Equal(t, "moo", string(data))
-				})
-			}
-		})
+				data, err := fs.ReadFile(fsys, test.resultFile)
+				require.NoError(t, err)
+				require.Equal(t, "moo", string(data))
+			})
+		}
 	})
 
-	t.Run("from is a directory", func(t *testing.T) {
+	t.Run("src is a directory", func(t *testing.T) {
 		t.Run("writes files", func(t *testing.T) {
 			baseDir := bldr.Files(t).WriteFile("animals/snake", "hiss").Build()
 			artifact := oci.NewArtifact(bldr.OCIPlatform.Generic, baseDir, "/my_files")
@@ -94,14 +92,14 @@ func TestArtifact_FS(t *testing.T) {
 
 			tests := []struct {
 				name   string
-				from   string
-				to     string
+				src    string
+				dst    string
 				expect []string
 			}{
 				{
 					name: "writes to new path",
-					from: baseDir,
-					to:   "creatures/real",
+					src:  baseDir,
+					dst:  "creatures/real",
 					expect: []string{
 						"creatures",
 						"creatures/real",
@@ -113,8 +111,8 @@ func TestArtifact_FS(t *testing.T) {
 				},
 				{
 					name: "slashes in to path are ignored",
-					from: baseDir,
-					to:   "/files/",
+					src:  baseDir,
+					dst:  "/files/",
 					expect: []string{
 						"files",
 						"files/animals",
@@ -125,8 +123,8 @@ func TestArtifact_FS(t *testing.T) {
 				},
 				{
 					name: "cleans paths",
-					from: baseDir + "/directory/..",
-					to:   "/directory/..",
+					src:  baseDir + "/directory/..",
+					dst:  "/directory/..",
 					expect: []string{
 						"animals",
 						"animals/birds",
@@ -137,7 +135,7 @@ func TestArtifact_FS(t *testing.T) {
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
-					artifact := oci.NewArtifact(bldr.OCIPlatform.Generic, test.from, test.to)
+					artifact := oci.NewArtifact(bldr.OCIPlatform.Generic, test.src, test.dst)
 					paths := make([]string, 0)
 
 					fsys, cleanup, err := artifact.FS()
@@ -162,20 +160,20 @@ func TestArtifact_FS(t *testing.T) {
 	t.Run("errors", func(t *testing.T) {
 		tests := []struct {
 			name      string
-			from      string
-			to        string
+			src       string
+			dst       string
 			expectErr string
 		}{
 			{
-				name:      "from path does not exist",
-				from:      "/file/doesnt/exist",
+				name:      "source path does not exist",
+				src:       "/file/doesnt/exist",
 				expectErr: `stat /file/doesnt/exist: no such file or directory`,
 			},
 		}
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				artifact := oci.NewArtifact(bldr.OCIPlatform.Generic, test.from, test.to)
+				artifact := oci.NewArtifact(bldr.OCIPlatform.Generic, test.src, test.dst)
 
 				_, _, err := artifact.FS()
 				require.Error(t, err)
