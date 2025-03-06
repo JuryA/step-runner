@@ -3,6 +3,7 @@ package oci
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -13,11 +14,13 @@ import (
 
 type Releaser struct {
 	client *internal.Client
+	logger *slog.Logger
 }
 
 func NewReleaser(downloadDir string) *Releaser {
 	return &Releaser{
 		client: internal.NewClient(downloadDir),
+		logger: slog.Default(),
 	}
 }
 
@@ -44,12 +47,7 @@ func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts
 
 	imageIndex := factory.BuildImageIndex(createdAt, imagePlatforms...)
 
-	err := r.client.PushImageIndex(ctx, imgRef, imageIndex)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return r.client.PushImageIndex(ctx, imgRef, imageIndex)
 }
 
 func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts Artifacts) ([]v1.Layer, error) {
@@ -72,16 +70,12 @@ func (r *Releaser) buildImageLayer(factory *internal.ImageFactory, artifact *Art
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = cleanup() }()
 
-	layer, err := factory.BuildLayer(fs)
-	if err != nil {
-		return nil, err
-	}
+	defer func() {
+		if err := cleanup(); err != nil {
+			r.logger.Warn("failed to clean up files used to build image layer", "err", err)
+		}
+	}()
 
-	if err := cleanup(); err != nil {
-		return nil, err
-	}
-
-	return layer, nil
+	return factory.BuildLayer(fs)
 }

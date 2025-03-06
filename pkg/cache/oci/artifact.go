@@ -78,10 +78,6 @@ func (a *Artifact) copyFile(fromPath string, toPath string) error {
 		return fmt.Errorf(`copy "from" file to "to" file: %w`, err)
 	}
 
-	if err := fromFile.Close(); err != nil {
-		return fmt.Errorf(`close "from" file: %w`, err)
-	}
-
 	if err := toFile.Close(); err != nil {
 		return fmt.Errorf(`close "to" file: %w`, err)
 	}

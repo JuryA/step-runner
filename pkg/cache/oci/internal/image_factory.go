@@ -225,10 +225,6 @@ func (f *ImageFactory) tarFS(fsys fs.FS, tw *tar.Writer) error {
 			return fmt.Errorf("%s: %w", name, err)
 		}
 
-		if err := file.Close(); err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
-
 		return nil
 	})
 }
