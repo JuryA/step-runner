@@ -11,6 +11,7 @@ import (
 )
 
 type FilesBuilder struct {
+	dirs    map[string]os.FileMode
 	files   map[string]FileData
 	t       *testing.T
 	baseDir string
@@ -23,14 +24,24 @@ type FileData struct {
 
 func Files(t *testing.T) *FilesBuilder {
 	return &FilesBuilder{
+		dirs:    make(map[string]os.FileMode),
 		files:   make(map[string]FileData),
 		t:       t,
 		baseDir: t.TempDir(),
 	}
 }
 
+func (b *FilesBuilder) WriteDir(dir string) *FilesBuilder {
+	b.dirs[filepath.Join(b.baseDir, dir)] = 0755
+	return b
+}
+
+func (b *FilesBuilder) TouchFile(path string) *FilesBuilder {
+	return b.WriteFile(path, "")
+}
+
 func (b *FilesBuilder) WriteFile(path string, data any) *FilesBuilder {
-	return b.WriteFileWithPerms(path, data, 0o644)
+	return b.WriteFileWithPerms(path, data, 0644)
 }
 
 func (b *FilesBuilder) WriteFileWithPerms(path string, data any, perm os.FileMode) *FilesBuilder {
@@ -49,6 +60,11 @@ func (b *FilesBuilder) WriteFileWithPerms(path string, data any, perm os.FileMod
 }
 
 func (b *FilesBuilder) Build() string {
+	for dir, perm := range b.dirs {
+		err := os.MkdirAll(dir, perm)
+		require.NoError(b.t, err)
+	}
+
 	for filePath, fileData := range b.files {
 		dir, _ := path.Split(filePath)
 

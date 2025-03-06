@@ -27,20 +27,28 @@ func TestReleaser_Release(t *testing.T) {
 			Build()
 
 		artifacts := oci.NewArtifacts(
-			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/common")).Generic().Build(),
-			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/linux/amd64")).LinuxAMD64().Build())
+			bldr.OCIArtifact(t).
+				Generic().
+				WithFrom(filepath.Join(baseDir, "dist/common")).
+				WithTo("/my_step").
+				Build(),
+			bldr.OCIArtifact(t).
+				LinuxAMD64().
+				WithFrom(filepath.Join(baseDir, "dist/linux/amd64/program")).
+				WithTo("/my_step/program").
+				Build())
 
 		downloadDir := t.TempDir()
 		err := oci.NewReleaser(downloadDir).Release(ctx, remoteImgRef, artifacts)
 		require.NoError(t, err)
 
 		imageDir := fetch(t, remoteImgRef, bldr.OCIPlatform.LinuxAMD64)
-		stat, err := os.Stat(filepath.Join(imageDir, "step.yml"))
+		stat, err := os.Stat(filepath.Join(imageDir, "my_step", "step.yml"))
 		require.NoError(t, err)
-		require.Equal(t, os.FileMode(0600), stat.Mode())
+		require.Equal(t, "-rw-r--r--", stat.Mode().String())
 
-		require.Equal(t, "spec:", readFile(t, filepath.Join(imageDir, "step.yml")))
-		require.Equal(t, "123", readFile(t, filepath.Join(imageDir, "program")))
+		require.Equal(t, "spec:", readFile(t, filepath.Join(imageDir, "my_step", "step.yml")))
+		require.Equal(t, "123", readFile(t, filepath.Join(imageDir, "my_step", "program")))
 	})
 
 	t.Run("publishes images for many architectures", func(t *testing.T) {
@@ -55,9 +63,21 @@ func TestReleaser_Release(t *testing.T) {
 			Build()
 
 		artifacts := oci.NewArtifacts(
-			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/common")).Generic().Build(),
-			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/linux/amd64")).LinuxAMD64().Build(),
-			bldr.OCIArtifact(t).WithFrom(filepath.Join(baseDir, "dist/linux/arm64")).LinuxARM64().Build())
+			bldr.OCIArtifact(t).
+				Generic().
+				WithFrom(filepath.Join(baseDir, "dist/common")).
+				WithTo("/").
+				Build(),
+			bldr.OCIArtifact(t).
+				LinuxAMD64().
+				WithFrom(filepath.Join(baseDir, "dist/linux/amd64")).
+				WithTo("/").
+				Build(),
+			bldr.OCIArtifact(t).
+				LinuxARM64().
+				WithFrom(filepath.Join(baseDir, "dist/linux/arm64")).
+				WithTo("/").
+				Build())
 
 		downloadDir := t.TempDir()
 		err := oci.NewReleaser(downloadDir).Release(ctx, remoteImgRef, artifacts)
@@ -70,6 +90,36 @@ func TestReleaser_Release(t *testing.T) {
 		arm64Dir := fetch(t, remoteImgRef, bldr.OCIPlatform.LinuxARM64)
 		require.Equal(t, "spec:", readFile(t, filepath.Join(arm64Dir, "step.yml")))
 		require.Equal(t, "arm64", readFile(t, filepath.Join(arm64Dir, "program")))
+	})
+
+	t.Run("writes an empty directory", func(t *testing.T) {
+		ctx := context.Background()
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		baseDir := bldr.Files(t).WriteDir("/my/files").Build()
+
+		artifacts := oci.NewArtifacts(
+			bldr.OCIArtifact(t).
+				LinuxAMD64().
+				WithFrom(filepath.Join(baseDir, "my", "files")).
+				WithTo("/app/my/files").
+				Build())
+
+		downloadDir := t.TempDir()
+		err := oci.NewReleaser(downloadDir).Release(ctx, remoteImgRef, artifacts)
+		require.NoError(t, err)
+
+		imageDir := fetch(t, remoteImgRef, bldr.OCIPlatform.LinuxAMD64)
+		myFiles := filepath.Join(imageDir, "app", "my", "files")
+
+		stat, err := os.Stat(myFiles)
+		require.NoError(t, err)
+		require.True(t, stat.Mode().IsDir())
+
+		entries, err := os.ReadDir(myFiles)
+		require.NoError(t, err)
+		require.Len(t, entries, 0)
 	})
 }
 

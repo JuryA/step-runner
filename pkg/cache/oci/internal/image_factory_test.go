@@ -3,6 +3,11 @@ package internal_test
 import (
 	"archive/tar"
 	"io"
+	"net"
+	"os"
+	"path/filepath"
+	"runtime"
+	"syscall"
 	"testing"
 	"time"
 
@@ -54,11 +59,50 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 		untar := tar.NewReader(uncompressed)
 		next, err := untar.Next()
 		require.NoError(t, err)
+		require.Equal(t, "animals", next.Name)
+
+		next, err = untar.Next()
+		require.NoError(t, err)
 		require.Equal(t, "animals/sheep.txt", next.Name)
 
 		data, err := io.ReadAll(untar)
 		require.NoError(t, err)
 		require.Equal(t, "how now brown cow", string(data))
+	})
+
+	t.Run("only tars files and directories", func(t *testing.T) {
+		t.Run("sockets", func(t *testing.T) {
+			baseDir := filepath.Join(os.TempDir(), bldr.Random(t).String())
+			socketPath := filepath.Join(baseDir, "example.sock")
+			require.NoError(t, os.MkdirAll(baseDir, 0755))
+			t.Cleanup(func() { _ = os.RemoveAll(baseDir) })
+
+			listener, err := net.Listen("unix", socketPath)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = listener.Close() })
+
+			_, err = internal.NewImageFactory().BuildLayer(os.DirFS(baseDir))
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "example.sock: archive/tar: sockets not supported")
+		})
+
+		t.Run("named pipe", func(t *testing.T) {
+			if runtime.GOOS == "windows" {
+				t.Skip("skipping test on Windows as it does not support pipes")
+			}
+
+			baseDir := filepath.Join(os.TempDir(), bldr.Random(t).String())
+			namedPipePath := filepath.Join(baseDir, "named.pipe")
+			require.NoError(t, os.MkdirAll(baseDir, 0755))
+			t.Cleanup(func() { _ = os.RemoveAll(baseDir) })
+
+			err := syscall.Mkfifo(namedPipePath, 0666)
+			require.NoError(t, err)
+
+			_, err = internal.NewImageFactory().BuildLayer(os.DirFS(baseDir))
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "named.pipe: type fifo, only regular files and directories are supported")
+		})
 	})
 
 	t.Run("compresses using zstd", func(t *testing.T) {
@@ -93,6 +137,27 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 		digestB, err := layerB.Digest()
 		require.NoError(t, err)
 		require.Equal(t, digestA, digestB)
+	})
+
+	t.Run("archives empty directories", func(t *testing.T) {
+		archiveFS := bldr.Files(t).WriteDir("/animals/mammals").BuildFS()
+
+		layer, err := internal.NewImageFactory().BuildLayer(archiveFS)
+		require.NoError(t, err)
+
+		uncompressed, err := layer.Uncompressed()
+		require.NoError(t, err)
+
+		untar := tar.NewReader(uncompressed)
+		next, err := untar.Next()
+		require.NoError(t, err)
+		require.Equal(t, "animals", next.Name)
+		require.Equal(t, tar.TypeDir, int32(next.Typeflag))
+
+		next, err = untar.Next()
+		require.NoError(t, err)
+		require.Equal(t, "animals/mammals", next.Name)
+		require.Equal(t, tar.TypeDir, int32(next.Typeflag))
 	})
 }
 

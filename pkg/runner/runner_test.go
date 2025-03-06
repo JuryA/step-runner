@@ -2,20 +2,16 @@ package runner_test
 
 import (
 	"bytes"
-	ctx "context"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/pkg/testutil"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 func TestRun(t *testing.T) {
@@ -444,7 +440,28 @@ run:
 	}}
 
 	for _, c := range cases {
-		t.Run(c.name, runTest(c))
+		t.Run(c.name, func(t *testing.T) {
+			log := &bytes.Buffer{}
+
+			result, err := testutil.StepRunner(t).
+				WithLogs(log).
+				WithGlobalCtxEnv(c.globalEnv).
+				Run(c.yaml)
+
+			if c.wantErr != nil {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.wantErr.Error())
+				if c.wantResults != nil {
+					c.wantResults(t, result)
+				}
+			} else {
+				require.NoError(t, err)
+				if c.wantLog != "" {
+					require.Equal(t, c.wantLog, log.String())
+				}
+				c.wantResults(t, result)
+			}
+		})
 	}
 }
 
@@ -460,59 +477,4 @@ type runnerTest struct {
 func requireStringEqualValue(t *testing.T, str string, got *structpb.Value) {
 	want := structpb.NewStringValue(str)
 	require.True(t, protobuf.Equal(want, got), "want %+v. got %+v", want, got)
-}
-
-func runTest(testCase runnerTest) func(*testing.T) {
-	return func(t *testing.T) {
-		schemaSpec, schemaStep, err := schema.ReadSteps(testCase.yaml)
-		require.NoError(t, err)
-		protoSpec, err := schemaSpec.Compile()
-		require.NoError(t, err)
-		protoDef, err := schemaStep.Compile()
-		require.NoError(t, err)
-		protoStepDef := &proto.SpecDefinition{
-			Spec:       protoSpec,
-			Definition: protoDef,
-		}
-		require.NoError(t, err)
-		protoStepDef.Dir, _ = os.Getwd()
-
-		defs, err := cache.New()
-		require.NoError(t, err)
-
-		var log bytes.Buffer
-
-		osEnv, err := runner.NewEnvironmentFromOS()
-		require.NoError(t, err)
-
-		globalCtx := runner.NewGlobalContext(osEnv)
-		globalCtx.Env = runner.NewEnvironment(testCase.globalEnv)
-		globalCtx.Stdout = &log
-		globalCtx.Stderr = &log
-		globalCtx.WorkDir, _ = os.UserHomeDir()
-
-		params := &runner.Params{}
-
-		step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
-		require.NoError(t, err)
-
-		inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
-		stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.Env)
-		require.NoError(t, err)
-		result, err := step.Run(ctx.Background(), stepsCtx)
-
-		if testCase.wantErr != nil {
-			require.Error(t, err)
-			require.Contains(t, err.Error(), testCase.wantErr.Error())
-			if testCase.wantResults != nil {
-				testCase.wantResults(t, result)
-			}
-		} else {
-			require.NoError(t, err)
-			if testCase.wantLog != "" {
-				require.Equal(t, testCase.wantLog, log.String())
-			}
-			testCase.wantResults(t, result)
-		}
-	}
 }

@@ -144,18 +144,18 @@ func TestParseInputs(t *testing.T) {
 			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(commonJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 2)
-			require.Equal(t, "files/templates", inputs.Common[0].From)
-			require.Equal(t, "/templates", inputs.Common[0].To)
-			require.Equal(t, "step.yml", inputs.Common[1].From)
-			require.Equal(t, "step.yml", inputs.Common[1].To)
+			require.Equal(t, "files/templates", inputs.Common[0].Src)
+			require.Equal(t, "/templates", inputs.Common[0].Dst)
+			require.Equal(t, "step.yml", inputs.Common[1].Src)
+			require.Equal(t, "step.yml", inputs.Common[1].Dst)
 		})
 
 		t.Run("trims space", func(t *testing.T) {
 			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(`{"files": {"  step.yml  ": "  step.yml  "}}`).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 1)
-			require.Equal(t, "step.yml", inputs.Common[0].From)
-			require.Equal(t, "step.yml", inputs.Common[0].To)
+			require.Equal(t, "step.yml", inputs.Common[0].Src)
+			require.Equal(t, "step.yml", inputs.Common[0].Dst)
 		})
 
 		t.Run("can be empty", func(t *testing.T) {
@@ -187,14 +187,14 @@ func TestParseInputs(t *testing.T) {
 					expectErr:  `common input: json: unknown field "filess"`,
 				},
 				{
-					name:       "empty from path",
+					name:       "empty src path",
 					commonJSON: `{"files": {"": "step.yml"}}`,
-					expectErr:  `common input: empty from path: "": "step.yml"`,
+					expectErr:  `common input: empty source path: "": "step.yml"`,
 				},
 				{
-					name:       "empty to path",
+					name:       "empty dst path",
 					commonJSON: `{"files": {"step.yml": ""}}`,
-					expectErr:  `common input: empty to path: "step.yml": ""`,
+					expectErr:  `common input: empty destination path: "step.yml": ""`,
 				}}
 
 			for _, test := range tests {
@@ -209,18 +209,18 @@ func TestParseInputs(t *testing.T) {
 
 	t.Run("platform artifacts", func(t *testing.T) {
 		t.Run("parses platform", func(t *testing.T) {
-			platformsJSON := `{"linux/amd64": {"files": {"my_program": "run"}}}`
+			platformsJSON := `{"linux_amd64": {"files": {"my_program": "run"}}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
 			require.Equal(t, "linux", inputs.PlatformSpecific[0].Platform.OS)
 			require.Equal(t, "amd64", inputs.PlatformSpecific[0].Platform.Architecture)
-			require.Equal(t, "my_program", inputs.PlatformSpecific[0].From)
-			require.Equal(t, "run", inputs.PlatformSpecific[0].To)
+			require.Equal(t, "my_program", inputs.PlatformSpecific[0].Src)
+			require.Equal(t, "run", inputs.PlatformSpecific[0].Dst)
 		})
 
 		t.Run("trims space", func(t *testing.T) {
-			platformsJSON := `{" linux / amd64 ": {"files": {"my_program": "run"}}}`
+			platformsJSON := `{" linux _ amd64 ": {"files": {"my_program": "run"}}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
@@ -229,7 +229,7 @@ func TestParseInputs(t *testing.T) {
 		})
 
 		t.Run("parses many platforms", func(t *testing.T) {
-			platformsJSON := `{"linux/arm64": {"files": {"amd_run": "run"}}, "linux/amd64": {"files": {"arm_run": "run"}}}`
+			platformsJSON := `{"linux_arm64": {"files": {"amd_run": "run"}}, "linux_amd64": {"files": {"arm_run": "run"}}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 2)
@@ -257,18 +257,18 @@ func TestParseInputs(t *testing.T) {
 					expectErr:     `platforms input: invalid platform os/arch: linux`,
 				},
 				{
-					name:          "too many slashes",
-					platformsJSON: `{"linux/amd64/v7": {"files": {"step.yml": "step.yml"}}}`,
-					expectErr:     `platforms input: invalid platform os/arch: linux/amd64/v7`,
+					name:          "too many underscores",
+					platformsJSON: `{"linux_amd64_v7": {"files": {"step.yml": "step.yml"}}}`,
+					expectErr:     `platforms input: invalid platform os/arch: linux_amd64_v7`,
 				},
 				{
 					name:          "keys other than files",
-					platformsJSON: `{"linux/amd64": {"filess": {"step.yml": "step.yml"}}}`,
+					platformsJSON: `{"linux_amd64": {"filess": {"step.yml": "step.yml"}}}`,
 					expectErr:     `platforms input: json: unknown field "filess"`,
 				},
 				{
 					name:          "same platform defined more than once",
-					platformsJSON: `{"linux/amd64": {"files": {"step.yml": "step.yml"}}, "  linux/amd64  ": {"files": {"step.yml": "step.yml"}}}`,
+					platformsJSON: `{"linux_amd64": {"files": {"step.yml": "step.yml"}}, "  linux_amd64  ": {"files": {"step.yml": "step.yml"}}}`,
 					expectErr:     `platform "linux/amd64" defined more than once`,
 				},
 			}
