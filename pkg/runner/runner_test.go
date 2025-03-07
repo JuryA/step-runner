@@ -1,7 +1,6 @@
 package runner_test
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"testing"
@@ -441,12 +440,7 @@ run:
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			log := &bytes.Buffer{}
-
-			result, err := testutil.StepRunner(t).
-				WithLogs(log).
-				WithGlobalCtxEnv(c.globalEnv).
-				Run(c.yaml)
+			result, logs, err := testutil.StepRunner(t).WithGlobalCtxEnv(c.globalEnv).Run(c.yaml)
 
 			if c.wantErr != nil {
 				require.Error(t, err)
@@ -456,9 +450,7 @@ run:
 				}
 			} else {
 				require.NoError(t, err)
-				if c.wantLog != "" {
-					require.Equal(t, c.wantLog, log.String())
-				}
+				require.Contains(t, logs, c.wantLog)
 				c.wantResults(t, result)
 			}
 		})

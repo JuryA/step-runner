@@ -18,6 +18,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if inputs.DebugMode {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	}
+
 	imgRef, err := inputs.ImgRef()
 	if err != nil {
 		logger.Error("publish", "err", err)
@@ -31,5 +35,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Error("published image", "image", imgRef.String())
+	logger.Info("published step", "image", imgRef.String())
 }

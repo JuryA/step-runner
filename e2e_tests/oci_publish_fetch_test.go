@@ -1,7 +1,6 @@
 package e2e_tests
 
 import (
-	"bytes"
 	"fmt"
 	"testing"
 
@@ -47,8 +46,11 @@ run:
 	registryAddr := registry.Address()
 	testStep := fmt.Sprintf(template, registryAddr, baseDir, platform.OS, platform.Architecture, baseDir, registryAddr)
 
-	buffer := &bytes.Buffer{}
-	_, err := testutil.StepRunner(t).WithLogs(buffer).Run(testStep)
+	_, logs, err := testutil.StepRunner(t).WithGlobalCtxJob("CI_STEPS_DEBUG", "true").Run(testStep)
 	require.NoError(t, err)
-	require.Contains(t, buffer.String(), "Hello, World!")
+	require.Contains(t, logs, "Hello, World!")
+	require.Contains(t, logs, `Running step "publish_image"`)
+	require.Regexp(t, `INFO published step image=.*/my-image:1.0.2`, logs)
+	require.Contains(t, logs, `Running step "run_published_step"`)
+	require.Contains(t, logs, "Hello, World!")
 }
