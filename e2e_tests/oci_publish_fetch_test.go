@@ -1,6 +1,7 @@
 package e2e_tests
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -14,7 +15,7 @@ func TestCanFetchAPublishedImage(t *testing.T) {
 	registry := bldr.StartOCIRegistryServer(t)
 
 	baseDir := bldr.Files(t).
-		WriteFile("step.yml", `spec: --- exec: { command: [cat, ${{step_dir}}/app/files/templates/message] }`).
+		WriteFile("step.yml", "spec:\n---\nexec:\n  command: [cat, '${{step_dir}}/app/files/templates/message']").
 		WriteFile("files/templates_dir/message", "Hello, World!").
 		Build()
 
@@ -23,7 +24,7 @@ spec:
 ---
 run:
   - name: publish_image
-    step: "builtin://oci/publish"
+    step: builtin://oci/publish
     inputs:
       registry: %s
       repository: my-image
@@ -35,11 +36,19 @@ run:
         %s_%s:  
           files:
             %s/files/templates_dir: /app/files/templates
-`
+  - name: run_published_step
+    step:
+      oci:
+        registry: %s
+        repository: my-image
+        tag: 1.0.2`
 
 	platform := bldr.OCIPlatform.ThisPlatform
-	testStep := fmt.Sprintf(template, registry.Address(), baseDir, platform.OS, platform.Architecture, baseDir)
+	registryAddr := registry.Address()
+	testStep := fmt.Sprintf(template, registryAddr, baseDir, platform.OS, platform.Architecture, baseDir, registryAddr)
 
-	_, err := testutil.StepRunner(t).Run(testStep)
+	buffer := &bytes.Buffer{}
+	_, err := testutil.StepRunner(t).WithLogs(buffer).Run(testStep)
 	require.NoError(t, err)
+	require.Contains(t, buffer.String(), "Hello, World!")
 }
