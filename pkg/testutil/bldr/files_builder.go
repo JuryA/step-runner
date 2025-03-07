@@ -11,10 +11,11 @@ import (
 )
 
 type FilesBuilder struct {
-	dirs    map[string]os.FileMode
-	files   map[string]FileData
-	t       *testing.T
-	baseDir string
+	dirs     map[string]os.FileMode
+	symlinks map[string]string
+	files    map[string]FileData
+	t        *testing.T
+	baseDir  string
 }
 
 type FileData struct {
@@ -24,10 +25,11 @@ type FileData struct {
 
 func Files(t *testing.T) *FilesBuilder {
 	return &FilesBuilder{
-		dirs:    make(map[string]os.FileMode),
-		files:   make(map[string]FileData),
-		t:       t,
-		baseDir: t.TempDir(),
+		dirs:     make(map[string]os.FileMode),
+		files:    make(map[string]FileData),
+		symlinks: make(map[string]string),
+		t:        t,
+		baseDir:  t.TempDir(),
 	}
 }
 
@@ -59,6 +61,11 @@ func (b *FilesBuilder) WriteFileWithPerms(path string, data any, perm os.FileMod
 	return b
 }
 
+func (b *FilesBuilder) WriteSymlink(from string, to string) *FilesBuilder {
+	b.symlinks[filepath.Join(b.baseDir, from)] = filepath.Join(b.baseDir, to)
+	return b
+}
+
 func (b *FilesBuilder) Build() string {
 	for dir, perm := range b.dirs {
 		err := os.MkdirAll(dir, perm)
@@ -72,6 +79,11 @@ func (b *FilesBuilder) Build() string {
 		require.NoError(b.t, err)
 
 		err = os.WriteFile(filePath, fileData.data, fileData.perm)
+		require.NoError(b.t, err)
+	}
+
+	for from, to := range b.symlinks {
+		err := os.Symlink(to, from)
 		require.NoError(b.t, err)
 	}
 
