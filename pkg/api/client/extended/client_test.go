@@ -23,18 +23,7 @@ type testDialer struct {
 
 func (t *testDialer) Dial() (*grpc.ClientConn, error) { return t.dial(), nil }
 
-func cleanup(t *testing.T, paths ...string) {
-	os.RemoveAll(path.Join(test.WorkDir(t), ".config"))
-	os.RemoveAll(path.Join(test.WorkDir(t), ".cache"))
-
-	for _, p := range paths {
-		os.RemoveAll(path.Join(test.WorkDir(t), p))
-	}
-}
-
 func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
-	defer cleanup(t)
-
 	server := server.New(t).Serve()
 	srClient, err := New(&testDialer{dial: server.NewConnection})
 	require.NoError(t, err)
@@ -89,8 +78,6 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
-	defer cleanup(t)
-
 	server := server.New(t).Serve()
 	srClient, err := New(&testDialer{dial: server.NewConnection})
 	require.NoError(t, err)
@@ -124,8 +111,6 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
-	defer cleanup(t)
-
 	server := server.New(t).Serve()
 	srClient, err := New(&testDialer{dial: server.NewConnection})
 	require.NoError(t, err)
@@ -152,8 +137,6 @@ func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
-	defer cleanup(t)
-
 	ctx := context.Background()
 
 	server := server.New(t).Serve()
@@ -216,8 +199,6 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_LogsOnly(t *testing.T) {
-	defer cleanup(t)
-
 	server := server.New(t).Serve()
 	srClient, err := New(&testDialer{dial: server.NewConnection})
 	require.NoError(t, err)

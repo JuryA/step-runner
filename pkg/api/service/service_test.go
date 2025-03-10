@@ -36,15 +36,6 @@ func makeScriptStep(cmd string) string {
 	return fmt.Sprintf(scriptStep, cmd)
 }
 
-func cleanup(t *testing.T, paths ...string) {
-	os.RemoveAll(path.Join(test.WorkDir(t), ".config"))
-	os.RemoveAll(path.Join(test.WorkDir(t), ".cache"))
-
-	for _, p := range paths {
-		os.RemoveAll(path.Join(test.WorkDir(t), p))
-	}
-}
-
 func jobFinished(j *jobs.Job) func() bool {
 	return func() bool {
 		stat := j.Status()
@@ -53,8 +44,6 @@ func jobFinished(j *jobs.Job) func() bool {
 }
 
 func Test_StepRunnerService_Run_Success(t *testing.T) {
-	defer cleanup(t)
-
 	bg := context.Background()
 	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
 
@@ -79,7 +68,6 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 }
 
 func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
-	defer cleanup(t)
 	bg := context.Background()
 
 	tests := map[string]struct {
@@ -161,8 +149,6 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 }
 
 func Test_StepRunnerService_Run_Vars(t *testing.T) {
-	defer cleanup(t, "blammo.txt")
-
 	tests := map[string]struct {
 		jobWorkDir bool
 		script     string
@@ -234,8 +220,6 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 }
 
 func Test_StepRunnerService_Run_DuplicateID(t *testing.T) {
-	defer cleanup(t)
-
 	server := server.New(t).Serve()
 	apiClient := proto.NewStepRunnerClient(server.NewConnection())
 
@@ -251,8 +235,6 @@ func Test_StepRunnerService_Run_DuplicateID(t *testing.T) {
 }
 
 func Test_StepRunnerService_Close(t *testing.T) {
-	defer cleanup(t)
-
 	tests := map[string]struct {
 		cmd      string
 		preClose func(*jobs.Job)
@@ -326,8 +308,6 @@ func Test_StepRunnerService_Close_BadID(t *testing.T) {
 }
 
 func Test_StepRunnerService_FollowLogs(t *testing.T) {
-	defer cleanup(t)
-
 	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
 	server := server.New(t).Serve()
 	apiClient := proto.NewStepRunnerClient(server.NewConnection())
@@ -481,7 +461,6 @@ func Test_StepRunnerService_Status(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			defer cleanup(t)
 
 			rrs := tt.runRequests(t)
 			for _, rr := range rrs {

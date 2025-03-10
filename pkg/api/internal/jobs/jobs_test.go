@@ -44,7 +44,7 @@ func makeMockStep(status proto.StepResult_Status, exitCode int32, err error, sle
 
 func Test_New(t *testing.T) {
 	jid := test.RandJobID()
-	j, err := New(jid, test.WorkDir(t))
+	j, err := New(jid, t.TempDir())
 	require.NoError(t, err)
 	defer j.Close()
 	j.finishC <- struct{}{}
@@ -61,7 +61,7 @@ func jobFinished(j *Job) func() bool {
 }
 
 func Test_CloseNoRun(t *testing.T) {
-	j, err := New(test.RandJobID(), test.WorkDir(t))
+	j, err := New(test.RandJobID(), t.TempDir())
 	require.NoError(t, err)
 
 	go j.Close()
@@ -110,7 +110,7 @@ func Test_Run_Close(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			j, err := New(test.RandJobID(), test.WorkDir(t))
+			j, err := New(test.RandJobID(), t.TempDir())
 			require.NoError(t, err)
 
 			if tt.pre != nil {
@@ -191,7 +191,7 @@ func Test_FollowLogs(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			gotWritten := bytes.Buffer{}
 
-			j, err := New(test.RandJobID(), test.WorkDir(t))
+			j, err := New(test.RandJobID(), t.TempDir())
 			require.NoError(t, err)
 
 			defer j.Close()
@@ -313,7 +313,7 @@ func Test_Status(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			j, err := New(test.RandJobID(), test.WorkDir(t))
+			j, err := New(test.RandJobID(), t.TempDir())
 			require.NoError(t, err)
 			j.finishC <- struct{}{}
 			defer j.Close()
