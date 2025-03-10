@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -27,13 +28,19 @@ const (
 	scriptStep = `spec: {}
 ---
 run:
-  - name: script_step
+  - name: %s
     script: %s
 `
 )
 
-func makeScriptStep(cmd string) string {
-	return fmt.Sprintf(scriptStep, cmd)
+var nonAlphaNumericRe = regexp.MustCompile("[^a-zA-Z0-9_]+")
+var whitespaceRe = regexp.MustCompile(`\s+`)
+
+func makeScriptStep(t *testing.T, cmd string) string {
+	noWhitespace := whitespaceRe.ReplaceAllString(t.Name(), "_")
+	stepName := nonAlphaNumericRe.ReplaceAllString(noWhitespace, "")
+
+	return fmt.Sprintf(scriptStep, stepName, cmd)
 }
 
 func jobFinished(j *jobs.Job) func() bool {
@@ -45,7 +52,7 @@ func jobFinished(j *jobs.Job) func() bool {
 
 func Test_StepRunnerService_Run_Success(t *testing.T) {
 	bg := context.Background()
-	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
+	rr := test.ProtoRunRequest(t, makeScriptStep(t, "echo foo bar baz"), false)
 
 	server := server.New(t).Serve()
 	apiClient := proto.NewStepRunnerClient(server.NewConnection())
@@ -56,12 +63,12 @@ func Test_StepRunnerService_Run_Success(t *testing.T) {
 	job, ok := server.GetJob(rr.Id)
 	require.True(t, ok)
 
-	assert.Eventually(t, jobFinished(job), time.Second*20, time.Millisecond*50)
+	assert.Eventually(t, jobFinished(job), time.Second*20, time.Millisecond*50, "job status %s", statusName(job.Status().Status))
 	assert.NoError(t, job.Ctx.Err())
 
 	stat := job.Status()
 	assert.Empty(t, stat.Message)
-	assert.Equal(t, proto.StepResult_success, stat.Status)
+	assert.Equal(t, statusName(proto.StepResult_success), statusName(stat.Status))
 
 	apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
 	assert.NoDirExists(t, job.TmpDir)
@@ -85,7 +92,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			validate: func(j *jobs.Job) {
 				stat := j.Status()
 				assert.Contains(t, stat.Message, context.Canceled.Error())
-				assert.Equal(t, proto.StepResult_cancelled, stat.Status)
+				assert.Equal(t, statusName(proto.StepResult_cancelled), statusName(stat.Status))
 			},
 		},
 		"Close called after request finished": {
@@ -93,13 +100,13 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			finish: func(j *jobs.Job, client proto.StepRunnerClient, wg *sync.WaitGroup) {
 				defer wg.Done()
 				// Make sure the step execution finished
-				assert.Eventually(t, jobFinished(j), time.Millisecond*1900, time.Millisecond*100)
+				assert.Eventually(t, jobFinished(j), time.Millisecond*1900, time.Millisecond*100, "job status %s", statusName(j.Status().Status))
 				client.Close(bg, &proto.CloseRequest{Id: j.ID})
 			},
 			validate: func(j *jobs.Job) {
 				stat := j.Status()
 				assert.Empty(t, stat.Message)
-				assert.Equal(t, proto.StepResult_success, stat.Status)
+				assert.Equal(t, statusName(proto.StepResult_success), statusName(stat.Status))
 			},
 		},
 		"Close called before request finishes": {
@@ -113,7 +120,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			validate: func(j *jobs.Job) {
 				stat := j.Status()
 				assert.Contains(t, stat.Message, "signal: killed")
-				assert.Equal(t, proto.StepResult_cancelled, stat.Status)
+				assert.Equal(t, statusName(proto.StepResult_cancelled), statusName(stat.Status))
 			},
 		},
 	}
@@ -126,7 +133,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 
-			rr := test.ProtoRunRequest(t, makeScriptStep(tt.script), false)
+			rr := test.ProtoRunRequest(t, makeScriptStep(t, tt.script), false)
 			_, err := apiClient.Run(bg, rr)
 			require.NoError(t, err)
 
@@ -135,7 +142,7 @@ func Test_StepRunnerService_Run_Cancelled(t *testing.T) {
 
 			go tt.finish(job, apiClient, &wg)
 
-			assert.Eventually(t, jobFinished(job), time.Millisecond*5500, time.Millisecond*100)
+			assert.Eventually(t, jobFinished(job), time.Millisecond*5500, time.Millisecond*100, "job status %s", statusName(job.Status().Status))
 			wg.Wait()
 
 			assert.Error(t, job.Ctx.Err())
@@ -192,7 +199,7 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			bg := context.Background()
 
-			rr := test.ProtoRunRequest(t, makeScriptStep(tt.script), tt.jobWorkDir)
+			rr := test.ProtoRunRequest(t, makeScriptStep(t, tt.script), tt.jobWorkDir)
 			tt.setup(rr)
 
 			_, err := apiClient.Run(bg, rr)
@@ -201,12 +208,12 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			job, ok := server.GetJob(rr.Id)
 			require.True(t, ok)
 
-			assert.Eventually(t, jobFinished(job), time.Millisecond*500, time.Millisecond*50)
+			assert.Eventually(t, jobFinished(job), time.Millisecond*500, time.Millisecond*50, "job status %s", statusName(job.Status().Status))
 			assert.NoError(t, job.Ctx.Err())
 
 			stat := job.Status()
 			assert.Empty(t, stat.Message)
-			assert.Equal(t, proto.StepResult_success, stat.Status)
+			assert.Equal(t, statusName(proto.StepResult_success), statusName(stat.Status))
 
 			assert.FileExists(t, path.Join(job.WorkDir, "blammo.txt"))
 			data, err := os.ReadFile(path.Join(job.WorkDir, "blammo.txt"))
@@ -223,7 +230,7 @@ func Test_StepRunnerService_Run_DuplicateID(t *testing.T) {
 	server := server.New(t).Serve()
 	apiClient := proto.NewStepRunnerClient(server.NewConnection())
 
-	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
+	rr := test.ProtoRunRequest(t, makeScriptStep(t, "echo foo bar baz"), false)
 
 	ctx := context.Background()
 
@@ -243,13 +250,13 @@ func Test_StepRunnerService_Close(t *testing.T) {
 		"Close called after job finished": {
 			cmd: "echo 'yes we can!!!'",
 			preClose: func(j *jobs.Job) {
-				require.Eventually(t, jobFinished(j), 200*time.Millisecond, 25*time.Millisecond)
+				require.Eventually(t, jobFinished(j), time.Millisecond*200, time.Millisecond*25, "job status %s", statusName(j.Status().Status))
 			},
 			validate: func(j *jobs.Job) {
 				assert.True(t, jobFinished(j)())
 				stat := j.Status()
 				assert.Empty(t, stat.Message)
-				assert.Equal(t, proto.StepResult_success, stat.Status)
+				assert.Equal(t, statusName(proto.StepResult_success), statusName(stat.Status))
 			},
 		},
 		"Close called before job finished (should cancel task)": {
@@ -258,10 +265,10 @@ func Test_StepRunnerService_Close(t *testing.T) {
 				assert.False(t, jobFinished(j)())
 			},
 			validate: func(j *jobs.Job) {
-				require.Eventually(t, jobFinished(j), 200*time.Millisecond, 25*time.Millisecond)
+				require.Eventually(t, jobFinished(j), time.Millisecond*200, time.Millisecond*25, "job status %s", statusName(j.Status().Status))
 				stat := j.Status()
 				assert.Contains(t, stat.Message, "signal: killed")
-				assert.Equal(t, proto.StepResult_cancelled, stat.Status)
+				assert.Equal(t, statusName(proto.StepResult_cancelled), statusName(stat.Status))
 			},
 		},
 	}
@@ -272,7 +279,7 @@ func Test_StepRunnerService_Close(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			rr := test.ProtoRunRequest(t, makeScriptStep(tt.cmd), false)
+			rr := test.ProtoRunRequest(t, makeScriptStep(t, tt.cmd), false)
 			_, err := apiClient.Run(bg, rr)
 			require.NoError(t, err)
 
@@ -308,7 +315,7 @@ func Test_StepRunnerService_Close_BadID(t *testing.T) {
 }
 
 func Test_StepRunnerService_FollowLogs(t *testing.T) {
-	rr := test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)
+	rr := test.ProtoRunRequest(t, makeScriptStep(t, "echo foo bar baz"), false)
 	server := server.New(t).Serve()
 	apiClient := proto.NewStepRunnerClient(server.NewConnection())
 
@@ -334,7 +341,7 @@ func Test_StepRunnerService_FollowLogs(t *testing.T) {
 	apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
 
 	require.True(t, errors.Is(err, io.EOF))
-	require.Contains(t, logs.String(), `Running step "script_step"`)
+	require.Contains(t, logs.String(), `Running step "Test_StepRunnerService_FollowLogs"`)
 	require.Contains(t, logs.String(), "foo bar baz\n")
 }
 
@@ -351,7 +358,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 	tests := map[string]spec{
 		"single job eventually finishes": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep(t, "echo foo bar baz"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
@@ -362,18 +369,18 @@ func Test_StepRunnerService_Status(t *testing.T) {
 				require.NoError(t, err)
 				assert.Len(t, sr.Jobs, 1)
 				assert.Equal(t, rr.Id, sr.Jobs[0].Id)
-				assert.Equal(t, proto.StepResult_running, sr.Jobs[0].Status)
+				assert.Equal(t, statusName(proto.StepResult_running), statusName(sr.Jobs[0].Status))
 				assert.NotNil(t, sr.Jobs[0].StartTime)
 				assert.Nil(t, sr.Jobs[0].EndTime)
 				assert.Empty(t, sr.Jobs[0].Message)
 
-				assert.Eventually(t, jobFinished(j), time.Second*15, time.Millisecond*50)
+				assert.Eventually(t, jobFinished(j), time.Second*15, time.Millisecond*50, "job status %s", statusName(j.Status().Status))
 
 				sr, err = apiClient.Status(bg, &proto.StatusRequest{Id: rr.Id})
 				require.NoError(t, err)
 				assert.Len(t, sr.Jobs, 1)
 				assert.Equal(t, rr.Id, sr.Jobs[0].Id)
-				assert.Equal(t, proto.StepResult_success, sr.Jobs[0].Status)
+				assert.Equal(t, statusName(proto.StepResult_success), statusName(sr.Jobs[0].Status))
 				assert.NotNil(t, sr.Jobs[0].EndTime)
 				assert.Empty(t, sr.Jobs[0].Message)
 			},
@@ -381,8 +388,8 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		"multiple jobs, no ids in request": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
 				return []*proto.RunRequest{
-					test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false),
-					test.ProtoRunRequest(t, makeScriptStep("bling blang blong"), false),
+					test.ProtoRunRequest(t, makeScriptStep(t, "echo foo bar baz"), false),
+					test.ProtoRunRequest(t, makeScriptStep(t, "bling blang blong"), false),
 				}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
@@ -397,8 +404,8 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		"multiple jobs, single id in request": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
 				return []*proto.RunRequest{
-					test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false),
-					test.ProtoRunRequest(t, makeScriptStep("bling blang blong"), false),
+					test.ProtoRunRequest(t, makeScriptStep(t, "echo foo bar baz"), false),
+					test.ProtoRunRequest(t, makeScriptStep(t, "bling blang blong"), false),
 				}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
@@ -411,7 +418,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"bad id in request": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("echo foo bar baz"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep(t, "echo foo bar baz"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				sr, err := apiClient.Status(bg, &proto.StatusRequest{Id: "blablabla"})
@@ -421,24 +428,24 @@ func Test_StepRunnerService_Status(t *testing.T) {
 		},
 		"single job failed": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("sdjskjdfh"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep(t, "sdjskjdfh"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
 				j, ok := server.GetJob(rr.Id)
 				require.True(t, ok)
 
-				assert.Eventually(t, jobFinished(j), time.Second*20, time.Millisecond*50)
+				assert.Eventually(t, jobFinished(j), time.Second*20, time.Millisecond*50, "job status %s", statusName(j.Status().Status))
 
 				sr, err := apiClient.Status(bg, &proto.StatusRequest{Id: rr.Id})
 				assert.NoError(t, err)
-				assert.Equal(t, proto.StepResult_failure, sr.Jobs[0].Status)
+				assert.Equal(t, statusName(proto.StepResult_failure), statusName(sr.Jobs[0].Status))
 				assert.Contains(t, sr.Jobs[0].Message, "exec: exit status 127")
 			},
 		},
 		"single job cancelled after execution start": {
 			runRequests: func(t *testing.T) []*proto.RunRequest {
-				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep("sleep 1"), false)}
+				return []*proto.RunRequest{test.ProtoRunRequest(t, makeScriptStep(t, "sleep 1"), false)}
 			},
 			validate: func(t *testing.T, s *spec, runRequests []*proto.RunRequest) {
 				rr := runRequests[0]
@@ -453,7 +460,7 @@ func Test_StepRunnerService_Status(t *testing.T) {
 				assert.Eventually(t, func() bool {
 					sr, err := apiClient.Status(bg, &proto.StatusRequest{})
 					return err == nil &&
-						assert.Equal(t, proto.StepResult_cancelled, sr.Jobs[0].Status) && // :-(
+						assert.Equal(t, statusName(proto.StepResult_cancelled), statusName(sr.Jobs[0].Status)) && // :-(
 						strings.Contains(sr.Jobs[0].Message, "signal: killed")
 				}, time.Second*2, time.Millisecond*250)
 			},
@@ -472,4 +479,8 @@ func Test_StepRunnerService_Status(t *testing.T) {
 			tt.validate(t, &tt, rrs)
 		})
 	}
+}
+
+func statusName(status proto.StepResult_Status) string {
+	return proto.StepResult_Status_name[int32(status)]
 }
