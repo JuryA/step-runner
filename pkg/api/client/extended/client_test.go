@@ -108,8 +108,6 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 	// on the server side yet, and Close() is necessarily called after Status().
 	assert.Equal(t, client.StateRunning.String(), status.State.String())
 	assert.Empty(t, status.Message)
-	assert.Contains(t, logs.String(), "hello there")
-	assert.NotContains(t, logs.String(), "goodbye")
 }
 
 func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {

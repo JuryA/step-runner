@@ -54,27 +54,16 @@ func New(jobID, workDir string, options ...func(*Job)) (*Job, error) {
 		return nil, fmt.Errorf("creating workdir %q: %w", workDir, err)
 	}
 
-	tmpDir := path.Join(os.TempDir(), "step-runner-output-"+jobID)
-	if err := os.MkdirAll(tmpDir, 0700); err != nil {
-		return nil, fmt.Errorf("creating tmpdir %q: %w", tmpDir, err)
-	}
-
-	logs, err := file.New(path.Join(tmpDir, "logs"))
-	if err != nil {
-		_ = os.RemoveAll(tmpDir)
-		return nil, fmt.Errorf("creating log file: %w", err)
-	}
-
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
 	job := &Job{
-		TmpDir:          tmpDir,
+		TmpDir:          "",
 		WorkDir:         workDir,
 		ID:              jobID,
 		Ctx:             ctx,
 		cancel:          cancel,
-		logs:            logs,
+		logs:            nil,
 		status:          proto.StepResult_unspecified,
 		finishC:         make(chan struct{}, 1),
 		runExitWaitTime: time.Second * 2,
@@ -82,6 +71,21 @@ func New(jobID, workDir string, options ...func(*Job)) (*Job, error) {
 
 	for _, opt := range options {
 		opt(job)
+	}
+
+	if job.logs == nil {
+		job.TmpDir = path.Join(os.TempDir(), "step-runner-output-"+jobID)
+		if err := os.MkdirAll(job.TmpDir, 0700); err != nil {
+			return nil, fmt.Errorf("creating tmpdir %q: %w", job.TmpDir, err)
+		}
+
+		logs, err := file.New(path.Join(job.TmpDir, "logs"))
+		if err != nil {
+			_ = os.RemoveAll(job.TmpDir)
+			return nil, fmt.Errorf("creating log file: %w", err)
+		}
+
+		job.logs = logs
 	}
 
 	return job, nil
@@ -214,5 +218,11 @@ func (j *Job) Status() *proto.Status {
 func WithRunExitWaitTime(waitTime time.Duration) func(*Job) {
 	return func(j *Job) {
 		j.runExitWaitTime = waitTime
+	}
+}
+
+func WithLogs(logs *file.Streamer) func(*Job) {
+	return func(j *Job) {
+		j.logs = logs
 	}
 }

@@ -245,12 +245,12 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 }
 
 func Test_StepRunnerService_Run_DuplicateID(t *testing.T) {
-	server := server.New(t).Serve()
-	apiClient := proto.NewStepRunnerClient(server.NewConnection())
+	ctx := context.Background()
+	srvr := server.New(t).Serve()
+	apiClient := proto.NewStepRunnerClient(srvr.NewConnection())
+	t.Cleanup(func() { _, _ = apiClient.Close(ctx, &proto.CloseRequest{}) })
 
 	rr := test.ProtoRunRequest(t, makeScriptStep(t, "echo foo bar baz"), false)
-
-	ctx := context.Background()
 
 	_, err := apiClient.Run(ctx, rr)
 	require.NoError(t, err)
