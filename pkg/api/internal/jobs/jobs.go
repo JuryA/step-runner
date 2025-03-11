@@ -37,10 +37,11 @@ type Job struct {
 
 	logs *file.Streamer
 
-	status proto.StepResult_Status
+	status          proto.StepResult_Status
+	runExitWaitTime time.Duration
 }
 
-func New(jobID, workDir string) (*Job, error) {
+func New(jobID, workDir string, options ...func(*Job)) (*Job, error) {
 	if workDir == "" {
 		osWorkDir, err := os.Getwd()
 		if err != nil {
@@ -67,16 +68,23 @@ func New(jobID, workDir string) (*Job, error) {
 	// TODO: add job timeout to RunRequest and hook it up here
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return &Job{
-		TmpDir:  tmpDir,
-		WorkDir: workDir,
-		ID:      jobID,
-		Ctx:     ctx,
-		cancel:  cancel,
-		logs:    logs,
-		status:  proto.StepResult_unspecified,
-		finishC: make(chan struct{}, 1),
-	}, nil
+	job := &Job{
+		TmpDir:          tmpDir,
+		WorkDir:         workDir,
+		ID:              jobID,
+		Ctx:             ctx,
+		cancel:          cancel,
+		logs:            logs,
+		status:          proto.StepResult_unspecified,
+		finishC:         make(chan struct{}, 1),
+		runExitWaitTime: time.Second * 2,
+	}
+
+	for _, opt := range options {
+		opt(job)
+	}
+
+	return job, nil
 }
 
 // Logs returns a pair of io.Writers corresponding to the Job's stdout and stderr (in that order).
@@ -152,7 +160,7 @@ func (j *Job) Close() {
 
 		select {
 		case <-j.finishC:
-		case <-time.NewTimer(time.Second * 2).C:
+		case <-time.NewTimer(j.runExitWaitTime).C:
 			// A caller called close without first calling Run... 2 seconds ought to be enough for exec.Cmd.Run() to
 			// return...
 			j.mux.Lock()
@@ -201,4 +209,10 @@ func (j *Job) Status() *proto.Status {
 		st.Message = j.err.Error()
 	}
 	return &st
+}
+
+func WithRunExitWaitTime(waitTime time.Duration) func(*Job) {
+	return func(j *Job) {
+		j.runExitWaitTime = waitTime
+	}
 }
