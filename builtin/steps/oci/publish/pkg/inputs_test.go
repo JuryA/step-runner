@@ -282,6 +282,33 @@ func TestParseInputs(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("parses debug mode", func(t *testing.T) {
+		tests := []struct {
+			name            string
+			debugMode       string
+			expectDebugMode bool
+		}{
+			{
+				name:            "mode not set",
+				debugMode:       "",
+				expectDebugMode: false,
+			},
+			{
+				name:            "mode set to true",
+				debugMode:       "true",
+				expectDebugMode: true,
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				inputs, err := ParseInputs(bldr.CLIInputs().WithDebugMode(test.debugMode).Build())
+				require.NoError(t, err)
+				require.Equal(t, test.expectDebugMode, inputs.DebugMode)
+			})
+		}
+	})
 }
 
 func TestInputs_ImgRef(t *testing.T) {

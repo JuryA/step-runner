@@ -103,6 +103,21 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "named.pipe: type fifo, only regular files and directories are supported")
 		})
+
+		t.Run("symlinks", func(t *testing.T) {
+			if runtime.GOOS == "windows" {
+				t.Skip("skipping test on Windows because symlinks may require elevated permissions")
+			}
+
+			archiveFS := bldr.Files(t).
+				WriteFile("sheep.txt", "baa").
+				WriteSymlink("white-fluffy.txt", "sheep.txt").
+				BuildFS()
+
+			_, err := internal.NewImageFactory().BuildLayer(archiveFS)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "white-fluffy.txt: type symbolic link, only regular files and directories are supported")
+		})
 	})
 
 	t.Run("compresses using zstd", func(t *testing.T) {
