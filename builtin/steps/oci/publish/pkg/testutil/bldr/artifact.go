@@ -5,7 +5,8 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
+	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
 type OCIArtifactBuilder struct {
@@ -18,20 +19,20 @@ func OCIArtifact(t *testing.T) *OCIArtifactBuilder {
 	return &OCIArtifactBuilder{
 		from:     t.TempDir(),
 		to:       "/my_step",
-		platform: OCIPlatform.LinuxARM64,
+		platform: mainBldr.OCIPlatform.LinuxARM64,
 	}
 }
 
 func (bldr *OCIArtifactBuilder) Generic() *OCIArtifactBuilder {
-	return bldr.WithPlatform(OCIPlatform.Generic)
+	return bldr.WithPlatform(mainBldr.OCIPlatform.Generic)
 }
 
 func (bldr *OCIArtifactBuilder) LinuxAMD64() *OCIArtifactBuilder {
-	return bldr.WithPlatform(OCIPlatform.LinuxAMD64)
+	return bldr.WithPlatform(mainBldr.OCIPlatform.LinuxAMD64)
 }
 
 func (bldr *OCIArtifactBuilder) LinuxARM64() *OCIArtifactBuilder {
-	return bldr.WithPlatform(OCIPlatform.LinuxARM64)
+	return bldr.WithPlatform(mainBldr.OCIPlatform.LinuxARM64)
 }
 
 func (bldr *OCIArtifactBuilder) WithPlatform(platform *v1.Platform) *OCIArtifactBuilder {
@@ -49,6 +50,6 @@ func (bldr *OCIArtifactBuilder) WithTo(to string) *OCIArtifactBuilder {
 	return bldr
 }
 
-func (bldr *OCIArtifactBuilder) Build() *oci.Artifact {
-	return oci.NewArtifact(bldr.platform, bldr.from, bldr.to)
+func (bldr *OCIArtifactBuilder) Build() *pkg.Artifact {
+	return pkg.NewArtifact(bldr.platform, bldr.from, bldr.to)
 }

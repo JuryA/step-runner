@@ -1,10 +1,11 @@
-package pkg
+package pkg_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
 	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg/testutil/bldr"
 )
 
@@ -35,7 +36,7 @@ func TestParseInputs(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				inputs, err := ParseInputs(bldr.CLIInputs().WithRegistry(test.registry).Build())
+				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithRegistry(test.registry).Build())
 				if test.expectErr == "" {
 					require.NoError(t, err)
 					require.Equal(t, test.expect, inputs.Registry)
@@ -73,7 +74,7 @@ func TestParseInputs(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				inputs, err := ParseInputs(bldr.CLIInputs().WithRepository(test.repository).Build())
+				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithRepository(test.repository).Build())
 				if test.expectErr == "" {
 					require.NoError(t, err)
 					require.Equal(t, test.expect, inputs.Repository)
@@ -126,7 +127,7 @@ func TestParseInputs(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				inputs, err := ParseInputs(bldr.CLIInputs().WithTag(test.tag).Build())
+				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithTag(test.tag).Build())
 				if test.expectErr == "" {
 					require.NoError(t, err)
 					require.Equal(t, test.expect, inputs.Tag)
@@ -141,7 +142,7 @@ func TestParseInputs(t *testing.T) {
 	t.Run("common artifacts", func(t *testing.T) {
 		t.Run("parses files", func(t *testing.T) {
 			commonJSON := `{"files": {"step.yml": "step.yml", " files/templates ": " /templates "}}`
-			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(commonJSON).Build())
+			inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithCommon(commonJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 2)
 			require.Equal(t, "files/templates", inputs.Common[0].Src)
@@ -151,7 +152,7 @@ func TestParseInputs(t *testing.T) {
 		})
 
 		t.Run("trims space", func(t *testing.T) {
-			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(`{"files": {"  step.yml  ": "  step.yml  "}}`).Build())
+			inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithCommon(`{"files": {"  step.yml  ": "  step.yml  "}}`).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 1)
 			require.Equal(t, "step.yml", inputs.Common[0].Src)
@@ -159,13 +160,13 @@ func TestParseInputs(t *testing.T) {
 		})
 
 		t.Run("can be empty", func(t *testing.T) {
-			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(`{}`).Build())
+			inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithCommon(`{}`).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 0)
 		})
 
 		t.Run("can have no files", func(t *testing.T) {
-			inputs, err := ParseInputs(bldr.CLIInputs().WithCommon(`{"files": {}}`).Build())
+			inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithCommon(`{"files": {}}`).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 0)
 		})
@@ -199,7 +200,7 @@ func TestParseInputs(t *testing.T) {
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
-					_, err := ParseInputs(bldr.CLIInputs().WithCommon(test.commonJSON).Build())
+					_, err := pkg.ParseInputs(bldr.CLIInputs().WithCommon(test.commonJSON).Build())
 					require.Error(t, err)
 					require.Contains(t, err.Error(), test.expectErr)
 				})
@@ -209,8 +210,8 @@ func TestParseInputs(t *testing.T) {
 
 	t.Run("platform artifacts", func(t *testing.T) {
 		t.Run("parses platform", func(t *testing.T) {
-			platformsJSON := `{"linux_amd64": {"files": {"my_program": "run"}}}`
-			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
+			platformsJSON := `{"linux/amd64": {"files": {"my_program": "run"}}}`
+			inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
 			require.Equal(t, "linux", inputs.PlatformSpecific[0].Platform.OS)
@@ -220,8 +221,8 @@ func TestParseInputs(t *testing.T) {
 		})
 
 		t.Run("trims space", func(t *testing.T) {
-			platformsJSON := `{" linux _ amd64 ": {"files": {"my_program": "run"}}}`
-			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
+			platformsJSON := `{" linux / amd64 ": {"files": {"my_program": "run"}}}`
+			inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
 			require.Equal(t, "linux", inputs.PlatformSpecific[0].Platform.OS)
@@ -229,8 +230,8 @@ func TestParseInputs(t *testing.T) {
 		})
 
 		t.Run("parses many platforms", func(t *testing.T) {
-			platformsJSON := `{"linux_arm64": {"files": {"amd_run": "run"}}, "linux_amd64": {"files": {"arm_run": "run"}}}`
-			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
+			platformsJSON := `{"linux/arm64": {"files": {"amd_run": "run"}}, "linux/amd64": {"files": {"arm_run": "run"}}}`
+			inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 2)
 		})
@@ -257,25 +258,25 @@ func TestParseInputs(t *testing.T) {
 					expectErr:     `platforms input: invalid platform os/arch: linux`,
 				},
 				{
-					name:          "too many underscores",
-					platformsJSON: `{"linux_amd64_v7": {"files": {"step.yml": "step.yml"}}}`,
-					expectErr:     `platforms input: invalid platform os/arch: linux_amd64_v7`,
+					name:          "too many slashes",
+					platformsJSON: `{"linux/amd64/v7": {"files": {"step.yml": "step.yml"}}}`,
+					expectErr:     `platforms input: invalid platform os/arch: linux/amd64/v7`,
 				},
 				{
 					name:          "keys other than files",
-					platformsJSON: `{"linux_amd64": {"filess": {"step.yml": "step.yml"}}}`,
+					platformsJSON: `{"linux/amd64": {"filess": {"step.yml": "step.yml"}}}`,
 					expectErr:     `platforms input: json: unknown field "filess"`,
 				},
 				{
 					name:          "same platform defined more than once",
-					platformsJSON: `{"linux_amd64": {"files": {"step.yml": "step.yml"}}, "  linux_amd64  ": {"files": {"step.yml": "step.yml"}}}`,
+					platformsJSON: `{"linux/amd64": {"files": {"step.yml": "step.yml"}}, "  linux/amd64  ": {"files": {"step.yml": "step.yml"}}}`,
 					expectErr:     `platform "linux/amd64" defined more than once`,
 				},
 			}
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
-					_, err := ParseInputs(bldr.CLIInputs().WithPlatforms(test.platformsJSON).Build())
+					_, err := pkg.ParseInputs(bldr.CLIInputs().WithPlatforms(test.platformsJSON).Build())
 					require.Error(t, err)
 					require.Contains(t, err.Error(), test.expectErr)
 				})
@@ -303,7 +304,7 @@ func TestParseInputs(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				inputs, err := ParseInputs(bldr.CLIInputs().WithDebugMode(test.debugMode).Build())
+				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithDebugMode(test.debugMode).Build())
 				require.NoError(t, err)
 				require.Equal(t, test.expectDebugMode, inputs.DebugMode)
 			})
@@ -337,7 +338,7 @@ func TestInputs_ImgRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			inputs := &Inputs{
+			inputs := &pkg.Inputs{
 				Registry:   test.registry,
 				Repository: test.repository,
 				Tag:        test.tag,

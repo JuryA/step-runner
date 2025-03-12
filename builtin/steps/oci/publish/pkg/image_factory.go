@@ -1,4 +1,4 @@
-package internal
+package pkg
 
 import (
 	"crypto/sha256"
@@ -38,10 +38,16 @@ type ImageFactory struct {
 }
 
 func NewImageFactory(options ...func(*ImageFactory)) *ImageFactory {
-	return &ImageFactory{
+	factory := &ImageFactory{
 		workDir: "",
 		logger:  slog.Default(),
 	}
+
+	for _, option := range options {
+		option(factory)
+	}
+
+	return factory
 }
 
 func (f *ImageFactory) BuildImageIndex(createdAt time.Time, imagePlatforms ...PlatformImage) v1.ImageIndex {

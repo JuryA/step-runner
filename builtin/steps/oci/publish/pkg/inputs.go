@@ -14,8 +14,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 )
 
 var semVerRe = regexp.MustCompile(`^\d+\.\d+\.\d+(-.*)?$`)
@@ -24,8 +22,8 @@ type Inputs struct {
 	Registry         string
 	Repository       string
 	Tag              string
-	Common           oci.Artifacts
-	PlatformSpecific oci.Artifacts
+	Common           Artifacts
+	PlatformSpecific Artifacts
 	DebugMode        bool
 }
 
@@ -74,7 +72,7 @@ func ParseInputs(args []string) (*Inputs, error) {
 		return nil, err
 	}
 
-	common, err := parseFiles(oci.PlatformGeneric, commonJSON)
+	common, err := parseFiles(PlatformGeneric, commonJSON)
 	if err != nil {
 		return nil, fmt.Errorf("common input: %w", err)
 	}
@@ -100,7 +98,7 @@ func ParseInputs(args []string) (*Inputs, error) {
 	return inputs, nil
 }
 
-func parsePlatforms(platformsJSON string) (oci.Artifacts, error) {
+func parsePlatforms(platformsJSON string) (Artifacts, error) {
 	var parsed map[string]struct {
 		Files map[string]string `json:"files"`
 	}
@@ -113,10 +111,10 @@ func parsePlatforms(platformsJSON string) (oci.Artifacts, error) {
 		return nil, errors.New("must have at least one platform")
 	}
 
-	allArtifacts := oci.NewArtifacts()
+	allArtifacts := NewArtifacts()
 
 	for _, name := range slices.Sorted(maps.Keys(parsed)) {
-		nameParts := strings.Split(name, "_")
+		nameParts := strings.Split(name, "/")
 
 		if len(nameParts) != 2 {
 			return nil, fmt.Errorf("invalid platform os/arch: %s", name)
@@ -146,7 +144,7 @@ func parsePlatforms(platformsJSON string) (oci.Artifacts, error) {
 	return allArtifacts, nil
 }
 
-func parseFiles(platform *v1.Platform, filesJSON string) (oci.Artifacts, error) {
+func parseFiles(platform *v1.Platform, filesJSON string) (Artifacts, error) {
 	var parsed struct {
 		SrcDst map[string]string `json:"files"`
 	}
@@ -171,8 +169,8 @@ func unmarshal(jsonInput string, into any) error {
 	return err
 }
 
-func buildArtifacts(platform *v1.Platform, srcDst map[string]string) (oci.Artifacts, error) {
-	artifacts := make([]*oci.Artifact, 0, len(srcDst))
+func buildArtifacts(platform *v1.Platform, srcDst map[string]string) (Artifacts, error) {
+	artifacts := make([]*Artifact, 0, len(srcDst))
 
 	for _, srcPath := range slices.Sorted(maps.Keys(srcDst)) {
 		src := strings.TrimSpace(srcPath)
@@ -186,8 +184,8 @@ func buildArtifacts(platform *v1.Platform, srcDst map[string]string) (oci.Artifa
 			return nil, fmt.Errorf("empty destination path: %q: %q", srcPath, srcDst[srcPath])
 		}
 
-		artifacts = append(artifacts, oci.NewArtifact(platform, src, dst))
+		artifacts = append(artifacts, NewArtifact(platform, src, dst))
 	}
 
-	return oci.NewArtifacts(artifacts...), nil
+	return NewArtifacts(artifacts...), nil
 }
