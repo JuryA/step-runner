@@ -2,6 +2,7 @@ package server
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -16,18 +17,22 @@ import (
 
 type TestStepRunnerServer struct {
 	*service.StepRunnerService
-	t      *testing.T
-	server *grpc.Server
-	port   string
+	t                  *testing.T
+	server             *grpc.Server
+	port               string
+	executor           func(delegate func())
+	jobRunExitWaitTime time.Duration
 }
 
 func New(t *testing.T, options ...func(*TestStepRunnerServer)) *TestStepRunnerServer {
 	port := bldr.TCPPort(t).FindFree()
 
 	server := &TestStepRunnerServer{
-		t:      t,
-		server: nil,
-		port:   port,
+		t:                  t,
+		server:             nil,
+		port:               port,
+		executor:           func(delegate func()) { delegate() }, // sync executor (does not start a goroutine)
+		jobRunExitWaitTime: 500 * time.Millisecond,
 	}
 
 	for _, opt := range options {
@@ -39,11 +44,16 @@ func New(t *testing.T, options ...func(*TestStepRunnerServer)) *TestStepRunnerSe
 }
 
 func (s *TestStepRunnerServer) Serve() *TestStepRunnerServer {
+	svcOptions := []func(*service.StepRunnerService){
+		service.WithExecutor(s.executor),
+		service.WithJobRunExitWaitTime(s.jobRunExitWaitTime),
+	}
+
 	stepCache, err := cache.New()
 	require.NoError(s.t, err)
 
 	s.server = grpc.NewServer()
-	s.StepRunnerService = service.New(stepCache, runner.NewEmptyEnvironment())
+	s.StepRunnerService = service.New(stepCache, runner.NewEmptyEnvironment(), svcOptions...)
 	proto.RegisterStepRunnerServer(s.server, s.StepRunnerService)
 
 	listener, _ := bldr.TCPPort(s.t).Listen(s.port)
@@ -69,5 +79,17 @@ func (s *TestStepRunnerServer) Stop() {
 	if s.server != nil {
 		s.server.Stop()
 		s.server = nil
+	}
+}
+
+func WithExecutor(executor func(delegate func())) func(*TestStepRunnerServer) {
+	return func(server *TestStepRunnerServer) {
+		server.executor = executor
+	}
+}
+
+func WithJobRunExitWaitTime(waitTime time.Duration) func(*TestStepRunnerServer) {
+	return func(server *TestStepRunnerServer) {
+		server.jobRunExitWaitTime = waitTime
 	}
 }

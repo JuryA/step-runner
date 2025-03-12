@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/streamer/file"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/test"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -34,7 +36,7 @@ func (m *mockStep) Run(_ context.Context, _ *runner.StepsContext) (*proto.StepRe
 }
 
 // TODO: Replace this with a mockStepBuilder
-func makeMockStep(status proto.StepResult_Status, exitCode int32, err error, sleepTime time.Duration) *mockStep {
+func makeMockStep(status proto.StepResult_Status, err error, sleepTime time.Duration) *mockStep {
 	return &mockStep{
 		err:        err,
 		sleepTime:  sleepTime,
@@ -44,13 +46,13 @@ func makeMockStep(status proto.StepResult_Status, exitCode int32, err error, sle
 
 func Test_New(t *testing.T) {
 	jid := test.RandJobID()
-	j, err := New(jid, test.WorkDir(t))
+	j, err := New(jid, t.TempDir(), WithRunExitWaitTime(time.Millisecond), WithLogs(FileStreamer(t).Build()))
 	require.NoError(t, err)
-	defer j.Close()
+	t.Cleanup(j.Close)
+
 	j.finishC <- struct{}{}
 
 	assert.Equal(t, jid, j.ID)
-	assert.DirExists(t, j.TmpDir)
 }
 
 func jobFinished(j *Job) func() bool {
@@ -61,7 +63,7 @@ func jobFinished(j *Job) func() bool {
 }
 
 func Test_CloseNoRun(t *testing.T) {
-	j, err := New(test.RandJobID(), test.WorkDir(t))
+	j, err := New(test.RandJobID(), t.TempDir(), WithRunExitWaitTime(time.Millisecond), WithLogs(FileStreamer(t).Build()))
 	require.NoError(t, err)
 
 	go j.Close()
@@ -84,22 +86,22 @@ func Test_Run_Close(t *testing.T) {
 		pre        func(*Job)
 	}{
 		"job runs to completion, success": {
-			step:       makeMockStep(proto.StepResult_success, 0, nil, 0),
+			step:       makeMockStep(proto.StepResult_success, nil, 0),
 			wantStatus: proto.StepResult_success,
 			wantErr:    func(_ *Job) string { return "" },
 		},
 		"job runs to completion, failure": {
-			step:       makeMockStep(proto.StepResult_failure, -1, errors.New("FOO"), 0),
+			step:       makeMockStep(proto.StepResult_failure, errors.New("FOO"), 0),
 			wantStatus: proto.StepResult_failure,
 			wantErr:    func(_ *Job) string { return "FOO" },
 		},
 		"job cancelled while running, final status is cancelled": {
-			step:       makeMockStep(proto.StepResult_failure, -1, errors.New("signal: killed"), time.Millisecond*100),
+			step:       makeMockStep(proto.StepResult_failure, errors.New("signal: killed"), time.Millisecond*100),
 			wantStatus: proto.StepResult_cancelled,
 			wantErr:    func(j *Job) string { return fmt.Sprintf("job %q cancelled: signal: killed", j.ID) },
 		},
 		"job cancelled before execution started": {
-			step:       makeMockStep(proto.StepResult_failure, -1, errors.New("signal: killed"), 0),
+			step:       makeMockStep(proto.StepResult_failure, errors.New("signal: killed"), 0),
 			wantStatus: proto.StepResult_cancelled,
 			wantErr:    func(j *Job) string { return fmt.Sprintf("job %q cancelled: signal: killed", j.ID) },
 			pre: func(j *Job) {
@@ -110,8 +112,9 @@ func Test_Run_Close(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			j, err := New(test.RandJobID(), test.WorkDir(t))
+			j, err := New(test.RandJobID(), t.TempDir(), WithLogs(FileStreamer(t).Build()))
 			require.NoError(t, err)
+			t.Cleanup(j.Close)
 
 			if tt.pre != nil {
 				tt.pre(j)
@@ -127,7 +130,7 @@ func Test_Run_Close(t *testing.T) {
 			j.Close()
 
 			assert.True(t, jobFinished(j)())
-			assert.Equal(t, tt.wantStatus, j.Status().Status)
+			assert.Equal(t, tt.wantStatus.String(), j.Status().Status.String())
 			wantErr := tt.wantErr(j)
 			if wantErr == "" {
 				assert.NoError(t, j.err)
@@ -169,19 +172,19 @@ func Test_FollowLogs(t *testing.T) {
 	}{
 		"write error, incomplete logs written, error returned": {
 			writeErr:    errors.New("POW!!!"),
-			step:        makeMockStep(proto.StepResult_failure, -1, errors.New("BLAMMO!!!"), 0),
+			step:        makeMockStep(proto.StepResult_failure, errors.New("BLAMMO!!!"), 0),
 			wantErr:     `following logs for job "\d*": streaming logs: POW!!!`,
 			wantWritten: data[0][:len(data[0])-1],
 		},
 		"step execution error, logs written successfully, no error returned": {
 			writeErr:    nil,
-			step:        makeMockStep(proto.StepResult_cancelled, -1, context.Canceled, 0),
+			step:        makeMockStep(proto.StepResult_cancelled, context.Canceled, 0),
 			wantErr:     "",
 			wantWritten: bytes.Join(data, nil),
 		},
 		"step execution succeeds, logs written successfully, no error returned": {
 			writeErr:    nil,
-			step:        makeMockStep(proto.StepResult_success, 0, nil, 0),
+			step:        makeMockStep(proto.StepResult_success, nil, 0),
 			wantErr:     "",
 			wantWritten: bytes.Join(data, nil),
 		},
@@ -191,22 +194,21 @@ func Test_FollowLogs(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			gotWritten := bytes.Buffer{}
 
-			j, err := New(test.RandJobID(), test.WorkDir(t))
+			job, err := New(test.RandJobID(), t.TempDir(), WithRunExitWaitTime(time.Millisecond), WithLogs(FileStreamer(t).Build()))
 			require.NoError(t, err)
-
-			defer j.Close()
+			t.Cleanup(job.Close)
 
 			go func() {
 				for _, d := range data {
-					_, err := j.logs.Write(d)
+					_, err := job.logs.Write(d)
 					assert.NoError(t, err)
 				}
 				stepsCtx, err := runner.NewStepsContext(&runner.GlobalContext{}, "foo", map[string]*structpb.Value{}, &runner.Environment{})
 				require.NoError(t, err)
-				j.Run(stepsCtx, tt.step)
+				job.Run(stepsCtx, tt.step)
 			}()
 
-			gotErr := j.FollowLogs(context.Background(), 0, toIOWriter(func(p []byte) (int, error) {
+			gotErr := job.FollowLogs(context.Background(), 0, toIOWriter(func(p []byte) (int, error) {
 				n, err := gotWritten.Write(p)
 				require.NoError(t, err)
 				return n, tt.writeErr
@@ -313,10 +315,11 @@ func Test_Status(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			j, err := New(test.RandJobID(), test.WorkDir(t))
+			j, err := New(test.RandJobID(), t.TempDir(), WithRunExitWaitTime(time.Millisecond), WithLogs(FileStreamer(t).Build()))
 			require.NoError(t, err)
+			t.Cleanup(j.Close)
+
 			j.finishC <- struct{}{}
-			defer j.Close()
 
 			tt.set(j)
 
@@ -407,4 +410,21 @@ func Test_computeFinalStatus(t *testing.T) {
 			assert.Equal(t, tt.wantStatus.String(), j.status.String())
 		})
 	}
+}
+
+type FileStreamerBuilder struct {
+	t *testing.T
+}
+
+func FileStreamer(t *testing.T) *FileStreamerBuilder {
+	return &FileStreamerBuilder{
+		t: t,
+	}
+}
+
+func (b *FileStreamerBuilder) Build() *file.Streamer {
+	streamer, err := file.New(filepath.Join(b.t.TempDir(), "logs"))
+	require.NoError(b.t, err)
+
+	return streamer
 }
