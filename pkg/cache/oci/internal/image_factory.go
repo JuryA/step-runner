@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -33,11 +34,13 @@ type PlatformImage struct {
 type ImageFactory struct {
 	workDirMu sync.Mutex
 	workDir   string
+	logger    *slog.Logger
 }
 
-func NewImageFactory() *ImageFactory {
+func NewImageFactory(options ...func(*ImageFactory)) *ImageFactory {
 	return &ImageFactory{
 		workDir: "",
+		logger:  slog.Default(),
 	}
 }
 
@@ -141,6 +144,7 @@ func (f *ImageFactory) archive(archiveFS fs.FS) (string, error) {
 	archiveName := filepath.Join(workDir, fmt.Sprintf("%x.tar.zstd", hash.Sum([]byte{})))
 
 	if _, err := os.Stat(archiveName); err == nil {
+		f.logger.Debug("archive for artifact already exists, reusing", "tar", archiveName)
 		return archiveName, nil
 	}
 
@@ -205,6 +209,7 @@ func (f *ImageFactory) tarFS(fsys fs.FS, tw *tar.Writer) error {
 			return fmt.Errorf("%s: type %s, only regular files and directories are supported", name, f.describeFileType(header.Typeflag))
 		}
 
+		f.logger.Debug("archiving file", "name", name, "type", f.describeFileType(header.Typeflag))
 		header.Name = name
 
 		if err := tw.WriteHeader(header); err != nil {
@@ -261,5 +266,11 @@ func (f *ImageFactory) describeFileType(typeFlag byte) string {
 		return "gnu long link"
 	default:
 		return "unknown type"
+	}
+}
+
+func WithLogger(logger *slog.Logger) func(*ImageFactory) {
+	return func(f *ImageFactory) {
+		f.logger = logger
 	}
 }

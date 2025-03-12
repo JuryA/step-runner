@@ -26,6 +26,7 @@ type Inputs struct {
 	Tag              string
 	Common           oci.Artifacts
 	PlatformSpecific oci.Artifacts
+	DebugMode        bool
 }
 
 func (i *Inputs) Validate() error {
@@ -58,7 +59,7 @@ func (i *Inputs) ImgRef() (name.Reference, error) {
 }
 
 func ParseInputs(args []string) (*Inputs, error) {
-	var registry, repository, tag, commonJSON, platformsJSON string
+	var registry, repository, tag, commonJSON, platformsJSON, debugMode string
 
 	flags := flag.NewFlagSet("run", flag.ContinueOnError)
 	flags.StringVar(&registry, "registry", "", "")
@@ -66,6 +67,7 @@ func ParseInputs(args []string) (*Inputs, error) {
 	flags.StringVar(&tag, "tag", "", "")
 	flags.StringVar(&commonJSON, "common", "", "")
 	flags.StringVar(&platformsJSON, "platforms", "", "")
+	flags.StringVar(&debugMode, "debug-mode", "", "")
 
 	err := flags.Parse(args)
 	if err != nil {
@@ -88,6 +90,7 @@ func ParseInputs(args []string) (*Inputs, error) {
 		Tag:              strings.TrimSpace(tag),
 		Common:           common,
 		PlatformSpecific: platform,
+		DebugMode:        debugMode == "true",
 	}
 
 	if err := inputs.Validate(); err != nil {

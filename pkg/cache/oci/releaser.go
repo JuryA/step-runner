@@ -25,13 +25,15 @@ func NewReleaser(downloadDir string) *Releaser {
 }
 
 func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts Artifacts) error {
-	factory := internal.NewImageFactory()
+	factory := internal.NewImageFactory(internal.WithLogger(r.logger))
 	defer factory.CleanUp()
 
 	imagePlatforms := make([]internal.PlatformImage, 0)
 	createdAt := time.Now()
 
 	for _, platform := range artifacts.Platforms() {
+		r.logger.Info("building image", "platform", platform)
+
 		layers, err := r.buildImageLayers(factory, artifacts.Generic().Add(artifacts.ForPlatform(platform)))
 		if err != nil {
 			return err
@@ -45,8 +47,10 @@ func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts
 		imagePlatforms = append(imagePlatforms, internal.PlatformImage{Image: image, Platform: platform})
 	}
 
+	r.logger.Info("building image index")
 	imageIndex := factory.BuildImageIndex(createdAt, imagePlatforms...)
 
+	r.logger.Info("pushing image index")
 	return r.client.PushImageIndex(ctx, imgRef, imageIndex)
 }
 
@@ -66,6 +70,7 @@ func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts Ar
 }
 
 func (r *Releaser) buildImageLayer(factory *internal.ImageFactory, artifact *Artifact) (v1.Layer, error) {
+	r.logger.Debug("copying files", "source", artifact.Src, "destination", artifact.Dst)
 	fs, cleanup, err := artifact.FS()
 	if err != nil {
 		return nil, err
@@ -77,5 +82,6 @@ func (r *Releaser) buildImageLayer(factory *internal.ImageFactory, artifact *Art
 		}
 	}()
 
+	r.logger.Debug("adding files to layer", "path", artifact.Dst)
 	return factory.BuildLayer(fs)
 }

@@ -1,8 +1,9 @@
 package testutil
 
 import (
+	"bytes"
 	ctx "context"
-	"io"
+	"fmt"
 	"os"
 	"testing"
 
@@ -15,22 +16,19 @@ import (
 )
 
 type StepRunnerBuilder struct {
-	t         *testing.T
-	globalEnv map[string]string
-	log       io.Writer
+	t            *testing.T
+	globalEnv    map[string]string
+	globalCtxJob map[string]string
+	log          *bytes.Buffer
 }
 
 func StepRunner(t *testing.T) *StepRunnerBuilder {
 	return &StepRunnerBuilder{
-		t:         t,
-		globalEnv: make(map[string]string),
-		log:       os.Stdout,
+		t:            t,
+		globalEnv:    make(map[string]string),
+		globalCtxJob: make(map[string]string),
+		log:          &bytes.Buffer{},
 	}
-}
-
-func (b *StepRunnerBuilder) WithLogs(log io.Writer) *StepRunnerBuilder {
-	b.log = log
-	return b
 }
 
 func (b *StepRunnerBuilder) WithGlobalCtxEnv(env map[string]string) *StepRunnerBuilder {
@@ -38,7 +36,12 @@ func (b *StepRunnerBuilder) WithGlobalCtxEnv(env map[string]string) *StepRunnerB
 	return b
 }
 
-func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, error) {
+func (b *StepRunnerBuilder) WithGlobalCtxJob(key, value string) *StepRunnerBuilder {
+	b.globalCtxJob[key] = value
+	return b
+}
+
+func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) {
 	schemaSpec, schemaStep, err := schema.ReadSteps(yaml)
 	require.NoError(b.t, err)
 
@@ -65,6 +68,7 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, error) {
 	globalCtx.Stdout = b.log
 	globalCtx.Stderr = b.log
 	globalCtx.WorkDir, err = os.UserHomeDir()
+	globalCtx.Job = b.globalCtxJob
 	require.NoError(b.t, err)
 
 	params := &runner.Params{}
@@ -76,5 +80,8 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, error) {
 	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.Env)
 	require.NoError(b.t, err)
 
-	return step.Run(ctx.Background(), stepsCtx)
+	run, err := step.Run(ctx.Background(), stepsCtx)
+
+	b.t.Cleanup(func() { fmt.Println(b.log) })
+	return run, b.log.String(), err
 }

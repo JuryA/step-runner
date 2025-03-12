@@ -6,6 +6,7 @@ type CLIInputsBuilder struct {
 	tag        string
 	common     string
 	platforms  string
+	debugMode  string
 }
 
 func CLIInputs() *CLIInputsBuilder {
@@ -15,6 +16,7 @@ func CLIInputs() *CLIInputsBuilder {
 		tag:        "1.0.0",
 		common:     `{"files": {"step.yml": "step.yml"}}`,
 		platforms:  `{"linux_arm64": {"files": {"amd_run": "run"}}, "linux_amd64": {"files": {"arm_run": "run"}}}`,
+		debugMode:  "",
 	}
 }
 
@@ -43,6 +45,11 @@ func (b *CLIInputsBuilder) WithPlatforms(platforms string) *CLIInputsBuilder {
 	return b
 }
 
+func (b *CLIInputsBuilder) WithDebugMode(debugMode string) *CLIInputsBuilder {
+	b.debugMode = debugMode
+	return b
+}
+
 func (b *CLIInputsBuilder) Build() []string {
 	return []string{
 		"--registry",
@@ -55,5 +62,7 @@ func (b *CLIInputsBuilder) Build() []string {
 		b.common,
 		"--platforms",
 		b.platforms,
+		"--debug-mode",
+		b.debugMode,
 	}
 }
