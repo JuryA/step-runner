@@ -32,7 +32,7 @@ run:
         files:
           %s/step.yml: step.yml
       platforms:
-        %s_%s:  
+        %s/%s:  
           files:
             %s/files/templates_dir: /app/files/templates
   - name: run_published_step

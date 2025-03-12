@@ -116,7 +116,7 @@ func parsePlatforms(platformsJSON string) (oci.Artifacts, error) {
 	allArtifacts := oci.NewArtifacts()
 
 	for _, name := range slices.Sorted(maps.Keys(parsed)) {
-		nameParts := strings.Split(name, "_")
+		nameParts := strings.Split(name, "/")
 
 		if len(nameParts) != 2 {
 			return nil, fmt.Errorf("invalid platform os/arch: %s", name)

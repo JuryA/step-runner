@@ -209,7 +209,7 @@ func TestParseInputs(t *testing.T) {
 
 	t.Run("platform artifacts", func(t *testing.T) {
 		t.Run("parses platform", func(t *testing.T) {
-			platformsJSON := `{"linux_amd64": {"files": {"my_program": "run"}}}`
+			platformsJSON := `{"linux/amd64": {"files": {"my_program": "run"}}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
@@ -220,7 +220,7 @@ func TestParseInputs(t *testing.T) {
 		})
 
 		t.Run("trims space", func(t *testing.T) {
-			platformsJSON := `{" linux _ amd64 ": {"files": {"my_program": "run"}}}`
+			platformsJSON := `{" linux / amd64 ": {"files": {"my_program": "run"}}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
@@ -229,7 +229,7 @@ func TestParseInputs(t *testing.T) {
 		})
 
 		t.Run("parses many platforms", func(t *testing.T) {
-			platformsJSON := `{"linux_arm64": {"files": {"amd_run": "run"}}, "linux_amd64": {"files": {"arm_run": "run"}}}`
+			platformsJSON := `{"linux/arm64": {"files": {"amd_run": "run"}}, "linux/amd64": {"files": {"arm_run": "run"}}}`
 			inputs, err := ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 2)
@@ -257,18 +257,18 @@ func TestParseInputs(t *testing.T) {
 					expectErr:     `platforms input: invalid platform os/arch: linux`,
 				},
 				{
-					name:          "too many underscores",
-					platformsJSON: `{"linux_amd64_v7": {"files": {"step.yml": "step.yml"}}}`,
-					expectErr:     `platforms input: invalid platform os/arch: linux_amd64_v7`,
+					name:          "too many slashes",
+					platformsJSON: `{"linux/amd64/v7": {"files": {"step.yml": "step.yml"}}}`,
+					expectErr:     `platforms input: invalid platform os/arch: linux/amd64/v7`,
 				},
 				{
 					name:          "keys other than files",
-					platformsJSON: `{"linux_amd64": {"filess": {"step.yml": "step.yml"}}}`,
+					platformsJSON: `{"linux/amd64": {"filess": {"step.yml": "step.yml"}}}`,
 					expectErr:     `platforms input: json: unknown field "filess"`,
 				},
 				{
 					name:          "same platform defined more than once",
-					platformsJSON: `{"linux_amd64": {"files": {"step.yml": "step.yml"}}, "  linux_amd64  ": {"files": {"step.yml": "step.yml"}}}`,
+					platformsJSON: `{"linux/amd64": {"files": {"step.yml": "step.yml"}}, "  linux/amd64  ": {"files": {"step.yml": "step.yml"}}}`,
 					expectErr:     `platform "linux/amd64" defined more than once`,
 				},
 			}
