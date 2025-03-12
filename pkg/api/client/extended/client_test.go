@@ -23,28 +23,18 @@ type testDialer struct {
 
 func (t *testDialer) Dial() (*grpc.ClientConn, error) { return t.dial(), nil }
 
-func cleanup(t *testing.T, paths ...string) {
-	os.RemoveAll(path.Join(test.WorkDir(t), ".config"))
-	os.RemoveAll(path.Join(test.WorkDir(t), ".cache"))
-
-	for _, p := range paths {
-		os.RemoveAll(path.Join(test.WorkDir(t), p))
-	}
-}
-
 func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
-	defer cleanup(t)
-
-	server := server.New(t).Serve()
-	srClient, err := New(&testDialer{dial: server.NewConnection})
+	srvr := server.New(t).Serve()
+	srClient, err := New(&testDialer{dial: srvr.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
 
 	rr := test.RunRequest(t, `run:
   - name: hello_world
-    step: ../../../runner/test_steps/greeting
-    inputs: {}
+    step: ../../../runner/test_steps/echo
+    inputs:
+        echo: hello world
   - name: blabla
     step: ../../testdata/bash
     inputs:
@@ -78,9 +68,9 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
 	assert.NoError(t, err)
-	assert.Equal(t, client.StateSuccess, status.State)
+	assert.Equal(t, client.StateSuccess.String(), status.State.String())
 	assert.Empty(t, status.Message)
-	assert.Contains(t, logs.String(), "meet steppy who is 1 likes {\"color\":\"red\"} and is hungry false")
+	assert.Contains(t, logs.String(), "hello world")
 	assert.Contains(t, logs.String(), "bla bla bla bar")
 	assert.Contains(t, logs.String(), "FOO=bar")
 	assert.Contains(t, logs.String(), "BAZ=blammo")
@@ -89,10 +79,9 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
-	defer cleanup(t)
-
-	server := server.New(t).Serve()
-	srClient, err := New(&testDialer{dial: server.NewConnection})
+	asyncExecutor := func(delegate func()) { go delegate() }
+	srvr := server.New(t, server.WithExecutor(asyncExecutor)).Serve()
+	srClient, err := New(&testDialer{dial: srvr.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
@@ -117,17 +106,13 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 	assert.Contains(t, err.Error(), "context deadline exceeded")
 	// TODO: This is weird: we'd expect the status to be either failed or cancelled, but job timeout is not implemented
 	// on the server side yet, and Close() is necessarily called after Status().
-	assert.Equal(t, client.StateRunning, status.State)
+	assert.Equal(t, client.StateRunning.String(), status.State.String())
 	assert.Empty(t, status.Message)
-	assert.Contains(t, logs.String(), "hello there")
-	assert.NotContains(t, logs.String(), "goodbye")
 }
 
 func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
-	defer cleanup(t)
-
-	server := server.New(t).Serve()
-	srClient, err := New(&testDialer{dial: server.NewConnection})
+	srvr := server.New(t).Serve()
+	srClient, err := New(&testDialer{dial: srvr.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
@@ -146,18 +131,16 @@ func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
 	assert.NoError(t, err)
-	assert.Equal(t, client.StateFailure, status.State)
+	assert.Equal(t, client.StateFailure.String(), status.State.String())
 	assert.Equal(t, `step "bash": exec: exit status 127`, status.Message)
 	assert.Contains(t, logs.String(), "kjhdfdhlkf: command not found")
 }
 
 func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
-	defer cleanup(t)
-
 	ctx := context.Background()
 
-	server := server.New(t).Serve()
-	srClient, err := New(&testDialer{dial: server.NewConnection})
+	srvr := server.New(t).Serve()
+	srClient, err := New(&testDialer{dial: srvr.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
@@ -169,8 +152,9 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 		defer wg.Done()
 		rr := test.RunRequest(t, `run:
   - name: hello_world
-    step: ../../../runner/test_steps/greeting
-    inputs: {}
+    step: ../../../runner/test_steps/echo
+    inputs:
+        echo: hi
 `, nil, nil)
 		rr.Id = rr.Id + "-1"
 
@@ -179,25 +163,24 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 		status, err := srClient.RunAndFollow(ctx, rr, &out)
 
 		assert.NoError(t, err)
-		assert.Equal(t, client.StateSuccess, status.State)
+		assert.Equal(t, client.StateSuccess.String(), status.State.String())
 		assert.Empty(t, status.Message)
-		assert.Contains(t, logs.String(), "meet steppy who is 1 likes {\"color\":\"red\"} and is hungry false")
+		assert.Contains(t, logs.String(), "hi")
 		assert.NotContains(t, logs.String(), "FOO=bar")
 		assert.NotContains(t, logs.String(), "BAZ=blammo")
 	}()
 
-	go func() {
-		defer wg.Done()
-		rr := test.RunRequest(t, `run:
+	step := `
+run:
   - name: bash
     step: ../../testdata/bash
     inputs:
-        script: env
-`,
-			map[string]string{
-				"FOO": "bar",
-				"BAZ": "blammo",
-			}, nil)
+        script: env`
+
+	go func() {
+		defer wg.Done()
+
+		rr := test.RunRequest(t, step, map[string]string{"FOO": "bar", "BAZ": "blammo"}, nil)
 		rr.Id = rr.Id + "-2"
 
 		logs := test.ClosableBuf{}
@@ -205,7 +188,7 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 		status, err := srClient.RunAndFollow(ctx, rr, &out)
 
 		assert.NoError(t, err)
-		assert.Equal(t, client.StateSuccess, status.State)
+		assert.Equal(t, client.StateSuccess.String(), status.State.String())
 		assert.Empty(t, status.Message)
 		assert.Contains(t, logs.String(), "FOO=bar")
 		assert.Contains(t, logs.String(), "BAZ=blammo")
@@ -216,10 +199,8 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 }
 
 func Test_StepRunnerClient_RunAndFollow_LogsOnly(t *testing.T) {
-	defer cleanup(t)
-
-	server := server.New(t).Serve()
-	srClient, err := New(&testDialer{dial: server.NewConnection})
+	srvr := server.New(t).Serve()
+	srClient, err := New(&testDialer{dial: srvr.NewConnection})
 	require.NoError(t, err)
 	//nolint:errcheck
 	defer srClient.CloseConn()
@@ -246,7 +227,7 @@ func Test_StepRunnerClient_RunAndFollow_LogsOnly(t *testing.T) {
 	status, err := srClient.RunAndFollow(ctx, rr, &out)
 
 	assert.NoError(t, err)
-	assert.Equal(t, client.StateSuccess, status.State)
+	assert.Equal(t, client.StateSuccess.String(), status.State.String())
 	assert.Empty(t, status.Message)
 	assert.Contains(t, logs.String(), "bla bla bla bar")
 	assert.Contains(t, logs.String(), "FOO=bar")

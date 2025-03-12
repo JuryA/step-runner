@@ -4,6 +4,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/jobs"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/internal/variables"
@@ -17,20 +18,31 @@ type errBadJobID struct{ id string }
 
 func (e *errBadJobID) Error() string { return fmt.Sprintf("no job with id %q", e.id) }
 
+var executeAsync = func(delegate func()) { go delegate() }
+
 type StepRunnerService struct {
 	proto.StepRunnerServer
 	cache runner.Cache
 
-	env  *runner.Environment
-	jobs *syncmap.SyncMap[string, *jobs.Job]
+	env             *runner.Environment
+	jobs            *syncmap.SyncMap[string, *jobs.Job]
+	execute         func(delegate func())
+	runExitWaitTime time.Duration
 }
 
-func New(stepCache runner.Cache, env *runner.Environment) *StepRunnerService {
-	return &StepRunnerService{
-		cache: stepCache,
-		env:   env,
-		jobs:  syncmap.New[string, *jobs.Job](),
+func New(stepCache runner.Cache, env *runner.Environment, options ...func(*StepRunnerService)) *StepRunnerService {
+	svc := &StepRunnerService{
+		cache:   stepCache,
+		env:     env,
+		jobs:    syncmap.New[string, *jobs.Job](),
+		execute: executeAsync,
 	}
+
+	for _, option := range options {
+		option(svc)
+	}
+
+	return svc
 }
 
 // Run parses, prepares, and initiates execution of a RunRequest.
@@ -44,7 +56,12 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("loading step: %w", err)
 	}
 
-	job, err := jobs.New(request.Id, specDef.Dir)
+	jobOpts := []func(*jobs.Job){}
+	if s.runExitWaitTime != 0 {
+		jobOpts = append(jobOpts, jobs.WithRunExitWaitTime(s.runExitWaitTime))
+	}
+
+	job, err := jobs.New(request.Id, specDef.Dir, jobOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("initializing request: %w", err)
 	}
@@ -79,7 +96,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 
 	// actually execute the steps request
 	s.jobs.Put(request.Id, job)
-	go job.Run(stepsCtx, step)
+	s.execute(func() { job.Run(stepsCtx, step) })
 	return &proto.RunResponse{}, nil
 }
 
@@ -156,4 +173,16 @@ func (s *StepRunnerService) Status(ctx context.Context, request *proto.StatusReq
 	}
 
 	return &proto.StatusResponse{Jobs: stats}, nil
+}
+
+func WithExecutor(executor func(delegate func())) func(service *StepRunnerService) {
+	return func(service *StepRunnerService) {
+		service.execute = executor
+	}
+}
+
+func WithJobRunExitWaitTime(waitTime time.Duration) func(service *StepRunnerService) {
+	return func(service *StepRunnerService) {
+		service.runExitWaitTime = waitTime
+	}
 }

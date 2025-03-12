@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -25,12 +23,6 @@ func RandJobID() string {
 	return strconv.Itoa(rand.New(rand.NewSource(time.Now().UnixNano())).Intn(9999))
 }
 
-func WorkDir(t *testing.T) string {
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-	return wd
-}
-
 func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest {
 	runReq := proto.RunRequest{
 		Id:    RandJobID(),
@@ -38,7 +30,7 @@ func ProtoRunRequest(t *testing.T, step string, withJob bool) *proto.RunRequest 
 		Env:   map[string]string{},
 	}
 
-	runReq.WorkDir = WorkDir(t)
+	runReq.WorkDir = t.TempDir()
 	if withJob {
 		runReq.Job = &proto.Job{BuildDir: runReq.WorkDir}
 	}
@@ -79,7 +71,7 @@ func RunRequest(t *testing.T, step string, env map[string]string, vars []client.
 		Steps: `spec: {}
 ---
 ` + step,
-		WorkDir:   WorkDir(t),
+		WorkDir:   "",
 		Env:       env,
 		Variables: vars,
 	}
