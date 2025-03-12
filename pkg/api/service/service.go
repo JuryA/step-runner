@@ -16,9 +16,9 @@ import (
 
 type errBadJobID struct{ id string }
 
-var executeAsync = func(delegate func()) { go delegate() }
-
 func (e *errBadJobID) Error() string { return fmt.Sprintf("no job with id %q", e.id) }
+
+var executeAsync = func(delegate func()) { go delegate() }
 
 type StepRunnerService struct {
 	proto.StepRunnerServer

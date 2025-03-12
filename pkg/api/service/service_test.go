@@ -37,8 +37,8 @@ var nonAlphaNumericRe = regexp.MustCompile("[^a-zA-Z0-9_]+")
 var whitespaceRe = regexp.MustCompile(`\s+`)
 
 func makeScriptStep(t *testing.T, cmd string) string {
-	noWhitespace := whitespaceRe.ReplaceAllString(t.Name(), "_")
-	stepName := nonAlphaNumericRe.ReplaceAllString(noWhitespace, "")
+	stepName := whitespaceRe.ReplaceAllString(t.Name(), "_")
+	stepName = nonAlphaNumericRe.ReplaceAllString(stepName, "")
 
 	return fmt.Sprintf(scriptStep, stepName, cmd)
 }
