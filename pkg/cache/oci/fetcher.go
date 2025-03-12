@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci/internal"
 )
@@ -25,4 +26,8 @@ func (f *OCIFetcher) Fetch(ctx context.Context, imgRef name.Reference, opts ...f
 	}
 
 	return dir, nil
+}
+
+func WithPlatforms(platforms ...*v1.Platform) func(*internal.PullOption) {
+	return internal.WithPlatforms(platforms...)
 }

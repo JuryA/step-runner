@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 )
 
 func main() {
@@ -28,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	releaser := oci.NewReleaser("download_dir")
+	releaser := pkg.NewReleaser()
 	err = releaser.Release(context.Background(), imgRef, inputs.Common.Add(inputs.PlatformSpecific))
 	if err != nil {
 		logger.Error("publish", "err", err)
