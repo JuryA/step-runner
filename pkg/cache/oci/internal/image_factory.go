@@ -144,7 +144,7 @@ func (f *ImageFactory) archive(archiveFS fs.FS) (string, error) {
 	archiveName := filepath.Join(workDir, fmt.Sprintf("%x.tar.zstd", hash.Sum([]byte{})))
 
 	if _, err := os.Stat(archiveName); err == nil {
-		f.logger.Debug("tar for artifact already exists, will reuse", "tar", archiveName)
+		f.logger.Debug("archive for artifact already exists, reusing", "tar", archiveName)
 		return archiveName, nil
 	}
 
@@ -209,7 +209,7 @@ func (f *ImageFactory) tarFS(fsys fs.FS, tw *tar.Writer) error {
 			return fmt.Errorf("%s: type %s, only regular files and directories are supported", name, f.describeFileType(header.Typeflag))
 		}
 
-		f.logger.Debug("tarring file", "name", name, "type", f.describeFileType(header.Typeflag))
+		f.logger.Debug("archiving file", "name", name, "type", f.describeFileType(header.Typeflag))
 		header.Name = name
 
 		if err := tw.WriteHeader(header); err != nil {

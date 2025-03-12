@@ -70,7 +70,7 @@ func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts Ar
 }
 
 func (r *Releaser) buildImageLayer(factory *internal.ImageFactory, artifact *Artifact) (v1.Layer, error) {
-	r.logger.Debug("copying files to destination structure", "path", artifact.Src)
+	r.logger.Debug("copying files", "source", artifact.Src, "destination", artifact.Dst)
 	fs, cleanup, err := artifact.FS()
 	if err != nil {
 		return nil, err
