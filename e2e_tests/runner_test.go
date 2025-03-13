@@ -1,4 +1,4 @@
-package runner_test
+package e2e_tests_test
 
 import (
 	"errors"
