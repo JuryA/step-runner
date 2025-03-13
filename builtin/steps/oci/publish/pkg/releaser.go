@@ -1,4 +1,4 @@
-package oci
+package pkg
 
 import (
 	"context"
@@ -8,27 +8,24 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci/internal"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 type Releaser struct {
-	client *internal.Client
 	logger *slog.Logger
 }
 
-func NewReleaser(downloadDir string) *Releaser {
+func NewReleaser() *Releaser {
 	return &Releaser{
-		client: internal.NewClient(downloadDir),
 		logger: slog.Default(),
 	}
 }
 
 func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts Artifacts) error {
-	factory := internal.NewImageFactory(internal.WithLogger(r.logger))
+	factory := NewImageFactory(WithLogger(r.logger))
 	defer factory.CleanUp()
 
-	imagePlatforms := make([]internal.PlatformImage, 0)
+	imagePlatforms := make([]PlatformImage, 0)
 	createdAt := time.Now()
 
 	for _, platform := range artifacts.Platforms() {
@@ -44,17 +41,17 @@ func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts
 			return err
 		}
 
-		imagePlatforms = append(imagePlatforms, internal.PlatformImage{Image: image, Platform: platform})
+		imagePlatforms = append(imagePlatforms, PlatformImage{Image: image, Platform: platform})
 	}
 
 	r.logger.Info("building image index")
 	imageIndex := factory.BuildImageIndex(createdAt, imagePlatforms...)
 
 	r.logger.Info("pushing image index")
-	return r.client.PushImageIndex(ctx, imgRef, imageIndex)
+	return r.pushImageIndex(ctx, imgRef, imageIndex)
 }
 
-func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts Artifacts) ([]v1.Layer, error) {
+func (r *Releaser) buildImageLayers(factory *ImageFactory, artifacts Artifacts) ([]v1.Layer, error) {
 	layers := make([]v1.Layer, 0)
 
 	for _, artifact := range artifacts {
@@ -69,7 +66,7 @@ func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts Ar
 	return layers, nil
 }
 
-func (r *Releaser) buildImageLayer(factory *internal.ImageFactory, artifact *Artifact) (v1.Layer, error) {
+func (r *Releaser) buildImageLayer(factory *ImageFactory, artifact *Artifact) (v1.Layer, error) {
 	r.logger.Debug("copying files", "source", artifact.Src, "destination", artifact.Dst)
 	fs, cleanup, err := artifact.FS()
 	if err != nil {
@@ -84,4 +81,13 @@ func (r *Releaser) buildImageLayer(factory *internal.ImageFactory, artifact *Art
 
 	r.logger.Debug("adding files to layer", "path", artifact.Dst)
 	return factory.BuildLayer(fs)
+}
+
+func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, index v1.ImageIndex) error {
+	err := remote.WriteIndex(ref, index, remote.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("push index image: %w", err)
+	}
+
+	return nil
 }

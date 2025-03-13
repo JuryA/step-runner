@@ -1,12 +1,13 @@
-package oci_test
+package pkg_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
-	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
+	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg/testutil/bldr"
+	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
 func TestArtifacts_ForPlatform(t *testing.T) {
@@ -14,7 +15,7 @@ func TestArtifacts_ForPlatform(t *testing.T) {
 		generic := bldr.OCIArtifact(t).Generic().Build()
 		linuxAmd64 := bldr.OCIArtifact(t).LinuxAMD64().Build()
 
-		artifacts := oci.NewArtifacts(generic, linuxAmd64).ForPlatform(bldr.OCIPlatform.Generic)
+		artifacts := pkg.NewArtifacts(generic, linuxAmd64).ForPlatform(mainBldr.OCIPlatform.Generic)
 		require.Len(t, artifacts, 1)
 		require.Equal(t, generic, artifacts[0])
 	})
@@ -22,7 +23,7 @@ func TestArtifacts_ForPlatform(t *testing.T) {
 	t.Run("returns zero artifacts when none match", func(t *testing.T) {
 		generic := bldr.OCIArtifact(t).Generic().Build()
 
-		artifacts := oci.NewArtifacts(generic).ForPlatform(bldr.OCIPlatform.LinuxARM64)
+		artifacts := pkg.NewArtifacts(generic).ForPlatform(mainBldr.OCIPlatform.LinuxARM64)
 		require.Len(t, artifacts, 0)
 	})
 }
@@ -33,19 +34,19 @@ func TestArtifacts_Platforms(t *testing.T) {
 		linuxArm64A := bldr.OCIArtifact(t).LinuxARM64().Build()
 		linuxAmd64B := bldr.OCIArtifact(t).LinuxAMD64().Build()
 
-		platforms := oci.NewArtifacts(linuxAmd64A, linuxArm64A, linuxAmd64B).Platforms()
+		platforms := pkg.NewArtifacts(linuxAmd64A, linuxArm64A, linuxAmd64B).Platforms()
 		require.Len(t, platforms, 2)
-		require.Equal(t, bldr.OCIPlatform.LinuxAMD64, platforms[0])
-		require.Equal(t, bldr.OCIPlatform.LinuxARM64, platforms[1])
+		require.Equal(t, mainBldr.OCIPlatform.LinuxAMD64, platforms[0])
+		require.Equal(t, mainBldr.OCIPlatform.LinuxARM64, platforms[1])
 	})
 
 	t.Run("excludes generic as a platform", func(t *testing.T) {
 		generic := bldr.OCIArtifact(t).Generic().Build()
 		linuxAmd64 := bldr.OCIArtifact(t).LinuxAMD64().Build()
 
-		platforms := oci.NewArtifacts(generic, linuxAmd64).Platforms()
+		platforms := pkg.NewArtifacts(generic, linuxAmd64).Platforms()
 		require.Len(t, platforms, 1)
-		require.Equal(t, bldr.OCIPlatform.LinuxAMD64, platforms[0])
+		require.Equal(t, mainBldr.OCIPlatform.LinuxAMD64, platforms[0])
 	})
 }
 
@@ -54,7 +55,7 @@ func TestArtifacts_Generic(t *testing.T) {
 	genericB := bldr.OCIArtifact(t).Generic().Build()
 	linuxArm64 := bldr.OCIArtifact(t).LinuxARM64().Build()
 
-	artifacts := oci.NewArtifacts(genericA, genericB, linuxArm64).Generic()
+	artifacts := pkg.NewArtifacts(genericA, genericB, linuxArm64).Generic()
 	require.Len(t, artifacts, 2)
 	require.Equal(t, genericA, artifacts[0])
 	require.Equal(t, genericB, artifacts[1])
@@ -65,9 +66,9 @@ func TestArtifacts_Add(t *testing.T) {
 	b := bldr.OCIArtifact(t).Generic().Build()
 	c := bldr.OCIArtifact(t).LinuxARM64().Build()
 
-	artifactsA := oci.NewArtifacts(a, b)
-	artifactsB := oci.NewArtifacts(c)
-	artifactsC := oci.NewArtifacts()
+	artifactsA := pkg.NewArtifacts(a, b)
+	artifactsB := pkg.NewArtifacts(c)
+	artifactsC := pkg.NewArtifacts()
 
 	artifacts := artifactsA.Add(artifactsB).Add(artifactsC)
 	require.Len(t, artifacts, 3)
