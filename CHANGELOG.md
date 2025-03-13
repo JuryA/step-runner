@@ -3,6 +3,8 @@
 - Support steps built-in to the step-runner. See !180.
 - Change OCI fetching syntax to use registry, repository and tag
   instead of url and version. See !181.
+- Environment variable `CI_STEPS_LOG_LEVEL` is available to all running 
+  steps. See !189.
 
 ## v0.5.0 (2025-02-05)
 

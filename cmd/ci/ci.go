@@ -67,12 +67,16 @@ func run(options *Options) error {
 	}
 
 	osEnv, err := runner.NewEnvironmentFromOSWithKnownVars()
-
 	if err != nil {
 		return err
 	}
 
-	globalCtx := runner.NewGlobalContext(osEnv)
+	globalEnv, err := runner.GlobalEnvironment(osEnv, options.JobVariables)
+	if err != nil {
+		return err
+	}
+
+	globalCtx := runner.NewGlobalContext(globalEnv)
 	params := &runner.Params{}
 
 	// Step runner should have no concept of "CI_BUILDS_DIR".

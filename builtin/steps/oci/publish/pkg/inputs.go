@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
 	"path"
 	"regexp"
@@ -18,13 +19,15 @@ import (
 
 var semVerRe = regexp.MustCompile(`^\d+\.\d+\.\d+(-.*)?$`)
 
+type GetEnv func(key string) string
+
 type Inputs struct {
 	Registry         string
 	Repository       string
 	Tag              string
 	Common           Artifacts
 	PlatformSpecific Artifacts
-	DebugMode        bool
+	LogLevel         slog.Level
 }
 
 func (i *Inputs) Validate() error {
@@ -56,8 +59,8 @@ func (i *Inputs) ImgRef() (name.Reference, error) {
 	return imgRef, nil
 }
 
-func ParseInputs(args []string) (*Inputs, error) {
-	var registry, repository, tag, commonJSON, platformsJSON, debugMode string
+func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
+	var registry, repository, tag, commonJSON, platformsJSON string
 
 	flags := flag.NewFlagSet("run", flag.ContinueOnError)
 	flags.StringVar(&registry, "registry", "", "")
@@ -65,7 +68,6 @@ func ParseInputs(args []string) (*Inputs, error) {
 	flags.StringVar(&tag, "tag", "", "")
 	flags.StringVar(&commonJSON, "common", "", "")
 	flags.StringVar(&platformsJSON, "platforms", "", "")
-	flags.StringVar(&debugMode, "debug-mode", "", "")
 
 	err := flags.Parse(args)
 	if err != nil {
@@ -82,13 +84,18 @@ func ParseInputs(args []string) (*Inputs, error) {
 		return nil, fmt.Errorf("platforms input: %w", err)
 	}
 
+	logLevel, err := parseLogLevel(getenv("CI_STEPS_LOG_LEVEL"))
+	if err != nil {
+		return nil, fmt.Errorf("log level: %w", err)
+	}
+
 	inputs := &Inputs{
 		Registry:         strings.TrimSpace(registry),
 		Repository:       strings.TrimSpace(repository),
 		Tag:              strings.TrimSpace(tag),
 		Common:           common,
 		PlatformSpecific: platform,
-		DebugMode:        debugMode == "true",
+		LogLevel:         logLevel,
 	}
 
 	if err := inputs.Validate(); err != nil {
@@ -188,4 +195,10 @@ func buildArtifacts(platform *v1.Platform, srcDst map[string]string) (Artifacts,
 	}
 
 	return NewArtifacts(artifacts...), nil
+}
+
+func parseLogLevel(level string) (slog.Level, error) {
+	var logLevel slog.Level
+	err := logLevel.UnmarshalText([]byte(level))
+	return logLevel, err
 }

@@ -27,5 +27,3 @@ exec:
     - "${{inputs.common}}"
     - "--platforms"
     - "${{inputs.platforms}}"
-    - "--debug-mode"
-    - "${{job.CI_STEPS_DEBUG}}"
