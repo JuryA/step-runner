@@ -46,6 +46,11 @@ func (b *StepRunnerBuilder) WithGlobalCtxJob(key, value string) *StepRunnerBuild
 	return b
 }
 
+func (b *StepRunnerBuilder) WithDebugLogs() *StepRunnerBuilder {
+	b.globalCtxJob[runner.LogLevelEnvName] = "debug"
+	return b
+}
+
 func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) {
 	schemaSpec, schemaStep, err := schema.ReadSteps(yaml)
 	require.NoError(b.t, err)
@@ -68,8 +73,14 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) 
 	osEnv, err := runner.NewEnvironmentFromOS()
 	require.NoError(b.t, err)
 
-	globalCtx := runner.NewGlobalContext(osEnv)
-	globalCtx.Env = runner.NewEnvironment(b.globalEnv)
+	env, err := runner.GlobalEnvironment(osEnv, b.globalCtxJob)
+	require.NoError(b.t, err)
+
+	if b.globalEnv != nil {
+		env = env.AddLexicalScope(b.globalEnv)
+	}
+
+	globalCtx := runner.NewGlobalContext(env)
 	globalCtx.Stdout = b.log
 	globalCtx.Stderr = b.log
 	globalCtx.WorkDir, err = os.UserHomeDir()

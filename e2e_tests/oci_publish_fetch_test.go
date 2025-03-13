@@ -46,7 +46,7 @@ run:
 	registryAddr := registry.Address()
 	testStep := fmt.Sprintf(template, registryAddr, baseDir, platform.OS, platform.Architecture, baseDir, registryAddr)
 
-	_, logs, err := testutil.StepRunner(t).WithGlobalCtxJob("CI_STEPS_DEBUG", "true").Run(testStep)
+	_, logs, err := testutil.StepRunner(t).WithDebugLogs().Run(testStep)
 	require.NoError(t, err)
 	require.Contains(t, logs, "Hello, World!")
 	require.Contains(t, logs, `Running step "publish_image"`)
