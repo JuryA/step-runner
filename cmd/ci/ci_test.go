@@ -16,9 +16,9 @@ func TestCICmd(t *testing.T) {
 	t.Run("runs steps", func(t *testing.T) {
 		steps := `
 - name: secret_factory_a
-  step: ../../pkg/runner/test_steps/secret_factory
+  step: ../../e2e_tests/steps/secret_factory
 - name: secret_factory_b
-  step: ../../pkg/runner/test_steps/secret_factory
+  step: ../../e2e_tests/steps/secret_factory
   inputs:
     secret_override: ${{ steps.secret_factory_a.outputs.secret }}
 `
@@ -73,7 +73,7 @@ func TestCICmd(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				_ = os.Remove(stepResultsFile)
 
-				require.NoError(t, os.Setenv("STEPS", `- step: ../../pkg/runner/test_steps/secret_factory`))
+				require.NoError(t, os.Setenv("STEPS", `- step: ../../e2e_tests/steps/secret_factory`))
 				defer func() { _ = os.Unsetenv("STEPS") }()
 
 				beforeValue := runner.RunningInDebugMode
@@ -97,7 +97,7 @@ func TestCICmd(t *testing.T) {
 	t.Run("can access environment variables", func(t *testing.T) {
 		steps := `
 - name: echo
-  step: ../../pkg/runner/test_steps/echo
+  step: ../../e2e_tests/steps/echo
   inputs:
     echo: env value is ${{env.LOGNAME}}
 `
@@ -126,7 +126,7 @@ func TestCICmd(t *testing.T) {
 	t.Run("failed step returns error", func(t *testing.T) {
 		steps := `
 - name: exit
-  step: ../../pkg/runner/test_steps/exit
+  step: ../../e2e_tests/steps/exit
   inputs:
     exit_code: 99
 `
