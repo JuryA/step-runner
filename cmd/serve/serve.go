@@ -44,7 +44,7 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to run service: %w", err)
 	}
 
-	env, err := runner.NewEnvironmentFromOS()
+	env, err := runner.NewEnvironmentFromOSWithKnownVars()
 
 	if err != nil {
 		return fmt.Errorf("failed to run service: %w", err)
