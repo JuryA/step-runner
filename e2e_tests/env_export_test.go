@@ -15,12 +15,12 @@ spec:
 ---
 run:
   - name: set_export_var
-    step: ./test_steps/export_env
+    step: ./steps/export_env
     inputs:
       name: FOO
       value: BAR
   - name: verify_foo_can_be_used
-    step: ./test_steps/echo
+    step: ./steps/echo
     inputs:
       echo: "FOO is ${{env.FOO}}"
 `

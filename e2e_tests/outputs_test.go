@@ -15,11 +15,11 @@ spec: {}
 ---
 run:
   - name: greet_foo
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: foo
   - name: greet_previous
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: ${{steps.greet_foo.outputs.name}}
 `
@@ -36,10 +36,10 @@ spec: {}
 ---
 run:
   - name: greet_the_crew
-    step: ./test_steps/crew
+    step: ./steps/crew
     inputs: {}
   - name: greet_previous
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: ${{steps.greet_the_crew.outputs.crew_name_1}}
 `
@@ -56,10 +56,10 @@ spec: {}
 ---
 run:
   - name: greet_the_crew
-    step: ./test_steps/crew
+    step: ./steps/crew
     inputs: {}
   - name: greet_previous
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: ${{steps.greet_sponge_bob.outputs.name}}`
 
@@ -77,7 +77,7 @@ spec:
 ---
 run:
   - name: do_nothing
-    step: ./test_steps/exit
+    step: ./steps/exit
 outputs:
   name: "Foo"`
 

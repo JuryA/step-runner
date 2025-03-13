@@ -17,7 +17,7 @@ env:
   NAME: from-run
 run:
   - name: greet_steppy
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: ${{ env.NAME }}`
 
@@ -33,7 +33,7 @@ spec: {}
 ---
 run:
   - name: greet_steppy
-    step: ./test_steps/greeting_name_from_env
+    step: ./steps/greeting_name_from_env
     env:
       NAME: from-step-invocation`
 
@@ -51,7 +51,7 @@ env:
   NAME: from-run
 run:
   - name: greet_steppy
-    step: ./test_steps/greeting_name_from_env
+    step: ./steps/greeting_name_from_env
     env:
       NAME: from-step-invocation`
 

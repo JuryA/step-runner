@@ -16,7 +16,7 @@ spec:
 ---
 run:
   - name: exec_step
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: steppy loves delegation
 delegate: exec_step`
@@ -33,7 +33,7 @@ spec:
 ---
 run:
   - name: composite_step
-    step: ./test_steps/greeting_delegate
+    step: ./steps/greeting_delegate
     inputs:
       name: steppy loves delegation
 delegate: composite_step

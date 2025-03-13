@@ -14,17 +14,17 @@ spec: {}
 ---
 run:
   - name: greet_steppy
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: steppy
       hungry: true
       favorites:
         foods: [hamburger]
   - name: greet_the_crew
-    step: ./test_steps/crew
+    step: ./steps/crew
     inputs: {}
   - name: greet_joe
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: joe
       age: 42

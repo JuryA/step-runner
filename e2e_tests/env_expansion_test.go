@@ -17,7 +17,7 @@ env:
   NAME: from-${{ env.WHERE_EXACTLY }}
 run:
   - name: greet_steppy
-    step: ./test_steps/greeting_name_from_env`
+    step: ./steps/greeting_name_from_env`
 
 		result, _, err := testutil.StepRunner(t).WithEnvKeyVal("WHERE_EXACTLY", "global").Run(yaml)
 		require.NoError(t, err)
@@ -32,7 +32,7 @@ spec: {}
 env:
 run:
   - name: greet_steppy
-    step: ./test_steps/greeting_name_from_env
+    step: ./steps/greeting_name_from_env
     env:
       NAME: from-${{ env.WHERE_EXACTLY }}`
 
@@ -50,7 +50,7 @@ env:
   WHERE_EXACTLY: ${{ env.WHERE_EXACTLY }}-then-run
 run:
   - name: greet_steppy
-    step: ./test_steps/greeting_name_from_env
+    step: ./steps/greeting_name_from_env
     env:
       NAME: from-${{ env.WHERE_EXACTLY }}-then-invocation`
 

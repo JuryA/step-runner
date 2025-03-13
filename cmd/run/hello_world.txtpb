@@ -6,7 +6,7 @@ type:steps
       path: ".."
       path: ".."
       path: "e2e_tests"
-      path: "test_steps"
+      path: "steps"
       path: "echo"
       filename: "step.yml"
     }
@@ -24,7 +24,7 @@ type:steps
       path: ".."
       path: ".."
       path: "e2e_tests"
-      path: "test_steps"
+      path: "steps"
       path: "echo"
       filename: "step.yml"
     }

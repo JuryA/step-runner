@@ -16,7 +16,7 @@ spec: {}
 ---
 run:
   - name: greet_steppy
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs: {}`
 
 		result, _, err := testutil.StepRunner(t).Run(yaml)
@@ -32,7 +32,7 @@ spec: {}
 ---
 run:
   - name: greet_foo
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: foo`
 

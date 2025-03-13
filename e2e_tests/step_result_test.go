@@ -18,7 +18,7 @@ env:
   NAME: subby
 run:
   - name: greet_steppy
-    step: ./test_steps/greeting
+    step: ./steps/greeting
     inputs:
       name: ${{ env.NAME }}`
 
