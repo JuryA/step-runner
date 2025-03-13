@@ -32,7 +32,7 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 
 	rr := test.RunRequest(t, `run:
   - name: hello_world
-    step: ../../../runner/test_steps/echo
+    step: ../../../../e2e_tests/steps/echo
     inputs:
         echo: hello world
   - name: blabla
@@ -152,7 +152,7 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 		defer wg.Done()
 		rr := test.RunRequest(t, `run:
   - name: hello_world
-    step: ../../../runner/test_steps/echo
+    step: ../../../../e2e_tests/steps/echo
     inputs:
         echo: hi
 `, nil, nil)

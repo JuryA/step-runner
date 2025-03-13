@@ -36,6 +36,11 @@ func (b *StepRunnerBuilder) WithGlobalCtxEnv(env map[string]string) *StepRunnerB
 	return b
 }
 
+func (b *StepRunnerBuilder) WithEnvKeyVal(key, value string) *StepRunnerBuilder {
+	b.globalEnv[key] = value
+	return b
+}
+
 func (b *StepRunnerBuilder) WithGlobalCtxJob(key, value string) *StepRunnerBuilder {
 	b.globalCtxJob[key] = value
 	return b
