@@ -50,10 +50,17 @@ func (sr *OCIStepResource) Describe() string {
 }
 
 func (sr *OCIStepResource) NamedReference() (name.Reference, error) {
-	imgRef, err := name.ParseReference(fmt.Sprintf("%s:%s", path.Join(sr.registry, sr.repository), sr.tag))
-	if err != nil {
-		return nil, fmt.Errorf("parsing OCI image reference: %w", err)
+	repository := path.Join(sr.registry, sr.repository)
+
+	imgRefTag, tagErr := name.ParseReference(fmt.Sprintf("%s:%s", repository, sr.tag))
+	if tagErr == nil {
+		return imgRefTag, nil
 	}
 
-	return imgRef, nil
+	digestImgRef, digestErr := name.ParseReference(fmt.Sprintf("%s@%s", repository, sr.tag))
+	if digestErr == nil {
+		return digestImgRef, nil
+	}
+
+	return nil, fmt.Errorf("parsing OCI image reference: %w", tagErr)
 }

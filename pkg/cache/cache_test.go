@@ -108,6 +108,29 @@ func TestCache(t *testing.T) {
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})
 
+	t.Run("loads OCI step using a digest", func(t *testing.T) {
+		registry := bldr.StartOCIRegistryServer(t)
+		layer := bldr.
+			OCIImageLayer(t).
+			WithFile("/step.yml", []byte("spec:\n---\nexec: {command: [sh]}")).
+			Build()
+		img := bldr.OCIImage(t).WithLayer(layer).Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		registry.PushImageIndex(registry.RefToImage("image", "latest"), imgIndex)
+
+		digest, err := imgIndex.Digest()
+		require.NoError(t, err)
+
+		digestRef := registry.RefToImageDigest("image", digest)
+		res := bldr.OCIStepResource().WithImgRef(digestRef).Build()
+		ociFetcher := oci.NewOCIFetcher(t.TempDir())
+
+		stepCache := cache.NewWithOptions(cache.WithOCIFetcher(ociFetcher))
+		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
+		require.NoError(t, err)
+		require.Equal(t, []string{"sh"}, specDef.Definition.Exec.Command)
+	})
+
 	t.Run("runs publish built-in step", func(t *testing.T) {
 		res := bldr.BuiltInStepResource().WithStep("oci/publish").Build()
 		builtInFetcher := builtin.NewFetcher(builtinsteps.FindBuiltInStep)

@@ -79,6 +79,13 @@ func (s *OCIRegistryServer) RefToImage(imageName, imageTag string) name.Referenc
 	return remoteImgRef
 }
 
+func (s *OCIRegistryServer) RefToImageDigest(imageName string, digest v1.Hash) name.Reference {
+	remoteImgRef, err := name.ParseReference(fmt.Sprintf("%s/%s@%s", s.Address(), imageName, digest))
+	require.NoError(s.t, err)
+
+	return remoteImgRef
+}
+
 func (s *OCIRegistryServer) Push(remoteImgRef name.Reference, img v1.Image) {
 	err := remote.Write(remoteImgRef, img)
 	require.NoError(s.t, err)
