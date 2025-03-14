@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/compression"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -25,11 +25,6 @@ const (
 	StepsOCIArtifact  types.MediaType = "application/vnd.gitlab.step.image.v1"
 	StepsOCILayerZSTD types.MediaType = "application/vnd.gitlab.step.layer.v1.tar+zstd"
 )
-
-type PlatformImage struct {
-	Image    v1.Image
-	Platform *v1.Platform
-}
 
 type ImageFactory struct {
 	workDirMu sync.Mutex
@@ -62,7 +57,7 @@ func (f *ImageFactory) BuildImageIndex(createdAt time.Time, imagePlatforms ...Pl
 			Add: imgPlatform.Image,
 			Descriptor: v1.Descriptor{
 				MediaType: types.OCIManifestSchema1,
-				Platform:  imgPlatform.Platform,
+				Platform:  imgPlatform.NormalizedPlatform(),
 				// we could add artifact type here too, github.com/google/go-containerregistry does not support this
 			},
 		})

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 
@@ -82,6 +82,27 @@ func TestReleaser_Release(t *testing.T) {
 		require.Equal(t, "amd64", indexManifest.Manifests[0].Platform.Architecture)
 		require.Equal(t, "v7", indexManifest.Manifests[0].Platform.Variant)
 		require.Equal(t, []string{"gpu"}, indexManifest.Manifests[0].Platform.Features)
+	})
+
+	t.Run("normalizes os/architecture names", func(t *testing.T) {
+		ctx := context.Background()
+		registry := mainBldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		platform := &v1.Platform{Architecture: "AARCH64", OS: "linux"}
+		platformSpecific := bldr.OCIArtifact(t).WithPlatform(platform).BuildArtifacts()
+
+		err := pkg.NewReleaser().Release(ctx, remoteImgRef, pkg.NewArtifacts(), platformSpecific)
+		require.NoError(t, err)
+
+		imgIndex, err := remote.Index(remoteImgRef)
+		require.NoError(t, err)
+
+		indexManifest, err := imgIndex.IndexManifest()
+		require.NoError(t, err)
+		require.Len(t, indexManifest.Manifests, 1)
+		require.Equal(t, "linux", indexManifest.Manifests[0].Platform.OS)
+		require.Equal(t, "arm64", indexManifest.Manifests[0].Platform.Architecture)
 	})
 
 	t.Run("publishes images for many architectures", func(t *testing.T) {
