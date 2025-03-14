@@ -74,7 +74,7 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 		return nil, err
 	}
 
-	common, err := parseFiles(PlatformGeneric, commonJSON)
+	common, err := parseCommon(commonJSON)
 	if err != nil {
 		return nil, fmt.Errorf("common input: %w", err)
 	}
@@ -107,7 +107,11 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 
 func parsePlatforms(platformsJSON string) (Artifacts, error) {
 	var parsed map[string]struct {
-		Files map[string]string `json:"files"`
+		OSVersion  string            `json:"os.version"`
+		OSFeatures []string          `json:"os.features"`
+		Variant    string            `json:"variant"`
+		Features   []string          `json:"features"`
+		Files      map[string]string `json:"files"`
 	}
 
 	if err := unmarshal(platformsJSON, &parsed); err != nil {
@@ -120,27 +124,27 @@ func parsePlatforms(platformsJSON string) (Artifacts, error) {
 
 	allArtifacts := NewArtifacts()
 
-	for _, name := range slices.Sorted(maps.Keys(parsed)) {
-		nameParts := strings.Split(name, "/")
+	for _, platformName := range slices.Sorted(maps.Keys(parsed)) {
+		nameParts := strings.Split(platformName, "/")
 
 		if len(nameParts) != 2 {
-			return nil, fmt.Errorf("invalid platform os/arch: %s", name)
+			return nil, fmt.Errorf("invalid platform os/arch: %s", platformName)
 		}
 
 		platform := &v1.Platform{
 			OS:           strings.TrimSpace(nameParts[0]),
 			Architecture: strings.TrimSpace(nameParts[1]),
-			OSVersion:    "",
-			OSFeatures:   nil,
-			Variant:      "",
-			Features:     nil,
+			OSVersion:    strings.TrimSpace(parsed[platformName].OSVersion),
+			OSFeatures:   trimSpaceInStrings(parsed[platformName].OSFeatures),
+			Variant:      strings.TrimSpace(parsed[platformName].Variant),
+			Features:     trimSpaceInStrings(parsed[platformName].Features),
 		}
 
 		if len(allArtifacts.ForPlatform(platform)) > 0 {
 			return nil, fmt.Errorf(`platform "%s/%s" defined more than once`, platform.OS, platform.Architecture)
 		}
 
-		artifacts, err := buildArtifacts(platform, parsed[name].Files)
+		artifacts, err := buildArtifacts(platform, parsed[platformName].Files)
 		if err != nil {
 			return nil, fmt.Errorf(": %w", err)
 		}
@@ -151,16 +155,16 @@ func parsePlatforms(platformsJSON string) (Artifacts, error) {
 	return allArtifacts, nil
 }
 
-func parseFiles(platform *v1.Platform, filesJSON string) (Artifacts, error) {
+func parseCommon(filesJSON string) (Artifacts, error) {
 	var parsed struct {
-		SrcDst map[string]string `json:"files"`
+		Files map[string]string `json:"files"`
 	}
 
 	if err := unmarshal(filesJSON, &parsed); err != nil {
 		return nil, err
 	}
 
-	return buildArtifacts(platform, parsed.SrcDst)
+	return buildArtifacts(PlatformGeneric, parsed.Files)
 }
 
 func unmarshal(jsonInput string, into any) error {
@@ -201,4 +205,14 @@ func parseLogLevel(level string) (slog.Level, error) {
 	var logLevel slog.Level
 	err := logLevel.UnmarshalText([]byte(level))
 	return logLevel, err
+}
+
+func trimSpaceInStrings(values []string) []string {
+	trimmed := make([]string, 0, len(values))
+
+	for _, value := range values {
+		trimmed = append(trimmed, strings.TrimSpace(value))
+	}
+
+	return trimmed
 }

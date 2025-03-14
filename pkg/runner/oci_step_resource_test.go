@@ -50,6 +50,13 @@ func TestOCIStepResource_NamedReference(t *testing.T) {
 			tag:        "!err!",
 			expectErr:  "could not parse reference: registry.gitlab.com/project:!err!",
 		},
+		{
+			name:       "registry, repository, and digest",
+			registry:   "registry.gitlab.com",
+			repository: "project",
+			tag:        "sha256:f271d3fd90442470614813bd422ad3c1a8286e79904ba4faeca94a3fd0fb5b24",
+			expect:     "registry.gitlab.com/project@sha256:f271d3fd90442470614813bd422ad3c1a8286e79904ba4faeca94a3fd0fb5b24",
+		},
 	}
 
 	for _, test := range tests {

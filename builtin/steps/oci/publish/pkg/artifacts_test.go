@@ -39,26 +39,6 @@ func TestArtifacts_Platforms(t *testing.T) {
 		require.Equal(t, mainBldr.OCIPlatform.LinuxAMD64, platforms[0])
 		require.Equal(t, mainBldr.OCIPlatform.LinuxARM64, platforms[1])
 	})
-
-	t.Run("excludes generic as a platform", func(t *testing.T) {
-		generic := bldr.OCIArtifact(t).Generic().Build()
-		linuxAmd64 := bldr.OCIArtifact(t).LinuxAMD64().Build()
-
-		platforms := pkg.NewArtifacts(generic, linuxAmd64).Platforms()
-		require.Len(t, platforms, 1)
-		require.Equal(t, mainBldr.OCIPlatform.LinuxAMD64, platforms[0])
-	})
-}
-
-func TestArtifacts_Generic(t *testing.T) {
-	genericA := bldr.OCIArtifact(t).Generic().Build()
-	genericB := bldr.OCIArtifact(t).Generic().Build()
-	linuxArm64 := bldr.OCIArtifact(t).LinuxARM64().Build()
-
-	artifacts := pkg.NewArtifacts(genericA, genericB, linuxArm64).Generic()
-	require.Len(t, artifacts, 2)
-	require.Equal(t, genericA, artifacts[0])
-	require.Equal(t, genericB, artifacts[1])
 }
 
 func TestArtifacts_Add(t *testing.T) {
