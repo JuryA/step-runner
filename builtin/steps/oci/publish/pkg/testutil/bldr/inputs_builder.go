@@ -1,12 +1,14 @@
 package bldr
 
+import "gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+
 type CLIInputsBuilder struct {
 	registry   string
 	repository string
 	tag        string
 	common     string
 	platforms  string
-	debugMode  string
+	logLevel   string
 }
 
 func CLIInputs() *CLIInputsBuilder {
@@ -16,7 +18,7 @@ func CLIInputs() *CLIInputsBuilder {
 		tag:        "1.0.0",
 		common:     `{"files": {"step.yml": "step.yml"}}`,
 		platforms:  `{"linux/arm64": {"files": {"amd_run": "run"}}, "linux/amd64": {"files": {"arm_run": "run"}}}`,
-		debugMode:  "",
+		logLevel:   "info",
 	}
 }
 
@@ -45,13 +47,13 @@ func (b *CLIInputsBuilder) WithPlatforms(platforms string) *CLIInputsBuilder {
 	return b
 }
 
-func (b *CLIInputsBuilder) WithDebugMode(debugMode string) *CLIInputsBuilder {
-	b.debugMode = debugMode
+func (b *CLIInputsBuilder) WithLogLevel(logLevel string) *CLIInputsBuilder {
+	b.logLevel = logLevel
 	return b
 }
 
-func (b *CLIInputsBuilder) Build() []string {
-	return []string{
+func (b *CLIInputsBuilder) Build() ([]string, pkg.GetEnv) {
+	cliOpts := []string{
 		"--registry",
 		b.registry,
 		"--repository",
@@ -62,7 +64,12 @@ func (b *CLIInputsBuilder) Build() []string {
 		b.common,
 		"--platforms",
 		b.platforms,
-		"--debug-mode",
-		b.debugMode,
 	}
+
+	envOpts := map[string]string{
+		"CI_STEPS_LOG_LEVEL": b.logLevel,
+	}
+
+	getEnv := func(key string) string { return envOpts[key] }
+	return cliOpts, getEnv
 }

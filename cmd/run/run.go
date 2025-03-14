@@ -162,7 +162,11 @@ func run(options *Options) error {
 
 func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
 	env, err := runner.NewEnvironmentFromOS(excludeJobVars)
+	if err != nil {
+		return nil, err
+	}
 
+	env, err = runner.GlobalEnvironment(env, options.Job)
 	if err != nil {
 		return nil, err
 	}

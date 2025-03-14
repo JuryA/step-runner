@@ -1,6 +1,7 @@
 package pkg_test
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -284,29 +285,34 @@ func TestParseInputs(t *testing.T) {
 		})
 	})
 
-	t.Run("parses debug mode", func(t *testing.T) {
+	t.Run("parses log level", func(t *testing.T) {
 		tests := []struct {
-			name            string
-			debugMode       string
-			expectDebugMode bool
+			logLevel       string
+			expectLogLevel slog.Level
 		}{
 			{
-				name:            "mode not set",
-				debugMode:       "",
-				expectDebugMode: false,
+				logLevel:       "info",
+				expectLogLevel: slog.LevelInfo,
 			},
 			{
-				name:            "mode set to true",
-				debugMode:       "true",
-				expectDebugMode: true,
+				logLevel:       "debug",
+				expectLogLevel: slog.LevelDebug,
+			},
+			{
+				logLevel:       "warn",
+				expectLogLevel: slog.LevelWarn,
+			},
+			{
+				logLevel:       "error",
+				expectLogLevel: slog.LevelError,
 			},
 		}
 
 		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithDebugMode(test.debugMode).Build())
+			t.Run(test.logLevel, func(t *testing.T) {
+				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithLogLevel(test.logLevel).Build())
 				require.NoError(t, err)
-				require.Equal(t, test.expectDebugMode, inputs.DebugMode)
+				require.Equal(t, test.expectLogLevel, inputs.LogLevel)
 			})
 		}
 	})

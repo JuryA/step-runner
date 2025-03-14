@@ -77,7 +77,12 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("preparing environment: %w", err)
 	}
 
-	globCtx := runner.NewGlobalContext(s.env.AddLexicalScope(request.Env))
+	env, err := runner.GlobalEnvironment(s.env, jobVars)
+	if err != nil {
+		return nil, fmt.Errorf("initializing global environment: %w", err)
+	}
+
+	globCtx := runner.NewGlobalContext(env.AddLexicalScope(request.Env))
 	globCtx.Job = jobVars
 	globCtx.WorkDir = job.WorkDir
 	globCtx.Stdout, globCtx.Stderr = job.Logs()

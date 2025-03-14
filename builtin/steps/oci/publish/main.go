@@ -11,15 +11,13 @@ import (
 func main() {
 	logger := slog.Default()
 
-	inputs, err := pkg.ParseInputs(os.Args[1:])
+	inputs, err := pkg.ParseInputs(os.Args[1:], os.Getenv)
 	if err != nil {
 		logger.Error("publish", "err", err)
 		os.Exit(1)
 	}
 
-	if inputs.DebugMode {
-		slog.SetLogLoggerLevel(slog.LevelDebug)
-	}
+	slog.SetLogLoggerLevel(inputs.LogLevel)
 
 	imgRef, err := inputs.ImgRef()
 	if err != nil {
