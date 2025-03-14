@@ -53,3 +53,7 @@ func (bldr *OCIArtifactBuilder) WithTo(to string) *OCIArtifactBuilder {
 func (bldr *OCIArtifactBuilder) Build() *pkg.Artifact {
 	return pkg.NewArtifact(bldr.platform, bldr.from, bldr.to)
 }
+
+func (bldr *OCIArtifactBuilder) BuildArtifacts() pkg.Artifacts {
+	return pkg.NewArtifacts(bldr.Build())
+}

@@ -27,19 +27,19 @@ func TestReleaser_Release(t *testing.T) {
 			WriteFile("dist/linux/amd64/program", "123").
 			Build()
 
-		artifacts := pkg.NewArtifacts(
-			bldr.OCIArtifact(t).
-				Generic().
-				WithFrom(filepath.Join(baseDir, "dist/common")).
-				WithTo("/my_step").
-				Build(),
-			bldr.OCIArtifact(t).
-				LinuxAMD64().
-				WithFrom(filepath.Join(baseDir, "dist/linux/amd64/program")).
-				WithTo("/my_step/program").
-				Build())
+		common := bldr.OCIArtifact(t).
+			Generic().
+			WithFrom(filepath.Join(baseDir, "dist/common")).
+			WithTo("/my_step").
+			BuildArtifacts()
 
-		err := pkg.NewReleaser().Release(ctx, remoteImgRef, artifacts)
+		platformSpecific := bldr.OCIArtifact(t).
+			LinuxAMD64().
+			WithFrom(filepath.Join(baseDir, "dist/linux/amd64/program")).
+			WithTo("/my_step/program").
+			BuildArtifacts()
+
+		err := pkg.NewReleaser().Release(ctx, remoteImgRef, common, platformSpecific)
 		require.NoError(t, err)
 
 		imageDir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
@@ -62,12 +62,13 @@ func TestReleaser_Release(t *testing.T) {
 			WriteFile("dist/linux/arm64/program", "arm64").
 			Build()
 
-		artifacts := pkg.NewArtifacts(
-			bldr.OCIArtifact(t).
-				Generic().
-				WithFrom(filepath.Join(baseDir, "dist/common")).
-				WithTo("/").
-				Build(),
+		common := bldr.OCIArtifact(t).
+			Generic().
+			WithFrom(filepath.Join(baseDir, "dist/common")).
+			WithTo("/").
+			BuildArtifacts()
+
+		platformSpecific := pkg.NewArtifacts(
 			bldr.OCIArtifact(t).
 				LinuxAMD64().
 				WithFrom(filepath.Join(baseDir, "dist/linux/amd64")).
@@ -79,7 +80,7 @@ func TestReleaser_Release(t *testing.T) {
 				WithTo("/").
 				Build())
 
-		err := pkg.NewReleaser().Release(ctx, remoteImgRef, artifacts)
+		err := pkg.NewReleaser().Release(ctx, remoteImgRef, common, platformSpecific)
 		require.NoError(t, err)
 
 		amd64Dir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
@@ -98,14 +99,13 @@ func TestReleaser_Release(t *testing.T) {
 
 		baseDir := mainBldr.Files(t).WriteDir("/my/files").Build()
 
-		artifacts := pkg.NewArtifacts(
-			bldr.OCIArtifact(t).
-				LinuxAMD64().
-				WithFrom(filepath.Join(baseDir, "my", "files")).
-				WithTo("/app/my/files").
-				Build())
+		platformSpecific := bldr.OCIArtifact(t).
+			LinuxAMD64().
+			WithFrom(filepath.Join(baseDir, "my", "files")).
+			WithTo("/app/my/files").
+			BuildArtifacts()
 
-		err := pkg.NewReleaser().Release(ctx, remoteImgRef, artifacts)
+		err := pkg.NewReleaser().Release(ctx, remoteImgRef, pkg.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
 		imageDir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
