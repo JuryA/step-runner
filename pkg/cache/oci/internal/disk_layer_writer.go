@@ -3,7 +3,6 @@ package internal
 import (
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -54,13 +53,12 @@ func (w *DiskLayerWriter) writeLayerToDisk(layer v1.Layer, dir string) error {
 		}
 
 		filePath := filepath.Join(dir, sanitizer.SanitizePath(hdr.Name))
-		filePerm := hdr.FileInfo().Mode()
 
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			err = w.writeDir(filePath, filePerm)
+			err = w.writeDir(filePath)
 		case tar.TypeReg:
-			err = w.writeFile(filePath, tr, filePerm)
+			err = w.writeFile(filePath, tr)
 		default:
 		}
 
@@ -70,16 +68,16 @@ func (w *DiskLayerWriter) writeLayerToDisk(layer v1.Layer, dir string) error {
 	}
 }
 
-func (w *DiskLayerWriter) writeDir(dir string, perm fs.FileMode) error {
-	if err := os.MkdirAll(dir, perm); err != nil {
+func (w *DiskLayerWriter) writeDir(dir string) error {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("creating directory %q: %w", dir, err)
 	}
 
 	return nil
 }
 
-func (w *DiskLayerWriter) writeFile(path string, content io.Reader, perm fs.FileMode) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, perm)
+func (w *DiskLayerWriter) writeFile(path string, content io.Reader) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0400)
 	if err != nil {
 		return fmt.Errorf("creating file %q: %w", path, err)
 	}

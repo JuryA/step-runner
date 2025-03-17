@@ -44,10 +44,6 @@ func TestReleaser_Release(t *testing.T) {
 		require.NoError(t, err)
 
 		imageDir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
-		stat, err := os.Stat(filepath.Join(imageDir, "my_step", "step.yml"))
-		require.NoError(t, err)
-		require.Equal(t, "-rw-r--r--", stat.Mode().String())
-
 		require.Equal(t, "spec:", readFile(t, filepath.Join(imageDir, "my_step", "step.yml")))
 		require.Equal(t, "123", readFile(t, filepath.Join(imageDir, "my_step", "program")))
 	})
