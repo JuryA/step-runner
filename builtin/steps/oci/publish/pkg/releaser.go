@@ -21,17 +21,17 @@ func NewReleaser() *Releaser {
 	}
 }
 
-func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, artifacts Artifacts) error {
+func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, common Artifacts, platformSpecific Artifacts) error {
 	factory := NewImageFactory(WithLogger(r.logger))
 	defer factory.CleanUp()
 
 	imagePlatforms := make([]PlatformImage, 0)
 	createdAt := time.Now()
 
-	for _, platform := range artifacts.Platforms() {
+	for _, platform := range platformSpecific.Platforms() {
 		r.logger.Info("building image", "platform", platform)
 
-		layers, err := r.buildImageLayers(factory, artifacts.Generic().Add(artifacts.ForPlatform(platform)))
+		layers, err := r.buildImageLayers(factory, common.Add(platformSpecific.ForPlatform(platform)))
 		if err != nil {
 			return err
 		}

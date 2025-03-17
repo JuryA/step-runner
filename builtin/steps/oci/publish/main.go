@@ -26,7 +26,7 @@ func main() {
 	}
 
 	releaser := pkg.NewReleaser()
-	err = releaser.Release(context.Background(), imgRef, inputs.Common.Add(inputs.PlatformSpecific))
+	err = releaser.Release(context.Background(), imgRef, inputs.Common, inputs.PlatformSpecific)
 	if err != nil {
 		logger.Error("publish", "err", err)
 		os.Exit(1)

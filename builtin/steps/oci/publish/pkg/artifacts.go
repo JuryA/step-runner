@@ -24,12 +24,7 @@ func (a Artifacts) ForPlatform(platform *v1.Platform) Artifacts {
 	return values
 }
 
-func (a Artifacts) Generic() Artifacts {
-	return a.ForPlatform(PlatformGeneric)
-}
-
 // Platforms returns a unique list of platforms represented by the artifacts.
-// The generic platform is excluded from the result set.
 func (a Artifacts) Platforms() []*v1.Platform {
 	unique := make([]*v1.Platform, 0)
 
@@ -44,7 +39,7 @@ func (a Artifacts) Platforms() []*v1.Platform {
 			}
 		}
 
-		if !seen && !artifact.Platform.Equals(*PlatformGeneric) {
+		if !seen {
 			unique = append(unique, artifact.Platform)
 		}
 	}

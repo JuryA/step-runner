@@ -5,6 +5,7 @@
   instead of url and version. See !181.
 - Environment variable `CI_STEPS_LOG_LEVEL` is available to all running 
   steps. See !189.
+- OCI images can be fetched using a digest as the tag. See !192.
 
 ## v0.5.0 (2025-02-05)
 

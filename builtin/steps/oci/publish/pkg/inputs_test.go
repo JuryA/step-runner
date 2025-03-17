@@ -197,7 +197,28 @@ func TestParseInputs(t *testing.T) {
 					name:       "empty dst path",
 					commonJSON: `{"files": {"step.yml": ""}}`,
 					expectErr:  `common input: empty destination path: "step.yml": ""`,
-				}}
+				},
+				{
+					name:       "includes variant",
+					commonJSON: `{"variant": "v7", "files": {"step.yml": "step.yml"}}`,
+					expectErr:  `common input: json: unknown field "variant"`,
+				},
+				{
+					name:       "includes os.features",
+					commonJSON: `{"os.features": "win32k", "files": {"step.yml": "step.yml"}}`,
+					expectErr:  `common input: json: unknown field "os.features"`,
+				},
+				{
+					name:       "includes os.version",
+					commonJSON: `{"os.version": "10.0.26100.3476", "files": {"step.yml": "step.yml"}}`,
+					expectErr:  `common input: json: unknown field "os.version"`,
+				},
+				{
+					name:       "includes features",
+					commonJSON: `{"features": "gpu", "files": {"step.yml": "step.yml"}}`,
+					expectErr:  `common input: json: unknown field "features"`,
+				},
+			}
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
@@ -217,17 +238,42 @@ func TestParseInputs(t *testing.T) {
 			require.Len(t, inputs.PlatformSpecific, 1)
 			require.Equal(t, "linux", inputs.PlatformSpecific[0].Platform.OS)
 			require.Equal(t, "amd64", inputs.PlatformSpecific[0].Platform.Architecture)
+			require.Empty(t, inputs.PlatformSpecific[0].Platform.Variant)
+			require.Empty(t, inputs.PlatformSpecific[0].Platform.OSVersion)
+			require.Empty(t, inputs.PlatformSpecific[0].Platform.OSFeatures)
+			require.Empty(t, inputs.PlatformSpecific[0].Platform.Features)
 			require.Equal(t, "my_program", inputs.PlatformSpecific[0].Src)
 			require.Equal(t, "run", inputs.PlatformSpecific[0].Dst)
 		})
 
+		t.Run("parses optional platform details", func(t *testing.T) {
+			platformsJSON := `{
+"windows/arm64": {
+  "variant": "v7", 
+  "os.version": "10.0.26100.3476", 
+  "os.features": ["win32k"], 
+  "features": ["gpu"], 
+  "files": {"step.yml": "step.yml"}
+}}`
+			inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
+			require.NoError(t, err)
+			require.Len(t, inputs.PlatformSpecific, 1)
+			require.Equal(t, "windows", inputs.PlatformSpecific[0].Platform.OS)
+			require.Equal(t, "arm64", inputs.PlatformSpecific[0].Platform.Architecture)
+			require.Equal(t, "v7", inputs.PlatformSpecific[0].Platform.Variant)
+			require.Equal(t, "10.0.26100.3476", inputs.PlatformSpecific[0].Platform.OSVersion)
+			require.Equal(t, []string{"win32k"}, inputs.PlatformSpecific[0].Platform.OSFeatures)
+			require.Equal(t, []string{"gpu"}, inputs.PlatformSpecific[0].Platform.Features)
+		})
+
 		t.Run("trims space", func(t *testing.T) {
-			platformsJSON := `{" linux / amd64 ": {"files": {"my_program": "run"}}}`
+			platformsJSON := `{" linux / amd64 ": {"variant":" v8 ", "files": {"my_program": "run"}}}`
 			inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
 			require.Equal(t, "linux", inputs.PlatformSpecific[0].Platform.OS)
 			require.Equal(t, "amd64", inputs.PlatformSpecific[0].Platform.Architecture)
+			require.Equal(t, "v8", inputs.PlatformSpecific[0].Platform.Variant)
 		})
 
 		t.Run("parses many platforms", func(t *testing.T) {
