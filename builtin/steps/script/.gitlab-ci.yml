@@ -1,0 +1,20 @@
+
+script step/bash:
+  stage: e2e
+  image: alpine:${ALPINE_VERSION}
+  script:
+    - apk add bash
+    - which bash
+    - if ! command -v bash 2>&1 >/dev/null; then echo "bash not found, aborting test" && exit 1; fi
+    - ./out/bin/step-runner-linux-amd64 run ./builtin/steps/script --inputs script='echo "Using shell $0" >output.txt'
+    - OUTPUT=$(cat output.txt)
+    - '[[ "$OUTPUT" =~ ^Using\ shell\ .*/bash$ ]] || (printf "Expected: Using shell (.*)bash\n  Actual: $OUTPUT\n" && exit 1)'
+
+script step/sh:
+  stage: e2e
+  image: alpine:${ALPINE_VERSION}
+  script:
+    - if command -v bash 2>&1 >/dev/null; then echo "bash is found and should not be, aborting test" && exit 1; fi
+    - ./out/bin/step-runner-linux-amd64 run ./builtin/steps/script --inputs script='echo "Using shell $0" >output.txt'
+    - OUTPUT=$(cat output.txt)
+    - '[[ "$OUTPUT" =~ ^Using\ shell\ .*/sh$ ]] || (printf "Expected: Using shell (.*)sh\n  Actual: $OUTPUT\n" && exit 1)'

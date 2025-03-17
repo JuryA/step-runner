@@ -1,0 +1,7 @@
+spec:
+  inputs:
+    script:
+      type: string
+---
+exec:
+  command: [ "${{step_dir}}/run_script.sh", "${{inputs.script}}" ]

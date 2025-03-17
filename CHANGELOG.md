@@ -1,3 +1,7 @@
+## v0.7.0 (2025-03-17)
+
+- Inline script step to reduce external network calls. See !186.
+
 ## v0.6.0 (2025-02-24)
 
 - Support steps built-in to the step-runner. See !180.

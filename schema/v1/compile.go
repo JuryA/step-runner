@@ -308,7 +308,13 @@ func (s *Step) compileScriptKeywordToStep() error {
 	if len(s.Inputs) != 0 {
 		return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
 	}
-	s.Step = &Reference{Git: NewGitReference("https://gitlab.com/components/script", "v2")}
+
+	s.Step = &proto.Step_Reference{
+		Protocol: proto.StepReferenceProtocol_builtin,
+		Path:     []string{"script"},
+		Filename: "step.yml",
+	}
+
 	s.Inputs = map[string]any{
 		"script": s.Script,
 	}
@@ -350,6 +356,8 @@ func (s *Step) compileToStepProto() (*proto.Step, error) {
 		err error
 	)
 	switch v := s.Step.(type) {
+	case *proto.Step_Reference:
+		ref = v
 	case string:
 		ref, err = shortReference(v).compile()
 	case *Reference:
