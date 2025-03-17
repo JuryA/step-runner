@@ -33,9 +33,8 @@ type: steps
 steps:
     - name: my_step
       step:
-          protocol: git
-          url: "https://gitlab.com/components/script"
-          version: v2
+          protocol: builtin
+          path: [ "script" ]
           filename: step.yml
       inputs:
           script: echo hello world
@@ -84,9 +83,8 @@ type: steps
 steps:
     - name: my_special_script_name
       step:
-          protocol: git
-          url: "https://gitlab.com/components/script"
-          version: v2
+          protocol: builtin
+          path: [ "script" ]
           filename: step.yml
       inputs:
           script: echo hello world
