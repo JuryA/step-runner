@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"io"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -68,20 +69,29 @@ func (b *OCIImageBuilder) Build() v1.Image {
 	return img
 }
 
+type fileInfo struct {
+	content []byte
+	perm    os.FileMode
+}
+
 type OCIImageLayerBuilder struct {
 	t     *testing.T
-	files map[string][]byte
+	files map[string]fileInfo
 }
 
 func OCIImageLayer(t *testing.T) *OCIImageLayerBuilder {
 	return &OCIImageLayerBuilder{
 		t:     t,
-		files: make(map[string][]byte),
+		files: make(map[string]fileInfo),
 	}
 }
 
 func (b *OCIImageLayerBuilder) WithFile(path string, fileContent []byte) *OCIImageLayerBuilder {
-	b.files[path] = fileContent
+	return b.WithFileWithPerms(path, fileContent, 0644)
+}
+
+func (b *OCIImageLayerBuilder) WithFileWithPerms(path string, fileContent []byte, perms os.FileMode) *OCIImageLayerBuilder {
+	b.files[path] = fileInfo{content: fileContent, perm: perms}
 	return b
 }
 
@@ -91,7 +101,7 @@ func (b *OCIImageLayerBuilder) Build() v1.Layer {
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
 
-	for path, content := range b.files {
+	for path, info := range b.files {
 		dirs := b.findUnwrittenDirsInPath(path, dirsWritten)
 
 		for _, dir := range dirs {
@@ -99,10 +109,10 @@ func (b *OCIImageLayerBuilder) Build() v1.Layer {
 			require.NoError(b.t, err)
 		}
 
-		err := tw.WriteHeader(&tar.Header{Typeflag: tar.TypeReg, Name: path, Size: int64(len(content)), Mode: 0777})
+		err := tw.WriteHeader(&tar.Header{Typeflag: tar.TypeReg, Name: path, Size: int64(len(info.content)), Mode: int64(info.perm)})
 		require.NoError(b.t, err)
 
-		_, err = tw.Write(content)
+		_, err = tw.Write(info.content)
 		require.NoError(b.t, err)
 	}
 

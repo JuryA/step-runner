@@ -25,6 +25,18 @@ func TestDiskLayerWriter(t *testing.T) {
 		require.Equal(t, []byte("foobar"), fileContent)
 	})
 
+	t.Run("files are read only", func(t *testing.T) {
+		layer := bldr.OCIImageLayer(t).WithFileWithPerms("/my-file", []byte{}, 0755).Build()
+		dir := t.TempDir()
+
+		err := internal.NewDiskLayerWriter().Write([]v1.Layer{layer}, dir)
+		require.NoError(t, err)
+
+		info, err := os.Stat(filepath.Join(dir, "/my-file"))
+		require.NoError(t, err)
+		require.Equal(t, "-r--------", info.Mode().String())
+	})
+
 	t.Run("writes empty files to disk", func(t *testing.T) {
 		layer := bldr.OCIImageLayer(t).WithFile("/my-file", []byte{}).Build()
 		dir := t.TempDir()
