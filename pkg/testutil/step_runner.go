@@ -80,20 +80,17 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) 
 		env = env.AddLexicalScope(b.globalEnv)
 	}
 
-	globalCtx := runner.NewGlobalContext(env)
-	globalCtx.Stdout = b.log
-	globalCtx.Stderr = b.log
-	globalCtx.WorkDir, err = os.UserHomeDir()
-	globalCtx.Job = b.globalCtxJob
+	workDir, err := os.UserHomeDir()
 	require.NoError(b.t, err)
 
+	globalCtx := runner.NewGlobalContext(workDir, b.globalCtxJob, env, b.log, b.log)
 	params := &runner.Params{}
 
 	step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
 	require.NoError(b.t, err)
 
 	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
-	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.Env)
+	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.EnvWithLexicalScope(params.Env))
 	require.NoError(b.t, err)
 
 	run, err := step.Run(ctx.Background(), stepsCtx)

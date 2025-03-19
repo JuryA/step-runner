@@ -14,8 +14,7 @@ import (
 func TestGlobalContext_Log(t *testing.T) {
 	t.Run("no error", func(t *testing.T) {
 		output := &strings.Builder{}
-		globalCtx := runner.NewGlobalContext(bldr.Env().Build())
-		globalCtx.Stdout = output
+		globalCtx := runner.NewGlobalContext(".", map[string]string{}, bldr.Env().Build(), output, output)
 
 		err := globalCtx.Logf("Hello %s!", "World")
 		require.NoError(t, err)
@@ -23,8 +22,8 @@ func TestGlobalContext_Log(t *testing.T) {
 	})
 
 	t.Run("when errors", func(t *testing.T) {
-		globalCtx := runner.NewGlobalContext(bldr.Env().Build())
-		globalCtx.Stdout = &ErrWriter{err: errors.New("simulated.error")}
+		output := &ErrWriter{err: errors.New("simulated.error")}
+		globalCtx := runner.NewGlobalContext(".", map[string]string{}, bldr.Env().Build(), output, output)
 
 		err := globalCtx.Logf("log message")
 		require.Error(t, err)

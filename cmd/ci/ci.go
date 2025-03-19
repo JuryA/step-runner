@@ -76,29 +76,24 @@ func run(options *Options) error {
 		return err
 	}
 
-	globalCtx := runner.NewGlobalContext(globalEnv)
-	params := &runner.Params{}
-
 	// Step runner should have no concept of "CI_BUILDS_DIR".
 	// However entire `ci` command is a workaround hack because
 	// steps are not yet plumbed through runner. Once we receive
 	// steps from runner over gRPC we will receive "work_dir"
 	// explicitly (set to CI_BUILDS_DIR by runner). Then we can
 	// delete this whole command.
-	globalCtx.WorkDir = options.WorkDir
-
 	// Add all CI_, GITLAB_ and DOCKER_ environment variables as a
 	// workaround until we get an explicit list in the Run gRPC
 	// call.
-	globalCtx.Job = options.JobVariables
+	globalCtx := runner.NewGlobalContext(options.WorkDir, options.JobVariables, globalEnv, os.Stdout, os.Stderr)
+	params := &runner.Params{}
 
 	step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
-
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)
 	}
 
-	env := globalCtx.Env.AddLexicalScope(params.Env)
+	env := globalCtx.EnvWithLexicalScope(params.Env)
 	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
 	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
 

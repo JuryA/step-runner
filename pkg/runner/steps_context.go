@@ -93,11 +93,11 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 		Env:         s.env.Values(),
 		ExportFile:  s.exportFile.Path(),
 		Inputs:      s.inputs,
-		Job:         s.globalCtx.Job,
+		Job:         s.globalCtx.Job(),
 		OutputFile:  s.outputFile.Path(),
 		StepDir:     s.stepDir,
 		StepResults: stepResultViews,
-		WorkDir:     s.globalCtx.WorkDir,
+		WorkDir:     s.globalCtx.WorkDir(),
 	}
 }
 
@@ -120,7 +120,7 @@ func (s *StepsContext) Cleanup() {
 }
 
 func (s *StepsContext) AddGlobalEnv(env *Environment) {
-	s.globalCtx.Env.Mutate(env)
+	s.globalCtx.AddGlobalEnv(env)
 }
 
 func (s *StepsContext) Logln(format string, v ...any) error {
@@ -128,11 +128,11 @@ func (s *StepsContext) Logln(format string, v ...any) error {
 }
 
 func (s *StepsContext) WorkDir() string {
-	return s.globalCtx.WorkDir
+	return s.globalCtx.WorkDir()
 }
 
 func (s *StepsContext) Pipe() (io.Writer, io.Writer) {
-	return s.globalCtx.Stdout, s.globalCtx.Stderr
+	return s.globalCtx.Pipe()
 }
 
 func (s *StepsContext) ReadOutputStepResult() (*proto.StepResult, error) {
