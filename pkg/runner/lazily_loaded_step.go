@@ -44,7 +44,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 		return nil, fmt.Errorf("%s: %w", s.Describe(), err)
 	}
 
-	env := parentStepsCtx.Env.AddLexicalScope(params.Env)
+	env := parentStepsCtx.EnvWithLexicalScope(params.Env)
 	inputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
 	stepsCtx, err := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir, inputs, env)
 
@@ -110,7 +110,7 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, wor
 
 	params := &Params{
 		Inputs: inputs,
-		Env:    stepsCtx.Env.AddLexicalScope(env).Values(),
+		Env:    stepsCtx.EnvWithLexicalScope(env).Values(),
 	}
 
 	step, err := s.parser.Parse(specDef, params, NewNamedStepReference(s.stepReference.Name, s.stepReference.Step))
