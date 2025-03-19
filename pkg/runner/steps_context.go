@@ -2,17 +2,18 @@ package runner
 
 import (
 	"fmt"
+	"io"
 
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
+	"gitlab.com/gitlab-org/step-runner/pkg/precond"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type StepsContext struct {
-	*GlobalContext
-
+	globalCtx  *GlobalContext
 	StepDir    string                       // The path to the YAML definition directory so steps can find their files and sub-steps with relative references know where to start.
 	OutputFile *StepFile                    // The path to the output file.
 	ExportFile *StepFile                    // The path to the export file.
@@ -21,7 +22,7 @@ type StepsContext struct {
 	Steps      map[string]*proto.StepResult // Results of previously executed steps.
 }
 
-func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*structpb.Value, env *Environment) (*StepsContext, error) {
+func NewStepsContext(globalCtx *GlobalContext, stepDir string, inputs map[string]*structpb.Value, env *Environment, options ...func(*StepsContext)) (*StepsContext, error) {
 	outputFile, err := NewStepFileInTmp()
 
 	if err != nil {
@@ -34,15 +35,22 @@ func NewStepsContext(globalCtx *GlobalContext, dir string, inputs map[string]*st
 		return nil, fmt.Errorf("creating steps context: export file: %w", err)
 	}
 
-	return &StepsContext{
-		GlobalContext: globalCtx,
-		StepDir:       dir,
-		Env:           env,
-		Inputs:        inputs,
-		Steps:         map[string]*proto.StepResult{},
-		OutputFile:    outputFile,
-		ExportFile:    exportFile,
-	}, nil
+	stepsCtx := &StepsContext{
+		globalCtx:  globalCtx,
+		StepDir:    stepDir,
+		Env:        env,
+		Inputs:     inputs,
+		Steps:      map[string]*proto.StepResult{},
+		OutputFile: outputFile,
+		ExportFile: exportFile,
+	}
+
+	for _, option := range options {
+		option(stepsCtx)
+	}
+
+	precond.MustNotBeNil(stepsCtx.Env, "steps context must have an environment")
+	return stepsCtx, nil
 }
 
 func (s *StepsContext) GetEnvs() map[string]string {
@@ -85,11 +93,11 @@ func (s *StepsContext) View() *expression.InterpolationContext {
 		Env:         s.Env.Values(),
 		ExportFile:  s.ExportFile.Path(),
 		Inputs:      s.Inputs,
-		Job:         s.Job,
+		Job:         s.globalCtx.Job,
 		OutputFile:  s.OutputFile.Path(),
 		StepDir:     s.StepDir,
 		StepResults: stepResultViews,
-		WorkDir:     s.WorkDir,
+		WorkDir:     s.globalCtx.WorkDir,
 	}
 }
 
@@ -109,4 +117,38 @@ func (s *StepsContext) StepResults() []*proto.StepResult {
 func (s *StepsContext) Cleanup() {
 	_ = s.OutputFile.Remove()
 	_ = s.ExportFile.Remove()
+}
+
+func (s *StepsContext) AddGlobalEnv(env *Environment) {
+	s.globalCtx.Env.Mutate(env)
+}
+
+func (s *StepsContext) Logln(format string, v ...any) error {
+	return s.globalCtx.Logln(format, v...)
+}
+
+func (s *StepsContext) WorkDir() string {
+	return s.globalCtx.WorkDir
+}
+
+func (s *StepsContext) Pipe() (io.Writer, io.Writer) {
+	return s.globalCtx.Stdout, s.globalCtx.Stderr
+}
+
+func WithStepsCtxOutputFile(outputFile *StepFile) func(*StepsContext) {
+	return func(s *StepsContext) {
+		s.OutputFile = outputFile
+	}
+}
+
+func WithStepsCtxExportFile(exportFile *StepFile) func(*StepsContext) {
+	return func(s *StepsContext) {
+		s.ExportFile = exportFile
+	}
+}
+
+func WithStepsCtxStepResults(results map[string]*proto.StepResult) func(*StepsContext) {
+	return func(s *StepsContext) {
+		s.Steps = results
+	}
 }

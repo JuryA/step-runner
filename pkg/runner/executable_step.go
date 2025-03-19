@@ -55,7 +55,7 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.St
 		return result.BuildFailure(), fmt.Errorf("export file: %w", err)
 	}
 
-	stepsCtx.GlobalContext.Env.Mutate(exports)
+	stepsCtx.AddGlobalEnv(exports)
 	return result.Build(), nil
 }
 
@@ -79,10 +79,8 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 
 	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = workDir
-
 	cmd.Env = stepsCtx.GetEnvList()
-	cmd.Stdout = stepsCtx.GlobalContext.Stdout
-	cmd.Stderr = stepsCtx.GlobalContext.Stderr
+	cmd.Stdout, cmd.Stderr = stepsCtx.Pipe()
 
 	err = cmd.Run()
 	execResult := NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode())
@@ -98,7 +96,7 @@ func (s *ExecutableStep) determineWorkDir(stepsCtx *StepsContext) (string, error
 	workDir := s.specDef.Definition.Exec.WorkDir
 
 	if workDir == "" {
-		return stepsCtx.WorkDir, nil
+		return stepsCtx.WorkDir(), nil
 	}
 
 	res, err := expression.ExpandString(stepsCtx.View(), workDir)

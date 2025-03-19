@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/precond"
 )
 
 type GlobalContext struct {
@@ -15,12 +17,15 @@ type GlobalContext struct {
 }
 
 func NewGlobalContext(env *Environment) *GlobalContext {
-	return &GlobalContext{
+	globalCtx := &GlobalContext{
 		Job:    map[string]string{},
 		Env:    env,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
+
+	precond.MustNotBeNil(globalCtx.Env, "global context must have an environment")
+	return globalCtx
 }
 
 func (gc *GlobalContext) Logln(format string, v ...any) error {
