@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-const expectedFormat = "## vMAJOR.MINOR.PATCH (YYYY-MM-DD)" // example: ## v17.5.0 (2024-10-17)
-var expectedFormatRe = regexp.MustCompile(`## v(.+)\.(.+)\.(.+) \((\d{4}-\d{2}-\d{2})\)`)
+const expectedFormat = "## vMAJOR.MINOR.PATCH" // example: ## v17.5.0
+var expectedFormatRe = regexp.MustCompile(`## v([0-9]+)\.([0-9]+)\.([0-9]+)`)
 
 type Changelog struct {
 	contents []byte
@@ -39,19 +39,24 @@ func (c *Changelog) read() ([]*Version, error) {
 	var changes []string
 	var current []string
 
-	for scanner.Scan() {
+	for i := 0; scanner.Scan(); i++ {
 		line := scanner.Text()
+
+		if i < 4 {
+			// ignore header and link to releases page
+			continue
+		}
 
 		parts := expectedFormatRe.FindStringSubmatch(scanner.Text())
 
 		switch {
-		case len(parts) != 5 && current == nil:
+		case len(parts) != 4 && current == nil:
 			return nil, fmt.Errorf("must start with version, line '%s' does not conform to expected format '%s'", line, expectedFormat)
-		case len(parts) != 5 && strings.HasPrefix(line, "## "):
+		case len(parts) != 4 && strings.HasPrefix(line, "## "):
 			return nil, fmt.Errorf("header line '%s' does not conform to expected format '%s'", line, expectedFormat)
-		case len(parts) != 5:
+		case len(parts) != 4:
 			changes = append(changes, line)
-		case len(parts) == 5:
+		case len(parts) == 4:
 			if current != nil {
 				versions = append(versions, NewVersion(current[1], current[2], current[3], changes))
 			}
