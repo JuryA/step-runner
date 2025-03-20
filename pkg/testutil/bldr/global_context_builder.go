@@ -22,11 +22,5 @@ func (bldr *GlobalContextBuilder) WithJob(name, value string) *GlobalContextBuil
 }
 
 func (bldr *GlobalContextBuilder) Build() *runner.GlobalContext {
-	return &runner.GlobalContext{
-		WorkDir: ".",
-		Job:     bldr.job,
-		Env:     runner.NewEmptyEnvironment(),
-		Stdout:  &bytes.Buffer{},
-		Stderr:  &bytes.Buffer{},
-	}
+	return runner.NewGlobalContext(".", bldr.job, runner.NewEmptyEnvironment(), &bytes.Buffer{}, &bytes.Buffer{})
 }

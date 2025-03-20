@@ -2,7 +2,8 @@
 
 - Inline script step to reduce external network calls. See !186.
 - Upgrade Go to use version `1.24`. See !193.
-- Support publishing steps using an OCI image. See !179, !180, !183, !184, !185, !189, and !192. 
+- Support publishing steps using an OCI image. See !179, !180, !183, !184, !185, !189, and !192.
+- Fix issue where nil environment caused a panic. See !195.
 
 ## v0.6.0 (2025-02-24)
 
