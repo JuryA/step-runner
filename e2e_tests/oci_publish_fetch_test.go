@@ -40,7 +40,15 @@ run:
       oci:
         registry: %s
         repository: my-image
-        tag: "1"`
+        tag: "1"
+  - name: echo_registry
+    script: "echo reg: ${{steps.publish_image.outputs.registry}}"
+  - name: echo_repository
+    script: "echo repo: ${{steps.publish_image.outputs.repository}}"
+  - name: echo_tag
+    script: "echo tag: ${{steps.publish_image.outputs.tag}}"
+  - name: echo_ref
+    script: "echo ref: ${{steps.publish_image.outputs.ref}}"`
 
 	platform := bldr.OCIPlatform.ThisPlatform
 	registryAddr := registry.Address()
@@ -53,4 +61,9 @@ run:
 	require.Regexp(t, `INFO published step image=.*/my-image:1.0.2`, logs)
 	require.Contains(t, logs, `Running step "run_published_step"`)
 	require.Contains(t, logs, "Hello, World!")
+	require.Contains(t, logs, "reg: "+registryAddr)
+	require.Contains(t, logs, "repo: my-image")
+	require.Contains(t, logs, "tag: 1")
+	require.Contains(t, logs, "ref: 1")
+	require.Regexp(t, `ref: .*/my-image:1.0.2`, logs)
 }

@@ -12,6 +12,15 @@ spec:
     platforms:
       type: struct
       default: {}
+  outputs:
+    registry:
+      type: string
+    repository:
+      type: string
+    tag:
+      type: string
+    ref:
+      type: string
 ---
 exec:
   work_dir: ${{step_dir}}

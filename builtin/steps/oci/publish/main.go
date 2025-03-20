@@ -31,4 +31,5 @@ func run(logger *slog.Logger) error {
 	}
 
 	logger.Info("published step", "image", inputs.RemoteImageRef.MajorMinorPatch().Name())
+	return pkg.NewOutputs(inputs.OutputFile).Write(inputs.RemoteImageRef.MajorMinorPatch())
 }

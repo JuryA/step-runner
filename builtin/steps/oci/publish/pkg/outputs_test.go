@@ -1,0 +1,30 @@
+package pkg
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/stretchr/testify/require"
+)
+
+func TestOutputs_Write(t *testing.T) {
+	t.Run("writes ref to file", func(t *testing.T) {
+		imgRef := name.MustParseReference("registry.gitlab.com:8080/my-group/my-project/image:10.1.1")
+		outputFile := filepath.Join(t.TempDir(), "output.txt")
+
+		err := NewOutputs(outputFile).Write(imgRef)
+		require.NoError(t, err)
+
+		fileData, err := os.ReadFile(outputFile)
+		require.NoError(t, err)
+
+		lines := strings.Split(string(fileData), "\n")
+		require.Equal(t, `{"name":"registry","value":"registry.gitlab.com:8080"}`, lines[0])
+		require.Equal(t, `{"name":"repository","value":"my-group/my-project/image"}`, lines[1])
+		require.Equal(t, `{"name":"tag","value":"10.1.1"}`, lines[2])
+		require.Equal(t, `{"name":"ref","value":"registry.gitlab.com:8080/my-group/my-project/image:10.1.1"}`, lines[3])
+	})
+}
