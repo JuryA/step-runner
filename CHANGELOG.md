@@ -1,12 +1,14 @@
-## v0.7.0 (2025-03-17)
+# Changelog
 
+See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when changes are released.
+
+## v0.7.0
 - Inline script step to reduce external network calls. See !186.
 - Upgrade Go to use version `1.24`. See !193.
 - Support publishing steps using an OCI image. See !179, !180, !183, !184, !185, !189, and !192.
 - Fix issue where nil environment caused a panic. See !195.
 
-## v0.6.0 (2025-02-24)
-
+## v0.6.0
 - Support steps built-in to the step-runner. See !180.
 - Change OCI fetching syntax to use registry, repository and tag
   instead of url and version. See !181.
@@ -14,18 +16,18 @@
   steps. See !189.
 - OCI images can be fetched using a digest as the tag. See !192.
 
-## v0.5.0 (2025-02-05)
+## v0.5.0
 
 - Upgrade Go to use version `1.23`. See !176.
 - Steps can be loaded from OCI images. See !178. 
 
-## v0.4.0 (2025-01-30)
+## v0.4.0
 
 - The `bootstrap` command is idempotent. See !170.
 - Script falls back to use `sh` when `bash` is not available. See [script!2](https://gitlab.com/components/script/-/merge_requests/2).
 - Bootstrap command does not print version info. See !173.
 
-## v0.3.0 (2025-01-06)
+## v0.3.0
 
 - Accept dir and file after /-/. See !169.
 
@@ -35,12 +37,12 @@
   expanded step syntax is used. See !gitlab/177038 for documentation
   update.
 
-## v0.2.1 (2024-12-13)
+## v0.2.1
 
 - Initial working dir CI_PROJECT_DIR in CI. See !165.
 - Ignore NoErrAlreadyUpToDate error when cloning a steps repo. See !166.
 
-## v0.2.0 (2024-11-21)
+## v0.2.0
 
 - Make the initial Run API call wait for the connection to be ready. See !161+.
 - Log name of executing step. See !158+.
@@ -54,18 +56,18 @@
 - **Use `run:` instead of `steps:` to run a sequence of steps**. This is consistent with what is used
   when defining steps for a job in the `.gitlab-ci.yml` file. See !145+.
 
-## v0.1.0 (2024-10-28)
+## v0.1.0
 
 - Version the Step Runner
 
-## v0.0.0 (2024-10-28)
+## v0.0.0
 
 ### Breaking Changes:
 
 - **Input and output types must be declared in the spec**. Variables no longer
   default to `string`.
 
-## v0.0.0 (2024-10-21)
+## v0.0.0
 
 ### Breaking Changes:
 
@@ -76,7 +78,7 @@
 - **Default Output type changed to string**. Due to the `raw_string` type being
   removed.
 
-## v0.0.0 (2024-10-17)
+## v0.0.0
 
 ### Breaking Changes:
 
@@ -88,7 +90,7 @@
   (https://gitlab.com/gitlab-org/step-runner/-/commit/5a964c4ab52b71fc87a5e63e528d7024fc6043c7).
   However it mistakenly wasn't applied to the `ci` command.
 
-## v0.0.0 (2024-10-15)
+## v0.0.0
 
 ### Added:
 

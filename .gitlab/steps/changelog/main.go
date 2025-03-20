@@ -41,7 +41,7 @@ func main() {
 	}
 
 	if echoLatestVersion != nil && *echoLatestVersion {
-		log.Printf("Latest changelog version: v%s (%s)\n", version.Tag())
+		log.Printf("Latest changelog version: %s\n", version.Tag())
 
 		for _, change := range version.Changes() {
 			log.Printf("%s\n", change)
