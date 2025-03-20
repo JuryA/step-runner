@@ -27,3 +27,5 @@ exec:
     - "${{inputs.common}}"
     - "--platforms"
     - "${{inputs.platforms}}"
+    - "--output_file"
+    - "${{output_file}}"

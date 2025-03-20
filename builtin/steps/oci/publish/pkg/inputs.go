@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"maps"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -24,10 +25,11 @@ type Inputs struct {
 	Common           Artifacts
 	PlatformSpecific Artifacts
 	LogLevel         slog.Level
+	OutputFile       string
 }
 
 func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
-	var registry, repository, tag, commonJSON, platformsJSON string
+	var registry, repository, tag, commonJSON, platformsJSON, outputFile string
 
 	flags := flag.NewFlagSet("run", flag.ContinueOnError)
 	flags.StringVar(&registry, "registry", "", "")
@@ -35,6 +37,7 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 	flags.StringVar(&tag, "tag", "", "")
 	flags.StringVar(&commonJSON, "common", "", "")
 	flags.StringVar(&platformsJSON, "platforms", "", "")
+	flags.StringVar(&outputFile, "output_file", "", "")
 
 	err := flags.Parse(args)
 	if err != nil {
@@ -61,11 +64,16 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 		return nil, fmt.Errorf("log level: %w", err)
 	}
 
+	if _, err := os.Stat(outputFile); err != nil {
+		return nil, fmt.Errorf("output file is required: %w", err)
+	}
+
 	inputs := &Inputs{
 		RemoteImageRef:   remoteImgRef,
 		Common:           common,
 		PlatformSpecific: platform,
 		LogLevel:         logLevel,
+		OutputFile:       outputFile,
 	}
 
 	return inputs, nil
