@@ -56,12 +56,16 @@ func (bldr *StepResultBuilder) WithSubStepResult(result *proto.StepResult) *Step
 }
 
 func (bldr *StepResultBuilder) WithExports(exports *Environment) *StepResultBuilder {
-	bldr.exports = exports.Values()
+	if exports != nil {
+		bldr.exports = exports.Values()
+	}
 	return bldr
 }
 
 func (bldr *StepResultBuilder) ObserveEnv(env *Environment, err error) error {
-	bldr.WithEnv(env.Values())
+	if env != nil {
+		bldr.WithEnv(env.Values())
+	}
 	return err
 }
 

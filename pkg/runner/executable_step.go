@@ -46,16 +46,16 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.St
 		return result.BuildFailure(), fmt.Errorf("exec: %w", err)
 	}
 
-	if err := result.ObserveOutputs(s.readOutputs(stepsCtx.OutputFile)); err != nil {
+	if err := result.ObserveOutputs(s.readOutputs(stepsCtx)); err != nil {
 		return result.BuildFailure(), fmt.Errorf("output file: %w", err)
 	}
 
-	exports, err := result.ObserveExports(stepsCtx.ExportFile.ReadEnvironment())
+	exports, err := result.ObserveExports(stepsCtx.ReadExportedEnv())
 	if err != nil {
 		return result.BuildFailure(), fmt.Errorf("export file: %w", err)
 	}
 
-	stepsCtx.GlobalContext.Env.Mutate(exports)
+	stepsCtx.AddGlobalEnv(exports)
 	return result.Build(), nil
 }
 
@@ -79,10 +79,8 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 
 	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = workDir
-
 	cmd.Env = stepsCtx.GetEnvList()
-	cmd.Stdout = stepsCtx.GlobalContext.Stdout
-	cmd.Stderr = stepsCtx.GlobalContext.Stderr
+	cmd.Stdout, cmd.Stderr = stepsCtx.Pipe()
 
 	err = cmd.Run()
 	execResult := NewExecResult(cmd.Dir, cmd.Args, cmd.ProcessState.ExitCode())
@@ -98,7 +96,7 @@ func (s *ExecutableStep) determineWorkDir(stepsCtx *StepsContext) (string, error
 	workDir := s.specDef.Definition.Exec.WorkDir
 
 	if workDir == "" {
-		return stepsCtx.WorkDir, nil
+		return stepsCtx.WorkDir(), nil
 	}
 
 	res, err := expression.ExpandString(stepsCtx.View(), workDir)
@@ -110,9 +108,9 @@ func (s *ExecutableStep) determineWorkDir(stepsCtx *StepsContext) (string, error
 	return res, nil
 }
 
-func (s *ExecutableStep) readOutputs(outputFile *StepFile) (map[string]*structpb.Value, error) {
+func (s *ExecutableStep) readOutputs(stepsCtx *StepsContext) (map[string]*structpb.Value, error) {
 	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		stepResult, err := outputFile.ReadStepResult()
+		stepResult, err := stepsCtx.ReadOutputStepResult()
 		if err != nil {
 			return nil, fmt.Errorf("delegate: %w", err)
 		}
@@ -120,5 +118,5 @@ func (s *ExecutableStep) readOutputs(outputFile *StepFile) (map[string]*structpb
 		return stepResult.Outputs, nil
 	}
 
-	return outputFile.ReadValues(s.specDef.Spec.Spec.Outputs)
+	return stepsCtx.ReadOutputValues(s.specDef.Spec.Spec.Outputs)
 }

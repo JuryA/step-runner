@@ -11,6 +11,7 @@ import (
 )
 
 type StepsContextBuilder struct {
+	t           *testing.T
 	globalCtx   *runner.GlobalContext
 	env         map[string]string
 	inputs      map[string]*structpb.Value
@@ -27,6 +28,7 @@ func StepsContext(t *testing.T) *StepsContextBuilder {
 	require.NoError(t, err)
 
 	return &StepsContextBuilder{
+		t:           t,
 		globalCtx:   GlobalContext().Build(),
 		env:         map[string]string{},
 		inputs:      map[string]*structpb.Value{},
@@ -57,13 +59,15 @@ func (bldr *StepsContextBuilder) WithStepResults(stepResults map[string]*proto.S
 }
 
 func (bldr *StepsContextBuilder) Build() *runner.StepsContext {
-	return &runner.StepsContext{
-		GlobalContext: bldr.globalCtx,
-		StepDir:       ".",
-		OutputFile:    bldr.outputFile,
-		ExportFile:    bldr.exportFile,
-		Env:           runner.NewEnvironment(bldr.env),
-		Inputs:        bldr.inputs,
-		Steps:         bldr.stepResults,
-	}
+	stepsCtx, err := runner.NewStepsContext(
+		bldr.globalCtx,
+		".",
+		bldr.inputs,
+		runner.NewEnvironment(bldr.env),
+		runner.WithStepsCtxOutputFile(bldr.outputFile),
+		runner.WithStepsCtxExportFile(bldr.exportFile),
+		runner.WithStepsCtxStepResults(bldr.stepResults))
+	require.NoError(bldr.t, err)
+
+	return stepsCtx
 }

@@ -82,10 +82,9 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("initializing global environment: %w", err)
 	}
 
-	globCtx := runner.NewGlobalContext(env.AddLexicalScope(request.Env))
-	globCtx.Job = jobVars
-	globCtx.WorkDir = job.WorkDir
-	globCtx.Stdout, globCtx.Stderr = job.Logs()
+	globalCtxEnv := env.AddLexicalScope(request.Env)
+	stdout, stderr := job.Logs()
+	globCtx := runner.NewGlobalContext(job.WorkDir, jobVars, globalCtxEnv, stdout, stderr)
 
 	params := &runner.Params{}
 	step, err := runner.NewParser(globCtx, s.cache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
@@ -94,7 +93,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	}
 
 	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
-	stepsCtx, err := runner.NewStepsContext(globCtx, specDef.Dir, inputs, globCtx.Env)
+	stepsCtx, err := runner.NewStepsContext(globCtx, specDef.Dir, inputs, globCtx.Env())
 	if err != nil {
 		return nil, err
 	}

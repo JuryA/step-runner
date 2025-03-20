@@ -11,7 +11,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/prototext"
-	"google.golang.org/protobuf/types/known/structpb"
 	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
@@ -132,13 +131,14 @@ func run(options *Options) error {
 		return err
 	}
 
-	step, err := runner.NewParser(globalCtx, stepCache).Parse(specDef, &runner.Params{}, runner.StepDefinedInGitLabJob)
+	params := &runner.Params{}
+	step, err := runner.NewParser(globalCtx, stepCache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return err
 	}
 
-	stepsCtx, err := runner.NewStepsContext(globalCtx, "", map[string]*structpb.Value{}, globalCtx.Env)
-
+	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
+	stepsCtx, err := runner.NewStepsContext(globalCtx, "", inputs, globalCtx.Env())
 	if err != nil {
 		return err
 	}
@@ -171,16 +171,12 @@ func createGlobalCtx(options *Options) (*runner.GlobalContext, error) {
 		return nil, err
 	}
 
-	globalCtx := runner.NewGlobalContext(env)
-
 	workDir, err := os.Getwd()
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create work dir: %w", err)
 	}
 
-	globalCtx.WorkDir = workDir
-	globalCtx.Job = options.Job
+	globalCtx := runner.NewGlobalContext(workDir, options.Job, env, os.Stdout, os.Stderr)
 	return globalCtx, nil
 }
 
