@@ -22,15 +22,23 @@ func NewReleaser() *Releaser {
 }
 
 func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, common Artifacts, platformSpecific Artifacts) error {
-	imgRef := remoteImgRef.MajorMinorPatch()
-
-	if r.alreadyPublished(ctx, imgRef) {
-		return fmt.Errorf("image already published: %s", imgRef)
-	}
-
 	factory := NewImageFactory(WithLogger(r.logger))
 	defer factory.CleanUp()
 
+	if r.alreadyPublished(ctx, remoteImgRef.MajorMinorPatch()) {
+		return fmt.Errorf("image already published: %s", remoteImgRef.MajorMinorPatch())
+	}
+
+	imageIndex, err := r.buildImageIndex(factory, common, platformSpecific)
+	if err != nil {
+		return err
+	}
+
+	r.logger.Info("pushing image index")
+	return r.pushImageIndex(ctx, remoteImgRef.MajorMinorPatch(), imageIndex)
+}
+
+func (r *Releaser) buildImageIndex(factory *ImageFactory, common, platformSpecific Artifacts) (v1.ImageIndex, error) {
 	imagePlatforms := make([]PlatformImage, 0)
 	createdAt := time.Now()
 
@@ -39,22 +47,19 @@ func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, co
 
 		layers, err := r.buildImageLayers(factory, common.Add(platformSpecific.ForPlatform(platform)))
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		image, err := factory.BuildImage(createdAt, layers...)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		imagePlatforms = append(imagePlatforms, PlatformImage{Image: image, Platform: platform})
 	}
 
 	r.logger.Info("building image index")
-	imageIndex := factory.BuildImageIndex(createdAt, imagePlatforms...)
-
-	r.logger.Info("pushing image index")
-	return r.pushImageIndex(ctx, imgRef, imageIndex)
+	return factory.BuildImageIndex(createdAt, imagePlatforms...), nil
 }
 
 func (r *Releaser) buildImageLayers(factory *ImageFactory, artifacts Artifacts) ([]v1.Layer, error) {
