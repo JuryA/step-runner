@@ -2,6 +2,7 @@ package pkg_test
 
 import (
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,10 +38,12 @@ func TestParseInputs(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithRegistry(test.registry).Build())
+				build, env := bldr.CLIInputs().WithRegistry(test.registry).WithRepository("img").WithTag("1.0.0").Build()
+				inputs, err := pkg.ParseInputs(build, env)
+
 				if test.expectErr == "" {
 					require.NoError(t, err)
-					require.Equal(t, test.expect, inputs.Registry)
+					require.Equal(t, test.expect+"/img:1.0.0", inputs.RemoteImageRef.String())
 				} else {
 					require.Error(t, err)
 					require.Contains(t, err.Error(), test.expectErr)
@@ -75,10 +78,11 @@ func TestParseInputs(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithRepository(test.repository).Build())
+				build, env := bldr.CLIInputs().WithRegistry("reg.gl.com").WithRepository(test.repository).WithTag("1.0.0").Build()
+				inputs, err := pkg.ParseInputs(build, env)
 				if test.expectErr == "" {
 					require.NoError(t, err)
-					require.Equal(t, test.expect, inputs.Repository)
+					require.Equal(t, "reg.gl.com/"+test.expect+":1.0.0", inputs.RemoteImageRef.String())
 				} else {
 					require.Error(t, err)
 					require.Contains(t, err.Error(), test.expectErr)
@@ -112,12 +116,12 @@ func TestParseInputs(t *testing.T) {
 			{
 				name:      "tag must be semver including patch",
 				tag:       "latest",
-				expectErr: `tag input: "latest" does not conform to semantic versioning MAJOR.MINOR.PATCH[-release]`,
+				expectErr: `version: tag does not conform to semantic versioning major.minor.patch[-release]: latest`,
 			},
 			{
 				name:      "tag cannot be major and minor only",
 				tag:       "2.0",
-				expectErr: `tag input: "2.0" does not conform to semantic versioning MAJOR.MINOR.PATCH[-release]`,
+				expectErr: `version: tag does not conform to semantic versioning major.minor.patch[-release]: 2.0`,
 			},
 			{
 				name:   "tag can include release candidate",
@@ -131,7 +135,8 @@ func TestParseInputs(t *testing.T) {
 				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithTag(test.tag).Build())
 				if test.expectErr == "" {
 					require.NoError(t, err)
-					require.Equal(t, test.expect, inputs.Tag)
+					require.Contains(t, inputs.RemoteImageRef.String(), test.expect)
+					require.True(t, strings.HasSuffix(inputs.RemoteImageRef.String(), test.expect))
 				} else {
 					require.Error(t, err)
 					require.Contains(t, err.Error(), test.expectErr)
@@ -390,15 +395,10 @@ func TestInputs_ImgRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			inputs := &pkg.Inputs{
-				Registry:   test.registry,
-				Repository: test.repository,
-				Tag:        test.tag,
-			}
-
-			imgRef, err := inputs.ImgRef()
+			build, env := bldr.CLIInputs().WithRegistry(test.registry).WithRepository(test.repository).WithTag(test.tag).Build()
+			inputs, err := pkg.ParseInputs(build, env)
 			require.NoError(t, err)
-			require.Equal(t, test.expect, imgRef.String())
+			require.Equal(t, test.expect, inputs.RemoteImageRef.MajorMinorPatch().Name())
 		})
 	}
 }

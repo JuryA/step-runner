@@ -21,7 +21,7 @@ import (
 func TestReleaser_Release(t *testing.T) {
 	t.Run("publishes an image specific for an architecture", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
-		remoteImgRef := registry.RefToImage("my-image", "1.0.0")
+		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
 		baseDir := mainBldr.Files(t).
 			WriteFileWithPerms("dist/common/step.yml", "spec:", 0600).
@@ -43,14 +43,14 @@ func TestReleaser_Release(t *testing.T) {
 		err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
 		require.NoError(t, err)
 
-		imageDir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
+		imageDir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
 		require.Equal(t, "spec:", readFile(t, filepath.Join(imageDir, "my_step", "step.yml")))
 		require.Equal(t, "123", readFile(t, filepath.Join(imageDir, "my_step", "program")))
 	})
 
 	t.Run("publishes an image with optional platform settings", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
-		remoteImgRef := registry.RefToImage("my-image", "1.0.0")
+		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
 		platform := &v1.Platform{
 			Architecture: "amd64",
@@ -65,7 +65,7 @@ func TestReleaser_Release(t *testing.T) {
 		err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
-		imgIndex, err := remote.Index(remoteImgRef)
+		imgIndex, err := remote.Index(remoteImgRef.MajorMinorPatch())
 		require.NoError(t, err)
 
 		indexManifest, err := imgIndex.IndexManifest()
@@ -81,7 +81,7 @@ func TestReleaser_Release(t *testing.T) {
 
 	t.Run("normalizes os/architecture names", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
-		remoteImgRef := registry.RefToImage("my-image", "1.0.0-rc1")
+		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
 		platform := &v1.Platform{Architecture: "AARCH64", OS: "linux"}
 		platformSpecific := bldr.OCIArtifact(t).WithPlatform(platform).BuildArtifacts()
@@ -89,7 +89,7 @@ func TestReleaser_Release(t *testing.T) {
 		err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
-		imgIndex, err := remote.Index(remoteImgRef)
+		imgIndex, err := remote.Index(remoteImgRef.MajorMinorPatch())
 		require.NoError(t, err)
 
 		indexManifest, err := imgIndex.IndexManifest()
@@ -101,7 +101,7 @@ func TestReleaser_Release(t *testing.T) {
 
 	t.Run("publishes images for many architectures", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
-		remoteImgRef := registry.RefToImage("my-image", "1.0.0")
+		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
 		baseDir := mainBldr.Files(t).
 			WriteFile("dist/common/step.yml", "spec:").
@@ -130,18 +130,18 @@ func TestReleaser_Release(t *testing.T) {
 		err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
 		require.NoError(t, err)
 
-		amd64Dir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
+		amd64Dir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
 		require.Equal(t, "spec:", readFile(t, filepath.Join(amd64Dir, "step.yml")))
 		require.Equal(t, "amd64", readFile(t, filepath.Join(amd64Dir, "program")))
 
-		arm64Dir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxARM64)
+		arm64Dir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxARM64)
 		require.Equal(t, "spec:", readFile(t, filepath.Join(arm64Dir, "step.yml")))
 		require.Equal(t, "arm64", readFile(t, filepath.Join(arm64Dir, "program")))
 	})
 
 	t.Run("writes an empty directory", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
-		remoteImgRef := registry.RefToImage("my-image", "1.0.0")
+		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
 		baseDir := mainBldr.Files(t).WriteDir("/my/files").Build()
 
@@ -154,7 +154,7 @@ func TestReleaser_Release(t *testing.T) {
 		err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
-		imageDir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
+		imageDir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
 		myFiles := filepath.Join(imageDir, "app", "my", "files")
 
 		stat, err := os.Stat(myFiles)
@@ -168,9 +168,9 @@ func TestReleaser_Release(t *testing.T) {
 
 	t.Run("fails to publish when image with version already exists", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
-		remoteImgRef := registry.RefToImage("my-image", "1.0.0")
+		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
-		registry.Push(remoteImgRef, mainBldr.OCIImage(t).Build())
+		registry.Push(remoteImgRef.MajorMinorPatch(), mainBldr.OCIImage(t).Build())
 
 		platformSpecific := bldr.OCIArtifact(t).BuildArtifacts()
 		err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)

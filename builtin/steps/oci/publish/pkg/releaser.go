@@ -21,7 +21,9 @@ func NewReleaser() *Releaser {
 	}
 }
 
-func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, common Artifacts, platformSpecific Artifacts) error {
+func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, common Artifacts, platformSpecific Artifacts) error {
+	imgRef := remoteImgRef.MajorMinorPatch()
+
 	if r.alreadyPublished(ctx, imgRef) {
 		return fmt.Errorf("image already published: %s", imgRef)
 	}

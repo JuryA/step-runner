@@ -11,52 +11,22 @@ import (
 	"path"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1"
 )
 
-var semVerRe = regexp.MustCompile(`^\d+\.\d+\.\d+(-.*)?$`)
+var semVerRe = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(-.*)?$`)
 
 type GetEnv func(key string) string
 
 type Inputs struct {
-	Registry         string
-	Repository       string
-	Tag              string
+	RemoteImageRef   *RemoteImageRef
 	Common           Artifacts
 	PlatformSpecific Artifacts
 	LogLevel         slog.Level
-}
-
-func (i *Inputs) Validate() error {
-	if i.Registry == "" {
-		return errors.New("registry is required")
-	}
-
-	if i.Repository == "" {
-		return errors.New("repository is required")
-	}
-
-	if i.Tag == "" {
-		return errors.New("tag is required")
-	}
-
-	if matches := semVerRe.MatchString(i.Tag); !matches {
-		return fmt.Errorf("tag input: %q does not conform to semantic versioning MAJOR.MINOR.PATCH[-release]", i.Tag)
-	}
-
-	return nil
-}
-
-func (i *Inputs) ImgRef() (name.Reference, error) {
-	imgRef, err := name.ParseReference(fmt.Sprintf("%s:%s", path.Join(i.Registry, i.Repository), i.Tag))
-	if err != nil {
-		return nil, fmt.Errorf("parsing image reference: %w", err)
-	}
-
-	return imgRef, nil
 }
 
 func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
@@ -72,6 +42,11 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 	err := flags.Parse(args)
 	if err != nil {
 		return nil, err
+	}
+
+	remoteImgRef, err := parseRemoteImageRef(registry, repository, tag)
+	if err != nil {
+		return nil, fmt.Errorf("version: %w", err)
 	}
 
 	common, err := parseCommon(commonJSON)
@@ -90,19 +65,60 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 	}
 
 	inputs := &Inputs{
-		Registry:         strings.TrimSpace(registry),
-		Repository:       strings.TrimSpace(repository),
-		Tag:              strings.TrimSpace(tag),
+		RemoteImageRef:   remoteImgRef,
 		Common:           common,
 		PlatformSpecific: platform,
 		LogLevel:         logLevel,
 	}
 
-	if err := inputs.Validate(); err != nil {
-		return nil, err
+	return inputs, nil
+}
+
+func parseRemoteImageRef(registry, repository, tag string) (*RemoteImageRef, error) {
+	registry = strings.TrimSpace(registry)
+	repository = strings.TrimSpace(repository)
+	tag = strings.TrimSpace(tag)
+
+	if registry == "" {
+		return nil, errors.New("registry is required")
 	}
 
-	return inputs, nil
+	if repository == "" {
+		return nil, errors.New("repository is required")
+	}
+
+	if tag == "" {
+		return nil, errors.New("tag is required")
+	}
+
+	tagParts := semVerRe.FindStringSubmatch(tag)
+
+	if len(tagParts) != 5 {
+		return nil, fmt.Errorf("tag does not conform to semantic versioning major.minor.patch[-release]: %s", tag)
+	}
+
+	major, err := strconv.ParseUint(tagParts[1], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("major version %s: %w", tagParts[1], err)
+	}
+
+	minor, err := strconv.ParseUint(tagParts[2], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("minor version: %s: %w", tagParts[2], err)
+	}
+
+	patch, err := strconv.ParseUint(tagParts[3], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("patch version: %s: %w", tagParts[3], err)
+	}
+
+	release := tagParts[4]
+	imgRef, err := name.ParseReference(fmt.Sprintf("%s:%d.%d.%d%s", path.Join(registry, repository), major, minor, patch, release))
+	if err != nil {
+		return nil, fmt.Errorf("parsing image reference: %w", err)
+	}
+
+	return NewRemoteImageRef(imgRef, major, minor, patch, release), nil
 }
 
 func parsePlatforms(platformsJSON string) (Artifacts, error) {
