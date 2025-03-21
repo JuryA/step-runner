@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
@@ -22,6 +22,10 @@ func NewReleaser() *Releaser {
 }
 
 func (r *Releaser) Release(ctx context.Context, imgRef name.Reference, common Artifacts, platformSpecific Artifacts) error {
+	if r.alreadyPublished(ctx, imgRef) {
+		return fmt.Errorf("image already published: %s", imgRef)
+	}
+
 	factory := NewImageFactory(WithLogger(r.logger))
 	defer factory.CleanUp()
 
@@ -90,4 +94,9 @@ func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, index
 	}
 
 	return nil
+}
+
+func (r *Releaser) alreadyPublished(ctx context.Context, imgRef name.Reference) bool {
+	descriptor, _ := remote.Head(imgRef, remote.WithContext(ctx))
+	return descriptor != nil
 }
