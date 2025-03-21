@@ -177,6 +177,33 @@ func TestReleaser_Release(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf("image already published: %s", remoteImgRef), err.Error())
 	})
+
+	t.Run("updates major/minor tag", func(t *testing.T) {
+		registry := mainBldr.StartOCIRegistryServer(t)
+		ref1 := registry.RefToImage("my-image", "1")
+		remoteImgRef := bldr.RemoteImageRef(t).WithRef(ref1).WithVersion(1, 1, 0).Build()
+
+		// make sure major tag 1 already exists
+		registry.Push(ref1, mainBldr.OCIImage(t).Build())
+
+		baseDir := mainBldr.Files(t).TouchFile("/new_image_file").Build()
+
+		platformSpecific := bldr.OCIArtifact(t).
+			LinuxAMD64().
+			WithFrom(filepath.Join(baseDir, "new_image_file")).
+			WithTo("/new_image_file").
+			BuildArtifacts()
+
+		err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)
+		require.NoError(t, err)
+
+		imageDir1 := fetch(t, ref1, mainBldr.OCIPlatform.LinuxAMD64)
+		require.FileExists(t, filepath.Join(imageDir1, "new_image_file"))
+
+		ref11 := registry.RefToImage("my-image", "1.1")
+		imageDir2 := fetch(t, ref11, mainBldr.OCIPlatform.LinuxAMD64)
+		require.FileExists(t, filepath.Join(imageDir2, "new_image_file"))
+	})
 }
 
 func readFile(t *testing.T, path string) string {

@@ -2,13 +2,17 @@ package pkg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
 
 type Releaser struct {
@@ -34,8 +38,23 @@ func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, co
 		return err
 	}
 
-	r.logger.Info("pushing image index")
-	return r.pushImageIndex(ctx, remoteImgRef.MajorMinorPatch(), imageIndex)
+	tags, err := r.listPublishedTags(ctx, remoteImgRef)
+	if err != nil {
+		return err
+	}
+
+	semVerRefs, err := remoteImgRef.SemVerRefs(tags)
+	if err != nil {
+		return err
+	}
+
+	for _, ref := range semVerRefs {
+		if err := r.pushImageIndex(ctx, ref, imageIndex); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *Releaser) buildImageIndex(factory *ImageFactory, common, platformSpecific Artifacts) (v1.ImageIndex, error) {
@@ -95,6 +114,8 @@ func (r *Releaser) buildImageLayer(factory *ImageFactory, artifact *Artifact) (v
 }
 
 func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, index v1.ImageIndex) error {
+	r.logger.Info("pushing image index", "image", ref.Name())
+
 	err := remote.WriteIndex(ref, index, remote.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("push index image: %w", err)
@@ -104,6 +125,60 @@ func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, index
 }
 
 func (r *Releaser) alreadyPublished(ctx context.Context, imgRef name.Reference) bool {
+	r.logger.Debug("checking if image has already been published")
+
 	descriptor, _ := remote.Head(imgRef, remote.WithContext(ctx))
+
+	if descriptor == nil {
+		r.logger.Debug("image has not been published")
+	}
+
 	return descriptor != nil
+}
+
+// listPublishedTags lists the tags for the remote image
+// for example, for registry.gitlab.com/gitlab-org/gitlab-runner it will return v17.7.0, v17.7.1, v17.8.0, v17.8.1, etc
+// returns no tags if the repository is not found
+func (r *Releaser) listPublishedTags(ctx context.Context, remoteImgRef *RemoteImageRef) ([]string, error) {
+	r.logger.Debug("listing published tags")
+
+	tags, err := remote.List(remoteImgRef.Repository(), remote.WithContext(ctx))
+
+	if err != nil {
+		if isErrorNameUnknown(err) {
+			r.logger.Debug("no published tags, repository not found")
+			return []string{}, nil
+		}
+
+		return nil, fmt.Errorf("listing published tags: %w", err)
+	}
+
+	if r.logger.Enabled(ctx, slog.LevelDebug) {
+		for chunk := range slices.Chunk(tags, 20) {
+			r.logger.Debug("published tags", "tags", strings.Join(chunk, ","))
+		}
+
+		if len(tags) == 0 {
+			r.logger.Debug("no published tags")
+		}
+	}
+
+	return tags, nil
+}
+
+func isErrorNameUnknown(err error) bool {
+	for err != nil {
+		transportErr, ok := err.(*transport.Error)
+		if ok {
+			for _, diagnostic := range transportErr.Errors {
+				if diagnostic.Code == transport.NameUnknownErrorCode {
+					return true
+				}
+			}
+		}
+
+		err = errors.Unwrap(err)
+	}
+
+	return false
 }

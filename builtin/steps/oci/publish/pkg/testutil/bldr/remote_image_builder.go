@@ -50,6 +50,12 @@ func (b *RemoteImageBuilder) WithVersion(major, minor, patch uint64) *RemoteImag
 	return b
 }
 
+func (b *RemoteImageBuilder) WithRef(imgRef name.Reference) *RemoteImageBuilder {
+	b.registry = imgRef.Context().RegistryStr()
+	b.repository = imgRef.Context().RepositoryStr()
+	return b
+}
+
 func (b *RemoteImageBuilder) Build() *pkg.RemoteImageRef {
 	imgRef, err := name.ParseReference(fmt.Sprintf("%s:%d.%d.%d%s", path.Join(b.registry, b.repository), b.major, b.minor, b.patch, b.release))
 	require.NoError(b.t, err)
