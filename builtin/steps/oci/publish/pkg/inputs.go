@@ -8,55 +8,22 @@ import (
 	"io"
 	"log/slog"
 	"maps"
-	"path"
 	"regexp"
 	"slices"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1"
 )
 
-var semVerRe = regexp.MustCompile(`^\d+\.\d+\.\d+(-.*)?$`)
+var semVerRe = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(-.*)?$`)
 
 type GetEnv func(key string) string
 
 type Inputs struct {
-	Registry         string
-	Repository       string
-	Tag              string
+	RemoteImageRef   *RemoteImageRef
 	Common           Artifacts
 	PlatformSpecific Artifacts
 	LogLevel         slog.Level
-}
-
-func (i *Inputs) Validate() error {
-	if i.Registry == "" {
-		return errors.New("registry is required")
-	}
-
-	if i.Repository == "" {
-		return errors.New("repository is required")
-	}
-
-	if i.Tag == "" {
-		return errors.New("tag is required")
-	}
-
-	if matches := semVerRe.MatchString(i.Tag); !matches {
-		return fmt.Errorf("tag input: %q does not conform to semantic versioning MAJOR.MINOR.PATCH[-release]", i.Tag)
-	}
-
-	return nil
-}
-
-func (i *Inputs) ImgRef() (name.Reference, error) {
-	imgRef, err := name.ParseReference(fmt.Sprintf("%s:%s", path.Join(i.Registry, i.Repository), i.Tag))
-	if err != nil {
-		return nil, fmt.Errorf("parsing image reference: %w", err)
-	}
-
-	return imgRef, nil
 }
 
 func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
@@ -72,6 +39,11 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 	err := flags.Parse(args)
 	if err != nil {
 		return nil, err
+	}
+
+	remoteImgRef, err := NewRemoteImageRef(registry, repository, tag)
+	if err != nil {
+		return nil, fmt.Errorf("version: %w", err)
 	}
 
 	common, err := parseCommon(commonJSON)
@@ -90,16 +62,10 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 	}
 
 	inputs := &Inputs{
-		Registry:         strings.TrimSpace(registry),
-		Repository:       strings.TrimSpace(repository),
-		Tag:              strings.TrimSpace(tag),
+		RemoteImageRef:   remoteImgRef,
 		Common:           common,
 		PlatformSpecific: platform,
 		LogLevel:         logLevel,
-	}
-
-	if err := inputs.Validate(); err != nil {
-		return nil, err
 	}
 
 	return inputs, nil

@@ -11,135 +11,6 @@ import (
 )
 
 func TestParseInputs(t *testing.T) {
-	t.Run("registry", func(t *testing.T) {
-		tests := []struct {
-			name      string
-			registry  string
-			expect    string
-			expectErr string
-		}{
-			{
-				name:     "parses",
-				registry: "registry.gitlab.com:5000",
-				expect:   "registry.gitlab.com:5000",
-			},
-			{
-				name:     "trims space",
-				registry: "  registry.gitlab.com  ",
-				expect:   "registry.gitlab.com",
-			},
-			{
-				name:      "cannot be empty",
-				registry:  "",
-				expectErr: "registry is required",
-			},
-		}
-
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithRegistry(test.registry).Build())
-				if test.expectErr == "" {
-					require.NoError(t, err)
-					require.Equal(t, test.expect, inputs.Registry)
-				} else {
-					require.Error(t, err)
-					require.Contains(t, err.Error(), test.expectErr)
-				}
-			})
-		}
-	})
-
-	t.Run("repository", func(t *testing.T) {
-		tests := []struct {
-			name       string
-			repository string
-			expect     string
-			expectErr  string
-		}{
-			{
-				name:       "parses",
-				repository: "my_group/my_project/image",
-				expect:     "my_group/my_project/image",
-			},
-			{
-				name:       "trims space",
-				repository: "  my_group/my_project/image  ",
-				expect:     "my_group/my_project/image",
-			},
-			{
-				name:       "cannot be empty",
-				repository: "",
-				expectErr:  "repository is required",
-			},
-		}
-
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithRepository(test.repository).Build())
-				if test.expectErr == "" {
-					require.NoError(t, err)
-					require.Equal(t, test.expect, inputs.Repository)
-				} else {
-					require.Error(t, err)
-					require.Contains(t, err.Error(), test.expectErr)
-				}
-			})
-		}
-	})
-
-	t.Run("tag", func(t *testing.T) {
-		tests := []struct {
-			name      string
-			tag       string
-			expect    string
-			expectErr string
-		}{
-			{
-				name:   "parses",
-				tag:    "1.0.3",
-				expect: "1.0.3",
-			},
-			{
-				name:   "trims space",
-				tag:    "  12.44.32  ",
-				expect: "12.44.32",
-			},
-			{
-				name:      "cannot be empty",
-				tag:       "",
-				expectErr: "tag is required",
-			},
-			{
-				name:      "tag must be semver including patch",
-				tag:       "latest",
-				expectErr: `tag input: "latest" does not conform to semantic versioning MAJOR.MINOR.PATCH[-release]`,
-			},
-			{
-				name:      "tag cannot be major and minor only",
-				tag:       "2.0",
-				expectErr: `tag input: "2.0" does not conform to semantic versioning MAJOR.MINOR.PATCH[-release]`,
-			},
-			{
-				name:   "tag can include release candidate",
-				tag:    "2.0.0-rc1",
-				expect: "2.0.0-rc1",
-			},
-		}
-
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-				inputs, err := pkg.ParseInputs(bldr.CLIInputs().WithTag(test.tag).Build())
-				if test.expectErr == "" {
-					require.NoError(t, err)
-					require.Equal(t, test.expect, inputs.Tag)
-				} else {
-					require.Error(t, err)
-					require.Contains(t, err.Error(), test.expectErr)
-				}
-			})
-		}
-	})
-
 	t.Run("common artifacts", func(t *testing.T) {
 		t.Run("parses files", func(t *testing.T) {
 			commonJSON := `{"files": {"step.yml": "step.yml", " files/templates ": " /templates "}}`
@@ -390,15 +261,10 @@ func TestInputs_ImgRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			inputs := &pkg.Inputs{
-				Registry:   test.registry,
-				Repository: test.repository,
-				Tag:        test.tag,
-			}
-
-			imgRef, err := inputs.ImgRef()
+			build, env := bldr.CLIInputs().WithRegistry(test.registry).WithRepository(test.repository).WithTag(test.tag).Build()
+			inputs, err := pkg.ParseInputs(build, env)
 			require.NoError(t, err)
-			require.Equal(t, test.expect, imgRef.String())
+			require.Equal(t, test.expect, inputs.RemoteImageRef.MajorMinorPatch().Name())
 		})
 	}
 }
