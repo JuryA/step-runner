@@ -2,6 +2,10 @@
 
 See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when changes are released.
 
+## v0.8.0
+
+- Update MAJOR and MAJOR.MINOR tags when publishing an image. See !198.
+
 ## v0.7.0
 - Inline script step to reduce external network calls. See !186.
 - Upgrade Go to use version `1.24`. See !193.

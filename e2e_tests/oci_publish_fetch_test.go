@@ -40,7 +40,7 @@ run:
       oci:
         registry: %s
         repository: my-image
-        tag: 1.0.2`
+        tag: "1"`
 
 	platform := bldr.OCIPlatform.ThisPlatform
 	registryAddr := registry.Address()

@@ -19,18 +19,11 @@ func main() {
 
 	slog.SetLogLoggerLevel(inputs.LogLevel)
 
-	imgRef, err := inputs.ImgRef()
+	err = pkg.NewReleaser().Release(context.Background(), inputs.RemoteImageRef, inputs.Common, inputs.PlatformSpecific)
 	if err != nil {
 		logger.Error("publish", "err", err)
 		os.Exit(1)
 	}
 
-	releaser := pkg.NewReleaser()
-	err = releaser.Release(context.Background(), imgRef, inputs.Common, inputs.PlatformSpecific)
-	if err != nil {
-		logger.Error("publish", "err", err)
-		os.Exit(1)
-	}
-
-	logger.Info("published step", "image", imgRef.String())
+	logger.Info("published step", "image", inputs.RemoteImageRef.MajorMinorPatch().Name())
 }
