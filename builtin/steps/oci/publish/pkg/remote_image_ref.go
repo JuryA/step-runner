@@ -1,10 +1,13 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
+	"path"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 )
@@ -23,8 +26,51 @@ type RemoteImageRef struct {
 	version         *version
 }
 
-func NewRemoteImageRef(majorMinorPatch name.Reference, major, minor, patch uint64, release string) *RemoteImageRef {
-	return &RemoteImageRef{
+func NewRemoteImageRef(registry, repository, tag string) (*RemoteImageRef, error) {
+	registry = strings.TrimSpace(registry)
+	repository = strings.TrimSpace(repository)
+	tag = strings.TrimSpace(tag)
+
+	if registry == "" {
+		return nil, errors.New("registry is required")
+	}
+
+	if repository == "" {
+		return nil, errors.New("repository is required")
+	}
+
+	if tag == "" {
+		return nil, errors.New("tag is required")
+	}
+
+	tagParts := semVerRe.FindStringSubmatch(tag)
+
+	if len(tagParts) != 5 {
+		return nil, fmt.Errorf("tag does not conform to semantic versioning major.minor.patch[-release]: %s", tag)
+	}
+
+	major, err := strconv.ParseUint(tagParts[1], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("major version %s: %w", tagParts[1], err)
+	}
+
+	minor, err := strconv.ParseUint(tagParts[2], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("minor version: %s: %w", tagParts[2], err)
+	}
+
+	patch, err := strconv.ParseUint(tagParts[3], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("patch version: %s: %w", tagParts[3], err)
+	}
+
+	release := tagParts[4]
+	majorMinorPatch, err := name.ParseReference(fmt.Sprintf("%s:%d.%d.%d%s", path.Join(registry, repository), major, minor, patch, release))
+	if err != nil {
+		return nil, fmt.Errorf("parsing image reference: %w", err)
+	}
+
+	ref := &RemoteImageRef{
 		majorMinorPatch: majorMinorPatch,
 		version: &version{
 			major:   major,
@@ -33,6 +79,8 @@ func NewRemoteImageRef(majorMinorPatch name.Reference, major, minor, patch uint6
 			release: release,
 		},
 	}
+
+	return ref, nil
 }
 
 func (ri *RemoteImageRef) MajorMinorPatch() name.Reference {

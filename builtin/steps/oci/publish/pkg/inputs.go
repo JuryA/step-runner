@@ -8,13 +8,10 @@ import (
 	"io"
 	"log/slog"
 	"maps"
-	"path"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 )
 
@@ -44,7 +41,7 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 		return nil, err
 	}
 
-	remoteImgRef, err := parseRemoteImageRef(registry, repository, tag)
+	remoteImgRef, err := NewRemoteImageRef(registry, repository, tag)
 	if err != nil {
 		return nil, fmt.Errorf("version: %w", err)
 	}
@@ -72,53 +69,6 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 	}
 
 	return inputs, nil
-}
-
-func parseRemoteImageRef(registry, repository, tag string) (*RemoteImageRef, error) {
-	registry = strings.TrimSpace(registry)
-	repository = strings.TrimSpace(repository)
-	tag = strings.TrimSpace(tag)
-
-	if registry == "" {
-		return nil, errors.New("registry is required")
-	}
-
-	if repository == "" {
-		return nil, errors.New("repository is required")
-	}
-
-	if tag == "" {
-		return nil, errors.New("tag is required")
-	}
-
-	tagParts := semVerRe.FindStringSubmatch(tag)
-
-	if len(tagParts) != 5 {
-		return nil, fmt.Errorf("tag does not conform to semantic versioning major.minor.patch[-release]: %s", tag)
-	}
-
-	major, err := strconv.ParseUint(tagParts[1], 10, 0)
-	if err != nil {
-		return nil, fmt.Errorf("major version %s: %w", tagParts[1], err)
-	}
-
-	minor, err := strconv.ParseUint(tagParts[2], 10, 0)
-	if err != nil {
-		return nil, fmt.Errorf("minor version: %s: %w", tagParts[2], err)
-	}
-
-	patch, err := strconv.ParseUint(tagParts[3], 10, 0)
-	if err != nil {
-		return nil, fmt.Errorf("patch version: %s: %w", tagParts[3], err)
-	}
-
-	release := tagParts[4]
-	imgRef, err := name.ParseReference(fmt.Sprintf("%s:%d.%d.%d%s", path.Join(registry, repository), major, minor, patch, release))
-	if err != nil {
-		return nil, fmt.Errorf("parsing image reference: %w", err)
-	}
-
-	return NewRemoteImageRef(imgRef, major, minor, patch, release), nil
 }
 
 func parsePlatforms(platformsJSON string) (Artifacts, error) {

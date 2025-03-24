@@ -181,7 +181,7 @@ func TestReleaser_Release(t *testing.T) {
 	t.Run("updates major/minor tag", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
 		ref1 := registry.RefToImage("my-image", "1")
-		remoteImgRef := bldr.RemoteImageRef(t).WithRef(ref1).WithVersion(1, 1, 0).Build()
+		remoteImgRef := bldr.RemoteImageRef(t).WithRepositoryRef(ref1).WithTag("1.1.0").Build()
 
 		// make sure major tag 1 already exists
 		registry.Push(ref1, mainBldr.OCIImage(t).Build())

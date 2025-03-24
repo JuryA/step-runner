@@ -1,8 +1,6 @@
 package bldr
 
 import (
-	"fmt"
-	"path"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -15,10 +13,7 @@ type RemoteImageBuilder struct {
 	t          *testing.T
 	registry   string
 	repository string
-	major      uint64
-	minor      uint64
-	patch      uint64
-	release    string
+	tag        string
 }
 
 func RemoteImageRef(t *testing.T) *RemoteImageBuilder {
@@ -26,10 +21,7 @@ func RemoteImageRef(t *testing.T) *RemoteImageBuilder {
 		t:          t,
 		registry:   "localhost:5000",
 		repository: "my-image",
-		major:      1,
-		minor:      0,
-		patch:      0,
-		release:    "",
+		tag:        "1.0.0",
 	}
 }
 
@@ -43,22 +35,20 @@ func (b *RemoteImageBuilder) WithRepository(repository string) *RemoteImageBuild
 	return b
 }
 
-func (b *RemoteImageBuilder) WithVersion(major, minor, patch uint64) *RemoteImageBuilder {
-	b.major = major
-	b.minor = minor
-	b.patch = patch
+func (b *RemoteImageBuilder) WithTag(tag string) *RemoteImageBuilder {
+	b.tag = tag
 	return b
 }
 
-func (b *RemoteImageBuilder) WithRef(imgRef name.Reference) *RemoteImageBuilder {
+func (b *RemoteImageBuilder) WithRepositoryRef(imgRef name.Reference) *RemoteImageBuilder {
 	b.registry = imgRef.Context().RegistryStr()
 	b.repository = imgRef.Context().RepositoryStr()
 	return b
 }
 
 func (b *RemoteImageBuilder) Build() *pkg.RemoteImageRef {
-	imgRef, err := name.ParseReference(fmt.Sprintf("%s:%d.%d.%d%s", path.Join(b.registry, b.repository), b.major, b.minor, b.patch, b.release))
+	remoteImgRef, err := pkg.NewRemoteImageRef(b.registry, b.repository, b.tag)
 	require.NoError(b.t, err)
 
-	return pkg.NewRemoteImageRef(imgRef, b.major, b.minor, b.patch, b.release)
+	return remoteImgRef
 }

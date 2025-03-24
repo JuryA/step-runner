@@ -1,15 +1,146 @@
 package pkg_test
 
 import (
-	"regexp"
-	"strconv"
 	"testing"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
 )
+
+func TestNewRemoteImageRef(t *testing.T) {
+	t.Run("registry", func(t *testing.T) {
+		tests := []struct {
+			name      string
+			registry  string
+			expect    string
+			expectErr string
+		}{
+			{
+				name:     "parses",
+				registry: "registry.gitlab.com:5000",
+				expect:   "registry.gitlab.com:5000",
+			},
+			{
+				name:     "trims space",
+				registry: "  registry.gitlab.com  ",
+				expect:   "registry.gitlab.com",
+			},
+			{
+				name:      "cannot be empty",
+				registry:  "",
+				expectErr: "registry is required",
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				remoteImgRef, err := pkg.NewRemoteImageRef(test.registry, "my-image", "1.0.0")
+
+				if test.expectErr == "" {
+					require.NoError(t, err)
+					require.Equal(t, test.expect, remoteImgRef.Repository().RegistryStr())
+				} else {
+					require.Error(t, err)
+					require.Contains(t, err.Error(), test.expectErr)
+				}
+			})
+		}
+	})
+
+	t.Run("repository", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			repository string
+			expect     string
+			expectErr  string
+		}{
+			{
+				name:       "parses",
+				repository: "my_group/my_project/image",
+				expect:     "my_group/my_project/image",
+			},
+			{
+				name:       "trims space",
+				repository: "  my_group/my_project/image  ",
+				expect:     "my_group/my_project/image",
+			},
+			{
+				name:       "cannot be empty",
+				repository: "",
+				expectErr:  "repository is required",
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				remoteImgRef, err := pkg.NewRemoteImageRef("reg.gl.com", test.repository, "1.0.0")
+
+				if test.expectErr == "" {
+					require.NoError(t, err)
+					require.Equal(t, test.expect, remoteImgRef.Repository().RepositoryStr())
+				} else {
+					require.Error(t, err)
+					require.Contains(t, err.Error(), test.expectErr)
+				}
+			})
+		}
+	})
+
+	t.Run("tag", func(t *testing.T) {
+		tests := []struct {
+			name      string
+			tag       string
+			expect    string
+			expectErr string
+		}{
+			{
+				name:   "parses",
+				tag:    "1.0.3",
+				expect: "1.0.3",
+			},
+			{
+				name:   "trims space",
+				tag:    "  12.44.32  ",
+				expect: "12.44.32",
+			},
+			{
+				name:      "cannot be empty",
+				tag:       "",
+				expectErr: "tag is required",
+			},
+			{
+				name:      "tag must be semver including patch",
+				tag:       "latest",
+				expectErr: `tag does not conform to semantic versioning major.minor.patch[-release]: latest`,
+			},
+			{
+				name:      "tag cannot be major and minor only",
+				tag:       "2.0",
+				expectErr: `tag does not conform to semantic versioning major.minor.patch[-release]: 2.0`,
+			},
+			{
+				name:   "tag can include release candidate",
+				tag:    "2.0.0-rc1",
+				expect: "2.0.0-rc1",
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				remoteImgRef, err := pkg.NewRemoteImageRef("reg.gl.com", "my-image", test.tag)
+
+				if test.expectErr == "" {
+					require.NoError(t, err)
+					require.Contains(t, test.expect, remoteImgRef.MajorMinorPatch().Identifier())
+				} else {
+					require.Error(t, err)
+					require.Contains(t, err.Error(), test.expectErr)
+				}
+			})
+		}
+	})
+}
 
 func TestRemoteImageRef_SemVerRefs(t *testing.T) {
 	tests := []struct {
@@ -68,27 +199,11 @@ func TestRemoteImageRef_SemVerRefs(t *testing.T) {
 		},
 	}
 
-	semVerRe := regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(-.*)?$`)
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			imgRef, err := name.ParseReference("registry.gitlab.com/my-project/image:" + test.publish)
+			remoteImgRef, err := pkg.NewRemoteImageRef("registry.gitlab.com", "project/image", test.publish)
 			require.NoError(t, err)
 
-			tagParts := semVerRe.FindStringSubmatch(test.publish)
-			require.Len(t, tagParts, 5)
-
-			major, err := strconv.ParseUint(tagParts[1], 10, 0)
-			require.NoError(t, err)
-
-			minor, err := strconv.ParseUint(tagParts[2], 10, 0)
-			require.NoError(t, err)
-
-			patch, err := strconv.ParseUint(tagParts[3], 10, 0)
-			require.NoError(t, err)
-			release := tagParts[4]
-
-			remoteImgRef := pkg.NewRemoteImageRef(imgRef, major, minor, patch, release)
 			refs, err := remoteImgRef.SemVerRefs(test.existingTags)
 			require.NoError(t, err)
 
