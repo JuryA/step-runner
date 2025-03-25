@@ -6,11 +6,13 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type OutputValue struct {
 	Name  string `json:"name"`
-	Value string `json:"value"`
+	Value any    `json:"value"`
 }
 
 type Outputs struct {
@@ -23,18 +25,33 @@ func NewOutputs(outputFile string) *Outputs {
 	}
 }
 
-func (o *Outputs) Write(imgRef name.Reference) error {
+func (o *Outputs) Write(imgRef name.Reference, image v1.ImageIndex) error {
 	writer, err := os.Create(o.outputFile)
 	if err != nil {
 		return fmt.Errorf("opening output file: %w", err)
 	}
 	defer writer.Close()
 
+	digest, err := image.Digest()
+	if err != nil {
+		return fmt.Errorf("getting digest of image index: %w", err)
+	}
+
+	digestOutput, err := structpb.NewStruct(map[string]any{
+		"algorithm": digest.Algorithm,
+		"hash":      digest.Hex,
+		"value":     digest.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("creating digest output: %w", err)
+	}
+
 	outputValues := []OutputValue{
 		{Name: "registry", Value: imgRef.Context().RegistryStr()},
 		{Name: "repository", Value: imgRef.Context().RepositoryStr()},
 		{Name: "tag", Value: imgRef.Identifier()},
 		{Name: "ref", Value: imgRef.String()},
+		{Name: "digest", Value: digestOutput},
 	}
 
 	for _, outputValue := range outputValues {

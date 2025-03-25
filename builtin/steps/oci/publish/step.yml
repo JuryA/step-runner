@@ -21,6 +21,8 @@ spec:
       type: string
     ref:
       type: string
+    digest:
+      type: struct
 ---
 exec:
   work_dir: ${{step_dir}}

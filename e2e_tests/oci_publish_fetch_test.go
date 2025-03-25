@@ -48,7 +48,13 @@ run:
   - name: echo_tag
     script: "echo tag: ${{steps.publish_image.outputs.tag}}"
   - name: echo_ref
-    script: "echo ref: ${{steps.publish_image.outputs.ref}}"`
+    script: "echo ref: ${{steps.publish_image.outputs.ref}}"
+  - name: echo_algorithm
+    script: "echo algorithm: ${{steps.publish_image.outputs.digest.algorithm}}"
+  - name: echo_hash
+    script: "echo hash: ${{steps.publish_image.outputs.digest.hash}}"
+  - name: echo_digest
+    script: "echo digest: ${{steps.publish_image.outputs.digest.value}}"`
 
 	platform := bldr.OCIPlatform.ThisPlatform
 	registryAddr := registry.Address()
@@ -66,4 +72,7 @@ run:
 	require.Contains(t, logs, "tag: 1")
 	require.Contains(t, logs, "ref: 1")
 	require.Regexp(t, `ref: .*/my-image:1.0.2`, logs)
+	require.Contains(t, logs, "algorithm: sha256")
+	require.Regexp(t, `hash: [0-9a-f]{64}`, logs)
+	require.Regexp(t, `digest: sha256:[0-9a-f]{64}`, logs)
 }
