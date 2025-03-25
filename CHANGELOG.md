@@ -4,6 +4,8 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 
 ## v0.8.0
 
+- The `oci/publish` step produces outputs for `registry`, `repository`,
+  `tag`, `ref`, and `digest`. See !197.
 - Update MAJOR and MAJOR.MINOR tags when publishing an image. See !198.
 
 ## v0.7.0
