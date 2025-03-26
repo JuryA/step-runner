@@ -137,10 +137,14 @@ $(GOIMPORTS):
 $(GOTESTSUM):
 	@go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
 
+# go-fmt formats Go files known to git (avoids running on .local/downloaded Go files)
+# The Go module name is considered a local import
 .PHONY: go-fmt
-go-fmt: DIRECTORY := ./pkg ./cmd main.go
 go-fmt: $(GOIMPORTS)
-	@$(GOIMPORTS) -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
+	@$(MAKE) \
+	DESCRIPTION="$@" \
+	COMMAND='git ls-files "**/*.go" | xargs $(GOIMPORTS) -w -local `awk '\''NR==1{print $$$$2; exit}'\'' go.mod`' \
+	run-for-all-go-modules
 
 .PHONY: $(GOLANGCI_LINT)
 $(GOLANGCI_LINT):
