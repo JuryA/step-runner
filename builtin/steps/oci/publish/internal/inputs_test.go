@@ -1,4 +1,4 @@
-package pkg_test
+package internal_test
 
 import (
 	"log/slog"
@@ -6,15 +6,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg/testutil/bldr"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal/testutil/bldr"
 )
 
 func TestParseInputs(t *testing.T) {
 	t.Run("common artifacts", func(t *testing.T) {
 		t.Run("parses files", func(t *testing.T) {
 			commonJSON := `{"files": {"step.yml": "step.yml", " files/templates ": " /templates "}}`
-			inputs, err := pkg.ParseInputs(bldr.CLIInputs(t).WithCommon(commonJSON).Build())
+			inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithCommon(commonJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 2)
 			require.Equal(t, "files/templates", inputs.Common[0].Src)
@@ -24,7 +24,7 @@ func TestParseInputs(t *testing.T) {
 		})
 
 		t.Run("trims space", func(t *testing.T) {
-			inputs, err := pkg.ParseInputs(bldr.CLIInputs(t).WithCommon(`{"files": {"  step.yml  ": "  step.yml  "}}`).Build())
+			inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithCommon(`{"files": {"  step.yml  ": "  step.yml  "}}`).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 1)
 			require.Equal(t, "step.yml", inputs.Common[0].Src)
@@ -32,13 +32,13 @@ func TestParseInputs(t *testing.T) {
 		})
 
 		t.Run("can be empty", func(t *testing.T) {
-			inputs, err := pkg.ParseInputs(bldr.CLIInputs(t).WithCommon(`{}`).Build())
+			inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithCommon(`{}`).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 0)
 		})
 
 		t.Run("can have no files", func(t *testing.T) {
-			inputs, err := pkg.ParseInputs(bldr.CLIInputs(t).WithCommon(`{"files": {}}`).Build())
+			inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithCommon(`{"files": {}}`).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.Common, 0)
 		})
@@ -93,7 +93,7 @@ func TestParseInputs(t *testing.T) {
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
-					_, err := pkg.ParseInputs(bldr.CLIInputs(t).WithCommon(test.commonJSON).Build())
+					_, err := internal.ParseInputs(bldr.CLIInputs(t).WithCommon(test.commonJSON).Build())
 					require.Error(t, err)
 					require.Contains(t, err.Error(), test.expectErr)
 				})
@@ -104,7 +104,7 @@ func TestParseInputs(t *testing.T) {
 	t.Run("platform artifacts", func(t *testing.T) {
 		t.Run("parses platform", func(t *testing.T) {
 			platformsJSON := `{"linux/amd64": {"files": {"my_program": "run"}}}`
-			inputs, err := pkg.ParseInputs(bldr.CLIInputs(t).WithPlatforms(platformsJSON).Build())
+			inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
 			require.Equal(t, "linux", inputs.PlatformSpecific[0].Platform.OS)
@@ -126,7 +126,7 @@ func TestParseInputs(t *testing.T) {
   "features": ["gpu"], 
   "files": {"step.yml": "step.yml"}
 }}`
-			inputs, err := pkg.ParseInputs(bldr.CLIInputs(t).WithPlatforms(platformsJSON).Build())
+			inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
 			require.Equal(t, "windows", inputs.PlatformSpecific[0].Platform.OS)
@@ -139,7 +139,7 @@ func TestParseInputs(t *testing.T) {
 
 		t.Run("trims space", func(t *testing.T) {
 			platformsJSON := `{" linux / amd64 ": {"variant":" v8 ", "files": {"my_program": "run"}}}`
-			inputs, err := pkg.ParseInputs(bldr.CLIInputs(t).WithPlatforms(platformsJSON).Build())
+			inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 1)
 			require.Equal(t, "linux", inputs.PlatformSpecific[0].Platform.OS)
@@ -149,7 +149,7 @@ func TestParseInputs(t *testing.T) {
 
 		t.Run("parses many platforms", func(t *testing.T) {
 			platformsJSON := `{"linux/arm64": {"files": {"amd_run": "run"}}, "linux/amd64": {"files": {"arm_run": "run"}}}`
-			inputs, err := pkg.ParseInputs(bldr.CLIInputs(t).WithPlatforms(platformsJSON).Build())
+			inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithPlatforms(platformsJSON).Build())
 			require.NoError(t, err)
 			require.Len(t, inputs.PlatformSpecific, 2)
 		})
@@ -194,7 +194,7 @@ func TestParseInputs(t *testing.T) {
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
-					_, err := pkg.ParseInputs(bldr.CLIInputs(t).WithPlatforms(test.platformsJSON).Build())
+					_, err := internal.ParseInputs(bldr.CLIInputs(t).WithPlatforms(test.platformsJSON).Build())
 					require.Error(t, err)
 					require.Contains(t, err.Error(), test.expectErr)
 				})
@@ -227,7 +227,7 @@ func TestParseInputs(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.logLevel, func(t *testing.T) {
-				inputs, err := pkg.ParseInputs(bldr.CLIInputs(t).WithLogLevel(test.logLevel).Build())
+				inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithLogLevel(test.logLevel).Build())
 				require.NoError(t, err)
 				require.Equal(t, test.expectLogLevel, inputs.LogLevel)
 			})
@@ -262,7 +262,7 @@ func TestInputs_ImgRef(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			build, env := bldr.CLIInputs(t).WithRegistry(test.registry).WithRepository(test.repository).WithTag(test.tag).Build()
-			inputs, err := pkg.ParseInputs(build, env)
+			inputs, err := internal.ParseInputs(build, env)
 			require.NoError(t, err)
 			require.Equal(t, test.expect, inputs.RemoteImageRef.MajorMinorPatch().Name())
 		})

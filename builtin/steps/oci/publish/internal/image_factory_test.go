@@ -1,4 +1,4 @@
-package pkg_test
+package internal_test
 
 import (
 	"archive/tar"
@@ -13,7 +13,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -21,7 +22,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 	t.Run("builds empty layer", func(t *testing.T) {
 		archiveFS := bldr.Files(t).BuildFS()
 
-		layer, err := pkg.NewImageFactory().BuildLayer(archiveFS)
+		layer, err := internal.NewImageFactory().BuildLayer(archiveFS)
 		require.NoError(t, err)
 
 		uncompressed, err := layer.Uncompressed()
@@ -33,7 +34,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 	})
 
 	t.Run("has steps media type", func(t *testing.T) {
-		layer, err := pkg.NewImageFactory().BuildLayer(bldr.Files(t).BuildFS())
+		layer, err := internal.NewImageFactory().BuildLayer(bldr.Files(t).BuildFS())
 		require.NoError(t, err)
 
 		mediaType, err := layer.MediaType()
@@ -46,7 +47,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 			WriteFile("/animals/sheep.txt", "how now brown cow").
 			BuildFS()
 
-		layer, err := pkg.NewImageFactory().BuildLayer(archiveFS)
+		layer, err := internal.NewImageFactory().BuildLayer(archiveFS)
 		require.NoError(t, err)
 
 		mediaType, err := layer.MediaType()
@@ -81,7 +82,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = listener.Close() })
 
-			_, err = pkg.NewImageFactory().BuildLayer(os.DirFS(baseDir))
+			_, err = internal.NewImageFactory().BuildLayer(os.DirFS(baseDir))
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "tar: cannot add non-regular file")
 		})
@@ -99,7 +100,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 			err := syscall.Mkfifo(namedPipePath, 0666)
 			require.NoError(t, err)
 
-			_, err = pkg.NewImageFactory().BuildLayer(os.DirFS(baseDir))
+			_, err = internal.NewImageFactory().BuildLayer(os.DirFS(baseDir))
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "tar: cannot add non-regular file")
 		})
@@ -114,7 +115,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 				WriteSymlink("white-fluffy.txt", "sheep.txt").
 				BuildFS()
 
-			_, err := pkg.NewImageFactory().BuildLayer(archiveFS)
+			_, err := internal.NewImageFactory().BuildLayer(archiveFS)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "tar: cannot add non-regular file")
 		})
@@ -123,7 +124,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 	t.Run("compresses using zstd", func(t *testing.T) {
 		archiveFS := bldr.Files(t).WriteFile("/sheep.txt", "baa").BuildFS()
 
-		layer, err := pkg.NewImageFactory().BuildLayer(archiveFS)
+		layer, err := internal.NewImageFactory().BuildLayer(archiveFS)
 		require.NoError(t, err)
 
 		compressed, err := layer.Compressed()
@@ -137,7 +138,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 	t.Run("can rebuild the same folder", func(t *testing.T) {
 		archiveFS := bldr.Files(t).WriteFile("/sheep.txt", "baa").BuildFS()
 
-		factory := pkg.NewImageFactory()
+		factory := internal.NewImageFactory()
 		layerA, err := factory.BuildLayer(archiveFS)
 		require.NoError(t, err)
 		require.NotNil(t, layerA)
@@ -157,7 +158,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 	t.Run("archives empty directories", func(t *testing.T) {
 		archiveFS := bldr.Files(t).WriteDir("/animals/mammals").BuildFS()
 
-		layer, err := pkg.NewImageFactory().BuildLayer(archiveFS)
+		layer, err := internal.NewImageFactory().BuildLayer(archiveFS)
 		require.NoError(t, err)
 
 		uncompressed, err := layer.Uncompressed()
@@ -183,7 +184,7 @@ func TestImageFactory_BuildImage(t *testing.T) {
 	layerA := bldr.OCIImageLayer(t).WithFile("/foo", []byte("foo")).Build()
 	layerB := bldr.OCIImageLayer(t).WithFile("/bar", []byte("bar")).Build()
 
-	image, err := pkg.NewImageFactory().BuildImage(createdAt, layerA, layerB)
+	image, err := internal.NewImageFactory().BuildImage(createdAt, layerA, layerB)
 	require.NoError(t, err)
 
 	layers, err := image.Layers()
@@ -202,8 +203,8 @@ func TestImageFactory_BuildImageIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	image := bldr.OCIImage(t).WithFile("/foo", []byte("foo")).Build()
-	imagePlatform := pkg.PlatformImage{Image: image, Platform: bldr.OCIPlatform.LinuxARM64v7}
-	imageIndex := pkg.NewImageFactory().BuildImageIndex(createdAt, imagePlatform)
+	imagePlatform := internal.PlatformImage{Image: image, Platform: bldr.OCIPlatform.LinuxARM64v7}
+	imageIndex := internal.NewImageFactory().BuildImageIndex(createdAt, imagePlatform)
 
 	mediaType, err := imageIndex.MediaType()
 	require.NoError(t, err)

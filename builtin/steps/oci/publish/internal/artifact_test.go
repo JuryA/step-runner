@@ -1,4 +1,4 @@
-package pkg_test
+package internal_test
 
 import (
 	"io/fs"
@@ -8,7 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -57,7 +58,7 @@ func TestArtifact_FS(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				artifact := pkg.NewArtifact(bldr.OCIPlatform.Generic, test.src, test.dst)
+				artifact := internal.NewArtifact(bldr.OCIPlatform.Generic, test.src, test.dst)
 
 				fsys, cleanup, err := artifact.FS()
 				require.NoError(t, err)
@@ -73,7 +74,7 @@ func TestArtifact_FS(t *testing.T) {
 	t.Run("src is a directory", func(t *testing.T) {
 		t.Run("writes files", func(t *testing.T) {
 			baseDir := bldr.Files(t).WriteFile("animals/snake", "hiss").Build()
-			artifact := pkg.NewArtifact(bldr.OCIPlatform.Generic, baseDir, "/my_files")
+			artifact := internal.NewArtifact(bldr.OCIPlatform.Generic, baseDir, "/my_files")
 
 			fsys, cleanup, err := artifact.FS()
 			require.NoError(t, err)
@@ -135,7 +136,7 @@ func TestArtifact_FS(t *testing.T) {
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
-					artifact := pkg.NewArtifact(bldr.OCIPlatform.Generic, test.src, test.dst)
+					artifact := internal.NewArtifact(bldr.OCIPlatform.Generic, test.src, test.dst)
 					paths := make([]string, 0)
 
 					fsys, cleanup, err := artifact.FS()
@@ -173,7 +174,7 @@ func TestArtifact_FS(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				artifact := pkg.NewArtifact(bldr.OCIPlatform.Generic, test.src, test.dst)
+				artifact := internal.NewArtifact(bldr.OCIPlatform.Generic, test.src, test.dst)
 
 				_, _, err := artifact.FS()
 				require.Error(t, err)
