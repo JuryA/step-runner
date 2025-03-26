@@ -35,6 +35,10 @@ BUILD_OS_ARCH ?= $(LOCAL_OS_ARCH)
 TARGETS := $(foreach os_arch,$(BUILD_OS_ARCH),$(os_arch))
 BIN_PATH := out/bin
 
+.DEFAULT_GOAL := precommit
+.PHONY: precommit
+precommit: go-fmt test
+
 .PHONY: $(TARGETS)
 $(TARGETS): GOOS=$(firstword $(subst /, ,$@))
 $(TARGETS): GOARCH=$(lastword $(subst /, ,$@))

@@ -25,36 +25,36 @@ func NewReleaser() *Releaser {
 	}
 }
 
-func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, common Artifacts, platformSpecific Artifacts) error {
+func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, common Artifacts, platformSpecific Artifacts) (v1.ImageIndex, error) {
 	factory := NewImageFactory(WithLogger(r.logger))
 	defer factory.CleanUp()
 
 	if r.alreadyPublished(ctx, remoteImgRef.MajorMinorPatch()) {
-		return fmt.Errorf("image already published: %s", remoteImgRef.MajorMinorPatch())
+		return nil, fmt.Errorf("image already published: %s", remoteImgRef.MajorMinorPatch())
 	}
 
 	imageIndex, err := r.buildImageIndex(factory, common, platformSpecific)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tags, err := r.listPublishedTags(ctx, remoteImgRef)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	semVerRefs, err := remoteImgRef.SemVerRefs(tags)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, ref := range semVerRefs {
 		if err := r.pushImageIndex(ctx, ref, imageIndex); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return imageIndex, nil
 }
 
 func (r *Releaser) buildImageIndex(factory *ImageFactory, common, platformSpecific Artifacts) (v1.ImageIndex, error) {
@@ -113,10 +113,15 @@ func (r *Releaser) buildImageLayer(factory *ImageFactory, artifact *Artifact) (v
 	return factory.BuildLayer(fs)
 }
 
-func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, index v1.ImageIndex) error {
-	r.logger.Info("pushing image index", "image", ref.Name())
+func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, imageIndex v1.ImageIndex) error {
+	digest, err := imageIndex.Digest()
+	if err != nil {
+		return fmt.Errorf("getting digest of image index: %w", err)
+	}
 
-	err := remote.WriteIndex(ref, index, remote.WithContext(ctx))
+	r.logger.Info("pushing image index", "image_digest", digest.String(), "destination", ref.Name())
+
+	err = remote.WriteIndex(ref, imageIndex, remote.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("push index image: %w", err)
 	}

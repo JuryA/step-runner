@@ -1,24 +1,36 @@
 package bldr
 
-import "gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+)
 
 type CLIInputsBuilder struct {
+	t          *testing.T
 	registry   string
 	repository string
 	tag        string
 	common     string
 	platforms  string
 	logLevel   string
+	outputFile string
 }
 
-func CLIInputs() *CLIInputsBuilder {
+func CLIInputs(t *testing.T) *CLIInputsBuilder {
 	return &CLIInputsBuilder{
+		t:          t,
 		registry:   "registry.gitlab.com",
 		repository: "my_group/my_project",
 		tag:        "1.0.0",
 		common:     `{"files": {"step.yml": "step.yml"}}`,
 		platforms:  `{"linux/arm64": {"files": {"amd_run": "run"}}, "linux/amd64": {"files": {"arm_run": "run"}}}`,
 		logLevel:   "info",
+		outputFile: filepath.Join(t.TempDir(), "output.txt"),
 	}
 }
 
@@ -53,6 +65,9 @@ func (b *CLIInputsBuilder) WithLogLevel(logLevel string) *CLIInputsBuilder {
 }
 
 func (b *CLIInputsBuilder) Build() ([]string, pkg.GetEnv) {
+	err := os.WriteFile(b.outputFile, []byte(""), 0644)
+	require.NoError(b.t, err)
+
 	cliOpts := []string{
 		"--registry",
 		b.registry,
@@ -64,6 +79,8 @@ func (b *CLIInputsBuilder) Build() ([]string, pkg.GetEnv) {
 		b.common,
 		"--platforms",
 		b.platforms,
+		"--output_file",
+		b.outputFile,
 	}
 
 	envOpts := map[string]string{
