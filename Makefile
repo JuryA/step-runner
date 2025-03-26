@@ -32,22 +32,22 @@ GOIMPORTS_VERSION := v0.23.0
 # override BUILD_OS_ARCH to build for multiple platforms
 LOCAL_OS_ARCH := $(lastword $(shell go version))
 BUILD_OS_ARCH ?= $(LOCAL_OS_ARCH)
-TARGETS := $(foreach os_arch,$(BUILD_OS_ARCH),$(os_arch))
+PLATFORMS := $(foreach os_arch,$(BUILD_OS_ARCH),$(os_arch))
 BIN_PATH := out/bin
 
 .DEFAULT_GOAL := precommit
 .PHONY: precommit
 precommit: go-fmt test
 
-.PHONY: $(TARGETS)
-$(TARGETS): GOOS=$(firstword $(subst /, ,$@))
-$(TARGETS): GOARCH=$(lastword $(subst /, ,$@))
-$(TARGETS): BINARY=$(BIN_PATH)/step-runner-$(subst /,-,$@)
-$(TARGETS):
-	@TARGET=$@ $(MAKE) build-builtin-steps
-
+.PHONY: $(PLATFORMS)
+$(PLATFORMS): GOOS=$(firstword $(subst /, ,$@))
+$(PLATFORMS): GOARCH=$(lastword $(subst /, ,$@))
+$(PLATFORMS): BINARY=$(BIN_PATH)/step-runner-$(subst /,-,$@)
+$(PLATFORMS):
+	@PLATFORM=$@ $(MAKE) builtin-steps-build
+	@echo "Running build for step-runner"
 	@mkdir -p $(BIN_PATH)
-	CGO_ENABLED=0 GOOS="$(GOOS)" GOARCH="$(GOARCH)" go build \
+	@CGO_ENABLED=0 GOOS="$(GOOS)" GOARCH="$(GOARCH)" go build \
 		-ldflags '-X "$(MODULE_NAME)/cmd.stepRunnerVersion=$(STEP_RUNNER_VERSION)"' \
 		-o "$(BINARY)"
 
@@ -61,9 +61,9 @@ go-deps:
 build: FIRST_PLATFORM=$(firstword $(BUILD_OS_ARCH))
 build: PLATFORM_BINARY=$(BIN_PATH)/step-runner-$(subst /,-,$(FIRST_PLATFORM))
 build: FIXED_LOCATION_BINARY=$(BIN_PATH)/step-runner
-build: generate go-deps $(TARGETS)
+build: generate go-deps $(PLATFORMS)
     ifeq (1, $(words $(BUILD_OS_ARCH)))
-		cp $(PLATFORM_BINARY) $(FIXED_LOCATION_BINARY)
+		@cp $(PLATFORM_BINARY) $(FIXED_LOCATION_BINARY)
     endif
 
 $(PROTO_GEN): $(PROTO_SRC)
@@ -72,22 +72,20 @@ $(PROTO_GEN): $(PROTO_SRC)
 
 .PHONY: .generate-proto
 .generate-proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOVALIDATE_DIST)
-	go generate ./proto
-	$(MAKE) DIRECTORY=./proto go-fmt
+	@echo "Running generate proto"
+	@go generate ./proto
+	@$(MAKE) DIRECTORY=./proto go-fmt
 
 .PHONY: generate
 generate:
-	$(MAKE) .generate-proto
+	@$(MAKE) .generate-proto
 
 .PHONY: test
-test: generate build-builtin-steps
+test: generate builtin-steps-build
 	CI_STEPS_DEBUG=true go test ./...
 	@git --no-pager diff --compact-summary --exit-code -- go.mod go.sum && echo 'Go modules are tidy and complete!'
 	@git --no-pager diff --compact-summary --exit-code -- ./internal/plugin/proto && echo 'proto code is up-to-date!'
 
-.PHONY: test-race
-test-race:
-	go test -count 1 -race ./...
 
 $(PROTOC): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')
 $(PROTOC): ARCH ?= $(shell uname -m | sed 's/aarch64/aarch_64/' | sed 's/arm64/aarch_64/')
@@ -119,7 +117,7 @@ $(PROTOVALIDATE_DIST):
 	@rm "$(local)/protovalidate.zip"
 
 .PHONY: clean
-clean: clean-builtin-steps
+clean: builtin-steps-clean
 	@rm -rf $(BIN_PATH)
 
 .PHONY: image
@@ -139,16 +137,24 @@ $(GOIMPORTS):
 .PHONY: go-fmt
 go-fmt: DIRECTORY := ./pkg ./cmd main.go
 go-fmt: $(GOIMPORTS)
-	$(GOIMPORTS) -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
+	@$(GOIMPORTS) -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
 
-.PHONY: build-builtin-steps
-build-builtin-steps: TARGET ?= $(LOCAL_OS_ARCH)
-build-builtin-steps: STEP_DIRS = $(shell find builtin/steps -type f -name Makefile -exec dirname {} \;)
-build-builtin-steps:
-	@for dir in $(STEP_DIRS); do \
-		TARGET="$(TARGET)" $(MAKE) -C $$dir build; \
-	done
+.PHONY: builtin-steps-build
+builtin-steps-build: PLATFORM ?= $(LOCAL_OS_ARCH)
+builtin-steps-build: go-deps
+	@$(MAKE) builtin-steps-run-make-target PLATFORM="$(PLATFORM)" MAKE_TARGET=build
 
-.PHONY: clean-builtin-steps
-clean-builtin-steps:
+.PHONY: builtin-steps-clean
+builtin-steps-clean:
 	@find builtin/bin -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
+
+# runs a make target in every builtin step make file, if the target is present
+.PHONY: builtin-steps-run-make-target
+builtin-steps-run-make-target:
+	@for dir in $(shell find builtin/steps -type f -name Makefile -exec dirname {} \;); do \
+		echo "Running $(MAKE_TARGET) for $$dir"; \
+		$(MAKE) -q -C $$dir $(MAKE_TARGET) 2>/dev/null; \
+		if [ $$? -ne 2 ]; then \
+			PLATFORM="$(PLATFORM)" $(MAKE) -C $$dir $(MAKE_TARGET); \
+		fi \
+	done
