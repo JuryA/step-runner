@@ -29,6 +29,9 @@ PROTO_GEN := $(wildcard proto/*.pb.go)
 GOIMPORTS := goimports
 GOIMPORTS_VERSION := v0.23.0
 
+GOLANGCI_LINT := golangci-lint
+GOLANGCI_LINT_VERSION := v1.64.7
+
 # override BUILD_OS_ARCH to build for multiple platforms
 LOCAL_OS_ARCH := $(lastword $(shell go version))
 BUILD_OS_ARCH ?= $(LOCAL_OS_ARCH)
@@ -139,6 +142,17 @@ go-fmt: DIRECTORY := ./pkg ./cmd main.go
 go-fmt: $(GOIMPORTS)
 	@$(GOIMPORTS) -w -local gitlab.com/gitlab-org/step-runner $(DIRECTORY)
 
+.PHONY: $(GOLANGCI_LINT)
+$(GOLANGCI_LINT):
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+.PHONY: go-lint
+go-lint: $(GOLANGCI_LINT)
+	@$(MAKE) \
+	DESCRIPTION="go-lint" \
+	COMMAND='$(GOLANGCI_LINT) run --timeout 5m ./...' \
+	run-for-all-go-modules
+
 .PHONY: builtin-steps-build
 builtin-steps-build: PLATFORM ?= $(LOCAL_OS_ARCH)
 builtin-steps-build: go-deps
@@ -157,4 +171,14 @@ builtin-steps-run-make-target:
 		if [ $$? -ne 2 ]; then \
 			PLATFORM="$(PLATFORM)" $(MAKE) -C $$dir $(MAKE_TARGET); \
 		fi \
+	done
+
+# runs a command for every directory that contains a go.mod
+.PHONY: run-for-all-go-modules
+run-for-all-go-modules: GO_MODS := $(wildcard ./go.mod */*/go.mod */*/*/go.mod */*/*/*/go.mod .gitlab/*/*/go.mod)
+run-for-all-go-modules: GO_DIRS := $(dir $(GO_MODS))
+run-for-all-go-modules:
+	@for dir in $(GO_DIRS); do \
+		echo "Running $(DESCRIPTION) for $$dir"; \
+		(cd $$dir && $(COMMAND)) || { echo "Command failed in $$dir"; exit 1; }; \
 	done

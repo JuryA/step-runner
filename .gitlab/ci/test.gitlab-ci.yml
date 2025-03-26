@@ -8,9 +8,10 @@ go-fmt:
 
 go-lint:
   stage: test
-  image: golangci/golangci-lint:v1.64.7
+  image: golang:${GO_VERSION}-alpine
   script:
-    - golangci-lint run -v --timeout 5m
+    - apk add git make
+    - make go-lint
 
 check-generated:
   stage: test
