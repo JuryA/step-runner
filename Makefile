@@ -57,10 +57,6 @@ $(PLATFORMS):
 		-ldflags '-X "$(MODULE_NAME)/cmd.stepRunnerVersion=$(STEP_RUNNER_VERSION)"' \
 		-o "$(BINARY)"
 
-.PHONY: go-deps
-go-deps:
-	go mod download
-
 # Build generates step runner binaries for platforms listed in BUILD_OS_ARCH.
 # If there is only one platform, the binary is copied to $BIN_PATH/step-runner for ease of use.
 .PHONY: build
@@ -136,6 +132,14 @@ $(GOIMPORTS):
 .PHONY: $(GOTESTSUM)
 $(GOTESTSUM):
 	@go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
+
+# go-deps downloads Go dependencies if the go.sum file is not empty (avoids an error message)
+.PHONY: go-deps
+go-deps:
+	@$(MAKE) \
+	DESCRIPTION="$@" \
+	COMMAND='if [ -s go.sum ]; then go mod download && go mod tidy; fi' \
+	run-for-all-go-modules
 
 # go-fmt formats Go files known to git (avoids running on .local/downloaded Go files)
 # The Go module name is considered a local import

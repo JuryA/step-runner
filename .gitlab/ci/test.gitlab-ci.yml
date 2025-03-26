@@ -1,4 +1,11 @@
 
+go-deps:
+  stage: test
+  image: golang:${GO_VERSION}
+  script:
+    - make go-deps
+    - git diff --exit-code
+
 go-fmt:
   stage: test
   image: golang:$GO_VERSION
