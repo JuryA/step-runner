@@ -32,6 +32,9 @@ GOIMPORTS_VERSION := v0.23.0
 GOLANGCI_LINT := golangci-lint
 GOLANGCI_LINT_VERSION := v1.64.7
 
+GOTESTSUM := gotestsum
+GOTESTSUM_VERSION := v1.12.1
+
 # override BUILD_OS_ARCH to build for multiple platforms
 LOCAL_OS_ARCH := $(lastword $(shell go version))
 BUILD_OS_ARCH ?= $(LOCAL_OS_ARCH)
@@ -83,13 +86,6 @@ $(PROTO_GEN): $(PROTO_SRC)
 generate:
 	@$(MAKE) .generate-proto
 
-.PHONY: test
-test: generate builtin-steps-build
-	CI_STEPS_DEBUG=true go test ./...
-	@git --no-pager diff --compact-summary --exit-code -- go.mod go.sum && echo 'Go modules are tidy and complete!'
-	@git --no-pager diff --compact-summary --exit-code -- ./internal/plugin/proto && echo 'proto code is up-to-date!'
-
-
 $(PROTOC): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')
 $(PROTOC): ARCH ?= $(shell uname -m | sed 's/aarch64/aarch_64/' | sed 's/arm64/aarch_64/')
 $(PROTOC): DOWNLOAD_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(OS_TYPE)-$(ARCH).zip
@@ -137,6 +133,10 @@ check-generated: generate
 $(GOIMPORTS):
 	@go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
 
+.PHONY: $(GOTESTSUM)
+$(GOTESTSUM):
+	@go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
+
 .PHONY: go-fmt
 go-fmt: DIRECTORY := ./pkg ./cmd main.go
 go-fmt: $(GOIMPORTS)
@@ -151,6 +151,13 @@ go-lint: $(GOLANGCI_LINT)
 	@$(MAKE) \
 	DESCRIPTION="go-lint" \
 	COMMAND='$(GOLANGCI_LINT) run --timeout 5m ./...' \
+	run-for-all-go-modules
+
+.PHONY: test
+test: $(GOTESTSUM) generate builtin-steps-build
+	@$(MAKE) \
+	DESCRIPTION="$@" \
+	COMMAND='$(GOTESTSUM) --junitfile=report.xml --format=testname --rerun-fails=2 --packages="./..." -- -race ./...' \
 	run-for-all-go-modules
 
 .PHONY: builtin-steps-build
