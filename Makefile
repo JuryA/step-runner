@@ -114,6 +114,7 @@ $(PROTOVALIDATE_DIST):
 .PHONY: clean
 clean: dist-steps-clean
 	@rm -rf $(BIN_PATH)
+	@find . -name report.xml | xargs rm
 
 .PHONY: image
 image:

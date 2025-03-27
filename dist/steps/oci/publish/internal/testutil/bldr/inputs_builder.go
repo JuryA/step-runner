@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
+	"gitlab.com/gitlab-org/dist-steps/oci/publish/internal"
 )
 
 type CLIInputsBuilder struct {

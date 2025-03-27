@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
+	"gitlab.com/gitlab-org/dist-steps/oci/publish/internal"
 )
 
 func main() {

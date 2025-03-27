@@ -12,8 +12,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
-	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal/testutil/bldr"
+	"gitlab.com/gitlab-org/dist-steps/oci/publish/internal"
+	"gitlab.com/gitlab-org/dist-steps/oci/publish/internal/testutil/bldr"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
