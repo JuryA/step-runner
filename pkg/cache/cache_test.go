@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/dist"
+	stepdist "gitlab.com/gitlab-org/step-runner/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/builtin"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
@@ -133,9 +133,9 @@ func TestCache(t *testing.T) {
 
 	t.Run("runs publish built-in step", func(t *testing.T) {
 		res := bldr.BuiltInStepResource().WithStep("oci/publish").Build()
-		builtInFetcher := builtin.NewFetcher(dist.FindDistributedStep)
+		distFetcher := dist.NewFetcher(stepdist.FindDistributedStep)
 
-		stepCache := cache.NewWithOptions(cache.WithBuiltInFetcher(builtInFetcher))
+		stepCache := cache.NewWithOptions(cache.WithDistFetcher(distFetcher))
 		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
 		require.NoError(t, err)
 		require.Contains(t, strings.Join(specDef.Definition.Exec.Command, " "), "run")

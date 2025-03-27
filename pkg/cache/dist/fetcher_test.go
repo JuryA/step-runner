@@ -1,4 +1,4 @@
-package builtin_test
+package dist_test
 
 import (
 	"io/fs"
@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/dist"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/builtin"
+	stepdist "gitlab.com/gitlab-org/step-runner/dist"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -19,7 +19,7 @@ func TestFetcher_Fetch(t *testing.T) {
 			WriteFile("files/hello.txt", "hello world").
 			BuildFS()
 
-		fetcher := builtin.NewFetcher(alwaysReturnsFS(embeddedFS))
+		fetcher := dist.NewFetcher(alwaysReturnsFS(embeddedFS))
 		t.Cleanup(fetcher.CleanUp)
 
 		baseDir, err := fetcher.Fetch([]string{"my_steps", "step"})
@@ -34,7 +34,7 @@ func TestFetcher_Fetch(t *testing.T) {
 
 	t.Run("caches steps written to disk", func(t *testing.T) {
 		embeddedFS := bldr.Files(t).WriteFile("step.yml", "spec:").BuildFS()
-		fetcher := builtin.NewFetcher(alwaysReturnsFS(embeddedFS))
+		fetcher := dist.NewFetcher(alwaysReturnsFS(embeddedFS))
 		t.Cleanup(fetcher.CleanUp)
 
 		baseDirA, err := fetcher.Fetch([]string{"my_step"})
@@ -48,7 +48,7 @@ func TestFetcher_Fetch(t *testing.T) {
 	})
 
 	t.Run("errors on step not found", func(t *testing.T) {
-		fetcher := builtin.NewFetcher(dist.FindDistributedStep)
+		fetcher := dist.NewFetcher(stepdist.FindDistributedStep)
 		t.Cleanup(fetcher.CleanUp)
 
 		_, err := fetcher.Fetch([]string{"invalid", "step"})
@@ -90,8 +90,8 @@ func TestFetcher_Fetch(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				embeddedFS := bldr.Files(t).WriteFileWithPerms(test.filename, "exec me", 444).BuildFS()
-				fetcher := builtin.NewFetcher(alwaysReturnsFS(embeddedFS))
+				embeddedFS := bldr.Files(t).WriteFileWithPerms(test.filename, "exec me", 0444).BuildFS()
+				fetcher := dist.NewFetcher(alwaysReturnsFS(embeddedFS))
 				t.Cleanup(fetcher.CleanUp)
 
 				baseDir, err := fetcher.Fetch([]string{"my_step"})
@@ -105,8 +105,8 @@ func TestFetcher_Fetch(t *testing.T) {
 	})
 }
 
-func alwaysReturnsFS(value fs.FS) dist.StepFinder {
-	return func(step string, options ...func(*dist.FindStepsOptions)) (fs.FS, error) {
+func alwaysReturnsFS(value fs.FS) stepdist.StepFinder {
+	return func(step string, options ...func(*stepdist.FindStepsOptions)) (fs.FS, error) {
 		return value, nil
 	}
 }

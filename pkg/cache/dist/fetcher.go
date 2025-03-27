@@ -1,4 +1,4 @@
-package builtin
+package dist
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ func (f *Fetcher) Fetch(path []string) (string, error) {
 
 	workDir, err := f.createWorkDir()
 	if err != nil {
-		return "", fmt.Errorf("fetch built-in step %s: %w", step, err)
+		return "", fmt.Errorf("fetch dist step %s: %w", step, err)
 	}
 
 	stepDirFS, err := f.stepsFinder(step)
@@ -46,11 +46,11 @@ func (f *Fetcher) Fetch(path []string) (string, error) {
 	}
 
 	if err := os.CopyFS(downloadDir, stepDirFS); err != nil {
-		return "", fmt.Errorf("fetch built-in step %s: copy: %w", step, err)
+		return "", fmt.Errorf("fetch dist step %s: copy: %w", step, err)
 	}
 
 	if err := f.chmodFiles(downloadDir); err != nil {
-		return "", fmt.Errorf("fetch built-in step %s: %w", step, err)
+		return "", fmt.Errorf("fetch dist step %s: %w", step, err)
 	}
 
 	return workDir, nil
