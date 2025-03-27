@@ -7,6 +7,7 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 - The `oci/publish` step produces outputs for `registry`, `repository`,
   `tag`, `ref`, and `digest`. See !197.
 - Update MAJOR and MAJOR.MINOR tags when publishing an image. See !198.
+- Revert Go version `1.24` upgrade, Go version is now `1.23`. See !202.
 
 ## v0.7.0
 - Inline script step to reduce external network calls. See !186.
