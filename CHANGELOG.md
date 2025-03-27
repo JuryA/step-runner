@@ -15,6 +15,7 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 - Fix issue where nil environment caused a panic. See !195.
 
 ## v0.6.0
+
 - Support steps built-in to the step-runner. See !180.
 - Change OCI fetching syntax to use registry, repository and tag
   instead of url and version. See !181.
