@@ -6,6 +6,6 @@ step-runner
 .docker-env
 Library/
 out/
-builtin/bin/*
-!builtin/bin/README.md
+dist/bin/*
+!dist/bin/README.md
 report.xml

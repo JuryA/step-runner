@@ -8,16 +8,16 @@ import (
 	"strings"
 	"sync"
 
-	builtinsteps "gitlab.com/gitlab-org/step-runner/builtin"
+	"gitlab.com/gitlab-org/step-runner/dist"
 )
 
 type Fetcher struct {
 	workDirMu   sync.Mutex
 	workDir     string
-	stepsFinder builtinsteps.StepFinder
+	stepsFinder dist.StepFinder
 }
 
-func NewFetcher(stepsFinder builtinsteps.StepFinder) *Fetcher {
+func NewFetcher(stepsFinder dist.StepFinder) *Fetcher {
 	return &Fetcher{
 		stepsFinder: stepsFinder,
 	}

@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	builtinsteps "gitlab.com/gitlab-org/step-runner/builtin"
+	"gitlab.com/gitlab-org/step-runner/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/builtin"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
@@ -48,12 +48,12 @@ func TestFetcher_Fetch(t *testing.T) {
 	})
 
 	t.Run("errors on step not found", func(t *testing.T) {
-		fetcher := builtin.NewFetcher(builtinsteps.FindBuiltInStep)
+		fetcher := builtin.NewFetcher(dist.FindDistributedStep)
 		t.Cleanup(fetcher.CleanUp)
 
 		_, err := fetcher.Fetch([]string{"invalid", "step"})
 		require.Error(t, err)
-		require.Contains(t, err.Error(), `fetch: built-in step "invalid/step" not found`)
+		require.Contains(t, err.Error(), `fetch: distributed step "invalid/step" not found`)
 	})
 
 	t.Run("files in the root named run are executable", func(t *testing.T) {
@@ -105,8 +105,8 @@ func TestFetcher_Fetch(t *testing.T) {
 	})
 }
 
-func alwaysReturnsFS(value fs.FS) builtinsteps.StepFinder {
-	return func(step string, options ...func(*builtinsteps.FindStepsOptions)) (fs.FS, error) {
+func alwaysReturnsFS(value fs.FS) dist.StepFinder {
+	return func(step string, options ...func(*dist.FindStepsOptions)) (fs.FS, error) {
 		return value, nil
 	}
 }

@@ -1,4 +1,4 @@
-STEP_BIN_PATH := $(subst builtin/steps/,builtin/bin/,$(CURDIR))
+STEP_BIN_PATH := $(subst dist/steps/,dist/bin/,$(CURDIR))
 LOCAL_OS_ARCH := $(lastword $(shell go version))
 TARGET ?= $(LOCAL_OS_ARCH)
 

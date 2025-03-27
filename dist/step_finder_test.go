@@ -1,4 +1,4 @@
-package builtin_test
+package dist_test
 
 import (
 	"io"
@@ -6,17 +6,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/builtin"
+	"gitlab.com/gitlab-org/step-runner/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
-func TestFindBuiltInStep(t *testing.T) {
+func TestFindDistributedStep(t *testing.T) {
 	t.Run("returns files embedded in step", func(t *testing.T) {
 		embeddedFS := bldr.Files(t).
 			WriteFile("/bin/my_steps/step/files/hello.txt", "hello world").
 			BuildFS()
 
-		stepFS, err := builtin.FindBuiltInStep("my_steps/step", builtin.WithFileSystem(embeddedFS))
+		stepFS, err := dist.FindDistributedStep("my_steps/step", dist.WithFileSystem(embeddedFS))
 		require.NoError(t, err)
 
 		helloTxt, err := stepFS.Open("files/hello.txt")
@@ -38,27 +38,27 @@ func TestFindBuiltInStep(t *testing.T) {
 			{
 				name: "returns error if step not found",
 				step: "my_steps/step",
-				err:  `built-in step "my_steps/step" not found`,
+				err:  `distributed step "my_steps/step" not found`,
 			},
 			{
 				name: "cannot ask for step in current directory",
 				step: ".",
-				err:  `built-in step "." not found`,
+				err:  `distributed step "." not found`,
 			},
 			{
 				name: "cannot ask for step in current directory using ..",
 				step: "my_step/step/../..",
-				err:  `built-in step "my_step/step/../.." not found`,
+				err:  `distributed step "my_step/step/../.." not found`,
 			},
 			{
 				name: "cannot ask for step using ..",
 				step: "..",
-				err:  `built-in step ".." not found`,
+				err:  `distributed step ".." not found`,
 			},
 			{
 				name: "cannot ask for step in previous sub directory",
 				step: "../..",
-				err:  `loading built-in step "../..": stat ..: invalid argument`,
+				err:  `loading distributed step "../..": stat ..: invalid argument`,
 			},
 		}
 
@@ -66,7 +66,7 @@ func TestFindBuiltInStep(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				embeddedFS := bldr.Files(t).WriteFile("/bin/.keep", "").BuildFS()
 
-				_, err := builtin.FindBuiltInStep(test.step, builtin.WithFileSystem(embeddedFS))
+				_, err := dist.FindDistributedStep(test.step, dist.WithFileSystem(embeddedFS))
 				require.Error(t, err)
 				require.Contains(t, err.Error(), test.err)
 			})

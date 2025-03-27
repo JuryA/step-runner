@@ -1,4 +1,4 @@
-package builtin
+package dist
 
 import (
 	"embed"
@@ -9,7 +9,7 @@ import (
 )
 
 //go:embed bin
-var builtInSteps embed.FS
+var distributedSteps embed.FS
 
 type StepFinder func(step string, options ...func(*FindStepsOptions)) (fs.FS, error)
 
@@ -17,8 +17,8 @@ type FindStepsOptions struct {
 	FindIn fs.FS
 }
 
-func FindBuiltInStep(step string, options ...func(*FindStepsOptions)) (fs.FS, error) {
-	defaultOps := &FindStepsOptions{FindIn: builtInSteps}
+func FindDistributedStep(step string, options ...func(*FindStepsOptions)) (fs.FS, error) {
+	defaultOps := &FindStepsOptions{FindIn: distributedSteps}
 
 	for _, opt := range options {
 		opt(defaultOps)
@@ -27,22 +27,22 @@ func FindBuiltInStep(step string, options ...func(*FindStepsOptions)) (fs.FS, er
 	stepSubDir := filepath.Join("bin", filepath.Clean(step))
 
 	if stepSubDir == "bin" || stepSubDir == "." {
-		return nil, fmt.Errorf("built-in step %q not found", step)
+		return nil, fmt.Errorf("distributed step %q not found", step)
 	}
 
 	_, err := fs.Stat(defaultOps.FindIn, stepSubDir)
 
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("built-in step %q not found", step)
+		return nil, fmt.Errorf("distributed step %q not found", step)
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("loading built-in step %q: %w", step, err)
+		return nil, fmt.Errorf("loading distributed step %q: %w", step, err)
 	}
 
 	stepFS, err := fs.Sub(defaultOps.FindIn, stepSubDir)
 	if err != nil {
-		return nil, fmt.Errorf("loading built-in step %q: %w", step, err)
+		return nil, fmt.Errorf("loading distributed step %q: %w", step, err)
 	}
 
 	return stepFS, nil

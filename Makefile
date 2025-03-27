@@ -175,12 +175,12 @@ builtin-steps-build: go-deps
 
 .PHONY: builtin-steps-clean
 builtin-steps-clean:
-	@find builtin/bin -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
+	@find dist/bin -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
 
 # runs a make target in every builtin step make file, if the target is present
 .PHONY: builtin-steps-run-make-target
 builtin-steps-run-make-target:
-	@for dir in $(shell find builtin/steps -type f -name Makefile -exec dirname {} \;); do \
+	@for dir in $(shell find dist/steps -type f -name Makefile -exec dirname {} \;); do \
 		echo "Running $(MAKE_TARGET) for $$dir"; \
 		$(MAKE) -q -C $$dir $(MAKE_TARGET) 2>/dev/null; \
 		if [ $$? -ne 2 ]; then \
