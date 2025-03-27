@@ -28,9 +28,7 @@ func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
 
 	rr2 := test.RunRequest(t, `run:
   - name: blabla
-    step: ../../testdata/bash
-    inputs:
-        script: echo "bla bla bla"
+    script: echo "bla bla bla"
 `, nil, nil)
 	rr1.Id = rr1.Id + "-2"
 
@@ -74,9 +72,7 @@ const (
 func Test_StepRunnerClient_FollowLogs_Success(t *testing.T) {
 	rr := test.RunRequest(t, `run:
   - name: lorem
-    step: ../../testdata/bash
-    inputs:
-        script: echo "`+lorem+`"`, nil, nil)
+    script: echo "`+lorem+`"`, nil, nil)
 
 	server := server.New(t).Serve()
 	srClient := New(server.NewConnection())
@@ -100,9 +96,7 @@ func (t toWriter) Write(p []byte) (int, error) { return t(p) }
 func Test_StepRunnerClient_FollowLogs_Again(t *testing.T) {
 	rr := test.RunRequest(t, `run:
   - name: lorem
-    step: ../../testdata/bash
-    inputs:
-        script: echo "`+lorem+`"`, nil, nil)
+    script: echo "`+lorem+`"`, nil, nil)
 
 	server := server.New(t).Serve()
 	srClient := New(server.NewConnection())
