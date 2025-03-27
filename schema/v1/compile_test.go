@@ -33,7 +33,7 @@ type: steps
 steps:
     - name: my_step
       step:
-          protocol: builtin
+          protocol: dist
           path: [ "script" ]
           filename: step.yml
       inputs:
@@ -83,7 +83,7 @@ type: steps
 steps:
     - name: my_special_script_name
       step:
-          protocol: builtin
+          protocol: dist
           path: [ "script" ]
           filename: step.yml
       inputs:
@@ -534,9 +534,9 @@ step:
 `,
 		wantErr: true,
 	}, {
-		step: `step: builtin://oci/publish`,
+		step: `step: dist://oci/publish`,
 		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_builtin,
+			Protocol: proto.StepReferenceProtocol_dist,
 			Path:     []string{"oci", "publish"},
 			Filename: "step.yml",
 			Version:  "",

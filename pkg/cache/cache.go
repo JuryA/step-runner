@@ -92,7 +92,7 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 
 		return c.load(stepRef, dir)
 
-	case proto.StepReferenceProtocol_builtin:
+	case proto.StepReferenceProtocol_dist:
 		dir, err := c.distFetcher.Fetch(stepRef.Path)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)

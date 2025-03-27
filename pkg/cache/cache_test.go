@@ -131,8 +131,8 @@ func TestCache(t *testing.T) {
 		require.Equal(t, []string{"sh"}, specDef.Definition.Exec.Command)
 	})
 
-	t.Run("runs publish built-in step", func(t *testing.T) {
-		res := bldr.BuiltInStepResource().WithStep("oci/publish").Build()
+	t.Run("runs publish dist step", func(t *testing.T) {
+		res := bldr.DistStepResource().WithStep("oci/publish").Build()
 		distFetcher := dist.NewFetcher(stepdist.FindDistributedStep)
 
 		stepCache := cache.NewWithOptions(cache.WithDistFetcher(distFetcher))
