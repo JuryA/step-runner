@@ -1,4 +1,4 @@
-FROM golang:1.24
+FROM golang:1.23
 
 WORKDIR /app
 COPY ./out/bin/step-runner-linux-amd64 /step-runner

@@ -59,7 +59,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 		untar := tar.NewReader(uncompressed)
 		next, err := untar.Next()
 		require.NoError(t, err)
-		require.Equal(t, "animals/", next.Name)
+		require.Equal(t, "animals", next.Name)
 
 		next, err = untar.Next()
 		require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 
 			_, err = pkg.NewImageFactory().BuildLayer(os.DirFS(baseDir))
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "tar: cannot add non-regular file")
+			require.Contains(t, err.Error(), "example.sock: archive/tar: sockets not supported")
 		})
 
 		t.Run("named pipe", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 
 			_, err = pkg.NewImageFactory().BuildLayer(os.DirFS(baseDir))
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "tar: cannot add non-regular file")
+			require.Contains(t, err.Error(), "named.pipe: type fifo, only regular files and directories are supported")
 		})
 
 		t.Run("symlinks", func(t *testing.T) {
@@ -116,7 +116,7 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 
 			_, err := pkg.NewImageFactory().BuildLayer(archiveFS)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "tar: cannot add non-regular file")
+			require.Contains(t, err.Error(), "white-fluffy.txt: type symbolic link, only regular files and directories are supported")
 		})
 	})
 
@@ -166,12 +166,12 @@ func TestImageFactory_BuildLayer(t *testing.T) {
 		untar := tar.NewReader(uncompressed)
 		next, err := untar.Next()
 		require.NoError(t, err)
-		require.Equal(t, "animals/", next.Name)
+		require.Equal(t, "animals", next.Name)
 		require.Equal(t, tar.TypeDir, int32(next.Typeflag))
 
 		next, err = untar.Next()
 		require.NoError(t, err)
-		require.Equal(t, "animals/mammals/", next.Name)
+		require.Equal(t, "animals/mammals", next.Name)
 		require.Equal(t, tar.TypeDir, int32(next.Typeflag))
 	})
 }
