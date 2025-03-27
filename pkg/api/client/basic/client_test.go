@@ -21,8 +21,7 @@ import (
 func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
 	rr1 := test.RunRequest(t, `run:
   - name: hello_world
-    step: ../../../../e2e_tests/steps/greeting
-    inputs: {}
+    script: echo "hello world"
 `, nil, nil)
 	rr1.Id = rr1.Id + "-1"
 
@@ -33,6 +32,7 @@ func Test_StepRunnerClient_Status_ListJobs(t *testing.T) {
 	rr1.Id = rr1.Id + "-2"
 
 	server := server.New(t).Serve()
+	defer server.Stop()
 	srClient := New(server.NewConnection())
 
 	ctx := context.Background()
@@ -75,6 +75,7 @@ func Test_StepRunnerClient_FollowLogs_Success(t *testing.T) {
     script: echo "`+lorem+`"`, nil, nil)
 
 	server := server.New(t).Serve()
+	defer server.Stop()
 	srClient := New(server.NewConnection())
 
 	ctx := context.Background()
@@ -86,6 +87,7 @@ func Test_StepRunnerClient_FollowLogs_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, int64(len(runStepMsg)+len(lorem)+1), n)
 	assert.Equal(t, runStepMsg+lorem+"\n", buf.String())
+
 	assert.NoError(t, srClient.Close(ctx, rr.Id))
 }
 
@@ -99,6 +101,7 @@ func Test_StepRunnerClient_FollowLogs_Again(t *testing.T) {
     script: echo "`+lorem+`"`, nil, nil)
 
 	server := server.New(t).Serve()
+	defer server.Stop()
 	srClient := New(server.NewConnection())
 
 	ctx := context.Background()
@@ -135,8 +138,9 @@ func Test_StepRunnerClient_WaitForReady(t *testing.T) {
 		conn := srvr.NewConnection()
 		require.Eventually(t, func() bool { return conn.GetState() == connectivity.Idle }, 2*time.Second, 100*time.Millisecond)
 
-		step := "run:\n  - name: hello_world\n    step: ../../../../e2e_tests/steps/greeting"
-		runRequest := test.RunRequest(t, step, nil, nil)
+		runRequest := test.RunRequest(t, `run:
+      - name: hello_world
+		script: echo "ghello wrold"`, nil, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
 		defer cancel()
@@ -152,10 +156,16 @@ func Test_StepRunnerClient_WaitForReady(t *testing.T) {
 		require.Eventually(t, func() bool { return conn.GetState() == connectivity.Idle }, 2*time.Second, 100*time.Millisecond)
 
 		srvr.Serve()
-		step := "run:\n  - name: hello_world\n    step: ../../../../e2e_tests/steps/greeting"
-		runRequest := test.RunRequest(t, step, nil, nil)
+		defer srvr.Stop()
+
+		runRequest := test.RunRequest(t, `run:
+      - name: hello_world
+        script: echo "hello world"`, nil, nil)
 
 		srClient := New(conn)
-		require.NoError(t, srClient.Run(context.Background(), runRequest))
+
+		ctx := context.Background()
+		require.NoError(t, srClient.Run(ctx, runRequest))
+		assert.NoError(t, srClient.Close(ctx, runRequest.Id))
 	})
 }
