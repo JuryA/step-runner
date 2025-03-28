@@ -6,6 +6,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -23,7 +25,7 @@ func NewCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "serve",
 		Short: "Start the step-runner gRPC service",
-		Args:  cobra.ExactArgs(0),
+		Args:  cobra.MaximumNArgs(1),
 		RunE:  run,
 	}
 }
@@ -39,22 +41,26 @@ func run(cmd *cobra.Command, args []string) error {
 		grpcServer.GracefulStop()
 	}()
 
+	socketAddr, err := getSocketAddr(args)
+	if err != nil {
+		return err
+	}
+
 	stepCache, err := cache.New()
 	if err != nil {
 		return fmt.Errorf("failed to run service: %w", err)
 	}
 
 	env, err := runner.NewEnvironmentFromOS()
-
 	if err != nil {
 		return fmt.Errorf("failed to run service: %w", err)
 	}
 
 	srv := service.New(stepCache, env)
 
-	listener, err := net.ListenUnix("unix", api.ListenSocketAddr())
+	listener, err := net.ListenUnix("unix", socketAddr)
 	if err != nil {
-		return fmt.Errorf("failed to open open socket %q for listening: %w", api.ListenSocketPath(), err)
+		return fmt.Errorf("failed to open open socket %q for listening: %w", socketAddr.Name, err)
 	}
 
 	grpcServer = grpc.NewServer()
@@ -62,4 +68,21 @@ func run(cmd *cobra.Command, args []string) error {
 
 	log.Printf("step-runner service listening on %v", listener.Addr())
 	return grpcServer.Serve(listener)
+}
+
+func getSocketAddr(args []string) (*net.UnixAddr, error) {
+	if len(args) == 0 {
+		return api.SocketAddr(api.DefaultSocketPath()), nil
+	}
+	socketDir := strings.TrimSpace(args[0])
+
+	if socketDir == "" {
+		return nil, fmt.Errorf("invalid empty socket dir")
+	}
+
+	fi, err := os.Stat(socketDir)
+	if err != nil || !fi.IsDir() {
+		return nil, fmt.Errorf("invalid socket dir %s", socketDir)
+	}
+	return api.SocketAddr(filepath.Join(socketDir, "step-runner.sock")), nil
 }
