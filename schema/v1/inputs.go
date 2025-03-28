@@ -1,0 +1,59 @@
+package schema
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+)
+
+type Input struct {
+	// AdditionalProperties corresponds to the JSON schema field
+	// "additionalProperties".
+	AdditionalProperties any `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty" mapstructure:"additionalProperties,omitempty"`
+
+	// Default is the default input value. Its type must match `type`.
+	Default any `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
+
+	// Sensitive implies the input is of sensitive nature and effort should be made to
+	// prevent accidental disclosure.
+	Sensitive *bool `json:"sensitive,omitempty" yaml:"sensitive,omitempty" mapstructure:"sensitive,omitempty"`
+
+	// Type is the value type of the input.
+	Type *InputType `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
+}
+
+type InputType string
+
+const InputTypeArray InputType = "array"
+const InputTypeBoolean InputType = "boolean"
+const InputTypeNumber InputType = "number"
+const InputTypeString InputType = "string"
+const InputTypeStruct InputType = "struct"
+
+var enumValues_InputType = []any{
+	"string",
+	"number",
+	"boolean",
+	"struct",
+	"array",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *InputType) UnmarshalJSON(b []byte) error {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_InputType {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_InputType, v)
+	}
+	*j = InputType(v)
+	return nil
+}
