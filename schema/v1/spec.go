@@ -119,18 +119,6 @@ func (j *OutputType) UnmarshalJSON(b []byte) error {
 
 type Outputs map[string]Output
 
-// Signature contains the inputs and outputs of the step.
-type Signature struct {
-	// Input describes a single step input.
-	Inputs SignatureInputs `json:"inputs,omitempty" yaml:"inputs,omitempty" mapstructure:"inputs,omitempty"`
-
-	// Outputs corresponds to the JSON schema field "outputs".
-	Outputs interface{} `json:"outputs,omitempty" yaml:"outputs,omitempty" mapstructure:"outputs,omitempty"`
-}
-
-// Input describes a single step input.
-type SignatureInputs map[string]Input
-
 // Spec is a document describing the interface of a step.
 type Spec struct {
 	// Spec corresponds to the JSON schema field "spec".
