@@ -153,13 +153,13 @@ func TestRemoteImageRef_SemVerRefs(t *testing.T) {
 			name:              "publishes major and minor when publishing latest tag",
 			existingTags:      []string{"3", "3.5", "3.5.0"},
 			publish:           "3.5.1",
-			expectPublishTags: []string{"3.5.1", "3.5", "3"},
+			expectPublishTags: []string{"3.5.1", "3.5", "3", "latest"},
 		},
 		{
 			name:              "publishes major and minor when no tags exist",
 			existingTags:      []string{},
 			publish:           "3.5.1",
-			expectPublishTags: []string{"3.5.1", "3.5", "3"},
+			expectPublishTags: []string{"3.5.1", "3.5", "3", "latest"},
 		},
 		{
 			name:              "publishes major when updating old minor",
@@ -189,13 +189,13 @@ func TestRemoteImageRef_SemVerRefs(t *testing.T) {
 			name:              "malformed existing tags are ignored",
 			existingTags:      []string{"5.7ish"},
 			publish:           "5.7.1",
-			expectPublishTags: []string{"5.7.1", "5.7", "5"},
+			expectPublishTags: []string{"5.7.1", "5.7", "5", "latest"},
 		},
 		{
-			name:              "publised release candidates are ignored",
+			name:              "published release candidates are ignored",
 			existingTags:      []string{"5.7.1-rc1"},
 			publish:           "5.7.0",
-			expectPublishTags: []string{"5.7.0", "5.7", "5"},
+			expectPublishTags: []string{"5.7.0", "5.7", "5", "latest"},
 		},
 	}
 

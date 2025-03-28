@@ -110,11 +110,15 @@ func (ri *RemoteImageRef) SemVerRefs(existingTags []string) ([]name.Reference, e
 	tags := ri.parseTags(existingTags)
 	namedRefs := []string{}
 
-	if ri.isMostRecentMinor(tags) {
+	if ri.isMostRecentPatchForMajorMinor(tags) {
 		namedRefs = append(namedRefs, fmt.Sprintf("%d.%d", ri.version.major, ri.version.minor))
 
-		if ri.isMostRecentMajor(tags) {
+		if ri.isMostRecentMinorForMajor(tags) {
 			namedRefs = append(namedRefs, fmt.Sprintf("%d", ri.version.major))
+
+			if ri.isMostRecentMajor(tags) {
+				namedRefs = append(namedRefs, "latest")
+			}
 		}
 	}
 
@@ -187,7 +191,7 @@ func (ri *RemoteImageRef) buildRefForTag(tag string) (name.Reference, error) {
 	return ref, nil
 }
 
-func (ri *RemoteImageRef) isMostRecentMinor(tags []*version) bool {
+func (ri *RemoteImageRef) isMostRecentPatchForMajorMinor(tags []*version) bool {
 	for _, tag := range tags {
 		if tag.major != ri.version.major || tag.minor != ri.version.minor {
 			continue
@@ -201,13 +205,23 @@ func (ri *RemoteImageRef) isMostRecentMinor(tags []*version) bool {
 	return true
 }
 
-func (ri *RemoteImageRef) isMostRecentMajor(tags []*version) bool {
+func (ri *RemoteImageRef) isMostRecentMinorForMajor(tags []*version) bool {
 	for _, tag := range tags {
 		if tag.major != ri.version.major {
 			continue
 		}
 
 		if tag.minor > ri.version.minor {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (ri *RemoteImageRef) isMostRecentMajor(tags []*version) bool {
+	for _, tag := range tags {
+		if tag.major > ri.version.major {
 			return false
 		}
 	}

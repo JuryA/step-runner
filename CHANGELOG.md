@@ -8,6 +8,8 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
   `tag`, `ref`, and `digest`. See !197.
 - Update MAJOR and MAJOR.MINOR tags when publishing an image. See !198.
 - Downgrade minimum compatible Go version to 1.23.6. See !203.
+- Publishing steps as an OCI image publishes the `latest` tag if publishing
+  latest version. See !205. 
 
 ## v0.7.0
 - Inline script step to reduce external network calls. See !186.
