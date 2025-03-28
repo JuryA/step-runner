@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/step-runner
 
-go 1.24
+go 1.23.6
 
 require (
 	github.com/containerd/platforms v0.2.1
