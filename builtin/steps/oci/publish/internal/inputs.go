@@ -1,4 +1,4 @@
-package pkg
+package internal
 
 import (
 	"encoding/json"
@@ -9,14 +9,11 @@ import (
 	"log/slog"
 	"maps"
 	"os"
-	"regexp"
 	"slices"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
-
-var semVerRe = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(-.*)?$`)
 
 type GetEnv func(key string) string
 

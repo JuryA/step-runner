@@ -1,11 +1,11 @@
-package pkg_test
+package internal_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
 )
 
 func TestNewRemoteImageRef(t *testing.T) {
@@ -35,7 +35,7 @@ func TestNewRemoteImageRef(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				remoteImgRef, err := pkg.NewRemoteImageRef(test.registry, "my-image", "1.0.0")
+				remoteImgRef, err := internal.NewRemoteImageRef(test.registry, "my-image", "1.0.0")
 
 				if test.expectErr == "" {
 					require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestNewRemoteImageRef(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				remoteImgRef, err := pkg.NewRemoteImageRef("reg.gl.com", test.repository, "1.0.0")
+				remoteImgRef, err := internal.NewRemoteImageRef("reg.gl.com", test.repository, "1.0.0")
 
 				if test.expectErr == "" {
 					require.NoError(t, err)
@@ -128,7 +128,7 @@ func TestNewRemoteImageRef(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				remoteImgRef, err := pkg.NewRemoteImageRef("reg.gl.com", "my-image", test.tag)
+				remoteImgRef, err := internal.NewRemoteImageRef("reg.gl.com", "my-image", test.tag)
 
 				if test.expectErr == "" {
 					require.NoError(t, err)
@@ -201,7 +201,7 @@ func TestRemoteImageRef_SemVerRefs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			remoteImgRef, err := pkg.NewRemoteImageRef("registry.gitlab.com", "project/image", test.publish)
+			remoteImgRef, err := internal.NewRemoteImageRef("registry.gitlab.com", "project/image", test.publish)
 			require.NoError(t, err)
 
 			refs, err := remoteImgRef.SemVerRefs(test.existingTags)

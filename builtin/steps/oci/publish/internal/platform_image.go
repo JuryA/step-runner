@@ -1,8 +1,8 @@
-package pkg
+package internal
 
 import (
 	"github.com/containerd/platforms"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 type PlatformImage struct {

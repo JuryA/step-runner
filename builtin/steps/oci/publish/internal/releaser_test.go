@@ -1,4 +1,4 @@
-package pkg_test
+package internal_test
 
 import (
 	"context"
@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg/testutil/bldr"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal/testutil/bldr"
+
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
@@ -40,7 +41,7 @@ func TestReleaser_Release(t *testing.T) {
 			WithTo("/my_step/program").
 			BuildArtifacts()
 
-		imageIndex, err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
+		imageIndex, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
 		require.NoError(t, err)
 		require.NotNil(t, imageIndex)
 
@@ -64,7 +65,7 @@ func TestReleaser_Release(t *testing.T) {
 		}
 		platformSpecific := bldr.OCIArtifact(t).WithPlatform(platform).BuildArtifacts()
 
-		_, err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)
+		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
 		imgIndex, err := remote.Index(remoteImgRef.MajorMinorPatch())
@@ -88,7 +89,7 @@ func TestReleaser_Release(t *testing.T) {
 		platform := &v1.Platform{Architecture: "AARCH64", OS: "linux"}
 		platformSpecific := bldr.OCIArtifact(t).WithPlatform(platform).BuildArtifacts()
 
-		_, err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)
+		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
 		imgIndex, err := remote.Index(remoteImgRef.MajorMinorPatch())
@@ -117,7 +118,7 @@ func TestReleaser_Release(t *testing.T) {
 			WithTo("/").
 			BuildArtifacts()
 
-		platformSpecific := pkg.NewArtifacts(
+		platformSpecific := internal.NewArtifacts(
 			bldr.OCIArtifact(t).
 				LinuxAMD64().
 				WithFrom(filepath.Join(baseDir, "dist/linux/amd64")).
@@ -129,7 +130,7 @@ func TestReleaser_Release(t *testing.T) {
 				WithTo("/").
 				Build())
 
-		_, err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
+		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
 		require.NoError(t, err)
 
 		amd64Dir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
@@ -153,7 +154,7 @@ func TestReleaser_Release(t *testing.T) {
 			WithTo("/app/my/files").
 			BuildArtifacts()
 
-		_, err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)
+		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
 		imageDir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
@@ -175,7 +176,7 @@ func TestReleaser_Release(t *testing.T) {
 		registry.Push(remoteImgRef.MajorMinorPatch(), mainBldr.OCIImage(t).Build())
 
 		platformSpecific := bldr.OCIArtifact(t).BuildArtifacts()
-		_, err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)
+		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf("image already published: %s", remoteImgRef), err.Error())
 	})
@@ -196,7 +197,7 @@ func TestReleaser_Release(t *testing.T) {
 			WithTo("/new_image_file").
 			BuildArtifacts()
 
-		_, err := pkg.NewReleaser().Release(t.Context(), remoteImgRef, pkg.NewArtifacts(), platformSpecific)
+		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
 		imageDir1 := fetch(t, ref1, mainBldr.OCIPlatform.LinuxAMD64)

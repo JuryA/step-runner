@@ -1,4 +1,4 @@
-package pkg
+package internal
 
 import (
 	"errors"
@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
+var semVerRe = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(-.*)?$`)
 var majorMinorPatchRe = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)$`)
 
 type version struct {

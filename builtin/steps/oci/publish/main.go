@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
 )
 
 func main() {
@@ -18,18 +18,18 @@ func main() {
 }
 
 func run(logger *slog.Logger) error {
-	inputs, err := pkg.ParseInputs(os.Args[1:], os.Getenv)
+	inputs, err := internal.ParseInputs(os.Args[1:], os.Getenv)
 	if err != nil {
 		return err
 	}
 
 	slog.SetLogLoggerLevel(inputs.LogLevel)
 
-	imageIndex, err := pkg.NewReleaser().Release(context.Background(), inputs.RemoteImageRef, inputs.Common, inputs.PlatformSpecific)
+	imageIndex, err := internal.NewReleaser().Release(context.Background(), inputs.RemoteImageRef, inputs.Common, inputs.PlatformSpecific)
 	if err != nil {
 		return err
 	}
 
 	logger.Info("published step", "image", inputs.RemoteImageRef.MajorMinorPatch().Name())
-	return pkg.NewOutputs(inputs.OutputFile).Write(inputs.RemoteImageRef.MajorMinorPatch(), imageIndex)
+	return internal.NewOutputs(inputs.OutputFile).Write(inputs.RemoteImageRef.MajorMinorPatch(), imageIndex)
 }

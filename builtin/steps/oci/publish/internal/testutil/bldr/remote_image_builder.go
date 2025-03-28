@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
 )
 
 type RemoteImageBuilder struct {
@@ -46,8 +46,8 @@ func (b *RemoteImageBuilder) WithRepositoryRef(imgRef name.Reference) *RemoteIma
 	return b
 }
 
-func (b *RemoteImageBuilder) Build() *pkg.RemoteImageRef {
-	remoteImgRef, err := pkg.NewRemoteImageRef(b.registry, b.repository, b.tag)
+func (b *RemoteImageBuilder) Build() *internal.RemoteImageRef {
+	remoteImgRef, err := internal.NewRemoteImageRef(b.registry, b.repository, b.tag)
 	require.NoError(b.t, err)
 
 	return remoteImgRef
