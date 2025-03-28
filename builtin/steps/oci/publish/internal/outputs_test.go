@@ -1,4 +1,4 @@
-package pkg
+package internal_test
 
 import (
 	"os"
@@ -9,6 +9,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
+
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -17,7 +19,7 @@ func TestOutputs_Write(t *testing.T) {
 		imgRef := name.MustParseReference("registry.gitlab.com:8080/my-group/my-project/image:10.1.1")
 		outputFile := filepath.Join(t.TempDir(), "output.txt")
 
-		err := NewOutputs(outputFile).Write(imgRef, mainBldr.OCIImageIndex(t).Build())
+		err := internal.NewOutputs(outputFile).Write(imgRef, mainBldr.OCIImageIndex(t).Build())
 		require.NoError(t, err)
 
 		fileData, err := os.ReadFile(outputFile)

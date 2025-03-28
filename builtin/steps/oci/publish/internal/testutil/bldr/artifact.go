@@ -5,7 +5,8 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
+
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -50,10 +51,10 @@ func (bldr *OCIArtifactBuilder) WithTo(to string) *OCIArtifactBuilder {
 	return bldr
 }
 
-func (bldr *OCIArtifactBuilder) Build() *pkg.Artifact {
-	return pkg.NewArtifact(bldr.platform, bldr.from, bldr.to)
+func (bldr *OCIArtifactBuilder) Build() *internal.Artifact {
+	return internal.NewArtifact(bldr.platform, bldr.from, bldr.to)
 }
 
-func (bldr *OCIArtifactBuilder) BuildArtifacts() pkg.Artifacts {
-	return pkg.NewArtifacts(bldr.Build())
+func (bldr *OCIArtifactBuilder) BuildArtifacts() internal.Artifacts {
+	return internal.NewArtifacts(bldr.Build())
 }

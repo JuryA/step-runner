@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/builtin/steps/oci/publish/pkg"
+	"gitlab.com/gitlab-org/step-builtins/oci/publish/internal"
 )
 
 type CLIInputsBuilder struct {
@@ -64,7 +64,7 @@ func (b *CLIInputsBuilder) WithLogLevel(logLevel string) *CLIInputsBuilder {
 	return b
 }
 
-func (b *CLIInputsBuilder) Build() ([]string, pkg.GetEnv) {
+func (b *CLIInputsBuilder) Build() ([]string, internal.GetEnv) {
 	err := os.WriteFile(b.outputFile, []byte(""), 0644)
 	require.NoError(b.t, err)
 

@@ -1,4 +1,11 @@
 
+go-deps:
+  stage: test
+  image: golang:${GO_VERSION}
+  script:
+    - make go-deps
+    - git diff --exit-code
+
 go-fmt:
   stage: test
   image: golang:$GO_VERSION
@@ -8,15 +15,17 @@ go-fmt:
 
 go-lint:
   stage: test
-  image: golangci/golangci-lint:v1.64.7
+  image: golang:${GO_VERSION}-alpine
   script:
-    - golangci-lint run -v --timeout 5m
+    - apk add git make
+    - make go-lint
 
 check-generated:
   stage: test
-  image: golang:$GO_VERSION
+  image: golang:${GO_VERSION}
   before_script:
-    - apt-get update && apt-get install -y zip
+    - apt update
+    - apt install --assume-yes --no-install-recommends unzip
   script:
     - make check-generated
 
@@ -24,20 +33,14 @@ go-test:
   stage: test
   image: golang:${GO_VERSION}
   before_script:
-    - make build-builtin-steps
+    - apt update
+    - apt install --assume-yes --no-install-recommends unzip
   script:
-    - go install gotest.tools/gotestsum@latest
-    - gotestsum --junitfile=report.xml
-                --format=testname
-                --rerun-fails=2
-                --packages="./..."
-                --jsonfile=tmp.json.log
-                --post-run-command="bash -c 'echo; echo Slowest tests; gotestsum tool slowest --num 10 --jsonfile tmp.json.log'"
-                -- -race ./...
+    - make test
   artifacts:
     when: always
     reports:
-      junit: report.xml
+      junit: [report.xml, builtin/steps/**/report.xml, .gitlab/steps/**/report.xml]
 
 changelog-format:
   stage: test

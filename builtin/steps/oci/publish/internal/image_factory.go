@@ -1,4 +1,4 @@
-package pkg
+package internal
 
 import (
 	"crypto/sha256"
@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/compression"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
