@@ -15,7 +15,7 @@ import (
 
 // Starts a dead-simple echoing server that listens on a socket
 func setupEchoServer(t *testing.T) func() {
-	ln, err := net.ListenUnix("unix", api.ListenSocketAddr())
+	ln, err := net.ListenUnix("unix", api.SocketAddr(api.DefaultSocketPath()))
 	require.NoError(t, err)
 
 	var conn net.Conn
@@ -41,7 +41,7 @@ func Test_Proxy(t *testing.T) {
 
 	// start the proxy...
 	go func() {
-		conn, err := net.DialUnix("unix", nil, api.ListenSocketAddr())
+		conn, err := net.DialUnix("unix", nil, api.SocketAddr(api.DefaultSocketPath()))
 		require.NoError(t, err)
 		assert.NoError(t, Proxy(pr, &buf, conn))
 	}()

@@ -23,7 +23,7 @@ func NewCmd() *cobra.Command {
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	conn, err := net.DialUnix("unix", nil, api.ListenSocketAddr())
+	conn, err := net.DialUnix("unix", nil, api.SocketAddr(api.DefaultSocketPath()))
 	if err != nil {
 		return fmt.Errorf("dialing: %w", err)
 	}

@@ -1,7 +1,0 @@
-spec:
-  inputs:
-    script:
-      type: string
----
-exec:
-  command: [bash, -c, "${{ inputs.script }}"]
