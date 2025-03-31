@@ -50,7 +50,7 @@ $(PLATFORMS): GOOS=$(firstword $(subst /, ,$@))
 $(PLATFORMS): GOARCH=$(lastword $(subst /, ,$@))
 $(PLATFORMS): BINARY=$(BIN_PATH)/step-runner-$(subst /,-,$@)
 $(PLATFORMS):
-	@PLATFORM=$@ $(MAKE) builtin-steps-build
+	@PLATFORM=$@ $(MAKE) dist-steps-build
 	@echo "Running build for step-runner"
 	@mkdir -p $(BIN_PATH)
 	@CGO_ENABLED=0 GOOS="$(GOOS)" GOARCH="$(GOARCH)" go build \
@@ -112,8 +112,9 @@ $(PROTOVALIDATE_DIST):
 	@rm "$(local)/protovalidate.zip"
 
 .PHONY: clean
-clean: builtin-steps-clean
+clean: dist-steps-clean
 	@rm -rf $(BIN_PATH)
+	@find . -name report.xml | xargs rm
 
 .PHONY: image
 image:
@@ -162,25 +163,25 @@ go-lint: $(GOLANGCI_LINT)
 	run-for-all-go-modules
 
 .PHONY: test
-test: $(GOTESTSUM) generate builtin-steps-build
+test: $(GOTESTSUM) generate dist-steps-build
 	@$(MAKE) \
 	DESCRIPTION="$@" \
 	COMMAND='$(GOTESTSUM) --junitfile=report.xml --format=testname --rerun-fails=2 --packages="./..." -- -race ./...' \
 	run-for-all-go-modules
 
-.PHONY: builtin-steps-build
-builtin-steps-build: PLATFORM ?= $(LOCAL_OS_ARCH)
-builtin-steps-build: go-deps
-	@$(MAKE) builtin-steps-run-make-target PLATFORM="$(PLATFORM)" MAKE_TARGET=build
+.PHONY: dist-steps-build
+dist-steps-build: PLATFORM ?= $(LOCAL_OS_ARCH)
+dist-steps-build: go-deps
+	@$(MAKE) dist-steps-run-make-target PLATFORM="$(PLATFORM)" MAKE_TARGET=build
 
-.PHONY: builtin-steps-clean
-builtin-steps-clean:
-	@find builtin/bin -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
+.PHONY: dist-steps-clean
+dist-steps-clean:
+	@find dist/bin -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
 
-# runs a make target in every builtin step make file, if the target is present
-.PHONY: builtin-steps-run-make-target
-builtin-steps-run-make-target:
-	@for dir in $(shell find builtin/steps -type f -name Makefile -exec dirname {} \;); do \
+# runs a make target in every dist step make file, if the target is present
+.PHONY: dist-steps-run-make-target
+dist-steps-run-make-target:
+	@for dir in $(shell find dist/steps -type f -name Makefile -exec dirname {} \;); do \
 		echo "Running $(MAKE_TARGET) for $$dir"; \
 		$(MAKE) -q -C $$dir $(MAKE_TARGET) 2>/dev/null; \
 		if [ $$? -ne 2 ]; then \

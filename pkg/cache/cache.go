@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	builtinsteps "gitlab.com/gitlab-org/step-runner/builtin"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/builtin"
+	stepdist "gitlab.com/gitlab-org/step-runner/dist"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
@@ -18,9 +18,9 @@ import (
 var _ runner.Cache = &cache{}
 
 type cache struct {
-	gitFetcher     *git.GitFetcher
-	ociFetcher     *oci.OCIFetcher
-	builtInFetcher *builtin.Fetcher
+	gitFetcher  *git.GitFetcher
+	ociFetcher  *oci.OCIFetcher
+	distFetcher *dist.Fetcher
 }
 
 func New() (runner.Cache, error) {
@@ -32,7 +32,7 @@ func New() (runner.Cache, error) {
 	return NewWithOptions(
 		WithGitFetcher(git.New(cacheDir, git.CloneOptions{Depth: 1})),
 		WithOCIFetcher(oci.NewOCIFetcher(cacheDir)),
-		WithBuiltInFetcher(builtin.NewFetcher(builtinsteps.FindBuiltInStep)),
+		WithDistFetcher(dist.NewFetcher(stepdist.FindDistributedStep)),
 	), nil
 }
 
@@ -48,9 +48,9 @@ func WithOCIFetcher(fetcher *oci.OCIFetcher) func(*cache) {
 	}
 }
 
-func WithBuiltInFetcher(fetcher *builtin.Fetcher) func(*cache) {
+func WithDistFetcher(fetcher *dist.Fetcher) func(*cache) {
 	return func(c *cache) {
-		c.builtInFetcher = fetcher
+		c.distFetcher = fetcher
 	}
 }
 
@@ -92,8 +92,8 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 
 		return c.load(stepRef, dir)
 
-	case proto.StepReferenceProtocol_builtin:
-		dir, err := c.builtInFetcher.Fetch(stepRef.Path)
+	case proto.StepReferenceProtocol_dist:
+		dir, err := c.distFetcher.Fetch(stepRef.Path)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}
