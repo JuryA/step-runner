@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -29,7 +30,7 @@ func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, co
 	factory := NewImageFactory(WithLogger(r.logger))
 	defer factory.CleanUp()
 
-	pusher, err := remote.NewPusher(remote.WithContext(ctx))
+	pusher, err := remote.NewPusher(remote.WithContext(ctx), remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return nil, fmt.Errorf("creating image pusher: %w", err)
 	}
