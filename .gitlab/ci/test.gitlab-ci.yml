@@ -40,7 +40,7 @@ go-test:
   artifacts:
     when: always
     reports:
-      junit: [report.xml, builtin/steps/**/report.xml, .gitlab/steps/**/report.xml]
+      junit: [report.xml, dist/steps/**/report.xml, .gitlab/steps/**/report.xml]
 
 changelog-format:
   stage: test

@@ -16,6 +16,6 @@ include:
   - local: /.gitlab/ci/build-binaries.gitlab-ci.yml
   - local: /.gitlab/ci/build-docker.gitlab-ci.yml
   - local: /.gitlab/ci/e2e.gitlab-ci.yml
-  - local: /builtin/steps/script/.gitlab-ci.yml
+  - local: /dist/steps/script/.gitlab-ci.yml
   - local: /.gitlab/ci/e2e-examples.gitlab-ci.yml
   - local: /.gitlab/ci/deploy.gitlab-ci.yml

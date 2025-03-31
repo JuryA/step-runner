@@ -23,7 +23,7 @@ spec:
 ---
 run:
   - name: publish_image
-    step: builtin://oci/publish
+    step: dist://oci/publish
     inputs:
       registry: %s
       repository: my-image
