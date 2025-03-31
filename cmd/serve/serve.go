@@ -26,13 +26,18 @@ func NewCmd() *cobra.Command {
 		Use:   "serve",
 		Short: "Start the step-runner gRPC service",
 		Args:  cobra.MaximumNArgs(1),
-		RunE:  run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sigChan := make(chan os.Signal, 1)
+			if err := run(cmd, args, sigChan); err != nil {
+				return fmt.Errorf("serving step-runner: %w", err)
+			}
+			return nil
+		},
 	}
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func run(_ *cobra.Command, args []string, sigChan chan os.Signal) error {
 	var grpcServer *grpc.Server
-	sigChan := make(chan os.Signal, 1)
 
 	go func() {
 		signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
