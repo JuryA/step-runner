@@ -11,6 +11,7 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 - Steps distributed with step-runner are fetched using the `dist://` prefix instead of `builtin://`. See !201.
 - Publishing steps as an OCI image publishes the `latest` tag if publishing
   latest version. See !205. 
+- The server command accepts a unix socket path on which to listen. See !206
 
 ## v0.7.0
 - Inline script step to reduce external network calls. See !186.

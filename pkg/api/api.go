@@ -8,6 +8,8 @@ import (
 
 var defaultSocketPath = path.Join(os.TempDir(), "step-runner.sock")
 
-func ListenSocketPath() string { return defaultSocketPath }
+func DefaultSocketPath() string { return defaultSocketPath }
 
-func ListenSocketAddr() *net.UnixAddr { return &net.UnixAddr{Name: ListenSocketPath(), Net: "unix"} }
+func SocketAddr(socketPath string) *net.UnixAddr {
+	return &net.UnixAddr{Name: socketPath, Net: "unix"}
+}

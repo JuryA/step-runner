@@ -31,22 +31,12 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 	defer srClient.CloseConn()
 
 	rr := test.RunRequest(t, `run:
-  - name: hello_world
-    step: ../../../../e2e_tests/steps/echo
-    inputs:
-        echo: hello world
   - name: blabla
-    step: ../../testdata/bash
-    inputs:
-        script: echo "bla bla bla $FOO"
+    script: echo "bla bla bla $FOO"
   - name: env
-    step: ../../testdata/bash
-    inputs:
-        script: env
+    script: env
   - name: file_var
-    step: ../../testdata/bash
-    inputs:
-        script: echo ${{ job.MEGA }} && cat ${{ job.MEGA }}
+    script: echo ${{ job.MEGA }} && cat ${{ job.MEGA }}
 `,
 		map[string]string{
 			"FOO": "bar",
@@ -70,7 +60,6 @@ func Test_StepRunnerClient_RunAndFollow_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, client.StateSuccess.String(), status.State.String())
 	assert.Empty(t, status.Message)
-	assert.Contains(t, logs.String(), "hello world")
 	assert.Contains(t, logs.String(), "bla bla bla bar")
 	assert.Contains(t, logs.String(), "FOO=bar")
 	assert.Contains(t, logs.String(), "BAZ=blammo")
@@ -88,9 +77,7 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 
 	rr := test.RunRequest(t, `run:
   - name: bash
-    step: ../../testdata/bash
-    inputs:
-        script: echo "hello there" && sleep 5 && echo "goodbye"
+    script: echo "hello there" && sleep 5 && echo "goodbye"
 `, nil, nil)
 
 	// NOTE: this cancels the client side, which ultimately calls Close() on the job and terminates it on the server
@@ -108,6 +95,8 @@ func Test_StepRunnerClient_RunAndFollow_Cancelled(t *testing.T) {
 	// on the server side yet, and Close() is necessarily called after Status().
 	assert.Equal(t, client.StateRunning.String(), status.State.String())
 	assert.Empty(t, status.Message)
+	assert.Contains(t, logs.String(), "hello there")
+	assert.NotContains(t, logs.String(), "goodbye")
 }
 
 func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
@@ -119,9 +108,7 @@ func Test_StepRunnerClient_RunAndFollow_Step_Fails(t *testing.T) {
 
 	rr := test.RunRequest(t, `run:
   - name: bash
-    step: ../../testdata/bash
-    inputs:
-        script: kjhdfdhlkf
+    script: kjhdfdhlkf
 `, nil, nil)
 
 	ctx := context.Background()
@@ -173,9 +160,7 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 	step := `
 run:
   - name: bash
-    step: ../../testdata/bash
-    inputs:
-        script: env`
+    script: env`
 
 	go func() {
 		defer wg.Done()
@@ -207,13 +192,9 @@ func Test_StepRunnerClient_RunAndFollow_LogsOnly(t *testing.T) {
 
 	rr := test.RunRequest(t, `run:
   - name: blabla
-    step: ../../testdata/bash
-    inputs:
-        script: echo "bla bla bla $FOO"
+    script: echo "bla bla bla $FOO"
   - name: env
-    step: ../../testdata/bash
-    inputs:
-        script: env
+    script: env
 `,
 		map[string]string{
 			"FOO": "bar",
