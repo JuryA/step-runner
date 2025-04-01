@@ -186,6 +186,11 @@ dist-steps-run-make-target:
 		$(MAKE) -q -C $$dir $(MAKE_TARGET) 2>/dev/null; \
 		if [ $$? -ne 2 ]; then \
 			PLATFORM="$(PLATFORM)" $(MAKE) -C $$dir $(MAKE_TARGET); \
+			if [ $$? -ne 0 ]; then \
+				echo "ERROR: $(MAKE_TARGET) failed."; \
+				echo "       command: 'PLATFORM="$(PLATFORM)" make -C $$dir $(MAKE_TARGET)'"; \
+				exit 1; \
+			fi \
 		fi \
 	done
 
@@ -196,5 +201,9 @@ run-for-all-go-modules: GO_DIRS := $(dir $(GO_MODS))
 run-for-all-go-modules:
 	@for dir in $(GO_DIRS); do \
 		echo "Running $(DESCRIPTION) for $$dir"; \
-		(cd $$dir && $(COMMAND)) || { echo "Command failed in $$dir"; exit 1; }; \
+		(cd "$$dir" && $(COMMAND)) || { \
+        	echo "ERROR: command failed."; \
+        	echo "       command: '$(COMMAND)'"; \
+        	exit 1; \
+        } \
 	done
