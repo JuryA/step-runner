@@ -9,18 +9,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/dist-steps/oci/fetch/internal/testutil/bldr"
-
-	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
 func TestRun(t *testing.T) {
 	t.Run("loads OCI step", func(t *testing.T) {
-		registry := mainBldr.StartOCIRegistryServer(t)
+		registry := bldr.StartOCIRegistryServer(t)
 		remoteImgRef := registry.RefToImage("my-image", "latest")
 
-		layer := mainBldr.OCIImageLayer(t).WithFile("/step.yml", []byte("spec:\n---\nexec: {command: [bash]}")).Build()
-		img := mainBldr.OCIImage(t).WithLayer(layer).Build()
-		imgIndex := mainBldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		layer := bldr.OCIImageLayer(t).WithFile("/step.yml", []byte("spec:\n---\nexec: {command: [bash]}")).Build()
+		img := bldr.OCIImage(t).WithLayer(layer).Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
 		registry.PushImageIndex(remoteImgRef, imgIndex)
 
 		outputFile := filepath.Join(t.TempDir(), "outputs.jsonl")
@@ -37,13 +35,13 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("loads OCI step using a digest", func(t *testing.T) {
-		registry := mainBldr.StartOCIRegistryServer(t)
-		layer := mainBldr.
+		registry := bldr.StartOCIRegistryServer(t)
+		layer := bldr.
 			OCIImageLayer(t).
 			WithFile("/step.yml", []byte("spec:\n---\nexec: {command: [sh]}")).
 			Build()
-		img := mainBldr.OCIImage(t).WithLayer(layer).Build()
-		imgIndex := mainBldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		img := bldr.OCIImage(t).WithLayer(layer).Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
 		registry.PushImageIndex(registry.RefToImage("image", "latest"), imgIndex)
 
 		digest, err := imgIndex.Digest()
