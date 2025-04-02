@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/dist-steps/oci/fetch/internal"
@@ -47,6 +48,18 @@ func (b *CLIInputsBuilder) WithTag(tag string) *CLIInputsBuilder {
 
 func (b *CLIInputsBuilder) WithLogLevel(logLevel string) *CLIInputsBuilder {
 	b.logLevel = logLevel
+	return b
+}
+
+func (b *CLIInputsBuilder) WithOutputFile(outputFile string) *CLIInputsBuilder {
+	b.outputFile = outputFile
+	return b
+}
+
+func (b *CLIInputsBuilder) WithRemoteImgRef(ref name.Reference) *CLIInputsBuilder {
+	b.registry = ref.Context().RegistryStr()
+	b.repository = ref.Context().RepositoryStr()
+	b.tag = ref.Identifier()
 	return b
 }
 
