@@ -1,0 +1,21 @@
+spec:
+  inputs:
+    registry:
+      type: string
+    repository:
+      type: string
+    tag:
+      type: string
+---
+exec:
+  work_dir: ${{step_dir}}
+  command:
+    - "${{step_dir}}/run"
+    - "--registry"
+    - "${{inputs.registry}}"
+    - "--repository"
+    - "${{inputs.repository}}"
+    - "--tag"
+    - "${{inputs.tag}}"
+    - "--output_file"
+    - "${{output_file}}"
