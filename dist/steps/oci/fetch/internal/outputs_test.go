@@ -1,0 +1,30 @@
+package internal_test
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/dist-steps/oci/fetch/internal"
+)
+
+func TestOutputs_Write(t *testing.T) {
+	t.Run("writes outputs to file", func(t *testing.T) {
+		imgRef := name.MustParseReference("registry.gitlab.com:8080/my-group/my-project/image:10.1.1")
+		outputFile := filepath.Join(t.TempDir(), "output.txt")
+
+		err := internal.NewOutputs(outputFile).Write("/path/to/step_dir", imgRef)
+		require.NoError(t, err)
+
+		fileData, err := os.ReadFile(outputFile)
+		require.NoError(t, err)
+
+		lines := strings.Split(string(fileData), "\n")
+		require.Equal(t, `{"name":"download_dir","value":"/path/to/step_dir"}`, lines[0])
+		require.Equal(t, `{"name":"ref","value":"registry.gitlab.com:8080/my-group/my-project/image:10.1.1"}`, lines[1])
+	})
+}
