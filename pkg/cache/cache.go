@@ -3,10 +3,8 @@ package cache
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
-	stepdist "gitlab.com/gitlab-org/step-runner/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
@@ -20,19 +18,6 @@ type cache struct {
 	gitFetcher  *git.GitFetcher
 	ociFetcher  *oci.OCIFetcher
 	distFetcher *dist.Fetcher
-}
-
-func New() (runner.Cache, error) {
-	cacheDir := filepath.Join(os.TempDir(), "step-runner-cache")
-	if err := os.MkdirAll(cacheDir, 0o750); err != nil {
-		return nil, fmt.Errorf("making cache dir %q: %w", cacheDir, err)
-	}
-
-	return NewWithOptions(
-		WithGitFetcher(git.New(cacheDir, git.CloneOptions{Depth: 1})),
-		WithOCIFetcher(oci.NewOCIFetcher(cacheDir)),
-		WithDistFetcher(dist.NewFetcher(stepdist.FindDistributedStep)),
-	), nil
 }
 
 func WithGitFetcher(fetcher *git.GitFetcher) func(*cache) {

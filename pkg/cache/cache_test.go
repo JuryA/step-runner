@@ -17,8 +17,10 @@ import (
 
 func TestCache(t *testing.T) {
 	t.Run("loads local step", func(t *testing.T) {
-		stepCache, err := cache.New()
-		require.NoError(t, err)
+		stepCache := cache.NewWithOptions(
+			cache.WithGitFetcher(git.New(t.TempDir(), git.CloneOptions{Depth: 1})),
+			cache.WithOCIFetcher(oci.NewOCIFetcher(t.TempDir())),
+			cache.WithDistFetcher(dist.NewFetcher(stepdist.FindDistributedStep)))
 
 		res := bldr.FileSystemStepResource(t).WithDir("../../e2e_tests/steps/echo").Build()
 		specDef, err := stepCache.Get(context.Background(), res)

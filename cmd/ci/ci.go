@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/report"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -61,10 +61,7 @@ func run(options *Options) error {
 		Definition: protoDef,
 	}
 
-	defs, err := cache.New()
-	if err != nil {
-		return fmt.Errorf("creating cache: %w", err)
-	}
+	diContainer := di.NewContainer()
 
 	osEnv, err := runner.NewEnvironmentFromOSWithKnownVars()
 	if err != nil {
@@ -88,7 +85,12 @@ func run(options *Options) error {
 	globalCtx := runner.NewGlobalContext(options.WorkDir, options.JobVariables, globalEnv, os.Stdout, os.Stderr)
 	params := &runner.Params{}
 
-	step, err := runner.NewParser(defs).Parse(globalCtx, protoStepDef, params, runner.StepDefinedInGitLabJob)
+	stepParser, err := diContainer.StepParser()
+	if err != nil {
+		return err
+	}
+
+	step, err := stepParser.Parse(globalCtx, protoStepDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)
 	}

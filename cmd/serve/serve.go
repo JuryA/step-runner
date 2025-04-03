@@ -14,8 +14,7 @@ import (
 	"google.golang.org/grpc"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
-	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -51,17 +50,17 @@ func run(_ *cobra.Command, args []string, sigChan chan os.Signal) error {
 		return err
 	}
 
-	stepCache, err := cache.New()
-	if err != nil {
-		return fmt.Errorf("initializing cache: %w", err)
-	}
-
 	env, err := runner.NewEnvironmentFromOS()
 	if err != nil {
 		return fmt.Errorf("initializing environment: %w", err)
 	}
 
-	srv := service.New(stepCache, env)
+	diContainer := di.NewContainer()
+
+	stepRunnerService, err := diContainer.StepRunnerService(env)
+	if err != nil {
+		return fmt.Errorf("initializing step runner service: %w", err)
+	}
 
 	listener, err := net.ListenUnix("unix", socketAddr)
 	if err != nil {
@@ -69,7 +68,7 @@ func run(_ *cobra.Command, args []string, sigChan chan os.Signal) error {
 	}
 
 	grpcServer = grpc.NewServer()
-	proto.RegisterStepRunnerServer(grpcServer, srv)
+	proto.RegisterStepRunnerServer(grpcServer, stepRunnerService)
 
 	log.Printf("step-runner service listening on %v", listener.Addr())
 	return grpcServer.Serve(listener)
