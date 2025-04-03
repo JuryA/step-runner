@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -29,7 +30,12 @@ func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, co
 	factory := NewImageFactory(WithLogger(r.logger))
 	defer factory.CleanUp()
 
-	if r.alreadyPublished(ctx, remoteImgRef.MajorMinorPatch()) {
+	pusher, err := remote.NewPusher(remote.WithContext(ctx), remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return nil, fmt.Errorf("creating image pusher: %w", err)
+	}
+
+	if r.alreadyPublished(pusher, remoteImgRef.MajorMinorPatch()) {
 		return nil, fmt.Errorf("image already published: %s", remoteImgRef.MajorMinorPatch())
 	}
 
@@ -38,7 +44,7 @@ func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, co
 		return nil, err
 	}
 
-	tags, err := r.listPublishedTags(ctx, remoteImgRef)
+	tags, err := r.listPublishedTags(ctx, pusher, remoteImgRef)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +55,7 @@ func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, co
 	}
 
 	for _, ref := range semVerRefs {
-		if err := r.pushImageIndex(ctx, ref, imageIndex); err != nil {
+		if err := r.pushImageIndex(pusher, ref, imageIndex); err != nil {
 			return nil, err
 		}
 	}
@@ -113,7 +119,7 @@ func (r *Releaser) buildImageLayer(factory *ImageFactory, artifact *Artifact) (v
 	return factory.BuildLayer(fs)
 }
 
-func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, imageIndex v1.ImageIndex) error {
+func (r *Releaser) pushImageIndex(pusher *remote.Pusher, ref name.Reference, imageIndex v1.ImageIndex) error {
 	digest, err := imageIndex.Digest()
 	if err != nil {
 		return fmt.Errorf("getting digest of image index: %w", err)
@@ -121,7 +127,7 @@ func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, image
 
 	r.logger.Info("pushing image index", "image_digest", digest.String(), "destination", ref.Name())
 
-	err = remote.WriteIndex(ref, imageIndex, remote.WithContext(ctx))
+	err = remote.WriteIndex(ref, imageIndex, remote.Reuse(pusher))
 	if err != nil {
 		return fmt.Errorf("push index image: %w", err)
 	}
@@ -129,10 +135,9 @@ func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, image
 	return nil
 }
 
-func (r *Releaser) alreadyPublished(ctx context.Context, imgRef name.Reference) bool {
+func (r *Releaser) alreadyPublished(pusher *remote.Pusher, imgRef name.Reference) bool {
 	r.logger.Debug("checking if image has already been published")
-
-	descriptor, _ := remote.Head(imgRef, remote.WithContext(ctx))
+	descriptor, _ := remote.Head(imgRef, remote.Reuse(pusher))
 
 	if descriptor == nil {
 		r.logger.Debug("image has not been published")
@@ -144,10 +149,9 @@ func (r *Releaser) alreadyPublished(ctx context.Context, imgRef name.Reference) 
 // listPublishedTags lists the tags for the remote image
 // for example, for registry.gitlab.com/gitlab-org/gitlab-runner it will return v17.7.0, v17.7.1, v17.8.0, v17.8.1, etc
 // returns no tags if the repository is not found
-func (r *Releaser) listPublishedTags(ctx context.Context, remoteImgRef *RemoteImageRef) ([]string, error) {
+func (r *Releaser) listPublishedTags(ctx context.Context, pusher *remote.Pusher, remoteImgRef *RemoteImageRef) ([]string, error) {
 	r.logger.Debug("listing published tags")
-
-	tags, err := remote.List(remoteImgRef.Repository(), remote.WithContext(ctx))
+	tags, err := remote.List(remoteImgRef.Repository(), remote.Reuse(pusher))
 
 	if err != nil {
 		if isErrorNameUnknown(err) {

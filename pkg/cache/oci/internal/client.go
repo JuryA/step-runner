@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/containerd/platforms"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -59,7 +60,7 @@ func (c *Client) Pull(ctx context.Context, ref name.Reference, opts ...func(*Pul
 
 // fetchImage is like 'remote.Image()' but uses github.com/containerd/platforms for better platform negotiation.
 func (c *Client) fetchImage(ctx context.Context, ref name.Reference, findForPlatform []platforms.Platform) (v1.Image, error) {
-	idx, err := remote.Index(ref, remote.WithContext(ctx))
+	idx, err := remote.Index(ref, remote.WithContext(ctx), remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return nil, fmt.Errorf("fetching index: %w", err)
 	}
