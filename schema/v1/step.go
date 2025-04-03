@@ -4,37 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"google.golang.org/protobuf/types/known/structpb"
 	"gopkg.in/yaml.v3"
+
+	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-type Exec struct {
-	// Command are the parameters to the system exec API. It does not invoke a shell.
-	Command []string `json:"command" yaml:"command" mapstructure:"command"`
+var (
+	_ yaml.Unmarshaler = &Step{}
+	_ json.Unmarshaler = &Step{}
+)
 
-	// WorkDir is the working directly in which `command` will be exec'ed.
-	WorkDir *string `json:"work_dir,omitempty" yaml:"work_dir,omitempty" mapstructure:"work_dir,omitempty"`
-}
+// Inputs is a map of step input names to structured values.
+type StepInputs map[string]interface{}
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *Exec) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["command"]; raw != nil && !ok {
-		return fmt.Errorf("field command in Exec: required")
-	}
-	type Plain Exec
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if plain.Command != nil && len(plain.Command) < 1 {
-		return fmt.Errorf("field %s length: must be >= %d", "command", 1)
-	}
-	*j = Exec(plain)
-	return nil
-}
+// Outputs are the output values for a sequence. They can reference the outputs of
+// sub-steps.
+type StepOutputs map[string]interface{}
 
 // Step is a unit of execution.
 type Step struct {
@@ -45,7 +31,7 @@ type Step struct {
 	Delegate *string `json:"delegate,omitempty" yaml:"delegate,omitempty" mapstructure:"delegate,omitempty"`
 
 	// Env is a map of environment variable names to string values.
-	Env StepEnv `json:"env,omitempty" yaml:"env,omitempty" mapstructure:"env,omitempty"`
+	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty" mapstructure:"env,omitempty"`
 
 	// Exec is a command to run.
 	Exec *Exec `json:"exec,omitempty" yaml:"exec,omitempty" mapstructure:"exec,omitempty"`
@@ -64,16 +50,11 @@ type Step struct {
 	Script *string `json:"script,omitempty" yaml:"script,omitempty" mapstructure:"script,omitempty"`
 
 	// Step is a reference to another step to invoke.
-	Step interface{} `json:"step,omitempty" yaml:"step,omitempty" mapstructure:"step,omitempty"`
+	Step any `json:"step,omitempty" yaml:"step,omitempty" mapstructure:"step,omitempty"`
 
 	// Run is a list of sub-steps to run.
 	Run []Step `json:"run,omitempty" yaml:"run,omitempty" mapstructure:"run,omitempty"`
 }
-
-var (
-	_ yaml.Unmarshaler = &Step{}
-	_ json.Unmarshaler = &Step{}
-)
 
 func (s *Step) UnmarshalYAML(value *yaml.Node) error {
 	type Default Step
@@ -119,12 +100,162 @@ func (s *Step) unmarshalStep() error {
 	}
 }
 
-// Env is a map of environment variable names to string values.
-type StepEnv map[string]string
+func (s *Step) Compile() (*proto.Definition, error) {
+	err := s.verifyOneTypeProvided()
+	if err != nil {
+		return nil, err
+	}
+	return s.compileToDefinitionProto()
+}
 
-// Inputs is a map of step input names to structured values.
-type StepInputs map[string]interface{}
+func (s *Step) verifyOneTypeProvided() error {
+	have := 0
+	if s.Exec != nil {
+		// Exec type step
+		have++
+	}
+	if s.Run != nil {
+		// Run type step
+		have++
+	}
+	if have == 0 {
+		return fmt.Errorf("at least one of `script, `action`, `run` or `exec` must be provided")
+	}
+	if have > 1 {
+		return fmt.Errorf("only one of `script`, `action`, `run` or `exec` may be provided. have %v", have)
+	}
+	return nil
+}
 
-// Outputs are the output values for a sequence. They can reference the outputs of
-// sub-steps.
-type StepOutputs map[string]interface{}
+func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
+	protoDef := &proto.Definition{}
+	switch {
+	case s.Exec != nil:
+		protoDef.Type = proto.DefinitionType_exec
+		protoDef.Exec = &proto.Definition_Exec{
+			Command: s.Exec.Command,
+		}
+		if s.Exec.WorkDir != nil {
+			protoDef.Exec.WorkDir = *s.Exec.WorkDir
+		}
+	case s.Run != nil:
+		protoDef.Type = proto.DefinitionType_steps
+		protoDef.Steps = make([]*proto.Step, len(s.Run))
+		for i, ss := range s.Run {
+			protoStep, err := (&ss).CompileStep(i)
+			if err != nil {
+				return nil, fmt.Errorf("compiling run[%v]: %v: %w", i, s.Name, err)
+			}
+			protoDef.Steps[i] = protoStep
+		}
+		protoDef.Outputs = map[string]*structpb.Value{}
+		for k, v := range s.Outputs {
+			protoV, err := (&valueCompiler{v}).compile()
+			if err != nil {
+				return nil, fmt.Errorf("compiling output[%q]: %v: %w", k, v, err)
+			}
+			protoDef.Outputs[k] = protoV
+		}
+	default:
+		return nil, fmt.Errorf("could not determine step type")
+	}
+	protoDef.Env = s.Env
+	if s.Delegate != nil {
+		protoDef.Delegate = *s.Delegate
+	}
+	return protoDef, nil
+}
+
+func (s *Step) CompileStep(i int) (*proto.Step, error) {
+	err := s.compileScriptKeywordToStep()
+	if err != nil {
+		return nil, err
+	}
+	err = s.compileActionKeywordToStep()
+	if err != nil {
+		return nil, err
+	}
+	return s.compileToStepProto()
+}
+
+func (s *Step) compileScriptKeywordToStep() error {
+	if s.Script == nil || *s.Script == "" {
+		return nil
+	}
+	if s.Step != nil {
+		return fmt.Errorf("the `script` keyword cannot be used with the `step` keyword")
+	}
+	if s.Action != nil && *s.Action != "" {
+		return fmt.Errorf("the `script` keyword cannot be used with the `action` keyword")
+	}
+	if len(s.Inputs) != 0 {
+		return fmt.Errorf("the `script` keyword cannot be used with `inputs`")
+	}
+
+	s.Step = &proto.Step_Reference{
+		Protocol: proto.StepReferenceProtocol_dist,
+		Path:     []string{"script"},
+		Filename: "step.yml",
+	}
+
+	s.Inputs = map[string]any{
+		"script": s.Script,
+	}
+	s.Script = nil
+	return nil
+}
+
+func (s *Step) compileActionKeywordToStep() error {
+	if s.Action == nil || *s.Action == "" {
+		return nil
+	}
+	if s.Step != nil {
+		return fmt.Errorf("the `action` keyword cannot be used with the `step` keyword")
+	}
+	if s.Script != nil && *s.Script != "" {
+		return fmt.Errorf("the `action` keyword cannot be used with the `script` keyword")
+	}
+	s.Step = &Reference{Git: NewGitReference("https://gitlab.com/components/action-runner", "main")}
+	s.Inputs = map[string]any{
+		"action": s.Action,
+		"inputs": s.Inputs,
+	}
+	s.Action = nil
+	return nil
+}
+
+func (s *Step) compileToStepProto() (*proto.Step, error) {
+	protoStep := &proto.Step{}
+	protoInputs := map[string]*structpb.Value{}
+	for k, v := range (map[string]any)(s.Inputs) {
+		protoValue, err := (&valueCompiler{v}).compile()
+		if err != nil {
+			return nil, err
+		}
+		protoInputs[k] = protoValue
+	}
+	var (
+		ref *proto.Step_Reference
+		err error
+	)
+	switch v := s.Step.(type) {
+	case *proto.Step_Reference:
+		ref = v
+	case string:
+		ref, err = shortReference(v).compile()
+	case *Reference:
+		ref, err = v.compile()
+	default:
+		err = fmt.Errorf("unsupported type: %T", v)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("compiling reference: %w", err)
+	}
+	if s.Name != nil {
+		protoStep.Name = *s.Name
+	}
+	protoStep.Env = s.Env
+	protoStep.Step = ref
+	protoStep.Inputs = protoInputs
+	return protoStep, nil
+}
