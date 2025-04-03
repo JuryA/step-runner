@@ -20,8 +20,8 @@ func TestCache(t *testing.T) {
 		stepCache, err := cache.New()
 		require.NoError(t, err)
 
-		res := bldr.FileSystemStepResource().Build()
-		specDef, err := stepCache.Get(context.Background(), "../../e2e_tests/steps/echo", res)
+		res := bldr.FileSystemStepResource(t).WithDir("../../e2e_tests/steps/echo").Build()
+		specDef, err := stepCache.Get(context.Background(), "", res)
 		require.NoError(t, err)
 		require.Contains(t, strings.Join(specDef.Definition.Exec.Command, ","), "echo")
 	})

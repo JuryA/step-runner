@@ -29,7 +29,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext(t).Build()
-		stepResource := bldr.FileSystemStepResource().Build()
+		stepResource := bldr.FileSystemStepResource(t).Build()
 		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
 		stepResult, err := step.Run(context.Background(), stepsCtx)
 
@@ -54,7 +54,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext(t).Build()
-		stepResource := bldr.FileSystemStepResource().Build()
+		stepResource := bldr.FileSystemStepResource(t).Build()
 		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
 		_, err := step.Run(context.Background(), stepsCtx)
 

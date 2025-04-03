@@ -2,6 +2,7 @@ package runner
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -46,7 +47,7 @@ func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, lo
 		var steps []Step
 
 		for _, stepReference := range specDef.Definition.Steps {
-			stepResource, err := p.parseStepResource(stepReference.Step)
+			stepResource, err := p.parseStepResource(specDef.Dir, stepReference.Step)
 
 			if err != nil {
 				return nil, err
@@ -71,10 +72,11 @@ func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Var
 	return nil
 }
 
-func (p *Parser) parseStepResource(stepRef *proto.Step_Reference) (StepResource, error) {
+func (p *Parser) parseStepResource(parentDir string, stepRef *proto.Step_Reference) (StepResource, error) {
 	switch stepRef.Protocol {
 	case proto.StepReferenceProtocol_local:
-		return NewFileSystemStepResource(stepRef.Path, stepRef.Filename), nil
+		stepPath := filepath.Join(stepRef.Path...)
+		return NewFileSystemStepResource(filepath.Join(parentDir, stepPath), stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_git:
 		return NewGitStepResource(stepRef.Url, stepRef.Version, stepRef.Path, stepRef.Filename), nil

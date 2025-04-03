@@ -12,7 +12,6 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
-	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 var _ runner.Cache = &cache{}
@@ -65,22 +64,23 @@ func NewWithOptions(options ...func(*cache)) runner.Cache {
 }
 
 func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
-	stepRef := stepResource.ToProtoStepRef()
+	switch sr := stepResource.(type) {
+	case *runner.FileSystemStepResource:
+		return sr.Fetch(ctx)
 
-	switch stepRef.Protocol {
-	case proto.StepReferenceProtocol_local:
-		return c.load(stepRef, parentDir)
-
-	case proto.StepReferenceProtocol_git:
+	case *runner.GitStepResource:
+		stepRef := sr.ToProtoStepRef()
 		dir, err := c.gitFetcher.Get(ctx, stepRef.Url, stepRef.Version)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}
 
-		return c.load(stepRef, dir)
+		stepPath := filepath.Join(stepRef.Path...)
+		return c.Get(ctx, dir, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
 
-	case proto.StepReferenceProtocol_oci:
-		imgRef, err := stepResource.(*runner.OCIStepResource).NamedReference()
+	case *runner.OCIStepResource:
+		stepRef := sr.ToProtoStepRef()
+		imgRef, err := sr.NamedReference()
 		if err != nil {
 			return nil, fmt.Errorf("OCI image: %w", err)
 		}
@@ -90,44 +90,20 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}
 
-		return c.load(stepRef, dir)
+		stepPath := filepath.Join(stepRef.Path...)
+		return c.Get(ctx, dir, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
 
-	case proto.StepReferenceProtocol_dist:
+	case *runner.DistStepResource:
+		stepRef := sr.ToProtoStepRef()
 		dir, err := c.distFetcher.Fetch(stepRef.Path)
 		if err != nil {
 			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
 		}
 
-		return c.load(stepRef, dir)
+		stepPath := filepath.Join(stepRef.Path...)
+		return c.Get(ctx, dir, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
 
 	default:
-		return nil, fmt.Errorf("invalid step reference: %v", stepRef)
+		return nil, fmt.Errorf("invalid step reference: %s", stepResource.Describe())
 	}
-}
-
-func (c *cache) load(stepRef *proto.Step_Reference, stepDir string) (*proto.SpecDefinition, error) {
-	path := filepath.Join(stepRef.Path...)
-	filename := filepath.Join(stepDir, path, stepRef.Filename)
-
-	spec, step, err := schema.LoadSteps(filename)
-	if err != nil {
-		return nil, fmt.Errorf("loading file %q: %w", filename, err)
-	}
-
-	protoSpec, err := spec.Compile()
-	if err != nil {
-		return nil, fmt.Errorf("compiling file %q: %w", stepDir, err)
-	}
-
-	protoDef, err := step.Compile()
-	if err != nil {
-		return nil, fmt.Errorf("compiling file %q: %w", stepDir, err)
-	}
-
-	protoStepDef := &proto.SpecDefinition{
-		Spec:       protoSpec,
-		Definition: protoDef,
-		Dir:        filepath.Join(stepDir, path),
-	}
-	return protoStepDef, nil
 }
