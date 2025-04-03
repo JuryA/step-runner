@@ -63,7 +63,7 @@ func NewWithOptions(options ...func(*cache)) runner.Cache {
 	return c
 }
 
-func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
+func (c *cache) Get(ctx context.Context, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
 	switch sr := stepResource.(type) {
 	case *runner.FileSystemStepResource:
 		return sr.Fetch(ctx)
@@ -76,7 +76,7 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 		}
 
 		stepPath := filepath.Join(stepRef.Path...)
-		return c.Get(ctx, dir, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
+		return c.Get(ctx, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
 
 	case *runner.OCIStepResource:
 		stepRef := sr.ToProtoStepRef()
@@ -91,7 +91,7 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 		}
 
 		stepPath := filepath.Join(stepRef.Path...)
-		return c.Get(ctx, dir, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
+		return c.Get(ctx, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
 
 	case *runner.DistStepResource:
 		stepRef := sr.ToProtoStepRef()
@@ -101,7 +101,7 @@ func (c *cache) Get(ctx context.Context, parentDir string, stepResource runner.S
 		}
 
 		stepPath := filepath.Join(stepRef.Path...)
-		return c.Get(ctx, dir, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
+		return c.Get(ctx, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
 
 	default:
 		return nil, fmt.Errorf("invalid step reference: %s", stepResource.Describe())

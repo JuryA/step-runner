@@ -21,7 +21,7 @@ func TestCache(t *testing.T) {
 		require.NoError(t, err)
 
 		res := bldr.FileSystemStepResource(t).WithDir("../../e2e_tests/steps/echo").Build()
-		specDef, err := stepCache.Get(context.Background(), "", res)
+		specDef, err := stepCache.Get(context.Background(), res)
 		require.NoError(t, err)
 		require.Contains(t, strings.Join(specDef.Definition.Exec.Command, ","), "echo")
 	})
@@ -38,7 +38,7 @@ func TestCache(t *testing.T) {
 			Commit("Add step definition")
 
 		res := bldr.GitStepResource().WithURL(gitServerURL).WithVersion("main").Build()
-		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
+		specDef, err := stepCache.Get(context.Background(), res)
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})
@@ -60,7 +60,7 @@ func TestCache(t *testing.T) {
 			WithPath("foo", "bar", "bob").
 			WithVersion(commit).
 			Build()
-		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
+		specDef, err := stepCache.Get(context.Background(), res)
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})
@@ -78,7 +78,7 @@ func TestCache(t *testing.T) {
 		ociFetcher := oci.NewOCIFetcher(t.TempDir())
 
 		stepCache := cache.NewWithOptions(cache.WithOCIFetcher(ociFetcher))
-		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
+		specDef, err := stepCache.Get(context.Background(), res)
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})
@@ -103,7 +103,7 @@ func TestCache(t *testing.T) {
 		ociFetcher := oci.NewOCIFetcher(t.TempDir())
 
 		stepCache := cache.NewWithOptions(cache.WithOCIFetcher(ociFetcher))
-		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
+		specDef, err := stepCache.Get(context.Background(), res)
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})
@@ -126,7 +126,7 @@ func TestCache(t *testing.T) {
 		ociFetcher := oci.NewOCIFetcher(t.TempDir())
 
 		stepCache := cache.NewWithOptions(cache.WithOCIFetcher(ociFetcher))
-		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
+		specDef, err := stepCache.Get(context.Background(), res)
 		require.NoError(t, err)
 		require.Equal(t, []string{"sh"}, specDef.Definition.Exec.Command)
 	})
@@ -136,7 +136,7 @@ func TestCache(t *testing.T) {
 		distFetcher := dist.NewFetcher(stepdist.FindDistributedStep)
 
 		stepCache := cache.NewWithOptions(cache.WithDistFetcher(distFetcher))
-		specDef, err := stepCache.Get(context.Background(), t.TempDir(), res)
+		specDef, err := stepCache.Get(context.Background(), res)
 		require.NoError(t, err)
 		require.Contains(t, strings.Join(specDef.Definition.Exec.Command, " "), "run")
 	})

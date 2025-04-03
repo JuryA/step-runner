@@ -70,7 +70,7 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, wor
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
 	}
 
-	specDef, err := s.resourceLoader.Get(ctx, workingDir, stepResource)
+	specDef, err := s.resourceLoader.Get(ctx, stepResource)
 
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)

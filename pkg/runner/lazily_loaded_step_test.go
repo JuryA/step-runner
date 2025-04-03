@@ -92,7 +92,7 @@ type FixedSpecDefCache struct {
 	lastGet runner.StepResource
 }
 
-func (c *FixedSpecDefCache) Get(_ context.Context, _ string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
+func (c *FixedSpecDefCache) Get(_ context.Context, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
 	c.lastGet = stepResource
 	return c.specDef, nil
 }
