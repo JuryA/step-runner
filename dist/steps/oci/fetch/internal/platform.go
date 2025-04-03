@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"log/slog"
 	"strings"
 
 	"github.com/containerd/platforms"
@@ -10,9 +11,11 @@ import (
 
 func FindManifestForPlatforms(findFor []platforms.Platform, manifests []v1.Descriptor) *v1.Descriptor {
 	for _, platform := range findFor {
+		slog.Debug("searching image index manifest for platform image", "platform", platform)
 		matched := FindManifestForPlatform(platform, manifests)
 
 		if matched != nil {
+			slog.Debug("found image for platform", "image_digest", matched.Digest, "platform", platform)
 			return matched
 		}
 	}
