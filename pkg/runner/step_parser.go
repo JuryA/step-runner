@@ -53,7 +53,7 @@ func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, lo
 				return nil, err
 			}
 
-			steps = append(steps, NewLazilyLoadedStep(p.globalCtx, p.stepCache, p, stepReference, stepResource, specDef.Dir))
+			steps = append(steps, NewLazilyLoadedStep(p.globalCtx, p.stepCache, p, stepReference, stepResource))
 		}
 
 		return NewSequenceOfSteps(loadedFrom, params, specDef, steps...), nil

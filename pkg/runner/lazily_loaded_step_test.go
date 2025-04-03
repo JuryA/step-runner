@@ -30,7 +30,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext(t).Build()
 		stepResource := bldr.FileSystemStepResource(t).Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		stepResult, err := step.Run(context.Background(), stepsCtx)
 
 		require.NoError(t, err)
@@ -55,7 +55,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext(t).Build()
 		stepResource := bldr.FileSystemStepResource(t).Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		_, err := step.Run(context.Background(), stepsCtx)
 
 		require.Error(t, err)
@@ -78,7 +78,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 		globalCtx := bldr.GlobalContext().WithJob("CI_JOB_TOKEN", "ABCDEF").Build()
 		stepsCtx := bldr.StepsContext(t).WithGlobalContext(globalCtx).Build()
 		stepResource := bldr.GitStepResource().WithURL("http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/step").Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		stepResult, err := step.Run(context.Background(), stepsCtx)
 
 		require.NoError(t, err)

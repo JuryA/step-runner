@@ -16,17 +16,15 @@ type LazilyLoadedStep struct {
 	parser         StepParser
 	stepReference  *proto.Step
 	stepResource   StepResource
-	workDir        string
 }
 
-func NewLazilyLoadedStep(globalCtx *GlobalContext, resourceLoader Cache, parser StepParser, stepReference *proto.Step, stepResource StepResource, workDir string) *LazilyLoadedStep {
+func NewLazilyLoadedStep(globalCtx *GlobalContext, resourceLoader Cache, parser StepParser, stepReference *proto.Step, stepResource StepResource) *LazilyLoadedStep {
 	return &LazilyLoadedStep{
 		globalCtx:      globalCtx,
 		resourceLoader: resourceLoader,
 		parser:         parser,
 		stepReference:  stepReference,
 		stepResource:   stepResource,
-		workDir:        workDir,
 	}
 }
 
@@ -38,7 +36,7 @@ func (s *LazilyLoadedStep) Describe() string {
 // The step reference inputs and environment are expanded.
 // The current environment is cloned into params in preparation for a recursive call to Run.
 func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*proto.StepResult, error) {
-	step, params, subStepSpecDefinition, err := s.loadStep(ctx, parentStepsCtx, s.workDir)
+	step, params, subStepSpecDefinition, err := s.loadStep(ctx, parentStepsCtx)
 
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", s.Describe(), err)
@@ -63,7 +61,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 	return result, nil
 }
 
-func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext, workingDir string) (Step, *Params, *proto.SpecDefinition, error) {
+func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext) (Step, *Params, *proto.SpecDefinition, error) {
 	stepResource, err := s.stepResource.Interpolate(stepsCtx.View())
 
 	if err != nil {
