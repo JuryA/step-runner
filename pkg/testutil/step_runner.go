@@ -86,7 +86,7 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) 
 	globalCtx := runner.NewGlobalContext(workDir, b.globalCtxJob, env, b.log, b.log)
 	params := &runner.Params{}
 
-	step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
+	step, err := runner.NewParser(defs).Parse(globalCtx, protoStepDef, params, runner.StepDefinedInGitLabJob)
 	require.NoError(b.t, err)
 
 	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)

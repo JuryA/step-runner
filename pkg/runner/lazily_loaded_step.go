@@ -111,7 +111,7 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext) (St
 		Env:    stepsCtx.EnvWithLexicalScope(env).Values(),
 	}
 
-	step, err := s.parser.Parse(specDef, params, NewNamedStepReference(s.stepReference.Name, s.stepReference.Step))
+	step, err := s.parser.Parse(stepsCtx.globalCtx, specDef, params, NewNamedStepReference(s.stepReference.Name, s.stepReference.Step))
 
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)

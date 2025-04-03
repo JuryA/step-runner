@@ -132,7 +132,7 @@ func run(options *Options) error {
 	}
 
 	params := &runner.Params{}
-	step, err := runner.NewParser(globalCtx, stepCache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
+	step, err := runner.NewParser(stepCache).Parse(globalCtx, specDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return err
 	}

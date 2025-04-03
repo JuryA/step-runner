@@ -88,7 +88,7 @@ func run(options *Options) error {
 	globalCtx := runner.NewGlobalContext(options.WorkDir, options.JobVariables, globalEnv, os.Stdout, os.Stderr)
 	params := &runner.Params{}
 
-	step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
+	step, err := runner.NewParser(defs).Parse(globalCtx, protoStepDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)
 	}
