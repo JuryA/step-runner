@@ -29,8 +29,8 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext(t).Build()
-		stepResource := bldr.FileSystemStepResource().Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
+		stepResource := bldr.FileSystemStepResource(t).Build()
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		stepResult, err := step.Run(context.Background(), stepsCtx)
 
 		require.NoError(t, err)
@@ -54,8 +54,8 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext(t).Build()
-		stepResource := bldr.FileSystemStepResource().Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
+		stepResource := bldr.FileSystemStepResource(t).Build()
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		_, err := step.Run(context.Background(), stepsCtx)
 
 		require.Error(t, err)
@@ -78,7 +78,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 		globalCtx := bldr.GlobalContext().WithJob("CI_JOB_TOKEN", "ABCDEF").Build()
 		stepsCtx := bldr.StepsContext(t).WithGlobalContext(globalCtx).Build()
 		stepResource := bldr.GitStepResource().WithURL("http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/step").Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource, "")
+		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		stepResult, err := step.Run(context.Background(), stepsCtx)
 
 		require.NoError(t, err)
@@ -92,7 +92,7 @@ type FixedSpecDefCache struct {
 	lastGet runner.StepResource
 }
 
-func (c *FixedSpecDefCache) Get(_ context.Context, _ string, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
+func (c *FixedSpecDefCache) Get(_ context.Context, stepResource runner.StepResource) (*proto.SpecDefinition, error) {
 	c.lastGet = stepResource
 	return c.specDef, nil
 }
@@ -101,6 +101,6 @@ type FixedStepParser struct {
 	step runner.Step
 }
 
-func (c *FixedStepParser) Parse(_ *proto.SpecDefinition, _ *runner.Params, _ runner.StepReference) (runner.Step, error) {
+func (c *FixedStepParser) Parse(_ *runner.GlobalContext, _ *proto.SpecDefinition, _ *runner.Params, _ runner.StepReference) (runner.Step, error) {
 	return c.step, nil
 }

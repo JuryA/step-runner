@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 	"gopkg.in/yaml.v3"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/report"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -121,18 +121,21 @@ func run(options *Options) error {
 			Definition: protoDef,
 		}
 	}
-	stepCache, err := cache.New()
-	if err != nil {
-		return err
-	}
+
+	diContainer := di.NewContainer()
 
 	globalCtx, err := createGlobalCtx(options)
 	if err != nil {
 		return err
 	}
 
+	stepParser, err := diContainer.StepParser()
+	if err != nil {
+		return err
+	}
+
 	params := &runner.Params{}
-	step, err := runner.NewParser(globalCtx, stepCache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
+	step, err := stepParser.Parse(globalCtx, specDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return err
 	}

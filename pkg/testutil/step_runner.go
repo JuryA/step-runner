@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
@@ -67,8 +67,7 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) 
 	protoStepDef.Dir, err = os.Getwd()
 	require.NoError(b.t, err)
 
-	defs, err := cache.New()
-	require.NoError(b.t, err)
+	diContainer := di.NewContainer()
 
 	osEnv, err := runner.NewEnvironmentFromOS()
 	require.NoError(b.t, err)
@@ -86,7 +85,10 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) 
 	globalCtx := runner.NewGlobalContext(workDir, b.globalCtxJob, env, b.log, b.log)
 	params := &runner.Params{}
 
-	step, err := runner.NewParser(globalCtx, defs).Parse(protoStepDef, params, runner.StepDefinedInGitLabJob)
+	stepParser, err := diContainer.StepParser()
+	require.NoError(b.t, err)
+
+	step, err := stepParser.Parse(globalCtx, protoStepDef, params, runner.StepDefinedInGitLabJob)
 	require.NoError(b.t, err)
 
 	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)

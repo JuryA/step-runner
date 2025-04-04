@@ -2,33 +2,32 @@ package runner
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type StepParser interface {
-	Parse(specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error)
+	Parse(globalCtx *GlobalContext, specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error)
 }
 
 type Parser struct {
-	globalCtx *GlobalContext
 	stepCache Cache
 }
 
-func NewParser(globalCtx *GlobalContext, stepCache Cache) *Parser {
+func NewParser(stepCache Cache) *Parser {
 	return &Parser{
-		globalCtx: globalCtx,
 		stepCache: stepCache,
 	}
 }
 
-func (p *Parser) Parse(specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
+func (p *Parser) Parse(globalCtx *GlobalContext, specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
 	if err := p.validateInputs(specDef.Spec, params.Inputs); err != nil {
 		return nil, fmt.Errorf("failed to parse spec definition: %w", err)
 	}
 
-	step, err := p.parseStepType(specDef, params, loadedFrom)
+	step, err := p.parseStepType(globalCtx, specDef, params, loadedFrom)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse spec definition: %w", err)
@@ -37,7 +36,7 @@ func (p *Parser) Parse(specDef *proto.SpecDefinition, params *Params, loadedFrom
 	return step, nil
 }
 
-func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
+func (p *Parser) parseStepType(globalCtx *GlobalContext, specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
 	if specDef.Definition.Type == proto.DefinitionType_exec {
 		return NewExecutableStep(loadedFrom, params, specDef), nil
 	}
@@ -46,13 +45,13 @@ func (p *Parser) parseStepType(specDef *proto.SpecDefinition, params *Params, lo
 		var steps []Step
 
 		for _, stepReference := range specDef.Definition.Steps {
-			stepResource, err := p.parseStepResource(stepReference.Step)
+			stepResource, err := p.parseStepResource(specDef.Dir, stepReference.Step)
 
 			if err != nil {
 				return nil, err
 			}
 
-			steps = append(steps, NewLazilyLoadedStep(p.globalCtx, p.stepCache, p, stepReference, stepResource, specDef.Dir))
+			steps = append(steps, NewLazilyLoadedStep(globalCtx, p.stepCache, p, stepReference, stepResource))
 		}
 
 		return NewSequenceOfSteps(loadedFrom, params, specDef, steps...), nil
@@ -71,10 +70,11 @@ func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Var
 	return nil
 }
 
-func (p *Parser) parseStepResource(stepRef *proto.Step_Reference) (StepResource, error) {
+func (p *Parser) parseStepResource(parentDir string, stepRef *proto.Step_Reference) (StepResource, error) {
 	switch stepRef.Protocol {
 	case proto.StepReferenceProtocol_local:
-		return NewFileSystemStepResource(stepRef.Path, stepRef.Filename), nil
+		stepPath := filepath.Join(stepRef.Path...)
+		return NewFileSystemStepResource(filepath.Join(parentDir, stepPath), stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_git:
 		return NewGitStepResource(stepRef.Url, stepRef.Version, stepRef.Path, stepRef.Filename), nil
