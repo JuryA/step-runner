@@ -91,7 +91,7 @@ func TestOCIStepResource_Fetch(t *testing.T) {
 
 		fetcher := oci.NewOCIFetcher(t.TempDir())
 		res := runner.NewOCIStepResource(fetcher, registry.Address(), "my-image", "latest", "", "step.yml")
-		specDef, err := res.Fetch(context.Background())
+		specDef, err := res.Fetch(context.Background(), nil)
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})
@@ -110,7 +110,7 @@ func TestOCIStepResource_Fetch(t *testing.T) {
 
 		fetcher := oci.NewOCIFetcher(t.TempDir())
 		res := runner.NewOCIStepResource(fetcher, registry.Address(), "my-image", "latest", "foo/bar/bob", "step.yml")
-		specDef, err := res.Fetch(context.Background())
+		specDef, err := res.Fetch(context.Background(), nil)
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})
@@ -130,7 +130,7 @@ func TestOCIStepResource_Fetch(t *testing.T) {
 
 		fetcher := oci.NewOCIFetcher(t.TempDir())
 		res := runner.NewOCIStepResource(fetcher, registry.Address(), "image", digest.String(), "", "step.yml")
-		specDef, err := res.Fetch(context.Background())
+		specDef, err := res.Fetch(context.Background(), nil)
 		require.NoError(t, err)
 		require.Equal(t, []string{"sh"}, specDef.Definition.Exec.Command)
 	})

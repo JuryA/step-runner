@@ -17,7 +17,7 @@ func TestFileSystemStepResource_Fetch(t *testing.T) {
 			Build()
 
 		resource := runner.NewFileSystemStepResource(dir, "step.yml")
-		specDef, err := resource.Fetch(context.Background())
+		specDef, err := resource.Fetch(context.Background(), nil)
 		require.NoError(t, err)
 		require.Contains(t, specDef.Definition.Exec.Command, "sh")
 	})

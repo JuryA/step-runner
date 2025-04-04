@@ -25,17 +25,13 @@ func NewDistStepResource(fetcher *dist.Fetcher, stepDir string, filename string)
 	}
 }
 
-func (sr *DistStepResource) Interpolate(_ *expression.InterpolationContext) (StepResource, error) {
-	return sr, nil
-}
-
-func (sr *DistStepResource) Fetch(ctx context.Context) (*proto.SpecDefinition, error) {
+func (sr *DistStepResource) Fetch(ctx context.Context, _ *expression.InterpolationContext) (*proto.SpecDefinition, error) {
 	dir, err := sr.fetcher.Fetch(sr.stepDir)
 	if err != nil {
 		return nil, fmt.Errorf("fetching dist step: %w", err)
 	}
 
-	specDef, err := NewFileSystemStepResource(filepath.Join(dir, sr.stepDir), sr.filename).Fetch(ctx)
+	specDef, err := NewFileSystemStepResource(filepath.Join(dir, sr.stepDir), sr.filename).Fetch(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("fetching dist step: %w", err)
 	}

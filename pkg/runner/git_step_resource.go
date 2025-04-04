@@ -29,23 +29,18 @@ func NewGitStepResource(fetcher *git.GitFetcher, url string, version string, ste
 	}
 }
 
-func (sr *GitStepResource) Interpolate(view *expression.InterpolationContext) (StepResource, error) {
-	newURL, err := expression.ExpandString(view, sr.url)
-
+func (sr *GitStepResource) Fetch(ctx context.Context, view *expression.InterpolationContext) (*proto.SpecDefinition, error) {
+	url, err := expression.ExpandString(view, sr.url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to interpolate git url: %w", err)
+		return nil, fmt.Errorf("fetching git step: interpolating url: %w", err)
 	}
 
-	return NewGitStepResource(sr.fetcher, newURL, sr.version, sr.stepDir, sr.filename), nil
-}
-
-func (sr *GitStepResource) Fetch(ctx context.Context) (*proto.SpecDefinition, error) {
-	dir, err := sr.fetcher.Get(ctx, sr.url, sr.version)
+	dir, err := sr.fetcher.Get(ctx, url, sr.version)
 	if err != nil {
 		return nil, fmt.Errorf("fetching git step: %w", err)
 	}
 
-	specDef, err := NewFileSystemStepResource(filepath.Join(dir, sr.stepDir), sr.filename).Fetch(ctx)
+	specDef, err := NewFileSystemStepResource(filepath.Join(dir, sr.stepDir), sr.filename).Fetch(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("fetching git step: %w", err)
 	}

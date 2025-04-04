@@ -30,10 +30,6 @@ func (sr *FixedStepResource) Describe() string {
 	return "fixed-step-resource"
 }
 
-func (sr *FixedStepResource) Interpolate(_ *expression.InterpolationContext) (runner.StepResource, error) {
-	return sr, nil
-}
-
-func (sr *FixedStepResource) Fetch(_ ctx.Context) (*proto.SpecDefinition, error) {
+func (sr *FixedStepResource) Fetch(ctx ctx.Context, view *expression.InterpolationContext) (*proto.SpecDefinition, error) {
 	return sr.specDef, nil
 }

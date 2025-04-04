@@ -34,10 +34,6 @@ func NewOCIStepResource(fetcher *oci.OCIFetcher, registry, repository string, ta
 	}
 }
 
-func (sr *OCIStepResource) Interpolate(_ *expression.InterpolationContext) (StepResource, error) {
-	return sr, nil
-}
-
 func (sr *OCIStepResource) Describe() string {
 	return fmt.Sprintf("%s/%s:%s[%s/%s]", sr.registry, sr.repository, sr.tag, sr.stepDir, sr.filename)
 }
@@ -58,7 +54,7 @@ func (sr *OCIStepResource) NamedReference() (name.Reference, error) {
 	return nil, fmt.Errorf("parsing OCI image reference: %w", tagErr)
 }
 
-func (sr *OCIStepResource) Fetch(ctx context.Context) (*proto.SpecDefinition, error) {
+func (sr *OCIStepResource) Fetch(ctx context.Context, _ *expression.InterpolationContext) (*proto.SpecDefinition, error) {
 	imgRef, err := sr.NamedReference()
 	if err != nil {
 		return nil, fmt.Errorf("fetching oci step: %w", err)
@@ -69,7 +65,7 @@ func (sr *OCIStepResource) Fetch(ctx context.Context) (*proto.SpecDefinition, er
 		return nil, fmt.Errorf("fetching oci step: %w", err)
 	}
 
-	specDef, err := NewFileSystemStepResource(filepath.Join(dir, sr.stepDir), sr.filename).Fetch(ctx)
+	specDef, err := NewFileSystemStepResource(filepath.Join(dir, sr.stepDir), sr.filename).Fetch(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("fetching oci step: %w", err)
 	}

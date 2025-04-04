@@ -16,7 +16,7 @@ func TestDistStepResource_Fetch(t *testing.T) {
 	t.Run("runs publish dist step", func(t *testing.T) {
 		fetcher := dist.NewFetcher(stepdist.FindDistributedStep)
 		res := runner.NewDistStepResource(fetcher, "oci/publish", "step.yml")
-		specDef, err := res.Fetch(context.Background())
+		specDef, err := res.Fetch(context.Background(), nil)
 		require.NoError(t, err)
 		require.Contains(t, strings.Join(specDef.Definition.Exec.Command, " "), "run")
 	})

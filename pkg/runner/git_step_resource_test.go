@@ -11,18 +11,6 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
-func TestGitStepResource_Interpolate(t *testing.T) {
-	t.Run("interpolates URL", func(t *testing.T) {
-		view := bldr.InterpolationCtx().WithEnvVar("STEP", "echo").Build()
-
-		gitResource := runner.NewGitStepResource(nil, "https://gitlab.com/steps/${{env.STEP}}", "main", "", "step.yml")
-		newResource, err := gitResource.Interpolate(view)
-		require.NoError(t, err)
-		require.NotSame(t, gitResource, newResource)
-		require.Equal(t, "https://gitlab.com/steps/echo@main:/step.yml", newResource.Describe())
-	})
-}
-
 func TestGitStepResource_Fetch(t *testing.T) {
 	t.Run("loads Git step", func(t *testing.T) {
 		repo, worktree := bldr.GitRepository().Build(t)
@@ -33,9 +21,11 @@ func TestGitStepResource_Fetch(t *testing.T) {
 			Stage("step.yml").
 			Commit("Add step definition")
 
+		view := bldr.InterpolationCtx().WithEnvVar("SERVER_ADDR", gitServerURL).Build()
+
 		fetcher := git.New(t.TempDir(), git.CloneOptions{Depth: 0})
-		res := runner.NewGitStepResource(fetcher, gitServerURL, "main", "", "step.yml")
-		specDef, err := res.Fetch(context.Background())
+		res := runner.NewGitStepResource(fetcher, "${{env.SERVER_ADDR}}", "main", "", "step.yml")
+		specDef, err := res.Fetch(context.Background(), view)
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})
@@ -52,7 +42,7 @@ func TestGitStepResource_Fetch(t *testing.T) {
 
 		fetcher := git.New(t.TempDir(), git.CloneOptions{Depth: 0})
 		res := runner.NewGitStepResource(fetcher, gitServerURL, commit, "foo/bar/bob", "step.yml")
-		specDef, err := res.Fetch(context.Background())
+		specDef, err := res.Fetch(context.Background(), bldr.InterpolationCtx().Build())
 		require.NoError(t, err)
 		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
 	})

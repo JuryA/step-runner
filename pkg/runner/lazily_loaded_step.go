@@ -60,14 +60,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 }
 
 func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext) (Step, *Params, *proto.SpecDefinition, error) {
-	stepResource, err := s.stepResource.Interpolate(stepsCtx.View())
-
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
-	}
-
-	specDef, err := stepResource.Fetch(ctx)
-
+	specDef, err := s.stepResource.Fetch(ctx, stepsCtx.View())
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
 	}

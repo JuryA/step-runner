@@ -10,6 +10,5 @@ import (
 // StepResource knows how to load a Step
 type StepResource interface {
 	Describer
-	Interpolate(*expression.InterpolationContext) (StepResource, error)
-	Fetch(ctx ctx.Context) (*proto.SpecDefinition, error)
+	Fetch(ctx.Context, *expression.InterpolationContext) (*proto.SpecDefinition, error)
 }
