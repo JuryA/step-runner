@@ -1,0 +1,31 @@
+package bldr
+
+import (
+	ctx "context"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/proto"
+)
+
+type FixedStepResourceBuilder struct {
+	specDef *proto.SpecDefinition
+}
+
+func StepResource(specDef *proto.SpecDefinition) *FixedStepResourceBuilder {
+	return &FixedStepResourceBuilder{
+		specDef: specDef,
+	}
+}
+
+func (bldr *FixedStepResourceBuilder) Build() runner.StepResource {
+	return &FixedStepResource{bldr.specDef}
+}
+
+type FixedStepResource struct {
+	specDef *proto.SpecDefinition
+}
+
+func (sr *FixedStepResource) Fetch(ctx ctx.Context, view *expression.InterpolationContext) (*proto.SpecDefinition, error) {
+	return sr.specDef, nil
+}

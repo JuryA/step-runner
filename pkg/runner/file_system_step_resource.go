@@ -23,15 +23,7 @@ func NewFileSystemStepResource(dir string, filename string) *FileSystemStepResou
 	}
 }
 
-func (sr *FileSystemStepResource) Interpolate(_ *expression.InterpolationContext) (StepResource, error) {
-	return sr, nil
-}
-
-func (sr *FileSystemStepResource) Describe() string {
-	return filepath.Join(sr.dir, sr.filename)
-}
-
-func (sr *FileSystemStepResource) Fetch(_ context.Context) (*proto.SpecDefinition, error) {
+func (sr *FileSystemStepResource) Fetch(_ context.Context, _ *expression.InterpolationContext) (*proto.SpecDefinition, error) {
 	stepFile := filepath.Join(sr.dir, sr.filename)
 
 	spec, step, err := schema.LoadSteps(stepFile)
