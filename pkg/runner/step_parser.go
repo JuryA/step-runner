@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -16,12 +17,14 @@ type StepParser interface {
 type Parser struct {
 	stepCache  Cache
 	gitFetcher *git.GitFetcher
+	ociFetcher *oci.OCIFetcher
 }
 
-func NewParser(stepCache Cache, gitFetcher *git.GitFetcher) *Parser {
+func NewParser(stepCache Cache, gitFetcher *git.GitFetcher, ociFetcher *oci.OCIFetcher) *Parser {
 	return &Parser{
 		stepCache:  stepCache,
 		gitFetcher: gitFetcher,
+		ociFetcher: ociFetcher,
 	}
 }
 
@@ -84,7 +87,7 @@ func (p *Parser) parseStepResource(parentDir string, stepRef *proto.Step_Referen
 		return NewGitStepResource(p.gitFetcher, stepRef.Url, stepRef.Version, stepDir, stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_oci:
-		return NewOCIStepResource(stepRef.Registry, stepRef.Repository, stepRef.Tag, stepRef.Path, stepRef.Filename), nil
+		return NewOCIStepResource(p.ociFetcher, stepRef.Registry, stepRef.Repository, stepRef.Tag, stepDir, stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_dist:
 		return NewDistStepResource(stepRef.Path, stepRef.Filename), nil

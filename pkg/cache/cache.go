@@ -57,19 +57,7 @@ func (c *cache) Get(ctx context.Context, stepResource runner.StepResource) (*pro
 		return sr.Fetch(ctx)
 
 	case *runner.OCIStepResource:
-		stepRef := sr.ToProtoStepRef()
-		imgRef, err := sr.NamedReference()
-		if err != nil {
-			return nil, fmt.Errorf("OCI image: %w", err)
-		}
-
-		dir, err := c.ociFetcher.Fetch(ctx, imgRef)
-		if err != nil {
-			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
-		}
-
-		stepPath := filepath.Join(stepRef.Path...)
-		return c.Get(ctx, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
+		return sr.Fetch(ctx)
 
 	case *runner.DistStepResource:
 		stepRef := sr.ToProtoStepRef()
@@ -80,7 +68,6 @@ func (c *cache) Get(ctx context.Context, stepResource runner.StepResource) (*pro
 
 		stepPath := filepath.Join(stepRef.Path...)
 		return c.Get(ctx, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
-
 	default:
 		return nil, fmt.Errorf("invalid step reference: %s", stepResource.Describe())
 	}

@@ -1,9 +1,14 @@
-package runner
+package runner_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
 func TestOCIStepResource_NamedReference(t *testing.T) {
@@ -61,7 +66,7 @@ func TestOCIStepResource_NamedReference(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			resource := NewOCIStepResource(test.registry, test.repository, test.tag, nil, "step.yml")
+			resource := runner.NewOCIStepResource(nil, test.registry, test.repository, test.tag, "", "step.yml")
 			reference, err := resource.NamedReference()
 			if test.expectErr == "" {
 				require.NoError(t, err)
@@ -72,4 +77,61 @@ func TestOCIStepResource_NamedReference(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestOCIStepResource_Fetch(t *testing.T) {
+	t.Run("loads OCI step", func(t *testing.T) {
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		layer := bldr.OCIImageLayer(t).WithFile("/step.yml", []byte("spec:\n---\nexec: {command: [bash]}")).Build()
+		img := bldr.OCIImage(t).WithLayer(layer).Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		registry.PushImageIndex(remoteImgRef, imgIndex)
+
+		fetcher := oci.NewOCIFetcher(t.TempDir())
+		res := runner.NewOCIStepResource(fetcher, registry.Address(), "my-image", "latest", "", "step.yml")
+		specDef, err := res.Fetch(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
+	})
+
+	t.Run("loads OCI step in sub-directory", func(t *testing.T) {
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		layer := bldr.
+			OCIImageLayer(t).
+			WithFile("/foo/bar/bob/step.yml", []byte("spec:\n---\nexec: {command: [bash]}")).
+			Build()
+		img := bldr.OCIImage(t).WithLayer(layer).Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		registry.PushImageIndex(remoteImgRef, imgIndex)
+
+		fetcher := oci.NewOCIFetcher(t.TempDir())
+		res := runner.NewOCIStepResource(fetcher, registry.Address(), "my-image", "latest", "foo/bar/bob", "step.yml")
+		specDef, err := res.Fetch(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
+	})
+
+	t.Run("loads OCI step using a digest", func(t *testing.T) {
+		registry := bldr.StartOCIRegistryServer(t)
+		layer := bldr.
+			OCIImageLayer(t).
+			WithFile("/step.yml", []byte("spec:\n---\nexec: {command: [sh]}")).
+			Build()
+		img := bldr.OCIImage(t).WithLayer(layer).Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		registry.PushImageIndex(registry.RefToImage("image", "latest"), imgIndex)
+
+		digest, err := imgIndex.Digest()
+		require.NoError(t, err)
+
+		fetcher := oci.NewOCIFetcher(t.TempDir())
+		res := runner.NewOCIStepResource(fetcher, registry.Address(), "image", digest.String(), "", "step.yml")
+		specDef, err := res.Fetch(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, []string{"sh"}, specDef.Definition.Exec.Command)
+	})
 }

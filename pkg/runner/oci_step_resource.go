@@ -1,31 +1,35 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"path"
-	"strings"
+	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 // OCIStepResource knows how to load a step from an OCI image (artifact)
 type OCIStepResource struct {
+	fetcher    *oci.OCIFetcher
 	registry   string
 	repository string
-	path       []string
+	stepDir    string
 	tag        string
 	filename   string
 }
 
-func NewOCIStepResource(registry, repository string, tag string, path []string, filename string) *OCIStepResource {
+func NewOCIStepResource(fetcher *oci.OCIFetcher, registry, repository string, tag string, stepDir string, filename string) *OCIStepResource {
 	return &OCIStepResource{
+		fetcher:    fetcher,
 		registry:   registry,
 		repository: repository,
 		tag:        tag,
-		path:       path,
+		stepDir:    stepDir,
 		filename:   filename,
 	}
 }
@@ -34,19 +38,8 @@ func (sr *OCIStepResource) Interpolate(_ *expression.InterpolationContext) (Step
 	return sr, nil
 }
 
-func (sr *OCIStepResource) ToProtoStepRef() *proto.Step_Reference {
-	return &proto.Step_Reference{
-		Protocol:   proto.StepReferenceProtocol_oci,
-		Registry:   sr.registry,
-		Repository: sr.repository,
-		Tag:        sr.tag,
-		Path:       sr.path,
-		Filename:   sr.filename,
-	}
-}
-
 func (sr *OCIStepResource) Describe() string {
-	return fmt.Sprintf("%s/%s:%s[%s/%s]", sr.registry, sr.repository, sr.tag, strings.Join(sr.path, "/"), sr.filename)
+	return fmt.Sprintf("%s/%s:%s[%s/%s]", sr.registry, sr.repository, sr.tag, sr.stepDir, sr.filename)
 }
 
 func (sr *OCIStepResource) NamedReference() (name.Reference, error) {
@@ -63,4 +56,23 @@ func (sr *OCIStepResource) NamedReference() (name.Reference, error) {
 	}
 
 	return nil, fmt.Errorf("parsing OCI image reference: %w", tagErr)
+}
+
+func (sr *OCIStepResource) Fetch(ctx context.Context) (*proto.SpecDefinition, error) {
+	imgRef, err := sr.NamedReference()
+	if err != nil {
+		return nil, fmt.Errorf("fetching oci step: %w", err)
+	}
+
+	dir, err := sr.fetcher.Fetch(ctx, imgRef)
+	if err != nil {
+		return nil, fmt.Errorf("fetching oci step: %w", err)
+	}
+
+	specDef, err := NewFileSystemStepResource(filepath.Join(dir, sr.stepDir), sr.filename).Fetch(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetching oci step: %w", err)
+	}
+
+	return specDef, nil
 }
