@@ -77,7 +77,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 		globalCtx := bldr.GlobalContext().WithJob("CI_JOB_TOKEN", "ABCDEF").Build()
 		stepsCtx := bldr.StepsContext(t).WithGlobalContext(globalCtx).Build()
-		stepResource := bldr.GitStepResource().WithURL("http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/step").Build()
+		stepResource := bldr.GitStepResource(t).WithURL("http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/step").Build()
 		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
 		stepResult, err := step.Run(context.Background(), stepsCtx)
 

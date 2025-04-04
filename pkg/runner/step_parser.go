@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -13,12 +14,14 @@ type StepParser interface {
 }
 
 type Parser struct {
-	stepCache Cache
+	stepCache  Cache
+	gitFetcher *git.GitFetcher
 }
 
-func NewParser(stepCache Cache) *Parser {
+func NewParser(stepCache Cache, gitFetcher *git.GitFetcher) *Parser {
 	return &Parser{
-		stepCache: stepCache,
+		stepCache:  stepCache,
+		gitFetcher: gitFetcher,
 	}
 }
 
@@ -71,13 +74,14 @@ func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Var
 }
 
 func (p *Parser) parseStepResource(parentDir string, stepRef *proto.Step_Reference) (StepResource, error) {
+	stepDir := filepath.Join(stepRef.Path...)
+
 	switch stepRef.Protocol {
 	case proto.StepReferenceProtocol_local:
-		stepPath := filepath.Join(stepRef.Path...)
-		return NewFileSystemStepResource(filepath.Join(parentDir, stepPath), stepRef.Filename), nil
+		return NewFileSystemStepResource(filepath.Join(parentDir, stepDir), stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_git:
-		return NewGitStepResource(stepRef.Url, stepRef.Version, stepRef.Path, stepRef.Filename), nil
+		return NewGitStepResource(p.gitFetcher, stepRef.Url, stepRef.Version, stepDir, stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_oci:
 		return NewOCIStepResource(stepRef.Registry, stepRef.Repository, stepRef.Tag, stepRef.Path, stepRef.Filename), nil

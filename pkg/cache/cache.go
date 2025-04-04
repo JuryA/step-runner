@@ -54,14 +54,7 @@ func (c *cache) Get(ctx context.Context, stepResource runner.StepResource) (*pro
 		return sr.Fetch(ctx)
 
 	case *runner.GitStepResource:
-		stepRef := sr.ToProtoStepRef()
-		dir, err := c.gitFetcher.Get(ctx, stepRef.Url, stepRef.Version)
-		if err != nil {
-			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
-		}
-
-		stepPath := filepath.Join(stepRef.Path...)
-		return c.Get(ctx, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
+		return sr.Fetch(ctx)
 
 	case *runner.OCIStepResource:
 		stepRef := sr.ToProtoStepRef()
