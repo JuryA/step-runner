@@ -22,7 +22,7 @@ var executeAsync = func(delegate func()) { go delegate() }
 
 type StepRunnerService struct {
 	proto.StepRunnerServer
-	cache runner.Cache
+	stepParser runner.StepParser
 
 	env             *runner.Environment
 	jobs            *syncmap.SyncMap[string, *jobs.Job]
@@ -30,12 +30,12 @@ type StepRunnerService struct {
 	runExitWaitTime time.Duration
 }
 
-func New(stepCache runner.Cache, env *runner.Environment, options ...func(*StepRunnerService)) *StepRunnerService {
+func New(stepParser runner.StepParser, env *runner.Environment, options ...func(*StepRunnerService)) *StepRunnerService {
 	svc := &StepRunnerService{
-		cache:   stepCache,
-		env:     env,
-		jobs:    syncmap.New[string, *jobs.Job](),
-		execute: executeAsync,
+		stepParser: stepParser,
+		env:        env,
+		jobs:       syncmap.New[string, *jobs.Job](),
+		execute:    executeAsync,
 	}
 
 	for _, option := range options {
@@ -87,7 +87,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	globCtx := runner.NewGlobalContext(job.WorkDir, jobVars, globalCtxEnv, stdout, stderr)
 
 	params := &runner.Params{}
-	step, err := runner.NewParser(globCtx, s.cache).Parse(specDef, params, runner.StepDefinedInGitLabJob)
+	step, err := s.stepParser.Parse(globCtx, specDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}

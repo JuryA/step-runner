@@ -1,33 +1,25 @@
 package runner
 
 import (
+	"context"
 	"fmt"
-	"strings"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
-// FileSystemStepResource knows how to load a step from the file system
+// FileSystemStepResource knows how to load a step from the file system using an absolute path
 type FileSystemStepResource struct {
-	path     []string
+	dir      string
 	filename string
 }
 
-func NewFileSystemStepResource(path []string, filename string) *FileSystemStepResource {
+func NewFileSystemStepResource(dir string, filename string) *FileSystemStepResource {
 	return &FileSystemStepResource{
-		path:     path,
+		dir:      dir,
 		filename: filename,
-	}
-}
-
-func (sr *FileSystemStepResource) ToProtoStepRef() *proto.Step_Reference {
-	return &proto.Step_Reference{
-		Url:      "",
-		Protocol: proto.StepReferenceProtocol_local,
-		Path:     sr.path,
-		Filename: sr.filename,
-		Version:  "",
 	}
 }
 
@@ -36,5 +28,31 @@ func (sr *FileSystemStepResource) Interpolate(_ *expression.InterpolationContext
 }
 
 func (sr *FileSystemStepResource) Describe() string {
-	return fmt.Sprintf("%s/%s", strings.Join(sr.path, "/"), sr.filename)
+	return filepath.Join(sr.dir, sr.filename)
+}
+
+func (sr *FileSystemStepResource) Fetch(_ context.Context) (*proto.SpecDefinition, error) {
+	stepFile := filepath.Join(sr.dir, sr.filename)
+
+	spec, step, err := schema.LoadSteps(stepFile)
+	if err != nil {
+		return nil, fmt.Errorf("loading file %q: %w", stepFile, err)
+	}
+
+	protoSpec, err := spec.Compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling proto specification: %w", err)
+	}
+
+	protoDef, err := step.Compile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling proto definition: %w", err)
+	}
+
+	protoStepDef := &proto.SpecDefinition{
+		Spec:       protoSpec,
+		Definition: protoDef,
+		Dir:        sr.dir,
+	}
+	return protoStepDef, nil
 }

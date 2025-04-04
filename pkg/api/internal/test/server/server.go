@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
+	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -49,11 +49,12 @@ func (s *TestStepRunnerServer) Serve() *TestStepRunnerServer {
 		service.WithJobRunExitWaitTime(s.jobRunExitWaitTime),
 	}
 
-	stepCache, err := cache.New()
+	diContainer := di.NewContainer()
+	stepParser, err := diContainer.StepParser()
 	require.NoError(s.t, err)
 
 	s.server = grpc.NewServer()
-	s.StepRunnerService = service.New(stepCache, runner.NewEmptyEnvironment(), svcOptions...)
+	s.StepRunnerService = service.New(stepParser, runner.NewEmptyEnvironment(), svcOptions...)
 	proto.RegisterStepRunnerServer(s.server, s.StepRunnerService)
 
 	listener, _ := bldr.TCPPort(s.t).Listen(s.port)
