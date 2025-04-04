@@ -7,7 +7,6 @@ import (
 
 	stepdist "gitlab.com/gitlab-org/step-runner/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
@@ -50,11 +49,6 @@ func NewContainer() *Container {
 }
 
 func (c *Container) StepParser() (*runner.Parser, error) {
-	stepCache, err := c.Cache()
-	if err != nil {
-		return nil, fmt.Errorf("creating step parser: %w", err)
-	}
-
 	gitFetcher, err := c.GitFetcher()
 	if err != nil {
 		return nil, fmt.Errorf("creating step parser: %w", err)
@@ -65,7 +59,7 @@ func (c *Container) StepParser() (*runner.Parser, error) {
 		return nil, fmt.Errorf("creating step parser: %w", err)
 	}
 
-	return runner.NewParser(stepCache, gitFetcher, ociFetcher, c.DistFetcher()), nil
+	return runner.NewParser(gitFetcher, ociFetcher, c.DistFetcher()), nil
 }
 
 func (c *Container) CacheDir() (string, error) {
@@ -97,23 +91,6 @@ func (c *Container) OCIFetcher() (*oci.OCIFetcher, error) {
 
 func (c *Container) DistFetcher() *dist.Fetcher {
 	return dist.NewFetcher(stepdist.FindDistributedStep)
-}
-
-func (c *Container) Cache() (runner.Cache, error) {
-	gitFetcher, err := c.GitFetcher()
-	if err != nil {
-		return nil, fmt.Errorf("creating cache: %w", err)
-	}
-
-	ociFetcher, err := c.OCIFetcher()
-	if err != nil {
-		return nil, fmt.Errorf("creating cache: %w", err)
-	}
-
-	return cache.NewWithOptions(
-		cache.WithGitFetcher(gitFetcher),
-		cache.WithOCIFetcher(ociFetcher),
-		cache.WithDistFetcher(c.DistFetcher())), nil
 }
 
 func (c *Container) StepRunnerService(env *runner.Environment) (*service.StepRunnerService, error) {

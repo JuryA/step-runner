@@ -16,15 +16,13 @@ type StepParser interface {
 }
 
 type Parser struct {
-	stepCache   Cache
 	gitFetcher  *git.GitFetcher
 	ociFetcher  *oci.OCIFetcher
 	distFetcher *dist.Fetcher
 }
 
-func NewParser(stepCache Cache, gitFetcher *git.GitFetcher, ociFetcher *oci.OCIFetcher, distFetcher *dist.Fetcher) *Parser {
+func NewParser(gitFetcher *git.GitFetcher, ociFetcher *oci.OCIFetcher, distFetcher *dist.Fetcher) *Parser {
 	return &Parser{
-		stepCache:   stepCache,
 		gitFetcher:  gitFetcher,
 		ociFetcher:  ociFetcher,
 		distFetcher: distFetcher,
@@ -60,7 +58,7 @@ func (p *Parser) parseStepType(globalCtx *GlobalContext, specDef *proto.SpecDefi
 				return nil, err
 			}
 
-			steps = append(steps, NewLazilyLoadedStep(globalCtx, p.stepCache, p, stepReference, stepResource))
+			steps = append(steps, NewLazilyLoadedStep(globalCtx, p, stepReference, stepResource))
 		}
 
 		return NewSequenceOfSteps(loadedFrom, params, specDef, steps...), nil
