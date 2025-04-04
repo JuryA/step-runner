@@ -34,10 +34,6 @@ func NewOCIStepResource(fetcher *oci.OCIFetcher, registry, repository string, ta
 	}
 }
 
-func (sr *OCIStepResource) Describe() string {
-	return fmt.Sprintf("%s/%s:%s[%s/%s]", sr.registry, sr.repository, sr.tag, sr.stepDir, sr.filename)
-}
-
 func (sr *OCIStepResource) NamedReference() (name.Reference, error) {
 	repository := path.Join(sr.registry, sr.repository)
 

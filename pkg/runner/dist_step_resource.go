@@ -38,7 +38,3 @@ func (sr *DistStepResource) Fetch(ctx context.Context, _ *expression.Interpolati
 
 	return specDef, nil
 }
-
-func (sr *DistStepResource) Describe() string {
-	return fmt.Sprintf("dist:%s", filepath.Join(sr.stepDir, sr.filename))
-}

@@ -23,10 +23,6 @@ func NewFileSystemStepResource(dir string, filename string) *FileSystemStepResou
 	}
 }
 
-func (sr *FileSystemStepResource) Describe() string {
-	return filepath.Join(sr.dir, sr.filename)
-}
-
 func (sr *FileSystemStepResource) Fetch(_ context.Context, _ *expression.InterpolationContext) (*proto.SpecDefinition, error) {
 	stepFile := filepath.Join(sr.dir, sr.filename)
 

@@ -26,10 +26,6 @@ type FixedStepResource struct {
 	specDef *proto.SpecDefinition
 }
 
-func (sr *FixedStepResource) Describe() string {
-	return "fixed-step-resource"
-}
-
 func (sr *FixedStepResource) Fetch(ctx ctx.Context, view *expression.InterpolationContext) (*proto.SpecDefinition, error) {
 	return sr.specDef, nil
 }

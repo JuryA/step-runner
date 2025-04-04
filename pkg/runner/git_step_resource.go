@@ -47,7 +47,3 @@ func (sr *GitStepResource) Fetch(ctx context.Context, view *expression.Interpola
 
 	return specDef, nil
 }
-
-func (sr *GitStepResource) Describe() string {
-	return fmt.Sprintf("%s@%s:%s/%s", sr.url, sr.version, sr.stepDir, sr.filename)
-}
