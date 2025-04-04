@@ -27,13 +27,4 @@ func TestCache(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, strings.Join(specDef.Definition.Exec.Command, ","), "echo")
 	})
-	t.Run("runs publish dist step", func(t *testing.T) {
-		res := bldr.DistStepResource().WithStep("oci/publish").Build()
-		distFetcher := dist.NewFetcher(stepdist.FindDistributedStep)
-
-		stepCache := cache.NewWithOptions(cache.WithDistFetcher(distFetcher))
-		specDef, err := stepCache.Get(context.Background(), res)
-		require.NoError(t, err)
-		require.Contains(t, strings.Join(specDef.Definition.Exec.Command, " "), "run")
-	})
 }

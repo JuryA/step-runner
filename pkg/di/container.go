@@ -65,7 +65,7 @@ func (c *Container) StepParser() (*runner.Parser, error) {
 		return nil, fmt.Errorf("creating step parser: %w", err)
 	}
 
-	return runner.NewParser(stepCache, gitFetcher, ociFetcher), nil
+	return runner.NewParser(stepCache, gitFetcher, ociFetcher, c.DistFetcher()), nil
 }
 
 func (c *Container) CacheDir() (string, error) {

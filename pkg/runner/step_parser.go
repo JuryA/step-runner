@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
@@ -15,16 +16,18 @@ type StepParser interface {
 }
 
 type Parser struct {
-	stepCache  Cache
-	gitFetcher *git.GitFetcher
-	ociFetcher *oci.OCIFetcher
+	stepCache   Cache
+	gitFetcher  *git.GitFetcher
+	ociFetcher  *oci.OCIFetcher
+	distFetcher *dist.Fetcher
 }
 
-func NewParser(stepCache Cache, gitFetcher *git.GitFetcher, ociFetcher *oci.OCIFetcher) *Parser {
+func NewParser(stepCache Cache, gitFetcher *git.GitFetcher, ociFetcher *oci.OCIFetcher, distFetcher *dist.Fetcher) *Parser {
 	return &Parser{
-		stepCache:  stepCache,
-		gitFetcher: gitFetcher,
-		ociFetcher: ociFetcher,
+		stepCache:   stepCache,
+		gitFetcher:  gitFetcher,
+		ociFetcher:  ociFetcher,
+		distFetcher: distFetcher,
 	}
 }
 
@@ -90,7 +93,7 @@ func (p *Parser) parseStepResource(parentDir string, stepRef *proto.Step_Referen
 		return NewOCIStepResource(p.ociFetcher, stepRef.Registry, stepRef.Repository, stepRef.Tag, stepDir, stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_dist:
-		return NewDistStepResource(stepRef.Path, stepRef.Filename), nil
+		return NewDistStepResource(p.distFetcher, stepDir, stepRef.Filename), nil
 	}
 
 	return nil, fmt.Errorf("unknown step reference protocol: %s", stepRef.Protocol)

@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
@@ -60,14 +59,8 @@ func (c *cache) Get(ctx context.Context, stepResource runner.StepResource) (*pro
 		return sr.Fetch(ctx)
 
 	case *runner.DistStepResource:
-		stepRef := sr.ToProtoStepRef()
-		dir, err := c.distFetcher.Fetch(stepRef.Path)
-		if err != nil {
-			return nil, fmt.Errorf("fetching step %q: %w", stepRef, err)
-		}
+		return sr.Fetch(ctx)
 
-		stepPath := filepath.Join(stepRef.Path...)
-		return c.Get(ctx, runner.NewFileSystemStepResource(filepath.Join(dir, stepPath), stepRef.Filename))
 	default:
 		return nil, fmt.Errorf("invalid step reference: %s", stepResource.Describe())
 	}
