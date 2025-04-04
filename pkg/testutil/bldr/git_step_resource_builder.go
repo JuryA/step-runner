@@ -1,20 +1,26 @@
 package bldr
 
 import (
+	"path/filepath"
+	"testing"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 )
 
 type GitStepResourceBuilder struct {
+	t       *testing.T
 	url     string
 	version string
-	path    []string
+	path    string
 }
 
-func GitStepResource() *GitStepResourceBuilder {
+func GitStepResource(t *testing.T) *GitStepResourceBuilder {
 	return &GitStepResourceBuilder{
+		t:       t,
 		url:     "https://gitlab.com/steps/echo",
 		version: "main",
-		path:    []string{""},
+		path:    "",
 	}
 }
 
@@ -29,10 +35,11 @@ func (bldr *GitStepResourceBuilder) WithVersion(version string) *GitStepResource
 }
 
 func (bldr *GitStepResourceBuilder) WithPath(path ...string) *GitStepResourceBuilder {
-	bldr.path = path
+	bldr.path = filepath.Join(path...)
 	return bldr
 }
 
 func (bldr *GitStepResourceBuilder) Build() *runner.GitStepResource {
-	return runner.NewGitStepResource(bldr.url, bldr.version, bldr.path, "step.yml")
+	gitFetcher := git.New(bldr.t.TempDir(), git.CloneOptions{Depth: 0})
+	return runner.NewGitStepResource(gitFetcher, bldr.url, bldr.version, bldr.path, "step.yml")
 }

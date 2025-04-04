@@ -11,20 +11,18 @@ import (
 
 // LazilyLoadedStep is a step that dynamically fetches, parses and executes a step definition.
 type LazilyLoadedStep struct {
-	globalCtx      *GlobalContext
-	resourceLoader Cache
-	parser         StepParser
-	stepReference  *proto.Step
-	stepResource   StepResource
+	globalCtx     *GlobalContext
+	parser        StepParser
+	stepReference *proto.Step
+	stepResource  StepResource
 }
 
-func NewLazilyLoadedStep(globalCtx *GlobalContext, resourceLoader Cache, parser StepParser, stepReference *proto.Step, stepResource StepResource) *LazilyLoadedStep {
+func NewLazilyLoadedStep(globalCtx *GlobalContext, parser StepParser, stepReference *proto.Step, stepResource StepResource) *LazilyLoadedStep {
 	return &LazilyLoadedStep{
-		globalCtx:      globalCtx,
-		resourceLoader: resourceLoader,
-		parser:         parser,
-		stepReference:  stepReference,
-		stepResource:   stepResource,
+		globalCtx:     globalCtx,
+		parser:        parser,
+		stepReference: stepReference,
+		stepResource:  stepResource,
 	}
 }
 
@@ -62,14 +60,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 }
 
 func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext) (Step, *Params, *proto.SpecDefinition, error) {
-	stepResource, err := s.stepResource.Interpolate(stepsCtx.View())
-
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
-	}
-
-	specDef, err := s.resourceLoader.Get(ctx, stepResource)
-
+	specDef, err := s.stepResource.Fetch(ctx, stepsCtx.View())
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
 	}

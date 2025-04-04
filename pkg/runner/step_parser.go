@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -13,12 +16,16 @@ type StepParser interface {
 }
 
 type Parser struct {
-	stepCache Cache
+	gitFetcher  *git.GitFetcher
+	ociFetcher  *oci.OCIFetcher
+	distFetcher *dist.Fetcher
 }
 
-func NewParser(stepCache Cache) *Parser {
+func NewParser(gitFetcher *git.GitFetcher, ociFetcher *oci.OCIFetcher, distFetcher *dist.Fetcher) *Parser {
 	return &Parser{
-		stepCache: stepCache,
+		gitFetcher:  gitFetcher,
+		ociFetcher:  ociFetcher,
+		distFetcher: distFetcher,
 	}
 }
 
@@ -51,7 +58,7 @@ func (p *Parser) parseStepType(globalCtx *GlobalContext, specDef *proto.SpecDefi
 				return nil, err
 			}
 
-			steps = append(steps, NewLazilyLoadedStep(globalCtx, p.stepCache, p, stepReference, stepResource))
+			steps = append(steps, NewLazilyLoadedStep(globalCtx, p, stepReference, stepResource))
 		}
 
 		return NewSequenceOfSteps(loadedFrom, params, specDef, steps...), nil
@@ -71,19 +78,20 @@ func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Var
 }
 
 func (p *Parser) parseStepResource(parentDir string, stepRef *proto.Step_Reference) (StepResource, error) {
+	stepDir := filepath.Join(stepRef.Path...)
+
 	switch stepRef.Protocol {
 	case proto.StepReferenceProtocol_local:
-		stepPath := filepath.Join(stepRef.Path...)
-		return NewFileSystemStepResource(filepath.Join(parentDir, stepPath), stepRef.Filename), nil
+		return NewFileSystemStepResource(filepath.Join(parentDir, stepDir), stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_git:
-		return NewGitStepResource(stepRef.Url, stepRef.Version, stepRef.Path, stepRef.Filename), nil
+		return NewGitStepResource(p.gitFetcher, stepRef.Url, stepRef.Version, stepDir, stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_oci:
-		return NewOCIStepResource(stepRef.Registry, stepRef.Repository, stepRef.Tag, stepRef.Path, stepRef.Filename), nil
+		return NewOCIStepResource(p.ociFetcher, stepRef.Registry, stepRef.Repository, stepRef.Tag, stepDir, stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_dist:
-		return NewDistStepResource(stepRef.Path, stepRef.Filename), nil
+		return NewDistStepResource(p.distFetcher, stepDir, stepRef.Filename), nil
 	}
 
 	return nil, fmt.Errorf("unknown step reference protocol: %s", stepRef.Protocol)

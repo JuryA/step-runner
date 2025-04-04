@@ -23,11 +23,9 @@ func NewFetcher(stepsFinder dist.StepFinder) *Fetcher {
 	}
 }
 
-func (f *Fetcher) Fetch(path []string) (string, error) {
+func (f *Fetcher) Fetch(step string) (string, error) {
 	f.workDirMu.Lock()
 	defer f.workDirMu.Unlock()
-
-	step := filepath.Join(path...)
 
 	workDir, err := f.createWorkDir()
 	if err != nil {

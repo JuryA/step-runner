@@ -15,7 +15,6 @@ import (
 func TestLazilyLoadedStep(t *testing.T) {
 	t.Run("loads and executes step", func(t *testing.T) {
 		specDef := bldr.ProtoSpecDef().Build()
-		resourceLoader := &FixedSpecDefCache{specDef: specDef}
 
 		stepResult := bldr.StepResult().WithSpecDef(specDef).WithSuccessStatus().Build()
 		parser := &FixedStepParser{step: bldr.Step().WithRunReturnsStepResult(stepResult).Build()}
@@ -29,8 +28,8 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext(t).Build()
-		stepResource := bldr.FileSystemStepResource(t).Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
+		stepResource := bldr.StepResource(specDef).Build()
+		step := runner.NewLazilyLoadedStep(globalCtx, parser, stepRef, stepResource)
 		stepResult, err := step.Run(context.Background(), stepsCtx)
 
 		require.NoError(t, err)
@@ -39,7 +38,6 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 	t.Run("errors when inputs are provided that are not defined", func(t *testing.T) {
 		specDef := bldr.ProtoSpecDef().Build()
-		resourceLoader := &FixedSpecDefCache{specDef: specDef}
 
 		stepResult := bldr.StepResult().WithSpecDef(specDef).WithSuccessStatus().Build()
 		parser := &FixedStepParser{step: bldr.Step().WithRunReturnsStepResult(stepResult).Build()}
@@ -54,36 +52,12 @@ func TestLazilyLoadedStep(t *testing.T) {
 
 		globalCtx := bldr.GlobalContext().Build()
 		stepsCtx := bldr.StepsContext(t).Build()
-		stepResource := bldr.FileSystemStepResource(t).Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
+		stepResource := bldr.StepResource(specDef).Build()
+		step := runner.NewLazilyLoadedStep(globalCtx, parser, stepRef, stepResource)
 		_, err := step.Run(context.Background(), stepsCtx)
 
 		require.Error(t, err)
 		require.Equal(t, `step "step-name": failed to load: step does not accept input with name "not.defined"`, err.Error())
-	})
-
-	t.Run("expands step reference URL", func(t *testing.T) {
-		specDef := bldr.ProtoSpecDef().Build()
-		resourceLoader := &FixedSpecDefCache{specDef: specDef}
-
-		stepResult := bldr.StepResult().WithSpecDef(specDef).WithSuccessStatus().Build()
-		parser := &FixedStepParser{step: bldr.Step().WithRunReturnsStepResult(stepResult).Build()}
-
-		stepRef := &proto.Step{
-			Name:   "step-name",
-			Env:    map[string]string{},
-			Inputs: map[string]*structpb.Value{},
-		}
-
-		globalCtx := bldr.GlobalContext().WithJob("CI_JOB_TOKEN", "ABCDEF").Build()
-		stepsCtx := bldr.StepsContext(t).WithGlobalContext(globalCtx).Build()
-		stepResource := bldr.GitStepResource().WithURL("http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/step").Build()
-		step := runner.NewLazilyLoadedStep(globalCtx, resourceLoader, parser, stepRef, stepResource)
-		stepResult, err := step.Run(context.Background(), stepsCtx)
-
-		require.NoError(t, err)
-		require.Equal(t, proto.StepResult_success, stepResult.Status)
-		require.Equal(t, "http://gitlab-ci-token:ABCDEF@gitlab.com/step@main:/step.yml", resourceLoader.lastGet.Describe())
 	})
 }
 

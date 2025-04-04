@@ -22,7 +22,7 @@ func TestFetcher_Fetch(t *testing.T) {
 		fetcher := dist.NewFetcher(alwaysReturnsFS(embeddedFS))
 		t.Cleanup(fetcher.CleanUp)
 
-		baseDir, err := fetcher.Fetch([]string{"my_steps", "step"})
+		baseDir, err := fetcher.Fetch("my_steps/step")
 		require.NoError(t, err)
 
 		helloWorldPath := filepath.Join(baseDir, "my_steps", "step", "files", "hello.txt")
@@ -37,11 +37,11 @@ func TestFetcher_Fetch(t *testing.T) {
 		fetcher := dist.NewFetcher(alwaysReturnsFS(embeddedFS))
 		t.Cleanup(fetcher.CleanUp)
 
-		baseDirA, err := fetcher.Fetch([]string{"my_step"})
+		baseDirA, err := fetcher.Fetch("my_step")
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(baseDirA, "my_step", "step.yml"))
 
-		baseDirB, err := fetcher.Fetch([]string{"my_step"})
+		baseDirB, err := fetcher.Fetch("my_step")
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(baseDirB, "my_step", "step.yml"))
 		require.Equal(t, baseDirA, baseDirB)
@@ -51,7 +51,7 @@ func TestFetcher_Fetch(t *testing.T) {
 		fetcher := dist.NewFetcher(stepdist.FindDistributedStep)
 		t.Cleanup(fetcher.CleanUp)
 
-		_, err := fetcher.Fetch([]string{"invalid", "step"})
+		_, err := fetcher.Fetch("invalid/step")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), `fetch: distributed step "invalid/step" not found`)
 	})
@@ -94,7 +94,7 @@ func TestFetcher_Fetch(t *testing.T) {
 				fetcher := dist.NewFetcher(alwaysReturnsFS(embeddedFS))
 				t.Cleanup(fetcher.CleanUp)
 
-				baseDir, err := fetcher.Fetch([]string{"my_step"})
+				baseDir, err := fetcher.Fetch("my_step")
 				require.NoError(t, err)
 
 				info, err := os.Stat(filepath.Join(baseDir, "my_step", test.filename))
