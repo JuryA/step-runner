@@ -1,0 +1,45 @@
+package runner
+
+import (
+	"fmt"
+	"path/filepath"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
+	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
+	"gitlab.com/gitlab-org/step-runner/proto"
+)
+
+type StepResourceParser struct {
+	gitFetcher  *git.GitFetcher
+	ociFetcher  *oci.OCIFetcher
+	distFetcher *dist.Fetcher
+}
+
+func NewStepResourceParser(gitFetcher *git.GitFetcher, ociFetcher *oci.OCIFetcher, distFetcher *dist.Fetcher) *StepResourceParser {
+	return &StepResourceParser{
+		gitFetcher:  gitFetcher,
+		ociFetcher:  ociFetcher,
+		distFetcher: distFetcher,
+	}
+}
+
+func (p *StepResourceParser) Parse(parentDir string, stepRef *proto.Step_Reference) (StepResource, error) {
+	stepDir := filepath.Join(stepRef.Path...)
+
+	switch stepRef.Protocol {
+	case proto.StepReferenceProtocol_local:
+		return NewFileSystemStepResource(filepath.Join(parentDir, stepDir), stepRef.Filename), nil
+
+	case proto.StepReferenceProtocol_git:
+		return NewGitStepResource(p.gitFetcher, stepRef.Url, stepRef.Version, stepDir, stepRef.Filename), nil
+
+	case proto.StepReferenceProtocol_oci:
+		return NewOCIStepResource(p.ociFetcher, stepRef.Registry, stepRef.Repository, stepRef.Tag, stepDir, stepRef.Filename), nil
+
+	case proto.StepReferenceProtocol_dist:
+		return NewDistStepResource(p.distFetcher, stepDir, stepRef.Filename), nil
+	}
+
+	return nil, fmt.Errorf("unknown step reference protocol: %s", stepRef.Protocol)
+}

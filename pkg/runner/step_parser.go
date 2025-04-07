@@ -2,11 +2,7 @@ package runner
 
 import (
 	"fmt"
-	"path/filepath"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/context"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -16,16 +12,12 @@ type StepParser interface {
 }
 
 type Parser struct {
-	gitFetcher  *git.GitFetcher
-	ociFetcher  *oci.OCIFetcher
-	distFetcher *dist.Fetcher
+	stepResParser *StepResourceParser
 }
 
-func NewParser(gitFetcher *git.GitFetcher, ociFetcher *oci.OCIFetcher, distFetcher *dist.Fetcher) *Parser {
+func NewParser(stepResParser *StepResourceParser) *Parser {
 	return &Parser{
-		gitFetcher:  gitFetcher,
-		ociFetcher:  ociFetcher,
-		distFetcher: distFetcher,
+		stepResParser: stepResParser,
 	}
 }
 
@@ -52,7 +44,7 @@ func (p *Parser) parseStepType(globalCtx *GlobalContext, specDef *proto.SpecDefi
 		var steps []Step
 
 		for _, stepReference := range specDef.Definition.Steps {
-			stepResource, err := p.parseStepResource(specDef.Dir, stepReference.Step)
+			stepResource, err := p.stepResParser.Parse(specDef.Dir, stepReference.Step)
 
 			if err != nil {
 				return nil, err
@@ -75,24 +67,4 @@ func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Var
 	}
 
 	return nil
-}
-
-func (p *Parser) parseStepResource(parentDir string, stepRef *proto.Step_Reference) (StepResource, error) {
-	stepDir := filepath.Join(stepRef.Path...)
-
-	switch stepRef.Protocol {
-	case proto.StepReferenceProtocol_local:
-		return NewFileSystemStepResource(filepath.Join(parentDir, stepDir), stepRef.Filename), nil
-
-	case proto.StepReferenceProtocol_git:
-		return NewGitStepResource(p.gitFetcher, stepRef.Url, stepRef.Version, stepDir, stepRef.Filename), nil
-
-	case proto.StepReferenceProtocol_oci:
-		return NewOCIStepResource(p.ociFetcher, stepRef.Registry, stepRef.Repository, stepRef.Tag, stepDir, stepRef.Filename), nil
-
-	case proto.StepReferenceProtocol_dist:
-		return NewDistStepResource(p.distFetcher, stepDir, stepRef.Filename), nil
-	}
-
-	return nil, fmt.Errorf("unknown step reference protocol: %s", stepRef.Protocol)
 }
