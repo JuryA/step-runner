@@ -2,6 +2,10 @@
 
 See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when changes are released.
 
+## v0.9.0
+
+- Fix error preventing `oci/publish` pushing images to `registry.gitlab.com`. See !213.
+
 ## v0.8.0
 
 - The `oci/publish` step produces outputs for `registry`, `repository`,

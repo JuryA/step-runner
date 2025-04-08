@@ -31,7 +31,7 @@ func (b *RemoteImageBuilder) WithRegistry(registry string) *RemoteImageBuilder {
 }
 
 func (b *RemoteImageBuilder) WithRepository(repository string) *RemoteImageBuilder {
-	b.registry = repository
+	b.repository = repository
 	return b
 }
 

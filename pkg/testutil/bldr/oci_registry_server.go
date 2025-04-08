@@ -47,7 +47,7 @@ func (s *OCIRegistryServer) Serve(ctx context.Context) {
 	config.Storage = configuration.Storage{}
 	config.Storage["inmemory"] = configuration.Parameters{}
 	config.Storage["maintenance"] = configuration.Parameters{"uploadpurging": map[any]any{"enabled": false}}
-	config.Log.Level = "debug"
+	config.Log.Level = "info"
 	config.Log.Formatter = "text"
 	config.HTTP.Secret = "secrety-secret"
 	config.HTTP.Addr = fmt.Sprintf(":%s", s.port)
