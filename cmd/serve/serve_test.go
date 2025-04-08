@@ -1,7 +1,6 @@
 package serve_test
 
 import (
-	"context"
 	"net"
 	"os"
 	"sync"
@@ -83,7 +82,7 @@ func TestRun(t *testing.T) {
 	cl := newSRClient(t, socketAddr)
 
 	// execute a simple command to ensure the service is running
-	status, err := cl.Status(context.Background(), &proto.StatusRequest{})
+	status, err := cl.Status(bldr.DefaultCtx(t), &proto.StatusRequest{})
 	assert.NoError(t, err)
 	require.Len(t, status.Jobs, 0)
 
