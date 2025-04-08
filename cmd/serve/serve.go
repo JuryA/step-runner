@@ -14,9 +14,8 @@ import (
 	"google.golang.org/grpc"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
 	"gitlab.com/gitlab-org/step-runner/pkg/di"
-	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -27,54 +26,29 @@ func NewCmd() *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sigChan := make(chan os.Signal, 1)
-			if err := run(cmd, args, sigChan); err != nil {
+			diContainer := di.NewContainer()
+
+			stepRunnerService, err := diContainer.StepRunnerService()
+			if err != nil {
+				return fmt.Errorf("initializing step-runner: %w", err)
+			}
+
+			socketAddr, err := GetSocketAddr(args)
+			if err != nil {
+				return fmt.Errorf("initializing step-runner: %w", err)
+
+			}
+
+			if err := NewServeCmd(stepRunnerService, socketAddr, sigChan).Run(); err != nil {
 				return fmt.Errorf("serving step-runner: %w", err)
 			}
+
 			return nil
 		},
 	}
 }
 
-func run(_ *cobra.Command, args []string, sigChan chan os.Signal) error {
-	var grpcServer *grpc.Server
-
-	go func() {
-		signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
-		sig := <-sigChan
-		log.Printf("received '%s' signal; shutting down.", sig.String())
-		grpcServer.GracefulStop()
-	}()
-
-	socketAddr, err := getSocketAddr(args)
-	if err != nil {
-		return err
-	}
-
-	env, err := runner.NewEnvironmentFromOS()
-	if err != nil {
-		return fmt.Errorf("initializing environment: %w", err)
-	}
-
-	diContainer := di.NewContainer()
-
-	stepRunnerService, err := diContainer.StepRunnerService(env)
-	if err != nil {
-		return fmt.Errorf("initializing step runner service: %w", err)
-	}
-
-	listener, err := net.ListenUnix("unix", socketAddr)
-	if err != nil {
-		return fmt.Errorf("opening socket: %w", err)
-	}
-
-	grpcServer = grpc.NewServer()
-	proto.RegisterStepRunnerServer(grpcServer, stepRunnerService)
-
-	log.Printf("step-runner service listening on %v", listener.Addr())
-	return grpcServer.Serve(listener)
-}
-
-func getSocketAddr(args []string) (*net.UnixAddr, error) {
+func GetSocketAddr(args []string) (*net.UnixAddr, error) {
 	if len(args) == 0 {
 		return api.SocketAddr(api.DefaultSocketPath()), nil
 	}
@@ -89,4 +63,50 @@ func getSocketAddr(args []string) (*net.UnixAddr, error) {
 		return nil, fmt.Errorf("invalid socket dir %s", socketDir)
 	}
 	return api.SocketAddr(filepath.Join(socketDir, "step-runner.sock")), nil
+}
+
+type ServeCmd struct {
+	stepRunnerService *service.StepRunnerService
+	grpcServer        *grpc.Server
+	sigChan           chan os.Signal
+	socketAddr        *net.UnixAddr
+}
+
+func NewServeCmd(stepRunnerService *service.StepRunnerService, socketAddr *net.UnixAddr, sigChan chan os.Signal) *ServeCmd {
+	return &ServeCmd{
+		stepRunnerService: stepRunnerService,
+		grpcServer:        grpc.NewServer(),
+		sigChan:           sigChan,
+		socketAddr:        socketAddr,
+	}
+}
+
+func (sc *ServeCmd) Run() error {
+	listener, err := sc.Listen()
+	if err != nil {
+		return err
+	}
+
+	return sc.Serve(listener)
+}
+
+func (sc *ServeCmd) Listen() (net.Listener, error) {
+	go func() {
+		signal.Notify(sc.sigChan, syscall.SIGTERM, syscall.SIGINT)
+		sig := <-sc.sigChan
+		log.Printf("received '%s' signal; shutting down.", sig)
+		sc.grpcServer.GracefulStop()
+	}()
+
+	listener, err := net.ListenUnix("unix", sc.socketAddr)
+	if err != nil {
+		return nil, fmt.Errorf("opening socket: %w", err)
+	}
+
+	return listener, nil
+}
+
+func (sc *ServeCmd) Serve(listener net.Listener) error {
+	proto.RegisterStepRunnerServer(sc.grpcServer, sc.stepRunnerService)
+	return sc.grpcServer.Serve(listener)
 }
