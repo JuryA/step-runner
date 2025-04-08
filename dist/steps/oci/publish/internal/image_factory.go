@@ -22,7 +22,6 @@ import (
 )
 
 const (
-	StepsOCIArtifact  types.MediaType = "application/vnd.gitlab.step.image.v1"
 	StepsOCILayerZSTD types.MediaType = "application/vnd.gitlab.step.layer.v1.tar+zstd"
 )
 
@@ -75,11 +74,11 @@ func (f *ImageFactory) BuildImage(createdAt time.Time, layers ...v1.Layer) (v1.I
 	image := mutate.Annotations(empty.Image, annotations).(v1.Image)
 	image = mutate.MediaType(image, types.OCIManifestSchema1)
 
-	// technically, we should set Artifact Type here, though it's unsupported by github.com/google/go-containerregistry
+	// technically, we should set artifact type here, however, it's unsupported by github.com/google/go-containerregistry
 	// see https://github.com/opencontainers/image-spec/blob/fbb4662eb53b80bd38f7597406cf1211317768f0/manifest.md#guidelines-for-artifact-usage
 	// as a fallback, the config media type should be set to the artifact type instead of using an "empty" media type
+	// however, setting a custom config media type results in failing to push to a GitLab container registry
 
-	image = mutate.ConfigMediaType(image, StepsOCIArtifact)
 	image, err = mutate.ConfigFile(image, &v1.ConfigFile{})
 	if err != nil {
 		return nil, fmt.Errorf("build image: empty config: %w", err)

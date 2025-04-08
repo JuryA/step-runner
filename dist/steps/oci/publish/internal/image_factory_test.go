@@ -194,7 +194,6 @@ func TestImageFactory_BuildImage(t *testing.T) {
 	manifest, err := image.Manifest()
 	require.NoError(t, err)
 	require.Equal(t, "application/vnd.oci.image.manifest.v1+json", string(manifest.MediaType))
-	require.Equal(t, "application/vnd.gitlab.step.image.v1", string(manifest.Config.MediaType))
 	require.Equal(t, "2024-02-18T15:04:05Z", manifest.Annotations["org.opencontainers.image.created"])
 }
 
