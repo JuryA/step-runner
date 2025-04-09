@@ -93,7 +93,12 @@ func (c *Container) DistFetcher() *dist.Fetcher {
 	return dist.NewFetcher(stepdist.FindDistributedStep)
 }
 
-func (c *Container) StepRunnerService(env *runner.Environment) (*service.StepRunnerService, error) {
+func (c *Container) StepRunnerService() (*service.StepRunnerService, error) {
+	env, err := runner.NewEnvironmentFromOS()
+	if err != nil {
+		return nil, fmt.Errorf("creating step runner service: %w", err)
+	}
+
 	stepParser, err := c.StepParser()
 	if err != nil {
 		return nil, fmt.Errorf("creating step runner service: %w", err)

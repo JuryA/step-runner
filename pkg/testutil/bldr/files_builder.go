@@ -2,9 +2,11 @@ package bldr
 
 import (
 	"io/fs"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,6 +33,15 @@ func Files(t *testing.T) *FilesBuilder {
 		t:        t,
 		baseDir:  t.TempDir(),
 	}
+}
+
+func (b *FilesBuilder) WithShortBaseDir() *FilesBuilder {
+	b.baseDir = filepath.Join(os.TempDir(), strconv.FormatUint(rand.Uint64(), 10))
+	err := os.MkdirAll(b.baseDir, 0777)
+	require.NoError(b.t, err)
+
+	b.t.Cleanup(func() { _ = os.RemoveAll(b.baseDir) })
+	return b
 }
 
 func (b *FilesBuilder) WriteDir(dir string) *FilesBuilder {
@@ -93,4 +104,9 @@ func (b *FilesBuilder) Build() string {
 func (b *FilesBuilder) BuildFS() fs.FS {
 	dir := b.Build()
 	return os.DirFS(dir)
+}
+
+func (b *FilesBuilder) BuildPath(path string) string {
+	dir := b.Build()
+	return filepath.Join(dir, path)
 }
