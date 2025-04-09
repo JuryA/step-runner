@@ -2,12 +2,13 @@ package testutil
 
 import (
 	"bytes"
-	ctx "context"
-	"fmt"
+	"io"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
@@ -20,6 +21,7 @@ type StepRunnerBuilder struct {
 	globalEnv    map[string]string
 	globalCtxJob map[string]string
 	log          *bytes.Buffer
+	timeout      time.Duration
 }
 
 func StepRunner(t *testing.T) *StepRunnerBuilder {
@@ -28,6 +30,7 @@ func StepRunner(t *testing.T) *StepRunnerBuilder {
 		globalEnv:    make(map[string]string),
 		globalCtxJob: make(map[string]string),
 		log:          &bytes.Buffer{},
+		timeout:      20 * time.Second,
 	}
 }
 
@@ -82,7 +85,8 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) 
 	workDir, err := os.UserHomeDir()
 	require.NoError(b.t, err)
 
-	globalCtx := runner.NewGlobalContext(workDir, b.globalCtxJob, env, b.log, b.log)
+	stepLog := io.MultiWriter(b.log, os.Stdout)
+	globalCtx := runner.NewGlobalContext(workDir, b.globalCtxJob, env, stepLog, stepLog)
 	params := &runner.Params{}
 
 	stepParser, err := diContainer.StepParser()
@@ -95,8 +99,10 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) 
 	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.EnvWithLexicalScope(params.Env))
 	require.NoError(b.t, err)
 
-	run, err := step.Run(ctx.Background(), stepsCtx)
+	ctx, cancel := context.WithTimeout(context.Background(), b.timeout)
+	defer cancel()
 
-	b.t.Cleanup(func() { fmt.Println(b.log) })
+	run, err := step.Run(ctx, stepsCtx)
+
 	return run, b.log.String(), err
 }
