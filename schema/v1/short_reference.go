@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
@@ -9,10 +10,16 @@ import (
 
 const distPrefix = "dist://"
 
+func CompileShortRef(value string) (*proto.Step_Reference, error) {
+	return shortReference(value).compile()
+}
+
 type shortReference string
 
 func (sr shortReference) compile() (*proto.Step_Reference, error) {
-	if strings.HasPrefix(string(sr), ".") {
+	value := strings.TrimSpace(string(sr))
+
+	if strings.HasPrefix(value, ".") || strings.HasPrefix(value, "/") {
 		return sr.compileLocal()
 	}
 
@@ -34,7 +41,7 @@ func (sr shortReference) compileDist() (*proto.Step_Reference, error) {
 }
 
 func (sr shortReference) compileLocal() (*proto.Step_Reference, error) {
-	path, filename := pathFilename(string(sr))
+	path, filename := pathFilename(true, string(sr))
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_local,
 		Path:     path,
@@ -51,7 +58,7 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 	rev := parts[len(parts)-1]
 	url, rest, _ := strings.Cut(rest, "/-/")
 	url = defaultHTTPS(url)
-	path, filename := pathFilename(rest)
+	path, filename := pathFilename(false, rest)
 	path = append([]string{"steps"}, path...)
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,
@@ -69,15 +76,25 @@ func defaultHTTPS(stepUrl string) string {
 	return "https://" + stepUrl
 }
 
-func pathFilename(pathStr string) (path []string, filename string) {
-	filename = "step.yml"
+func pathFilename(allowAbsolute bool, pathStr string) ([]string, string) {
+	filename := "step.yml"
 	if pathStr == "" {
 		return nil, filename
 	}
-	path = strings.Split(pathStr, "/")
-	if strings.HasSuffix(path[len(path)-1], ".yml") {
-		filename = path[len(path)-1]
-		path = path[:len(path)-1]
+
+	path := strings.Split(pathStr, "/")
+	lastItemIndex := len(path) - 1
+
+	if strings.HasSuffix(path[lastItemIndex], ".yml") {
+		filename = path[lastItemIndex]
+		path = path[:lastItemIndex]
 	}
+
+	if allowAbsolute && len(path) > 0 && strings.HasPrefix(pathStr, "/") {
+		// for absolute paths, strings.Split results in the first element of path being empty string
+		path[0] = "/"
+	}
+
+	path = slices.DeleteFunc(path, func(value string) bool { return value == "" })
 	return path, filename
 }

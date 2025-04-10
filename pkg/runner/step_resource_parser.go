@@ -3,6 +3,7 @@ package runner
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
@@ -29,7 +30,12 @@ func (p *StepResourceParser) Parse(parentDir string, stepRef *proto.Step_Referen
 
 	switch stepRef.Protocol {
 	case proto.StepReferenceProtocol_local:
-		return NewFileSystemStepResource(filepath.Join(parentDir, stepDir), stepRef.Filename), nil
+		dir := stepDir
+		if !strings.HasPrefix(stepDir, "/") {
+			dir = filepath.Join(parentDir, stepDir)
+		}
+
+		return NewFileSystemStepResource(dir, stepRef.Filename), nil
 
 	case proto.StepReferenceProtocol_git:
 		return NewGitStepResource(p.gitFetcher, stepRef.Url, stepRef.Version, stepDir, stepRef.Filename), nil

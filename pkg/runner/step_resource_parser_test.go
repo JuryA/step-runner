@@ -76,3 +76,39 @@ func TestStepResourceParser_Parse(t *testing.T) {
 		}
 	})
 }
+
+func TestStepResourceParser_ParseLocalStep(t *testing.T) {
+	t.Run("loads relative path", func(t *testing.T) {
+		parser, err := di.NewContainer().StepResourceParser()
+		require.NoError(t, err)
+
+		stepRef := &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_local,
+			Path:     []string{"path", "to", "step_dir"},
+			Filename: "step.yml",
+		}
+
+		stepResource, err := parser.Parse("/parent/dir", stepRef)
+		require.NoError(t, err)
+
+		description := stepResource.(*runner.FileSystemStepResource).Describe()
+		require.Equal(t, "/parent/dir/path/to/step_dir/step.yml", description)
+	})
+
+	t.Run("loads absolute path", func(t *testing.T) {
+		parser, err := di.NewContainer().StepResourceParser()
+		require.NoError(t, err)
+
+		stepRef := &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_local,
+			Path:     []string{"/", "path", "to", "step_dir"},
+			Filename: "step.yml",
+		}
+
+		stepResource, err := parser.Parse("/parent/dir", stepRef)
+		require.NoError(t, err)
+
+		description := stepResource.(*runner.FileSystemStepResource).Describe()
+		require.Equal(t, "/path/to/step_dir/step.yml", description)
+	})
+}
