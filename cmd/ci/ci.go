@@ -45,6 +45,13 @@ func NewCmd() *cobra.Command {
 }
 
 func run(options *Options) error {
+	fmt.Println("***** WARNING *****")
+	fmt.Println("As of GitLab Runner 17.11, the legacy step-runner image registry.gitlab.com/gitlab-org/step-runner:v0" +
+		" is replaced by the image defined by the job.")
+	fmt.Println("The legacy step-runner image will be supported until GitLab 18.0.")
+	fmt.Println("See https://docs.gitlab.com/ci/steps/ for information on how to configure CI/CD Steps.")
+	fmt.Println("***** END WARNING *****")
+
 	def, err := wrapStepsInSpecDef(options.Steps)
 	if err != nil {
 		return fmt.Errorf("reading STEPS %q: %w", options.Steps, err)

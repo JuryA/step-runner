@@ -5,6 +5,7 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 ## v0.9.0
 
 - Fix error preventing `oci/publish` pushing images to `registry.gitlab.com`. See !213.
+- Print warning when using the legacy version of Steps. See !214.
 
 ## v0.8.0
 
