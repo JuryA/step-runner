@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -9,6 +10,8 @@ import (
 )
 
 const distPrefix = "dist://"
+
+var containsExpressionRe = regexp.MustCompile(`\${{.*}}`)
 
 func CompileShortRef(value string) (*proto.Step_Reference, error) {
 	return shortReference(value).compile()
@@ -18,6 +21,13 @@ type shortReference string
 
 func (sr shortReference) compile() (*proto.Step_Reference, error) {
 	value := strings.TrimSpace(string(sr))
+
+	if containsExpressionRe.MatchString(string(sr)) {
+		return &proto.Step_Reference{
+			Protocol: proto.StepReferenceProtocol_dynamic,
+			Url:      string(sr),
+		}, nil
+	}
 
 	if strings.HasPrefix(value, ".") || strings.HasPrefix(value, "/") {
 		return sr.compileLocal()

@@ -69,3 +69,23 @@ func TestShortReference_compileLocal(t *testing.T) {
 		})
 	}
 }
+
+func TestShortReference_compileDynamic(t *testing.T) {
+	t.Run("entire ref is expression", func(t *testing.T) {
+		var shortRef shortReference = "${{steps.previous_step.outputs.download_dir}}"
+
+		protoStepRef, err := shortRef.compile()
+		require.NoError(t, err)
+		require.Equal(t, proto.StepReferenceProtocol_dynamic, protoStepRef.Protocol)
+		require.Equal(t, "${{steps.previous_step.outputs.download_dir}}", protoStepRef.Url)
+	})
+
+	t.Run("ref is part expression", func(t *testing.T) {
+		var shortRef shortReference = "/path/to/some/steps/${{env.THE_STEP}}"
+
+		protoStepRef, err := shortRef.compile()
+		require.NoError(t, err)
+		require.Equal(t, proto.StepReferenceProtocol_dynamic, protoStepRef.Protocol)
+		require.Equal(t, "/path/to/some/steps/${{env.THE_STEP}}", protoStepRef.Url)
+	})
+}

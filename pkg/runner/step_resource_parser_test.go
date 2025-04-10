@@ -59,6 +59,14 @@ func TestStepResourceParser_Parse(t *testing.T) {
 				},
 				expectedType: (*runner.DistStepResource)(nil),
 			},
+			{
+				name: "dynamic",
+				stepRef: &proto.Step_Reference{
+					Protocol: proto.StepReferenceProtocol_dynamic,
+					Url:      "${{job.VARIABLE}}",
+				},
+				expectedType: (*runner.DynamicStepResource)(nil),
+			},
 		}
 
 		for _, test := range tests {
