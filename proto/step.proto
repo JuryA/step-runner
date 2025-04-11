@@ -34,6 +34,8 @@ message Step {
     string repository = 7;
     // Tag is the version of the which version of the step OCI image to use.
     string tag = 8;
+    // SpecDef allows the step reference to be inlined or hardcoded
+    SpecDefinition specDef = 9;
   }
 }
 
@@ -46,6 +48,7 @@ enum StepReferenceProtocol {
   oci = 4;
   dist = 5;
   dynamic = 6;
+  spec_def = 7;
 }
 
 // Definition is the implementation of a step.
