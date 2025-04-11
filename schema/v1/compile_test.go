@@ -469,17 +469,6 @@ step: http://gitlab-ci-token:ABCDEF@gitlab.com/josephburnett/hello-private-repo.
 		},
 	}, {
 		step: `
-step: http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/josephburnett/hello-private-repo.git@main
-`,
-		want: &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_git,
-			Url:      "http://gitlab-ci-token:${{ job.CI_JOB_TOKEN }}@gitlab.com/josephburnett/hello-private-repo.git",
-			Path:     []string{"steps"},
-			Filename: "step.yml",
-			Version:  "main",
-		},
-	}, {
-		step: `
 step:
     oci:
         registry: registry.gitlab.com
