@@ -6,6 +6,8 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 
 - Fix error preventing `oci/publish` pushing images to `registry.gitlab.com`. See !213.
 - Print warning when using the legacy version of Steps. See !214.
+- Steps can be loaded from the file system using an absolute path. See !215.
+- Steps can be loaded using an expression. See !215.
 
 ## v0.8.0
 

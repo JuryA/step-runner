@@ -48,3 +48,7 @@ func (sr *FileSystemStepResource) Fetch(_ context.Context, _ *expression.Interpo
 	}
 	return protoStepDef, nil
 }
+
+func (sr *FileSystemStepResource) Describe() string {
+	return filepath.Join(sr.dir, sr.filename)
+}

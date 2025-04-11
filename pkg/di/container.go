@@ -48,18 +48,27 @@ func NewContainer() *Container {
 	return &Container{}
 }
 
-func (c *Container) StepParser() (*runner.Parser, error) {
+func (c *Container) StepResourceParser() (*runner.StepResourceParser, error) {
 	gitFetcher, err := c.GitFetcher()
 	if err != nil {
-		return nil, fmt.Errorf("creating step parser: %w", err)
+		return nil, fmt.Errorf("creating step resource parser: %w", err)
 	}
 
 	ociFetcher, err := c.OCIFetcher()
 	if err != nil {
+		return nil, fmt.Errorf("creating step resource parser: %w", err)
+	}
+
+	return runner.NewStepResourceParser(gitFetcher, ociFetcher, c.DistFetcher()), nil
+}
+
+func (c *Container) StepParser() (*runner.Parser, error) {
+	stepResParser, err := c.StepResourceParser()
+	if err != nil {
 		return nil, fmt.Errorf("creating step parser: %w", err)
 	}
 
-	return runner.NewParser(gitFetcher, ociFetcher, c.DistFetcher()), nil
+	return runner.NewParser(stepResParser), nil
 }
 
 func (c *Container) CacheDir() (string, error) {

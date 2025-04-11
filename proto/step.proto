@@ -45,6 +45,7 @@ enum StepReferenceProtocol {
   zip = 3;
   oci = 4;
   dist = 5;
+  dynamic = 6;
 }
 
 // Definition is the implementation of a step.

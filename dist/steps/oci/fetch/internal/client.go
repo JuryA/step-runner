@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/containerd/platforms"
@@ -59,6 +60,7 @@ func (c *Client) Pull(ctx context.Context, ref name.Reference, opts ...func(*Pul
 
 // fetchImage is like 'remote.Image()' but uses github.com/containerd/platforms for better platform negotiation.
 func (c *Client) fetchImage(ctx context.Context, ref name.Reference, findForPlatform []platforms.Platform) (v1.Image, error) {
+	slog.Debug("fetching image index from registry", "ref", ref)
 	idx, err := remote.Index(ref, remote.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("fetching index: %w", err)
@@ -75,6 +77,7 @@ func (c *Client) fetchImage(ctx context.Context, ref name.Reference, findForPlat
 		return nil, fmt.Errorf("didn't find an image matching platform %s", DescribePlatforms(findForPlatform...))
 	}
 
+	slog.Debug("fetching image from registry", "digest", manifest.Digest, "platform", manifest.Platform)
 	image, err := idx.Image(manifest.Digest)
 	if err != nil {
 		return nil, fmt.Errorf("fetching image for manifest %v: %v", manifest.Digest, err)

@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -69,6 +70,7 @@ func (w *DiskLayerWriter) writeLayerToDisk(layer v1.Layer, dir string) error {
 }
 
 func (w *DiskLayerWriter) writeDir(dir string) error {
+	slog.Debug("writing directory", "dir", dir)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("creating directory %q: %w", dir, err)
 	}
@@ -77,6 +79,8 @@ func (w *DiskLayerWriter) writeDir(dir string) error {
 }
 
 func (w *DiskLayerWriter) writeFile(path string, content io.Reader) error {
+	slog.Debug("writing file", "file", path)
+
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0400)
 	if err != nil {
 		return fmt.Errorf("creating file %q: %w", path, err)
