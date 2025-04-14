@@ -27,9 +27,9 @@ func TestRun(t *testing.T) {
 		require.NoError(t, err)
 
 		outputs := extractOutputs(t, outputFile)
-		require.Contains(t, outputs, "download_dir")
+		require.Contains(t, outputs, "fetched_step_path")
 
-		stepYml, err := os.ReadFile(filepath.Join(outputs["download_dir"], "step.yml"))
+		stepYml, err := os.ReadFile(outputs["fetched_step_path"])
 		require.NoError(t, err)
 		require.Equal(t, string(stepYml), "spec:\n---\nexec: {command: [bash]}")
 	})
@@ -55,9 +55,9 @@ func TestRun(t *testing.T) {
 		require.NoError(t, err)
 
 		outputs := extractOutputs(t, outputFile)
-		require.Contains(t, outputs, "download_dir")
+		require.Contains(t, outputs, "fetched_step_path")
 
-		stepYml, err := os.ReadFile(filepath.Join(outputs["download_dir"], "step.yml"))
+		stepYml, err := os.ReadFile(outputs["fetched_step_path"])
 		require.NoError(t, err)
 		require.Equal(t, string(stepYml), "spec:\n---\nexec: {command: [sh]}")
 	})

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
 )
@@ -23,7 +24,7 @@ func NewOutputs(outputFile string) *Outputs {
 	}
 }
 
-func (o *Outputs) Write(downloadDir string, imgRef name.Reference) error {
+func (o *Outputs) Write(downloadDir string, imgRef name.Reference, stepFilePath string) error {
 	writer, err := os.Create(o.outputFile)
 	if err != nil {
 		return fmt.Errorf("opening output file: %w", err)
@@ -31,7 +32,7 @@ func (o *Outputs) Write(downloadDir string, imgRef name.Reference) error {
 	defer writer.Close()
 
 	outputValues := []OutputValue{
-		{Name: "download_dir", Value: downloadDir},
+		{Name: "fetched_step_path", Value: filepath.Join(downloadDir, stepFilePath)},
 		{Name: "ref", Value: imgRef.String()},
 	}
 

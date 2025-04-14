@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -15,16 +16,19 @@ type GetEnv func(key string) string
 
 type Inputs struct {
 	RemoteImageRef name.Reference
+	StepFilePath   string
 	LogLevel       slog.Level
 	OutputFile     string
 }
 
 func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
-	var registry, repository, tag, outputFile string
+	var registry, repository, tag, stepPath, stepFile, outputFile string
 
 	flags := flag.NewFlagSet("run", flag.ContinueOnError)
 	flags.StringVar(&registry, "registry", "", "")
 	flags.StringVar(&repository, "repository", "", "")
+	flags.StringVar(&stepPath, "step_path", "", "")
+	flags.StringVar(&stepFile, "step_file", "", "")
 	flags.StringVar(&tag, "tag", "", "")
 	flags.StringVar(&outputFile, "output_file", "", "")
 
@@ -49,6 +53,13 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 		return nil, fmt.Errorf("tag is required")
 	}
 
+	if stepFile == "" {
+		return nil, fmt.Errorf("step_file is required")
+	}
+
+	stepPath = strings.TrimSpace(stepPath)
+	stepFile = strings.TrimSpace(stepFile)
+
 	remoteImgRef, err := parseNamedReference(registry, repository, tag)
 	if err != nil {
 		return nil, fmt.Errorf("parsing image reference: %w", err)
@@ -65,6 +76,7 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 
 	inputs := &Inputs{
 		RemoteImageRef: remoteImgRef,
+		StepFilePath:   filepath.Join(stepPath, stepFile),
 		LogLevel:       logLevel,
 		OutputFile:     outputFile,
 	}

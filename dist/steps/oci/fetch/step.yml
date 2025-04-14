@@ -6,15 +6,31 @@ spec:
       type: string
     tag:
       type: string
+    step_path:
+      type: string
+      default: ""
+    step_file:
+      type: string
+      default: step.yml
+  outputs:
+    fetched_step_path:
+      type: string
+    ref:
+      type: string
 ---
 exec:
-  work_dir: ${{step_dir}}
   command:
     - "${{step_dir}}/run"
     - "--registry"
     - "${{inputs.registry}}"
     - "--repository"
     - "${{inputs.repository}}"
+    - "--tag"
+    - "${{inputs.tag}}"
+    - "--step_path"
+    - "${{inputs.step_path}}"
+    - "--step_file"
+    - "${{inputs.step_file}}"
     - "--tag"
     - "${{inputs.tag}}"
     - "--output_file"
