@@ -86,6 +86,16 @@ func (r *Reference) compileOCI(stepName string, inputs map[string]*structpb.Valu
 		tag = "latest"
 	}
 
+	dir := ""
+	if r.OCI.Dir != nil {
+		dir = *r.OCI.Dir
+	}
+
+	filename := "step.yml"
+	if r.OCI.File != nil {
+		filename = *r.OCI.File
+	}
+
 	fetchStepName := "fetch_step_" + stepName
 
 	stepRef := &proto.Step_Reference{
@@ -109,6 +119,8 @@ func (r *Reference) compileOCI(stepName string, inputs map[string]*structpb.Valu
 							"registry":   structpb.NewStringValue(r.OCI.Registry),
 							"repository": structpb.NewStringValue(r.OCI.Repository),
 							"tag":        structpb.NewStringValue(tag),
+							"step_path":  structpb.NewStringValue(dir),
+							"step_file":  structpb.NewStringValue(filename),
 						},
 						Env: env,
 					},

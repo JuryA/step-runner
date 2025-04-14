@@ -36,5 +36,5 @@ func run(args []string, getEnv internal.GetEnv) error {
 	}
 
 	slog.Info("fetched step", "image", inputs.RemoteImageRef.String())
-	return internal.NewOutputs(inputs.OutputFile).Write(downloadDir, inputs.RemoteImageRef)
+	return internal.NewOutputs(inputs.OutputFile).Write(downloadDir, inputs.RemoteImageRef, inputs.StepFilePath)
 }

@@ -29,7 +29,7 @@ func TestRun(t *testing.T) {
 		outputs := extractOutputs(t, outputFile)
 		require.Contains(t, outputs, "download_dir")
 
-		stepYml, err := os.ReadFile(filepath.Join(outputs["download_dir"], "step.yml"))
+		stepYml, err := os.ReadFile(outputs["download_dir"])
 		require.NoError(t, err)
 		require.Equal(t, string(stepYml), "spec:\n---\nexec: {command: [bash]}")
 	})
@@ -57,7 +57,7 @@ func TestRun(t *testing.T) {
 		outputs := extractOutputs(t, outputFile)
 		require.Contains(t, outputs, "download_dir")
 
-		stepYml, err := os.ReadFile(filepath.Join(outputs["download_dir"], "step.yml"))
+		stepYml, err := os.ReadFile(outputs["download_dir"])
 		require.NoError(t, err)
 		require.Equal(t, string(stepYml), "spec:\n---\nexec: {command: [sh]}")
 	})
