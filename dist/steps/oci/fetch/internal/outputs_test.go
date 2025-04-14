@@ -24,7 +24,7 @@ func TestOutputs_Write(t *testing.T) {
 		require.NoError(t, err)
 
 		lines := strings.Split(string(fileData), "\n")
-		require.Equal(t, `{"name":"download_dir","value":"/path/to/step_dir/step.yml"}`, lines[0])
+		require.Equal(t, `{"name":"fetched_step_path","value":"/path/to/step_dir/step.yml"}`, lines[0])
 		require.Equal(t, `{"name":"ref","value":"registry.gitlab.com:8080/my-group/my-project/image:10.1.1"}`, lines[1])
 	})
 }

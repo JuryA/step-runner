@@ -13,7 +13,7 @@ spec:
       type: string
       default: step.yml
   outputs:
-    download_dir:
+    fetched_step_path:
       type: string
     ref:
       type: string

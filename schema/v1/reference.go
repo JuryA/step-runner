@@ -128,7 +128,7 @@ func (r *Reference) compileOCI(stepName string, inputs map[string]*structpb.Valu
 						Name: stepName,
 						Step: &proto.Step_Reference{
 							Protocol: proto.StepReferenceProtocol_dynamic,
-							Url:      fmt.Sprintf("${{steps.%s.outputs.download_dir}}", fetchStepName),
+							Url:      fmt.Sprintf("${{steps.%s.outputs.fetched_step_path}}", fetchStepName),
 						},
 						Inputs: inputs,
 						Env:    env,

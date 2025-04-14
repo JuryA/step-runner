@@ -32,7 +32,7 @@ func (o *Outputs) Write(downloadDir string, imgRef name.Reference, stepFilePath 
 	defer writer.Close()
 
 	outputValues := []OutputValue{
-		{Name: "download_dir", Value: filepath.Join(downloadDir, stepFilePath)},
+		{Name: "fetched_step_path", Value: filepath.Join(downloadDir, stepFilePath)},
 		{Name: "ref", Value: imgRef.String()},
 	}
 
