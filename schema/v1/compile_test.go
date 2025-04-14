@@ -470,56 +470,6 @@ step: http://gitlab-ci-token:ABCDEF@gitlab.com/josephburnett/hello-private-repo.
 	}, {
 		step: `
 step:
-    oci:
-        registry: registry.gitlab.com
-        repository: steps/my-step
-        tag: latest
-`,
-		want: &proto.Step_Reference{
-			Protocol:   proto.StepReferenceProtocol_oci,
-			Registry:   "registry.gitlab.com",
-			Repository: "steps/my-step",
-			Tag:        "latest",
-			Path:       nil,
-			Filename:   "step.yml",
-		},
-	}, {
-		step: `
-step:
-    oci:
-        registry: registry.gitlab.com
-        repository: steps/my-step
-        tag: ""
-`,
-		want: &proto.Step_Reference{
-			Protocol:   proto.StepReferenceProtocol_oci,
-			Registry:   "registry.gitlab.com",
-			Repository: "steps/my-step",
-			Tag:        "latest",
-			Path:       nil,
-			Filename:   "step.yml",
-		},
-	}, {
-		step: `
-step:
-    oci:
-        registry: registry.gitlab.com:8080
-        repository: steps/my-step
-        tag: latest
-        dir: "steps"
-        filename: step.yml
-`,
-		want: &proto.Step_Reference{
-			Protocol:   proto.StepReferenceProtocol_oci,
-			Registry:   "registry.gitlab.com:8080",
-			Repository: "steps/my-step",
-			Tag:        "latest",
-			Path:       []string{"steps"},
-			Filename:   "step.yml",
-		},
-	}, {
-		step: `
-step:
 `,
 		wantErr: true,
 	}, {
@@ -537,7 +487,7 @@ step:
 			step := &Step{}
 			err := unmarshalSchema(c.step, step)
 			require.NoError(t, err)
-			got, err := step.CompileStep(0)
+			got, err := step.CompileStep()
 			if c.wantErr {
 				require.Error(t, err)
 			} else {

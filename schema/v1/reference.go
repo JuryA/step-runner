@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -45,7 +47,7 @@ func (r *Reference) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (r *Reference) compile() (*proto.Step_Reference, error) {
+func (r *Reference) compile(stepName string, inputs map[string]*structpb.Value, env map[string]string) (*proto.Step_Reference, error) {
 	if r.Git == nil && r.OCI == nil {
 		return nil, fmt.Errorf("compiling reference: git or oci not specified")
 	}
@@ -58,7 +60,7 @@ func (r *Reference) compile() (*proto.Step_Reference, error) {
 		return r.compileGit()
 	}
 
-	return r.compileOCI()
+	return r.compileOCI(stepName, inputs, env)
 }
 
 func (r *Reference) compileGit() (*proto.Step_Reference, error) {
@@ -78,22 +80,52 @@ func (r *Reference) compileGit() (*proto.Step_Reference, error) {
 	return s, nil
 }
 
-func (r *Reference) compileOCI() (*proto.Step_Reference, error) {
-	s := &proto.Step_Reference{
-		Protocol:   proto.StepReferenceProtocol_oci,
-		Registry:   r.OCI.Registry,
-		Repository: r.OCI.Repository,
-		Tag:        r.OCI.Tag,
-		Filename:   "step.yml",
+func (r *Reference) compileOCI(stepName string, inputs map[string]*structpb.Value, env map[string]string) (*proto.Step_Reference, error) {
+	tag := r.OCI.Tag
+	if tag == "" {
+		tag = "latest"
 	}
-	if r.OCI.Dir != nil {
-		s.Path = strings.Split(*r.OCI.Dir, "/")
+
+	fetchStepName := "fetch_step_" + stepName
+
+	stepRef := &proto.Step_Reference{
+		Protocol: proto.StepReferenceProtocol_spec_def,
+		SpecDef: &proto.SpecDefinition{
+			Spec: &proto.Spec{
+				Spec: &proto.Spec_Content{
+					OutputMethod: proto.OutputMethod_delegate,
+				}},
+			Definition: &proto.Definition{
+				Type: proto.DefinitionType_steps,
+				Steps: []*proto.Step{
+					{
+						Name: fetchStepName,
+						Step: &proto.Step_Reference{
+							Protocol: proto.StepReferenceProtocol_dist,
+							Path:     []string{"oci", "fetch"},
+							Filename: "step.yml",
+						},
+						Inputs: map[string]*structpb.Value{ // inline the inputs
+							"registry":   structpb.NewStringValue(r.OCI.Registry),
+							"repository": structpb.NewStringValue(r.OCI.Repository),
+							"tag":        structpb.NewStringValue(tag),
+						},
+						Env: env,
+					},
+					{
+						Name: stepName,
+						Step: &proto.Step_Reference{
+							Protocol: proto.StepReferenceProtocol_dynamic,
+							Url:      fmt.Sprintf("${{steps.%s.outputs.download_dir}}", fetchStepName),
+						},
+						Inputs: inputs,
+						Env:    env,
+					},
+				},
+				Delegate: stepName,
+			},
+		},
 	}
-	if r.OCI.File != nil {
-		s.Filename = *r.OCI.File
-	}
-	if r.OCI.Tag == "" {
-		s.Tag = "latest"
-	}
-	return s, nil
+
+	return stepRef, nil
 }

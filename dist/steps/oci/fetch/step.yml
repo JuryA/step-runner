@@ -6,9 +6,13 @@ spec:
       type: string
     tag:
       type: string
+  outputs:
+    download_dir:
+      type: string
+    ref:
+      type: string
 ---
 exec:
-  work_dir: ${{step_dir}}
   command:
     - "${{step_dir}}/run"
     - "--registry"
