@@ -48,6 +48,9 @@ func (p *StepResourceParser) Parse(parentDir string, stepRef *proto.Step_Referen
 
 	case proto.StepReferenceProtocol_dynamic:
 		return NewDynamicStepResource(p, stepRef.Url), nil
+
+	case proto.StepReferenceProtocol_spec_def:
+		return NewFixedStepResource(stepRef.SpecDef), nil
 	}
 
 	return nil, fmt.Errorf("unknown step reference protocol: %s", stepRef.Protocol)

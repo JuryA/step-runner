@@ -8,6 +8,7 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 - Print warning when using the legacy version of Steps. See !214.
 - Steps can be loaded from the file system using an absolute path. See !215.
 - Steps can be loaded using an expression. See !215.
+- Fetching steps from an OCI registry uses a step to fetch. See !216.
 
 ## v0.8.0
 

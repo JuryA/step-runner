@@ -169,6 +169,45 @@ func TestParseInputs(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("step path is joined to step file", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			stepPath string
+			stepFile string
+			expect   string
+		}{
+			{
+				name:     "joins path and step",
+				stepPath: "path/to/step",
+				stepFile: "my_step.yml",
+				expect:   "path/to/step/my_step.yml",
+			},
+			{
+				name:     "trims space",
+				stepPath: "    path/to/mystep   ",
+				stepFile: "   step.yml   ",
+				expect:   "path/to/mystep/step.yml",
+			},
+			{
+				name:     "removes additional path separators",
+				stepPath: "/path//to/step",
+				stepFile: "step.yml",
+				expect:   "/path/to/step/step.yml",
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				inputs, err := internal.ParseInputs(bldr.CLIInputs(t).
+					WithStepPath(test.stepPath).
+					WithStepFile(test.stepFile).
+					Build())
+				require.NoError(t, err)
+				require.Equal(t, test.expect, inputs.StepFilePath)
+			})
+		}
+	})
 }
 
 func TestParseInputs_RemoteImageReference(t *testing.T) {

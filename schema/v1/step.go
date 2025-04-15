@@ -142,7 +142,7 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 		protoDef.Type = proto.DefinitionType_steps
 		protoDef.Steps = make([]*proto.Step, len(s.Run))
 		for i, ss := range s.Run {
-			protoStep, err := (&ss).CompileStep(i)
+			protoStep, err := (&ss).CompileStep()
 			if err != nil {
 				return nil, fmt.Errorf("compiling run[%v]: %v: %w", i, s.Name, err)
 			}
@@ -166,7 +166,7 @@ func (s *Step) compileToDefinitionProto() (*proto.Definition, error) {
 	return protoDef, nil
 }
 
-func (s *Step) CompileStep(i int) (*proto.Step, error) {
+func (s *Step) CompileStep() (*proto.Step, error) {
 	err := s.compileScriptKeywordToStep()
 	if err != nil {
 		return nil, err
@@ -225,7 +225,6 @@ func (s *Step) compileActionKeywordToStep() error {
 }
 
 func (s *Step) compileToStepProto() (*proto.Step, error) {
-	protoStep := &proto.Step{}
 	protoInputs := map[string]*structpb.Value{}
 	for k, v := range (map[string]any)(s.Inputs) {
 		protoValue, err := (&valueCompiler{v}).compile()
@@ -234,6 +233,12 @@ func (s *Step) compileToStepProto() (*proto.Step, error) {
 		}
 		protoInputs[k] = protoValue
 	}
+
+	name := ""
+	if s.Name != nil {
+		name = *s.Name
+	}
+
 	var (
 		ref *proto.Step_Reference
 		err error
@@ -244,18 +249,29 @@ func (s *Step) compileToStepProto() (*proto.Step, error) {
 	case string:
 		ref, err = shortReference(v).compile()
 	case *Reference:
-		ref, err = v.compile()
+		ref, err = v.compile(name, protoInputs, s.Env)
 	default:
 		err = fmt.Errorf("unsupported type: %T", v)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("compiling reference: %w", err)
 	}
-	if s.Name != nil {
-		protoStep.Name = *s.Name
+
+	if ref.Protocol == proto.StepReferenceProtocol_spec_def {
+		// Inputs are not returned in the StepReference because there is no guarantee they will match those defined by the SpecDef
+		// Each step has inputs when executed, so the step is free to inline these inputs into the returned SpecDef
+		return &proto.Step{
+			Name:   name,
+			Step:   ref,
+			Env:    s.Env,
+			Inputs: nil,
+		}, nil
 	}
-	protoStep.Env = s.Env
-	protoStep.Step = ref
-	protoStep.Inputs = protoInputs
-	return protoStep, nil
+
+	return &proto.Step{
+		Name:   name,
+		Step:   ref,
+		Env:    s.Env,
+		Inputs: protoInputs,
+	}, nil
 }
