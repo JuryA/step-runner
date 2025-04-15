@@ -61,6 +61,36 @@ func TestRun(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, string(stepYml), "spec:\n---\nexec: {command: [sh]}")
 	})
+
+	t.Run("loads OCI step in sub-directory", func(t *testing.T) {
+		registry := bldr.StartOCIRegistryServer(t)
+		remoteImgRef := registry.RefToImage("my-image", "latest")
+
+		layer := bldr.
+			OCIImageLayer(t).
+			WithFile("/foo/bar/bob/step.yml", []byte("spec:\n---\nexec: {command: [bash]}")).
+			Build()
+		img := bldr.OCIImage(t).WithLayer(layer).Build()
+		imgIndex := bldr.OCIImageIndex(t).WithImageForThisPlatform(img).Build()
+		registry.PushImageIndex(remoteImgRef, imgIndex)
+
+		outputFile := filepath.Join(t.TempDir(), "outputs.jsonl")
+		cliArgs, getEnv := bldr.CLIInputs(t).
+			WithRemoteImgRef(remoteImgRef).
+			WithOutputFile(outputFile).
+			WithStepPath("foo/bar/bob").
+			WithStepFile("step.yml").
+			Build()
+		err := run(cliArgs, getEnv)
+		require.NoError(t, err)
+
+		outputs := extractOutputs(t, outputFile)
+		require.Contains(t, outputs, "fetched_step_path")
+
+		stepYml, err := os.ReadFile(outputs["fetched_step_path"])
+		require.NoError(t, err)
+		require.Equal(t, string(stepYml), "spec:\n---\nexec: {command: [bash]}")
+	})
 }
 
 func extractOutputs(t *testing.T, outputFile string) map[string]string {

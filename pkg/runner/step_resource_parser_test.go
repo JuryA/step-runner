@@ -30,18 +30,6 @@ func TestStepResourceParser_Parse(t *testing.T) {
 				expectedType: (*runner.GitStepResource)(nil),
 			},
 			{
-				name: "oci",
-				stepRef: &proto.Step_Reference{
-					Protocol:   proto.StepReferenceProtocol_oci,
-					Registry:   "registry.gitlab.com",
-					Repository: "project/my-repository",
-					Tag:        "latest",
-					Path:       []string{},
-					Filename:   "step.yml",
-				},
-				expectedType: (*runner.OCIStepResource)(nil),
-			},
-			{
 				name: "local",
 				stepRef: &proto.Step_Reference{
 					Protocol: proto.StepReferenceProtocol_local,
