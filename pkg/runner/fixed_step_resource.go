@@ -4,17 +4,16 @@ import (
 	"context"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
-	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type FixedStepResource struct {
-	specDef *proto.SpecDefinition
+	specDef *SpecDefinition
 }
 
-func NewFixedStepResource(specDef *proto.SpecDefinition) *FixedStepResource {
+func NewFixedStepResource(specDef *SpecDefinition) *FixedStepResource {
 	return &FixedStepResource{specDef: specDef}
 }
 
-func (sr *FixedStepResource) Fetch(_ context.Context, _ *expression.InterpolationContext) (*proto.SpecDefinition, error) {
+func (sr *FixedStepResource) Fetch(_ context.Context, _ *expression.InterpolationContext) (*SpecDefinition, error) {
 	return sr.specDef, nil
 }

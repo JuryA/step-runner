@@ -13,11 +13,11 @@ type StepResultBuilder struct {
 	loadedFrom     StepReference
 	outputs        map[string]*structpb.Value
 	params         *Params
-	specDef        *proto.SpecDefinition
+	specDef        *SpecDefinition
 	subStepResults []*proto.StepResult
 }
 
-func NewStepResultBuilder(loadedFrom StepReference, params *Params, specDef *proto.SpecDefinition) *StepResultBuilder {
+func NewStepResultBuilder(loadedFrom StepReference, params *Params, specDef *SpecDefinition) *StepResultBuilder {
 	return &StepResultBuilder{
 		env:            make(map[string]string),
 		execResult:     nil,
@@ -100,7 +100,7 @@ func (bldr *StepResultBuilder) Build() *proto.StepResult {
 func (bldr *StepResultBuilder) buildResult(status proto.StepResult_Status) *proto.StepResult {
 	return &proto.StepResult{
 		Step:           bldr.loadedFrom.ToProtoStep(bldr.params),
-		SpecDefinition: bldr.specDef,
+		SpecDefinition: bldr.specDef.ToProto(),
 		Status:         status,
 		Outputs:        bldr.outputs,
 		Exports:        bldr.exports,

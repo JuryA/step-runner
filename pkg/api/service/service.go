@@ -61,7 +61,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		jobOpts = append(jobOpts, jobs.WithRunExitWaitTime(s.runExitWaitTime))
 	}
 
-	job, err := jobs.New(request.Id, specDef.Dir, jobOpts...)
+	job, err := jobs.New(request.Id, specDef.Dir(), jobOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("initializing request: %w", err)
 	}
@@ -92,8 +92,8 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 		return nil, fmt.Errorf("failed to start step runner service: %w", err)
 	}
 
-	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
-	stepsCtx, err := runner.NewStepsContext(globCtx, specDef.Dir, inputs, globCtx.Env())
+	inputs := params.NewInputsWithDefault(specDef.SpecInputs())
+	stepsCtx, err := runner.NewStepsContext(globCtx, specDef.Dir(), inputs, globCtx.Env())
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (s *StepRunnerService) Run(ctx context.Context, request *proto.RunRequest) 
 	return &proto.RunResponse{}, nil
 }
 
-func (s *StepRunnerService) loadSteps(stepsStr string, request *proto.RunRequest) (*proto.SpecDefinition, error) {
+func (s *StepRunnerService) loadSteps(stepsStr string, request *proto.RunRequest) (*runner.SpecDefinition, error) {
 	spec, step, err := schema.ReadSteps(stepsStr)
 	if err != nil {
 		return nil, fmt.Errorf("reading steps %q: %w", stepsStr, err)
@@ -117,16 +117,13 @@ func (s *StepRunnerService) loadSteps(stepsStr string, request *proto.RunRequest
 	if err != nil {
 		return nil, fmt.Errorf("compiling steps: %w", err)
 	}
-	protoStepDef := &proto.SpecDefinition{
-		Spec:       protoSpec,
-		Definition: protoDef,
+
+	dir := request.WorkDir
+	if request.Job != nil && request.Job.BuildDir != "" {
+		dir = request.Job.BuildDir
 	}
 
-	protoStepDef.Dir = request.WorkDir
-	if request.Job != nil && request.Job.BuildDir != "" {
-		protoStepDef.Dir = request.Job.BuildDir
-	}
-	return protoStepDef, nil
+	return runner.NewSpecDefinition(protoSpec, protoDef, dir), nil
 }
 
 func (s *StepRunnerService) Close(ctx context.Context, request *proto.CloseRequest) (*proto.CloseResponse, error) {

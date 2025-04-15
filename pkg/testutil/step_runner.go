@@ -64,10 +64,10 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) 
 	protoDef, err := schemaStep.Compile()
 	require.NoError(b.t, err)
 
-	protoStepDef := &proto.SpecDefinition{Spec: protoSpec, Definition: protoDef}
+	dir, err := os.Getwd()
 	require.NoError(b.t, err)
 
-	protoStepDef.Dir, err = os.Getwd()
+	specDef := runner.NewSpecDefinition(protoSpec, protoDef, dir)
 	require.NoError(b.t, err)
 
 	diContainer := di.NewContainer()
@@ -92,11 +92,11 @@ func (b *StepRunnerBuilder) Run(yaml string) (*proto.StepResult, string, error) 
 	stepParser, err := diContainer.StepParser()
 	require.NoError(b.t, err)
 
-	step, err := stepParser.Parse(globalCtx, protoStepDef, params, runner.StepDefinedInGitLabJob)
+	step, err := stepParser.Parse(globalCtx, specDef, params, runner.StepDefinedInGitLabJob)
 	require.NoError(b.t, err)
 
-	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
-	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, globalCtx.EnvWithLexicalScope(params.Env))
+	inputs := params.NewInputsWithDefault(specDef.SpecInputs())
+	stepsCtx, err := runner.NewStepsContext(globalCtx, specDef.Dir(), inputs, globalCtx.EnvWithLexicalScope(params.Env))
 	require.NoError(b.t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), b.timeout)

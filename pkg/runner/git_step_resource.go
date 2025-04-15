@@ -7,7 +7,6 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
-	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 // GitStepResource knows how to load a step from a Git repository
@@ -29,7 +28,7 @@ func NewGitStepResource(fetcher *git.GitFetcher, url string, version string, ste
 	}
 }
 
-func (sr *GitStepResource) Fetch(ctx context.Context, view *expression.InterpolationContext) (*proto.SpecDefinition, error) {
+func (sr *GitStepResource) Fetch(ctx context.Context, view *expression.InterpolationContext) (*SpecDefinition, error) {
 	url, err := expression.ExpandString(view, sr.url)
 	if err != nil {
 		return nil, fmt.Errorf("fetching git step: interpolating url: %w", err)

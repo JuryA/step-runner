@@ -1,17 +1,12 @@
-package schema
+package schema_test
 
 import (
-	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"gopkg.in/yaml.v3"
 
-	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 func TestRead(t *testing.T) {
@@ -80,7 +75,7 @@ exec:
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			spec, step, err := ReadSteps(c.yaml)
+			spec, step, err := schema.ReadSteps(c.yaml)
 			if c.wantErr {
 				require.Error(t, err)
 				require.Nil(t, spec)
@@ -88,7 +83,7 @@ exec:
 			} else {
 				require.NoError(t, err)
 				// Assert that the whole step is preserved round-trip
-				got, err := WriteSteps(spec, step)
+				got, err := schema.WriteSteps(spec, step)
 				require.NoError(t, err)
 				want := strings.TrimSpace(c.yaml)
 				got = strings.TrimSpace(got)
@@ -96,48 +91,4 @@ exec:
 			}
 		})
 	}
-}
-
-func readProto(content, dir string) (*proto.SpecDefinition, error) {
-	var (
-		spec       proto.Spec
-		definition proto.Definition
-	)
-
-	if err := unmarshalProto(content, &spec, &definition); err != nil {
-		return nil, fmt.Errorf("unmarshaling proto: %w", err)
-	}
-	stepDef := &proto.SpecDefinition{
-		Spec:       &spec,
-		Definition: &definition,
-		Dir:        dir,
-	}
-	return stepDef, nil
-}
-
-func unmarshalProto(input string, subjects ...protoreflect.ProtoMessage) error {
-	d := yaml.NewDecoder(strings.NewReader(input))
-	d.KnownFields(true)
-
-	for _, subject := range subjects {
-		var decoded any
-		err := d.Decode(&decoded)
-		if err != nil {
-			return fmt.Errorf("decoding: %w", err)
-		}
-
-		// convert to json
-		encoded, err := json.Marshal(decoded)
-		if err != nil {
-			return fmt.Errorf("converting to json: %w", err)
-		}
-
-		// convert to proto
-		if err := protojson.Unmarshal(encoded, subject); err != nil {
-			return fmt.Errorf("converting to proto: %w", err)
-		}
-	}
-
-	return nil
-
 }

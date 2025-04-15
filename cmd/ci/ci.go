@@ -61,12 +61,9 @@ func run(options *Options) error {
 	if err != nil {
 		return fmt.Errorf("compiling STEPS: %w", err)
 	}
-	protoStepDef := &proto.SpecDefinition{
-		Spec: &proto.Spec{
-			Spec: &proto.Spec_Content{},
-		},
-		Definition: protoDef,
-	}
+
+	spec := &proto.Spec{Spec: &proto.Spec_Content{}}
+	specDef := runner.NewSpecDefinition(spec, protoDef, "")
 
 	diContainer := di.NewContainer()
 
@@ -97,14 +94,14 @@ func run(options *Options) error {
 		return err
 	}
 
-	step, err := stepParser.Parse(globalCtx, protoStepDef, params, runner.StepDefinedInGitLabJob)
+	step, err := stepParser.Parse(globalCtx, specDef, params, runner.StepDefinedInGitLabJob)
 	if err != nil {
 		return fmt.Errorf("failed to run steps: %w", err)
 	}
 
 	env := globalCtx.EnvWithLexicalScope(params.Env)
-	inputs := params.NewInputsWithDefault(protoStepDef.Spec.Spec.Inputs)
-	stepsCtx, err := runner.NewStepsContext(globalCtx, protoStepDef.Dir, inputs, env)
+	inputs := params.NewInputsWithDefault(specDef.SpecInputs())
+	stepsCtx, err := runner.NewStepsContext(globalCtx, specDef.Dir(), inputs, env)
 
 	if err != nil {
 		return fmt.Errorf("creating steps context: %w", err)

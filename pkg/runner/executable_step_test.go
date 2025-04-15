@@ -59,7 +59,7 @@ func TestExecutableStep_Run(t *testing.T) {
 				protoDef := bldr.ProtoDef().
 					WithExecType("", []string{"/bin/bash", "-c", "echo " + outputValueB64 + " | base64 -d > ${{output_file}}"}).
 					Build()
-				specDef := bldr.ProtoSpecDef().WithSpec(protoSpec).WithDefinition(protoDef).Build()
+				specDef := bldr.SpecDef().WithSpec(protoSpec).WithDefinition(protoDef).Build()
 				stepsCtx := bldr.StepsContext(t).Build()
 
 				step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
@@ -84,7 +84,7 @@ func TestExecutableStep_Run(t *testing.T) {
 			WithEnvVar("STEP_RESULT", base64.StdEncoding.EncodeToString(jsonStepResult)).
 			WithExecType("", []string{"/bin/bash", "-c", `echo ${{env.STEP_RESULT}} | base64 -d >${{output_file}}`}).
 			Build()
-		specDef := bldr.ProtoSpecDef().WithSpec(protoSpec).WithDefinition(protoDef).Build()
+		specDef := bldr.SpecDef().WithSpec(protoSpec).WithDefinition(protoDef).Build()
 		stepsCtx := bldr.StepsContext(t).Build()
 
 		step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
@@ -97,7 +97,7 @@ func TestExecutableStep_Run(t *testing.T) {
 
 func TestExecutableStep_Describe(t *testing.T) {
 	protoDef := bldr.ProtoDef().WithExecType("", []string{"go", "run", "."}).Build()
-	specDef := bldr.ProtoSpecDef().WithDefinition(protoDef).Build()
+	specDef := bldr.SpecDef().WithDefinition(protoDef).Build()
 
 	step := runner.NewExecutableStep(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef)
 	require.Equal(t, `executable step "go run ."`, step.Describe())

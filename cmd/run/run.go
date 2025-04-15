@@ -76,28 +76,23 @@ func NewCmd() *cobra.Command {
 
 func run(options *Options) error {
 
-	var specDef *proto.SpecDefinition
+	var specDef *runner.SpecDefinition
 
 	if options.TextProtoStepFile != "" {
-
 		data, err := os.ReadFile(options.TextProtoStepFile)
 		if err != nil {
 			return err
 		}
 
-		specDef = &proto.SpecDefinition{
-			Spec: &proto.Spec{
-				Spec: &proto.Spec_Content{},
-			},
-			Definition: &proto.Definition{},
-		}
-		err = prototext.Unmarshal(data, specDef.Definition)
+		defn := &proto.Definition{}
+		err = prototext.Unmarshal(data, defn)
 		if err != nil {
 			return err
 		}
 
-		specDef.Dir = filepath.Dir(options.TextProtoStepFile)
-
+		spec := &proto.Spec{Spec: &proto.Spec_Content{}}
+		dir := filepath.Dir(options.TextProtoStepFile)
+		specDef = runner.NewSpecDefinition(spec, defn, dir)
 	} else {
 
 		yml, err := yamlStep(options)
@@ -114,12 +109,9 @@ func run(options *Options) error {
 		if err != nil {
 			return err
 		}
-		specDef = &proto.SpecDefinition{
-			Spec: &proto.Spec{
-				Spec: &proto.Spec_Content{},
-			},
-			Definition: protoDef,
-		}
+
+		spec := &proto.Spec{Spec: &proto.Spec_Content{}}
+		specDef = runner.NewSpecDefinition(spec, protoDef, "")
 	}
 
 	diContainer := di.NewContainer()
@@ -140,8 +132,8 @@ func run(options *Options) error {
 		return err
 	}
 
-	inputs := params.NewInputsWithDefault(specDef.Spec.Spec.Inputs)
-	stepsCtx, err := runner.NewStepsContext(globalCtx, "", inputs, globalCtx.Env())
+	inputs := params.NewInputsWithDefault(specDef.SpecInputs())
+	stepsCtx, err := runner.NewStepsContext(globalCtx, specDef.Dir(), inputs, globalCtx.Env())
 	if err != nil {
 		return err
 	}

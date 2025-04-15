@@ -14,7 +14,7 @@ import (
 
 func TestLazilyLoadedStep(t *testing.T) {
 	t.Run("loads and executes step", func(t *testing.T) {
-		specDef := bldr.ProtoSpecDef().Build()
+		specDef := bldr.SpecDef().Build()
 
 		stepResult := bldr.StepResult().WithSpecDef(specDef).WithSuccessStatus().Build()
 		parser := &FixedStepParser{step: bldr.Step().WithRunReturnsStepResult(stepResult).Build()}
@@ -37,7 +37,7 @@ func TestLazilyLoadedStep(t *testing.T) {
 	})
 
 	t.Run("errors when inputs are provided that are not defined", func(t *testing.T) {
-		specDef := bldr.ProtoSpecDef().Build()
+		specDef := bldr.SpecDef().Build()
 
 		stepResult := bldr.StepResult().WithSpecDef(specDef).WithSuccessStatus().Build()
 		parser := &FixedStepParser{step: bldr.Step().WithRunReturnsStepResult(stepResult).Build()}
@@ -75,6 +75,6 @@ type FixedStepParser struct {
 	step runner.Step
 }
 
-func (c *FixedStepParser) Parse(_ *runner.GlobalContext, _ *proto.SpecDefinition, _ *runner.Params, _ runner.StepReference) (runner.Step, error) {
+func (c *FixedStepParser) Parse(_ *runner.GlobalContext, _ *runner.SpecDefinition, _ *runner.Params, _ runner.StepReference) (runner.Step, error) {
 	return c.step, nil
 }
