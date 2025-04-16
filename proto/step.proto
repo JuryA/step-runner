@@ -126,8 +126,6 @@ message SpecDefinition {
   Spec spec = 1;
   // Definition is the second document in the file.
   Definition definition = 2;
-  // Dir is where the file was loaded from.
-  string dir = 3;
 }
 
 // ValueType is an enumerations of the possible types a value can have.
