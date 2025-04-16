@@ -7,7 +7,6 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
-	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 // DistStepResource knows how to load a step that is internal to the step-runner
@@ -25,7 +24,7 @@ func NewDistStepResource(fetcher *dist.Fetcher, stepDir string, filename string)
 	}
 }
 
-func (sr *DistStepResource) Fetch(ctx context.Context, _ *expression.InterpolationContext) (*proto.SpecDefinition, error) {
+func (sr *DistStepResource) Fetch(ctx context.Context, _ *expression.InterpolationContext) (*SpecDefinition, error) {
 	dir, err := sr.fetcher.Fetch(sr.stepDir)
 	if err != nil {
 		return nil, fmt.Errorf("fetching dist step: %w", err)

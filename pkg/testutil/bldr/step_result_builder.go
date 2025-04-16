@@ -3,11 +3,12 @@ package bldr
 import (
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type StepResultBuilder struct {
-	specDef *proto.SpecDefinition
+	specDef *runner.SpecDefinition
 	status  proto.StepResult_Status
 	step    *proto.Step
 	outputs map[string]*structpb.Value
@@ -15,7 +16,7 @@ type StepResultBuilder struct {
 
 func StepResult() *StepResultBuilder {
 	return &StepResultBuilder{
-		specDef: ProtoSpecDef().Build(),
+		specDef: SpecDef().Build(),
 		status:  proto.StepResult_success,
 		step:    nil,
 		outputs: map[string]*structpb.Value{},
@@ -27,7 +28,7 @@ func (bldr *StepResultBuilder) WithOutput(name string, value *structpb.Value) *S
 	return bldr
 }
 
-func (bldr *StepResultBuilder) WithSpecDef(specDef *proto.SpecDefinition) *StepResultBuilder {
+func (bldr *StepResultBuilder) WithSpecDef(specDef *runner.SpecDefinition) *StepResultBuilder {
 	bldr.specDef = specDef
 	return bldr
 }
@@ -45,7 +46,7 @@ func (bldr *StepResultBuilder) WithSuccessStatus() *StepResultBuilder {
 func (bldr *StepResultBuilder) Build() *proto.StepResult {
 	return &proto.StepResult{
 		Step:           bldr.step,
-		SpecDefinition: bldr.specDef,
+		SpecDefinition: bldr.specDef.ToProto(),
 		Status:         bldr.status,
 		Outputs:        bldr.outputs,
 		Exports:        make(map[string]string),

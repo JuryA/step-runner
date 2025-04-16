@@ -5,27 +5,26 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
-	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 type FixedStepResourceBuilder struct {
-	specDef *proto.SpecDefinition
+	specDef *runner.SpecDefinition
 }
 
-func StepResource(specDef *proto.SpecDefinition) *FixedStepResourceBuilder {
+func StepResource(specDef *runner.SpecDefinition) *FixedStepResourceBuilder {
 	return &FixedStepResourceBuilder{
 		specDef: specDef,
 	}
 }
 
 func (bldr *FixedStepResourceBuilder) Build() runner.StepResource {
-	return &FixedStepResource{bldr.specDef}
+	return &FixedStepResource{specDef: bldr.specDef}
 }
 
 type FixedStepResource struct {
-	specDef *proto.SpecDefinition
+	specDef *runner.SpecDefinition
 }
 
-func (sr *FixedStepResource) Fetch(ctx ctx.Context, view *expression.InterpolationContext) (*proto.SpecDefinition, error) {
+func (sr *FixedStepResource) Fetch(ctx ctx.Context, view *expression.InterpolationContext) (*runner.SpecDefinition, error) {
 	return sr.specDef, nil
 }

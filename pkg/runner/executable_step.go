@@ -16,10 +16,10 @@ import (
 type ExecutableStep struct {
 	loadedFrom StepReference
 	params     *Params
-	specDef    *proto.SpecDefinition
+	specDef    *SpecDefinition
 }
 
-func NewExecutableStep(loadedFrom StepReference, params *Params, specDef *proto.SpecDefinition) *ExecutableStep {
+func NewExecutableStep(loadedFrom StepReference, params *Params, specDef *SpecDefinition) *ExecutableStep {
 	return &ExecutableStep{
 		loadedFrom: loadedFrom,
 		params:     params,
@@ -28,7 +28,7 @@ func NewExecutableStep(loadedFrom StepReference, params *Params, specDef *proto.
 }
 
 func (s *ExecutableStep) Describe() string {
-	return fmt.Sprintf("executable step %q", strings.Join(s.specDef.Definition.Exec.Command, " "))
+	return fmt.Sprintf("executable step %q", strings.Join(s.specDef.ExecCommand(), " "))
 }
 
 func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
@@ -38,7 +38,7 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.St
 
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 
-	if err := result.ObserveEnv(stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)); err != nil {
+	if err := result.ObserveEnv(stepsCtx.ExpandAndApplyEnv(s.specDef.Env())); err != nil {
 		return result.BuildFailure(), fmt.Errorf("expand step env: %w", err)
 	}
 
@@ -62,7 +62,7 @@ func (s *ExecutableStep) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.St
 func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*ExecResult, error) {
 	cmdArgs := []string{}
 
-	for _, arg := range s.specDef.Definition.Exec.Command {
+	for _, arg := range s.specDef.ExecCommand() {
 		res, err := expression.ExpandString(stepsCtx.View(), arg)
 
 		if err != nil {
@@ -93,7 +93,7 @@ func (s *ExecutableStep) execCommand(ctx ctx.Context, stepsCtx *StepsContext) (*
 }
 
 func (s *ExecutableStep) determineWorkDir(stepsCtx *StepsContext) (string, error) {
-	workDir := s.specDef.Definition.Exec.WorkDir
+	workDir := s.specDef.ExecWorkDir()
 
 	if workDir == "" {
 		return stepsCtx.WorkDir(), nil
@@ -109,7 +109,7 @@ func (s *ExecutableStep) determineWorkDir(stepsCtx *StepsContext) (string, error
 }
 
 func (s *ExecutableStep) readOutputs(stepsCtx *StepsContext) (map[string]*structpb.Value, error) {
-	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
+	if s.specDef.IsDelegateOutputs() {
 		stepResult, err := stepsCtx.ReadOutputStepResult()
 		if err != nil {
 			return nil, fmt.Errorf("delegate: %w", err)
@@ -118,5 +118,5 @@ func (s *ExecutableStep) readOutputs(stepsCtx *StepsContext) (map[string]*struct
 		return stepResult.Outputs, nil
 	}
 
-	return stepsCtx.ReadOutputValues(s.specDef.Spec.Spec.Outputs)
+	return stepsCtx.ReadOutputValues(s.specDef.SpecOutputs())
 }

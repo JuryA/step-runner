@@ -27,7 +27,7 @@ func TestGitStepResource_Fetch(t *testing.T) {
 		res := runner.NewGitStepResource(fetcher, "${{env.SERVER_ADDR}}", "main", "", "step.yml")
 		specDef, err := res.Fetch(context.Background(), view)
 		require.NoError(t, err)
-		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
+		require.Equal(t, []string{"bash"}, specDef.ExecCommand())
 	})
 
 	t.Run("loads Git step in sub-directory", func(t *testing.T) {
@@ -44,6 +44,6 @@ func TestGitStepResource_Fetch(t *testing.T) {
 		res := runner.NewGitStepResource(fetcher, gitServerURL, commit, "foo/bar/bob", "step.yml")
 		specDef, err := res.Fetch(context.Background(), bldr.InterpolationCtx().Build())
 		require.NoError(t, err)
-		require.Equal(t, []string{"bash"}, specDef.Definition.Exec.Command)
+		require.Equal(t, []string{"bash"}, specDef.ExecCommand())
 	})
 }
