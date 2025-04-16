@@ -9,7 +9,6 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api/service"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/dist"
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 )
 
@@ -54,12 +53,7 @@ func (c *Container) StepResourceParser() (*runner.StepResourceParser, error) {
 		return nil, fmt.Errorf("creating step resource parser: %w", err)
 	}
 
-	ociFetcher, err := c.OCIFetcher()
-	if err != nil {
-		return nil, fmt.Errorf("creating step resource parser: %w", err)
-	}
-
-	return runner.NewStepResourceParser(gitFetcher, ociFetcher, c.DistFetcher()), nil
+	return runner.NewStepResourceParser(gitFetcher, c.DistFetcher()), nil
 }
 
 func (c *Container) StepParser() (*runner.Parser, error) {
@@ -87,15 +81,6 @@ func (c *Container) GitFetcher() (*git.GitFetcher, error) {
 	}
 
 	return git.New(cacheDir, git.CloneOptions{Depth: 1}), nil
-}
-
-func (c *Container) OCIFetcher() (*oci.OCIFetcher, error) {
-	cacheDir, err := c.CacheDir()
-	if err != nil {
-		return nil, fmt.Errorf("creating oci fetcher: %w", err)
-	}
-
-	return oci.NewOCIFetcher(cacheDir), nil
 }
 
 func (c *Container) DistFetcher() *dist.Fetcher {
