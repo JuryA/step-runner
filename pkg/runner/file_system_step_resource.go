@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
-	"gitlab.com/gitlab-org/step-runner/proto"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
@@ -23,7 +22,7 @@ func NewFileSystemStepResource(dir string, filename string) *FileSystemStepResou
 	}
 }
 
-func (sr *FileSystemStepResource) Fetch(_ context.Context, _ *expression.InterpolationContext) (*proto.SpecDefinition, error) {
+func (sr *FileSystemStepResource) Fetch(_ context.Context, _ *expression.InterpolationContext) (*SpecDefinition, error) {
 	stepFile := filepath.Join(sr.dir, sr.filename)
 
 	spec, step, err := schema.LoadSteps(stepFile)
@@ -41,12 +40,7 @@ func (sr *FileSystemStepResource) Fetch(_ context.Context, _ *expression.Interpo
 		return nil, fmt.Errorf("compiling proto definition: %w", err)
 	}
 
-	protoStepDef := &proto.SpecDefinition{
-		Spec:       protoSpec,
-		Definition: protoDef,
-		Dir:        sr.dir,
-	}
-	return protoStepDef, nil
+	return NewSpecDefinition(protoSpec, protoDef, sr.dir), nil
 }
 
 func (sr *FileSystemStepResource) Describe() string {

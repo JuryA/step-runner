@@ -14,11 +14,11 @@ import (
 type SequenceOfSteps struct {
 	loadedFrom StepReference
 	params     *Params
-	specDef    *proto.SpecDefinition
+	specDef    *SpecDefinition
 	steps      []Step
 }
 
-func NewSequenceOfSteps(loadedFrom StepReference, params *Params, specDef *proto.SpecDefinition, steps ...Step) *SequenceOfSteps {
+func NewSequenceOfSteps(loadedFrom StepReference, params *Params, specDef *SpecDefinition, steps ...Step) *SequenceOfSteps {
 	return &SequenceOfSteps{
 		loadedFrom: loadedFrom,
 		params:     params,
@@ -38,7 +38,7 @@ func (s *SequenceOfSteps) Describe() string {
 func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.StepResult, error) {
 	result := NewStepResultBuilder(s.loadedFrom, s.params, s.specDef)
 
-	if err := result.ObserveEnv(stepsCtx.ExpandAndApplyEnv(s.specDef.Definition.Env)); err != nil {
+	if err := result.ObserveEnv(stepsCtx.ExpandAndApplyEnv(s.specDef.Env())); err != nil {
 		return result.BuildFailure(), fmt.Errorf("expand step env: %w", err)
 	}
 
@@ -59,8 +59,8 @@ func (s *SequenceOfSteps) Run(ctx ctx.Context, stepsCtx *StepsContext) (*proto.S
 }
 
 func (s *SequenceOfSteps) readOutputs(stepsCtx *StepsContext, stepResults []*proto.StepResult) (map[string]*structpb.Value, error) {
-	if s.specDef.Spec.Spec.OutputMethod == proto.OutputMethod_delegate {
-		return findOutputsWithName(s.specDef.Definition.Delegate, stepResults)
+	if s.specDef.IsDelegateOutputs() {
+		return findOutputsWithName(s.specDef.DelegateTo(), stepResults)
 	}
 
 	return s.interpolateStepOutputs(stepsCtx)
@@ -69,7 +69,7 @@ func (s *SequenceOfSteps) readOutputs(stepsCtx *StepsContext, stepResults []*pro
 func (s *SequenceOfSteps) interpolateStepOutputs(stepsCtx *StepsContext) (map[string]*structpb.Value, error) {
 	outputs := make(map[string]*structpb.Value)
 
-	for k, v := range s.specDef.Definition.Outputs {
+	for k, v := range s.specDef.DefinitionOutputs() {
 		res, err := expression.Expand(stepsCtx.View(), v)
 		if err == nil {
 			outputs[k] = res.Value

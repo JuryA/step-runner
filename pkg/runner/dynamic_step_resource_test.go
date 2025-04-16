@@ -26,6 +26,6 @@ func TestDynamicStepResource_Fetch(t *testing.T) {
 		dynResource := runner.NewDynamicStepResource(stepRscParser, "${{env.MY_VAR_A}}")
 		specDef, err := dynResource.Fetch(context.Background(), view)
 		require.NoError(t, err)
-		require.Contains(t, specDef.Definition.Exec.Command, "sh")
+		require.Contains(t, specDef.ExecCommand(), "sh")
 	})
 }

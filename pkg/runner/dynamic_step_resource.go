@@ -26,7 +26,7 @@ func NewDynamicStepResource(parser stepResourceParser, shortRef string) *Dynamic
 	}
 }
 
-func (sr *DynamicStepResource) Fetch(ctx context.Context, view *expression.InterpolationContext) (*proto.SpecDefinition, error) {
+func (sr *DynamicStepResource) Fetch(ctx context.Context, view *expression.InterpolationContext) (*SpecDefinition, error) {
 	shortRef, err := expression.ExpandString(view, sr.shortRef)
 	if err != nil {
 		return nil, fmt.Errorf("fetching step: interpolating reference: %w", err)

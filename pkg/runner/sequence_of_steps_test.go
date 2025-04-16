@@ -16,7 +16,7 @@ import (
 func TestSequenceOfSteps_Describe(t *testing.T) {
 	subStepA := bldr.Step().Build()
 	subStepB := bldr.Step().Build()
-	specDef := bldr.ProtoSpecDef().Build()
+	specDef := bldr.SpecDef().Build()
 
 	steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStepA, subStepB)
 	require.Equal(t, "sequence of 2 steps", steps.Describe())
@@ -27,7 +27,7 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		stepResult := bldr.StepResult().WithSuccessStatus().Build()
 		subStep := bldr.Step().WithRunReturnsStepResult(stepResult).Build()
 		stepsCtx := bldr.StepsContext(t).Build()
-		specDef := bldr.ProtoSpecDef().Build()
+		specDef := bldr.SpecDef().Build()
 
 		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStep)
 		result, err := steps.Run(context.Background(), stepsCtx)
@@ -43,7 +43,7 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		stepResult := bldr.StepResult().WithFailedStatus().Build()
 		subStep := bldr.Step().WithRunReturnsStepResult(stepResult).WithRunReturnsErr(err).Build()
 		stepsCtx := bldr.StepsContext(t).Build()
-		specDef := bldr.ProtoSpecDef().Build()
+		specDef := bldr.SpecDef().Build()
 
 		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStep)
 		result, err := steps.Run(context.Background(), stepsCtx)
@@ -62,7 +62,7 @@ func TestSequenceOfSteps_Run(t *testing.T) {
 		protoDef := bldr.ProtoDef().
 			WithOutput("name", structpb.NewStringValue("name is ${{env.FOO}}")).
 			Build()
-		specDef := bldr.ProtoSpecDef().WithDefinition(protoDef).Build()
+		specDef := bldr.SpecDef().WithDefinition(protoDef).Build()
 
 		steps := runner.NewSequenceOfSteps(runner.StepDefinedInGitLabJob, &runner.Params{}, specDef, subStep)
 		result, err := steps.Run(context.Background(), stepsCtx)

@@ -41,8 +41,8 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 	}
 
 	env := parentStepsCtx.EnvWithLexicalScope(params.Env)
-	inputs := params.NewInputsWithDefault(subStepSpecDefinition.Spec.Spec.Inputs)
-	stepsCtx, err := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir, inputs, env)
+	inputs := params.NewInputsWithDefault(subStepSpecDefinition.SpecInputs())
+	stepsCtx, err := NewStepsContext(s.globalCtx, subStepSpecDefinition.Dir(), inputs, env)
 
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", s.Describe(), err)
@@ -59,7 +59,7 @@ func (s *LazilyLoadedStep) Run(ctx ctx.Context, parentStepsCtx *StepsContext) (*
 	return result, nil
 }
 
-func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext) (Step, *Params, *proto.SpecDefinition, error) {
+func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext) (Step, *Params, *SpecDefinition, error) {
 	specDef, err := s.stepResource.Fetch(ctx, stepsCtx.View())
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load: %w", err)
@@ -111,11 +111,11 @@ func (s *LazilyLoadedStep) loadStep(ctx ctx.Context, stepsCtx *StepsContext) (St
 	return step, params, specDef, nil
 }
 
-func buildInputVars(stepReference *proto.Step, stepSpecDef *proto.SpecDefinition) (map[string]*context.Variable, error) {
+func buildInputVars(stepReference *proto.Step, stepSpecDef *SpecDefinition) (map[string]*context.Variable, error) {
 	inputs := make(map[string]*context.Variable)
 
 	for name, val := range stepReference.Inputs {
-		input, ok := stepSpecDef.Spec.Spec.Inputs[name]
+		input, ok := stepSpecDef.SpecInputWithName(name)
 
 		if !ok {
 			return inputs, fmt.Errorf("step does not accept input with name %q", name)

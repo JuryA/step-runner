@@ -1,10 +1,16 @@
 package schema
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
 	protobuf "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"gopkg.in/yaml.v3"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -287,15 +293,50 @@ delegate: delegate_me
 				require.Nil(t, protoSpecDef)
 			} else {
 				require.NoError(t, err)
-				wantSpecDef, err := readProto(c.wantCompiled, "")
-				require.NoError(t, err)
+
+				wantSpecDef := readProto(t, c.wantCompiled)
 				if !protobuf.Equal(wantSpecDef, protoSpecDef) {
 					t.Errorf("wanted:\n%+v\ngot:\n%+v", wantSpecDef, protoSpecDef)
 				}
 			}
 		})
 	}
+}
 
+func readProto(t *testing.T, content string) *proto.SpecDefinition {
+	var spec proto.Spec
+	var definition proto.Definition
+
+	err := unmarshalProto(content, &spec, &definition)
+	require.NoError(t, err)
+
+	return &proto.SpecDefinition{Spec: &spec, Definition: &definition}
+}
+
+func unmarshalProto(input string, subjects ...protoreflect.ProtoMessage) error {
+	d := yaml.NewDecoder(strings.NewReader(input))
+	d.KnownFields(true)
+
+	for _, subject := range subjects {
+		var decoded any
+		err := d.Decode(&decoded)
+		if err != nil {
+			return fmt.Errorf("decoding: %w", err)
+		}
+
+		// convert to json
+		encoded, err := json.Marshal(decoded)
+		if err != nil {
+			return fmt.Errorf("converting to json: %w", err)
+		}
+
+		// convert to proto
+		if err := protojson.Unmarshal(encoded, subject); err != nil {
+			return fmt.Errorf("converting to proto: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func TestReferenceCompiler(t *testing.T) {

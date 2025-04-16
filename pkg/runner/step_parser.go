@@ -8,7 +8,7 @@ import (
 )
 
 type StepParser interface {
-	Parse(globalCtx *GlobalContext, specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error)
+	Parse(globalCtx *GlobalContext, specDef *SpecDefinition, params *Params, loadedFrom StepReference) (Step, error)
 }
 
 type Parser struct {
@@ -21,8 +21,8 @@ func NewParser(stepResParser *StepResourceParser) *Parser {
 	}
 }
 
-func (p *Parser) Parse(globalCtx *GlobalContext, specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
-	if err := p.validateInputs(specDef.Spec, params.Inputs); err != nil {
+func (p *Parser) Parse(globalCtx *GlobalContext, specDef *SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
+	if err := p.validateInputs(specDef.SpecInputs(), params.Inputs); err != nil {
 		return nil, fmt.Errorf("failed to parse spec definition: %w", err)
 	}
 
@@ -35,16 +35,16 @@ func (p *Parser) Parse(globalCtx *GlobalContext, specDef *proto.SpecDefinition, 
 	return step, nil
 }
 
-func (p *Parser) parseStepType(globalCtx *GlobalContext, specDef *proto.SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
-	if specDef.Definition.Type == proto.DefinitionType_exec {
+func (p *Parser) parseStepType(globalCtx *GlobalContext, specDef *SpecDefinition, params *Params, loadedFrom StepReference) (Step, error) {
+	if specDef.IsTypeExec() {
 		return NewExecutableStep(loadedFrom, params, specDef), nil
 	}
 
-	if specDef.Definition.Type == proto.DefinitionType_steps {
+	if specDef.IsTypeSteps() {
 		var steps []Step
 
-		for _, stepReference := range specDef.Definition.Steps {
-			stepResource, err := p.stepResParser.Parse(specDef.Dir, stepReference.Step)
+		for _, stepReference := range specDef.Steps() {
+			stepResource, err := p.stepResParser.Parse(specDef.Dir(), stepReference.Step)
 
 			if err != nil {
 				return nil, err
@@ -56,11 +56,11 @@ func (p *Parser) parseStepType(globalCtx *GlobalContext, specDef *proto.SpecDefi
 		return NewSequenceOfSteps(loadedFrom, params, specDef, steps...), nil
 	}
 
-	return nil, fmt.Errorf("unknown step definition type: %s", specDef.Definition.Type)
+	return nil, fmt.Errorf("unknown step definition type: %s", specDef.DescribeType())
 }
 
-func (p *Parser) validateInputs(spec *proto.Spec, inputs map[string]*context.Variable) error {
-	for key, value := range spec.Spec.Inputs {
+func (p *Parser) validateInputs(specInputs map[string]*proto.Spec_Content_Input, inputs map[string]*context.Variable) error {
+	for key, value := range specInputs {
 		if inputs[key] == nil && value.Default == nil {
 			return fmt.Errorf("input %q required, but not defined", key)
 		}

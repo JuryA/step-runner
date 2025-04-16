@@ -18,6 +18,6 @@ func TestDistStepResource_Fetch(t *testing.T) {
 		res := runner.NewDistStepResource(fetcher, "oci/publish", "step.yml")
 		specDef, err := res.Fetch(context.Background(), nil)
 		require.NoError(t, err)
-		require.Contains(t, strings.Join(specDef.Definition.Exec.Command, " "), "run")
+		require.Contains(t, strings.Join(specDef.ToProto().Definition.Exec.Command, " "), "run")
 	})
 }
