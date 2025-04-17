@@ -22,8 +22,8 @@ message Step {
     StepReferenceProtocol protocol = 1;
     // Url is the location of the referenced step.
     string url = 2;
-    // Path is the location of the step spec and definition within the URL.
-    repeated string path = 3;
+    // Path is the location of the step spec and definition within the URL. Replaced with step_path
+    repeated string path = 3 [deprecated = true];
     // Filename is the name of the file which contains the step spec and definition.
     string filename = 4;
     // Version is which version of the step to use.
@@ -36,7 +36,16 @@ message Step {
     string tag = 8;
     // SpecDef allows the step reference to be inlined or hardcoded
     SpecDefinition specDef = 9;
+    // Step Path is the path to the step
+    oneof step_path {
+      string path_exp = 10;
+      PathParts paths = 11;
+    }
   }
+}
+
+message PathParts {
+  repeated string parts = 1;
 }
 
 // StepReferenceProtocol is the method of fetching the referenced step.
