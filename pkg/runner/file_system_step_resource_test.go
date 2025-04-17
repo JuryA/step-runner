@@ -11,13 +11,26 @@ import (
 )
 
 func TestFileSystemStepResource_Fetch(t *testing.T) {
-	t.Run("loads local step", func(t *testing.T) {
-		dir := bldr.Files(t).
+	t.Run("load step using step path relative to work dir", func(t *testing.T) {
+		workDir := bldr.Files(t).
+			WriteFile("/path/to/step/step.yml", "spec:\n---\nexec: {command: [sh]}").
+			Build()
+
+		view := bldr.InterpolationCtx().WithEnvVar("STEP_PATH", "path/to/step").Build()
+		resource := runner.NewFileSystemStepResource(workDir, "${{env.STEP_PATH}}", "step.yml")
+		specDef, err := resource.Fetch(context.Background(), view)
+		require.NoError(t, err)
+		require.Contains(t, specDef.ToProto().Definition.Exec.Command, "sh")
+	})
+
+	t.Run("loads step using absolute step path", func(t *testing.T) {
+		stepPath := bldr.Files(t).
 			WriteFile("step.yml", "spec:\n---\nexec: {command: [sh]}").
 			Build()
 
-		resource := runner.NewFileSystemStepResource(dir, "step.yml")
-		specDef, err := resource.Fetch(context.Background(), nil)
+		view := bldr.InterpolationCtx().WithEnvVar("STEP_PATH", stepPath).Build()
+		resource := runner.NewFileSystemStepResource(t.TempDir(), "${{env.STEP_PATH}}", "step.yml")
+		specDef, err := resource.Fetch(context.Background(), view)
 		require.NoError(t, err)
 		require.Contains(t, specDef.ToProto().Definition.Exec.Command, "sh")
 	})

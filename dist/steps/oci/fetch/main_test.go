@@ -29,7 +29,7 @@ func TestRun(t *testing.T) {
 		outputs := extractOutputs(t, outputFile)
 		require.Contains(t, outputs, "fetched_step_path")
 
-		stepYml, err := os.ReadFile(outputs["fetched_step_path"])
+		stepYml, err := os.ReadFile(filepath.Join(outputs["fetched_step_path"], "step.yml"))
 		require.NoError(t, err)
 		require.Equal(t, string(stepYml), "spec:\n---\nexec: {command: [bash]}")
 	})
@@ -57,7 +57,7 @@ func TestRun(t *testing.T) {
 		outputs := extractOutputs(t, outputFile)
 		require.Contains(t, outputs, "fetched_step_path")
 
-		stepYml, err := os.ReadFile(outputs["fetched_step_path"])
+		stepYml, err := os.ReadFile(filepath.Join(outputs["fetched_step_path"], "step.yml"))
 		require.NoError(t, err)
 		require.Equal(t, string(stepYml), "spec:\n---\nexec: {command: [sh]}")
 	})
@@ -79,7 +79,6 @@ func TestRun(t *testing.T) {
 			WithRemoteImgRef(remoteImgRef).
 			WithOutputFile(outputFile).
 			WithStepPath("foo/bar/bob").
-			WithStepFile("step.yml").
 			Build()
 		err := run(cliArgs, getEnv)
 		require.NoError(t, err)
@@ -87,7 +86,7 @@ func TestRun(t *testing.T) {
 		outputs := extractOutputs(t, outputFile)
 		require.Contains(t, outputs, "fetched_step_path")
 
-		stepYml, err := os.ReadFile(outputs["fetched_step_path"])
+		stepYml, err := os.ReadFile(filepath.Join(outputs["fetched_step_path"], "step.yml"))
 		require.NoError(t, err)
 		require.Equal(t, string(stepYml), "spec:\n---\nexec: {command: [bash]}")
 	})

@@ -176,11 +176,13 @@ func TestCompileOCI(t *testing.T) {
 
 		steps := stepRef.SpecDef.Definition.Steps
 		require.Len(t, steps, 2)
+
+		// nolint:staticcheck // SA1019
 		require.Equal(t, []string{"oci", "fetch"}, steps[0].Step.Path)
 		require.Equal(t, "registry.gitlab.com", steps[0].Inputs["registry"].GetStringValue())
 		require.Equal(t, "project/my-repository", steps[0].Inputs["repository"].GetStringValue())
 		require.Equal(t, "latest", steps[0].Inputs["tag"].GetStringValue())
 		require.Equal(t, "my_step", steps[1].Name)
-		require.Equal(t, "${{steps.fetch_step_my_step.outputs.fetched_step_path}}", steps[1].Step.Url)
+		require.Equal(t, "${{steps.fetch_step_my_step.outputs.fetched_step_path}}", steps[1].Step.StepPath.(*proto.Step_Reference_PathExp).PathExp)
 	})
 }

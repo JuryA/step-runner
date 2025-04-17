@@ -17,7 +17,6 @@ type CLIInputsBuilder struct {
 	repository string
 	tag        string
 	stepPath   string
-	stepFile   string
 	logLevel   string
 	outputFile string
 }
@@ -29,7 +28,6 @@ func CLIInputs(t *testing.T) *CLIInputsBuilder {
 		repository: "my_group/my_project",
 		tag:        "1.0.0",
 		stepPath:   "",
-		stepFile:   "step.yml",
 		logLevel:   "info",
 		outputFile: filepath.Join(t.TempDir(), "output.txt"),
 	}
@@ -52,11 +50,6 @@ func (b *CLIInputsBuilder) WithTag(tag string) *CLIInputsBuilder {
 
 func (b *CLIInputsBuilder) WithStepPath(stepPath string) *CLIInputsBuilder {
 	b.stepPath = stepPath
-	return b
-}
-
-func (b *CLIInputsBuilder) WithStepFile(stepFile string) *CLIInputsBuilder {
-	b.stepFile = stepFile
 	return b
 }
 
@@ -90,8 +83,6 @@ func (b *CLIInputsBuilder) Build() ([]string, internal.GetEnv) {
 		b.tag,
 		"--step_path",
 		b.stepPath,
-		"--step_file",
-		b.stepFile,
 		"--output_file",
 		b.outputFile,
 	}
