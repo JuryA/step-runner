@@ -181,6 +181,6 @@ func TestCompileOCI(t *testing.T) {
 		require.Equal(t, "project/my-repository", steps[0].Inputs["repository"].GetStringValue())
 		require.Equal(t, "latest", steps[0].Inputs["tag"].GetStringValue())
 		require.Equal(t, "my_step", steps[1].Name)
-		require.Equal(t, "${{steps.fetch_step_my_step.outputs.fetched_step_path}}", steps[1].Step.Url)
+		require.Equal(t, "${{steps.fetch_step_my_step.outputs.fetched_step_path}}", steps[1].Step.StepPath.(*proto.Step_Reference_PathExp).PathExp)
 	})
 }

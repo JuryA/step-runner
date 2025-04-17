@@ -24,7 +24,7 @@ func NewOutputs(outputFile string) *Outputs {
 	}
 }
 
-func (o *Outputs) Write(downloadDir string, imgRef name.Reference, stepFilePath string) error {
+func (o *Outputs) Write(downloadDir string, imgRef name.Reference, stepPath string) error {
 	writer, err := os.Create(o.outputFile)
 	if err != nil {
 		return fmt.Errorf("opening output file: %w", err)
@@ -32,7 +32,7 @@ func (o *Outputs) Write(downloadDir string, imgRef name.Reference, stepFilePath 
 	defer writer.Close()
 
 	outputValues := []OutputValue{
-		{Name: "fetched_step_path", Value: filepath.Join(downloadDir, stepFilePath)},
+		{Name: "fetched_step_path", Value: filepath.Join(downloadDir, stepPath)},
 		{Name: "ref", Value: imgRef.String()},
 	}
 

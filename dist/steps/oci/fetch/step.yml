@@ -9,9 +9,6 @@ spec:
     step_path:
       type: string
       default: ""
-    step_file:
-      type: string
-      default: step.yml
   outputs:
     fetched_step_path:
       type: string
@@ -29,8 +26,6 @@ exec:
     - "${{inputs.tag}}"
     - "--step_path"
     - "${{inputs.step_path}}"
-    - "--step_file"
-    - "${{inputs.step_file}}"
     - "--tag"
     - "${{inputs.tag}}"
     - "--output_file"
