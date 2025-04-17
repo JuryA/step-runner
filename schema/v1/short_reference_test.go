@@ -64,6 +64,8 @@ func TestShortReference_compileLocal(t *testing.T) {
 			protoStepRef, err := test.shortRef.compile()
 			require.NoError(t, err)
 			require.Equal(t, protoStepRef.Protocol, proto.StepReferenceProtocol_local)
+
+			// nolint:staticcheck // SA1019
 			require.Equal(t, test.expectPath, protoStepRef.Path)
 			require.Equal(t, test.expectFilename, protoStepRef.Filename)
 		})

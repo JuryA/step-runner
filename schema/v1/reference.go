@@ -72,6 +72,7 @@ func (r *Reference) compileGit() (*proto.Step_Reference, error) {
 		Version:  r.Git.Rev,
 	}
 	if r.Git.Dir != nil {
+		// nolint:staticcheck // SA1019
 		s.Path = strings.Split(*r.Git.Dir, "/")
 	}
 	if r.Git.File != nil {

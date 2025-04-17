@@ -53,5 +53,6 @@ func (p *StepResourceParser) stepPath(stepRef *proto.Step_Reference) string {
 		return filepath.Join(val.Paths.Parts...)
 	}
 
+	// nolint:staticcheck // SA1019
 	return filepath.Join(stepRef.Path...)
 }
