@@ -72,6 +72,7 @@ func (r *Reference) compileGit() (*proto.Step_Reference, error) {
 		Version:  r.Git.Rev,
 	}
 	if r.Git.Dir != nil {
+		// nolint:staticcheck // SA1019
 		s.Path = strings.Split(*r.Git.Dir, "/")
 	}
 	if r.Git.File != nil {
@@ -120,15 +121,15 @@ func (r *Reference) compileOCI(stepName string, inputs map[string]*structpb.Valu
 							"repository": structpb.NewStringValue(r.OCI.Repository),
 							"tag":        structpb.NewStringValue(tag),
 							"step_path":  structpb.NewStringValue(dir),
-							"step_file":  structpb.NewStringValue(filename),
 						},
 						Env: env,
 					},
 					{
 						Name: stepName,
 						Step: &proto.Step_Reference{
-							Protocol: proto.StepReferenceProtocol_dynamic,
-							Url:      fmt.Sprintf("${{steps.%s.outputs.fetched_step_path}}", fetchStepName),
+							Protocol: proto.StepReferenceProtocol_local,
+							StepPath: &proto.Step_Reference_PathExp{PathExp: fmt.Sprintf("${{steps.%s.outputs.fetched_step_path}}", fetchStepName)},
+							Filename: filename,
 						},
 						Inputs: inputs,
 						Env:    env,

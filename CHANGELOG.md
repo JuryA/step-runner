@@ -2,6 +2,10 @@
 
 See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when changes are released.
 
+## v0.10.0
+
+- Expressions can be used when loading steps from file. See !219. 
+
 ## v0.9.0
 
 - Fix error preventing `oci/publish` pushing images to `registry.gitlab.com`. See !213.

@@ -3,7 +3,6 @@ package runner
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/cache/git"
 	"gitlab.com/gitlab-org/step-runner/pkg/internal/expression"
@@ -39,7 +38,7 @@ func (sr *GitStepResource) Fetch(ctx context.Context, view *expression.Interpola
 		return nil, fmt.Errorf("fetching git step: %w", err)
 	}
 
-	specDef, err := NewFileSystemStepResource(filepath.Join(dir, sr.stepDir), sr.filename).Fetch(ctx, nil)
+	specDef, err := NewFileSystemStepResource(dir, sr.stepDir, sr.filename).Fetch(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("fetching git step: %w", err)
 	}

@@ -74,37 +74,56 @@ func TestStepResourceParser_Parse(t *testing.T) {
 }
 
 func TestStepResourceParser_ParseLocalStep(t *testing.T) {
-	t.Run("loads relative path", func(t *testing.T) {
-		parser, err := di.NewContainer().StepResourceParser()
-		require.NoError(t, err)
+	tests := []struct {
+		name              string
+		parentDir         string
+		protoPath         []string
+		protoStepPath     any
+		expectDescription string
+	}{
+		{
+			name:              "legacy proto field",
+			parentDir:         "/parent/dir",
+			protoPath:         []string{"path", "to", "step_dir"},
+			expectDescription: "/parent/dir/path/to/step_dir/step.yml",
+		},
+		{
+			name:              "proto paths field",
+			parentDir:         "/parent/dir",
+			protoStepPath:     &proto.Step_Reference_Paths{Paths: &proto.PathParts{Parts: []string{"path", "to", "step_dir"}}},
+			expectDescription: "/parent/dir/path/to/step_dir/step.yml",
+		},
+		{
+			name:              "proto expression field",
+			protoStepPath:     &proto.Step_Reference_PathExp{PathExp: "${{env.STEP_DIR}}"},
+			expectDescription: "${{env.STEP_DIR}}/step.yml",
+		},
+	}
 
-		stepRef := &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_local,
-			Path:     []string{"path", "to", "step_dir"},
-			Filename: "step.yml",
-		}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			resParser, err := di.NewContainer().StepResourceParser()
+			require.NoError(t, err)
 
-		stepResource, err := parser.Parse("/parent/dir", stepRef)
-		require.NoError(t, err)
+			stepRef := &proto.Step_Reference{
+				Protocol: proto.StepReferenceProtocol_local,
+				Path:     test.protoPath,
+				Filename: "step.yml",
+			}
 
-		description := stepResource.(*runner.FileSystemStepResource).Describe()
-		require.Equal(t, "/parent/dir/path/to/step_dir/step.yml", description)
-	})
+			if val, ok := test.protoStepPath.(*proto.Step_Reference_Paths); ok {
+				stepRef.StepPath = val
+			}
 
-	t.Run("loads absolute path", func(t *testing.T) {
-		parser, err := di.NewContainer().StepResourceParser()
-		require.NoError(t, err)
+			if val, ok := test.protoStepPath.(*proto.Step_Reference_PathExp); ok {
+				stepRef.StepPath = val
+			}
 
-		stepRef := &proto.Step_Reference{
-			Protocol: proto.StepReferenceProtocol_local,
-			Path:     []string{"/", "path", "to", "step_dir"},
-			Filename: "step.yml",
-		}
+			stepResource, err := resParser.Parse(test.parentDir, stepRef)
+			require.NoError(t, err)
 
-		stepResource, err := parser.Parse("/parent/dir", stepRef)
-		require.NoError(t, err)
-
-		description := stepResource.(*runner.FileSystemStepResource).Describe()
-		require.Equal(t, "/path/to/step_dir/step.yml", description)
-	})
+			description := stepResource.(*runner.FileSystemStepResource).Describe()
+			require.Equal(t, test.expectDescription, description)
+		})
+	}
 }
