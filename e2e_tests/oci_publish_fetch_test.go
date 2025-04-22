@@ -1,6 +1,7 @@
 package e2e_tests
 
 import (
+	"encoding/base64"
 	"fmt"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 )
 
 func TestCanFetchAPublishedImage(t *testing.T) {
-	registry := bldr.StartOCIRegistryServer(t)
+	registry := bldr.StartOCIRegistryServer(t, bldr.WithRequireAuth("fred", "c0d3_n1nj4"))
 
 	baseDir := bldr.Files(t).
 		WriteFile("step.yml", "spec:\n---\nexec:\n  command: [cat, '${{step_dir}}/app/files/templates/message']").
@@ -59,8 +60,12 @@ run:
 	platform := bldr.OCIPlatform.ThisPlatform
 	registryAddr := registry.Address()
 	testStep := fmt.Sprintf(template, registryAddr, baseDir, platform.OS, platform.Architecture, baseDir, registryAddr)
+	userPass := base64.StdEncoding.EncodeToString([]byte("fred:c0d3_n1nj4"))
 
-	_, logs, err := testutil.StepRunner(t).WithDebugLogs().Run(testStep)
+	_, logs, err := testutil.StepRunner(t).
+		WithDebugLogs().
+		WithEnvKeyVal("DOCKER_AUTH_CONFIG", fmt.Sprintf(`{"auths":{"%s":{"auth":"%s"}}}`, registryAddr, userPass)).
+		Run(testStep)
 	require.NoError(t, err)
 	require.Contains(t, logs, "Hello, World!")
 	require.Contains(t, logs, `Running step "publish_image"`)
