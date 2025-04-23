@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -121,7 +122,7 @@ func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, image
 
 	r.logger.Info("pushing image index", "image_digest", digest.String(), "destination", ref.Name())
 
-	err = remote.WriteIndex(ref, imageIndex, remote.WithContext(ctx))
+	err = remote.WriteIndex(ref, imageIndex, r.remoteOptions(ctx)...)
 	if err != nil {
 		return fmt.Errorf("push index image: %w", err)
 	}
@@ -132,7 +133,7 @@ func (r *Releaser) pushImageIndex(ctx context.Context, ref name.Reference, image
 func (r *Releaser) alreadyPublished(ctx context.Context, imgRef name.Reference) bool {
 	r.logger.Debug("checking if image has already been published")
 
-	descriptor, _ := remote.Head(imgRef, remote.WithContext(ctx))
+	descriptor, _ := remote.Head(imgRef, r.remoteOptions(ctx)...)
 
 	if descriptor == nil {
 		r.logger.Debug("image has not been published")
@@ -147,7 +148,7 @@ func (r *Releaser) alreadyPublished(ctx context.Context, imgRef name.Reference) 
 func (r *Releaser) listPublishedTags(ctx context.Context, remoteImgRef *RemoteImageRef) ([]string, error) {
 	r.logger.Debug("listing published tags")
 
-	tags, err := remote.List(remoteImgRef.Repository(), remote.WithContext(ctx))
+	tags, err := remote.List(remoteImgRef.Repository(), r.remoteOptions(ctx)...)
 
 	if err != nil {
 		if isErrorNameUnknown(err) {
@@ -169,6 +170,13 @@ func (r *Releaser) listPublishedTags(ctx context.Context, remoteImgRef *RemoteIm
 	}
 
 	return tags, nil
+}
+
+func (r *Releaser) remoteOptions(ctx context.Context) []remote.Option {
+	return []remote.Option{
+		remote.WithContext(ctx),
+		remote.WithAuthFromKeychain(NewAuthLookupKeychain(os.LookupEnv)),
+	}
 }
 
 func isErrorNameUnknown(err error) bool {
