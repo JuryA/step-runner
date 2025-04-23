@@ -29,6 +29,11 @@ func NewOCIBasicAuthAccess(options map[string]interface{}) (auth.AccessControlle
 }
 
 func (ac *OCIBasicAuthAccess) Authorized(req *http.Request, _ ...auth.Access) (*auth.Grant, error) {
+	// Fetching does not require authentication
+	if req.Method == http.MethodGet || req.Method == http.MethodHead {
+		return &auth.Grant{User: auth.UserInfo{}, Resources: nil}, nil
+	}
+
 	username, password, ok := req.BasicAuth()
 	if !ok {
 		return nil, &basicAuthChallenge{}

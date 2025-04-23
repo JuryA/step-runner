@@ -2,6 +2,11 @@
 
 See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when changes are released.
 
+## v0.11.0
+
+- Authenticate when pushing to an OCI registry using the `DOCKER_AUTH_CONFIG` environment
+  variable. See !220.
+
 ## v0.10.0
 
 - Expressions can be used when loading steps from file. See !219. 
