@@ -9,16 +9,14 @@ import (
 )
 
 func main() {
-	logger := slog.Default()
-
-	if err := run(logger); err != nil {
-		logger.Error("publish", "err", err)
+	if err := run(os.Args[1:], os.Getenv); err != nil {
+		slog.Error("publish", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run(logger *slog.Logger) error {
-	inputs, err := internal.ParseInputs(os.Args[1:], os.Getenv)
+func run(args []string, getEnv internal.GetEnv) error {
+	inputs, err := internal.ParseInputs(args, getEnv)
 	if err != nil {
 		return err
 	}
@@ -30,6 +28,6 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 
-	logger.Info("published step", "image", inputs.RemoteImageRef.MajorMinorPatch().Name())
+	slog.Info("published step", "image", inputs.RemoteImageRef.MajorMinorPatch().Name())
 	return internal.NewOutputs(inputs.OutputFile).Write(inputs.RemoteImageRef.MajorMinorPatch(), imageIndex)
 }

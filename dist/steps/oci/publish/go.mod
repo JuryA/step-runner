@@ -4,6 +4,7 @@ go 1.24.1
 
 require (
 	github.com/containerd/platforms v0.2.1
+	github.com/docker/cli v27.5.0+incompatible
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/safearchive v0.0.0-20241025131057-f7ce9d7b6f9c
 	github.com/klauspost/compress v1.18.0
@@ -29,7 +30,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/distribution/v3 v3.0.0-rc.2 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v27.5.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect

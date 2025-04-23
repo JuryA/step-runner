@@ -64,6 +64,11 @@ func (b *CLIInputsBuilder) WithLogLevel(logLevel string) *CLIInputsBuilder {
 	return b
 }
 
+func (b *CLIInputsBuilder) WithOutputFile(outputFile string) *CLIInputsBuilder {
+	b.outputFile = outputFile
+	return b
+}
+
 func (b *CLIInputsBuilder) Build() ([]string, internal.GetEnv) {
 	err := os.WriteFile(b.outputFile, []byte(""), 0644)
 	require.NoError(b.t, err)
