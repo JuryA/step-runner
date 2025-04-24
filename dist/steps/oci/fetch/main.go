@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
 	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/internal"
 )
 
@@ -30,7 +31,7 @@ func run(args []string, getEnv internal.GetEnv) error {
 		return fmt.Errorf("making download dir: %w", err)
 	}
 
-	downloadDir, err := internal.NewClient(cacheDir).Pull(context.Background(), inputs.RemoteImageRef)
+	downloadDir, err := api.NewClient(cacheDir).Pull(context.Background(), inputs.RemoteImageRef)
 	if err != nil {
 		return err
 	}

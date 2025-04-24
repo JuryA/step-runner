@@ -1,4 +1,4 @@
-package internal
+package api
 
 import (
 	"context"
@@ -10,17 +10,19 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/internal"
 )
 
 type Client struct {
 	cacheDir    string
-	layerWriter LayerWriter
+	layerWriter internal.LayerWriter
 }
 
 func NewClient(cacheDir string) *Client {
 	return &Client{
 		cacheDir:    cacheDir,
-		layerWriter: NewDiskLayerWriter(),
+		layerWriter: internal.NewDiskLayerWriter(),
 	}
 }
 
@@ -71,10 +73,10 @@ func (c *Client) fetchImage(ctx context.Context, ref name.Reference, findForPlat
 		return nil, fmt.Errorf("getting index manifest: %w", err)
 	}
 
-	manifest := FindManifestForPlatforms(findForPlatform, indexManifest.Manifests)
+	manifest := internal.FindManifestForPlatforms(findForPlatform, indexManifest.Manifests)
 
 	if manifest == nil {
-		return nil, fmt.Errorf("didn't find an image matching platform %s", DescribePlatforms(findForPlatform...))
+		return nil, fmt.Errorf("didn't find an image matching platform %s", internal.DescribePlatforms(findForPlatform...))
 	}
 
 	slog.Debug("fetching image from registry", "digest", manifest.Digest, "platform", manifest.Platform)
@@ -91,7 +93,7 @@ func WithPlatforms(v1Platforms ...*v1.Platform) func(*PullOption) {
 		opt.Platforms = make([]platforms.Platform, len(v1Platforms))
 
 		for i := range v1Platforms {
-			opt.Platforms[i] = ConvertPlatformV1ToCtrd(v1Platforms[i])
+			opt.Platforms[i] = internal.ConvertPlatformV1ToCtrd(v1Platforms[i])
 		}
 	}
 }
