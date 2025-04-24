@@ -1,4 +1,4 @@
-package internal_test
+package api_test
 
 import (
 	"context"
@@ -9,9 +9,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/dist-steps/oci/fetch/internal/testutil/bldr"
-
-	"gitlab.com/gitlab-org/dist-steps/oci/fetch/internal"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/internal/testutil/bldr"
 )
 
 func TestOCIRegistry_Pull_Image(t *testing.T) {
@@ -23,8 +22,8 @@ func TestOCIRegistry_Pull_Image(t *testing.T) {
 		imgIndex := bldr.OCIImageIndex(t).WithPlatformImage(bldr.OCIPlatform.Generic, img).Build()
 		registry.PushImageIndex(remoteImgRef, imgIndex)
 
-		client := internal.NewClient(t.TempDir())
-		imageDir, err := client.Pull(context.Background(), remoteImgRef, internal.WithPlatforms(bldr.OCIPlatform.Generic))
+		client := api.NewClient(t.TempDir())
+		imageDir, err := client.Pull(context.Background(), remoteImgRef, api.WithPlatforms(bldr.OCIPlatform.Generic))
 		require.NoError(t, err)
 
 		content, err := os.ReadFile(filepath.Join(imageDir, "my-steps", "step.yml"))
@@ -38,8 +37,8 @@ func TestOCIRegistry_Pull_Image(t *testing.T) {
 
 		registry.Push(remoteImgRef, bldr.OCIImage(t).WithEmptyFile("/my-file").Build())
 
-		client := internal.NewClient(t.TempDir())
-		_, err := client.Pull(context.Background(), remoteImgRef, internal.WithPlatforms(bldr.OCIPlatform.Generic))
+		client := api.NewClient(t.TempDir())
+		_, err := client.Pull(context.Background(), remoteImgRef, api.WithPlatforms(bldr.OCIPlatform.Generic))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "fetching index: unexpected media type for ImageIndex(): application/vnd.docker.distribution.manifest.v2+json; call Image() instead")
 	})
@@ -48,7 +47,7 @@ func TestOCIRegistry_Pull_Image(t *testing.T) {
 		registry := bldr.StartOCIRegistryServer(t)
 		remoteImgRef := registry.RefToImage("my-image", "latest")
 
-		_, err := internal.NewClient(t.TempDir()).Pull(context.Background(), remoteImgRef)
+		_, err := api.NewClient(t.TempDir()).Pull(context.Background(), remoteImgRef)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "MANIFEST_UNKNOWN: manifest unknown; unknown tag=latest")
 	})
@@ -126,8 +125,8 @@ func TestOCIRegistry_Pull_Platforms(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			registry.PushImageIndex(remoteImgRef, test.imgIndex)
 
-			client := internal.NewClient(t.TempDir())
-			imageDir, err := client.Pull(ctx, remoteImgRef, internal.WithPlatforms(test.downloadFor...))
+			client := api.NewClient(t.TempDir())
+			imageDir, err := client.Pull(ctx, remoteImgRef, api.WithPlatforms(test.downloadFor...))
 
 			if test.expectError == "" {
 				require.NoError(t, err)

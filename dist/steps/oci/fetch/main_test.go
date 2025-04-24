@@ -8,7 +8,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/dist-steps/oci/fetch/internal/testutil/bldr"
+
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/internal/testutil/bldr"
 )
 
 func TestRun(t *testing.T) {
