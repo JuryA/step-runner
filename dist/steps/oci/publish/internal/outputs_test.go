@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/dist-steps/oci/publish/internal"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/internal"
 
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
