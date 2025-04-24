@@ -9,9 +9,9 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/dist-steps/oci/fetch/internal/testutil/bldr"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/internal/testutil/bldr"
 
-	"gitlab.com/gitlab-org/dist-steps/oci/fetch/internal"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/internal"
 )
 
 func TestOCIRegistry_Pull_Image(t *testing.T) {
