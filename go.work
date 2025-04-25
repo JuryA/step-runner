@@ -6,4 +6,5 @@ use (
 	./.gitlab/steps/create_gitlab_release
 	./dist/steps/oci/fetch
 	./dist/steps/oci/publish
+	e2e_tests
 )
