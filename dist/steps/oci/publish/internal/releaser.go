@@ -14,6 +14,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
 )
 
 type Releaser struct {
@@ -175,7 +177,7 @@ func (r *Releaser) listPublishedTags(ctx context.Context, remoteImgRef *RemoteIm
 func (r *Releaser) remoteOptions(ctx context.Context) []remote.Option {
 	return []remote.Option{
 		remote.WithContext(ctx),
-		remote.WithAuthFromKeychain(NewAuthLookupKeychain(os.LookupEnv)),
+		remote.WithAuthFromKeychain(api.NewAuthLookupKeychain(os.LookupEnv)),
 	}
 }
 

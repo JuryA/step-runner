@@ -1,7 +1,6 @@
 package internal_test
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,10 +11,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
+
 	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/internal"
 	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/internal/testutil/bldr"
 
-	"gitlab.com/gitlab-org/step-runner/pkg/cache/oci"
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
@@ -219,8 +219,7 @@ func readFile(t *testing.T, path string) string {
 }
 
 func fetch(t *testing.T, imgRef name.Reference, forPlatforms ...*v1.Platform) string {
-	platform := oci.WithPlatforms(forPlatforms...)
-	imageDir, err := oci.NewOCIFetcher(t.TempDir()).Fetch(context.Background(), imgRef, platform)
+	imageDir, err := api.NewClient(t.TempDir()).Pull(t.Context(), imgRef, api.WithPlatforms(forPlatforms...))
 	require.NoError(t, err)
 
 	return imageDir
