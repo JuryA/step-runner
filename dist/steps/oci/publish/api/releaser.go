@@ -1,4 +1,4 @@
-package internal
+package api
 
 import (
 	"context"
@@ -16,6 +16,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
+
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/internal"
 )
 
 type Releaser struct {
@@ -28,8 +30,8 @@ func NewReleaser() *Releaser {
 	}
 }
 
-func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, common Artifacts, platformSpecific Artifacts) (v1.ImageIndex, error) {
-	factory := NewImageFactory(WithLogger(r.logger))
+func (r *Releaser) Release(ctx context.Context, remoteImgRef *internal.RemoteImageRef, common internal.Artifacts, platformSpecific internal.Artifacts) (v1.ImageIndex, error) {
+	factory := internal.NewImageFactory(internal.WithLogger(r.logger))
 	defer factory.CleanUp()
 
 	if r.alreadyPublished(ctx, remoteImgRef.MajorMinorPatch()) {
@@ -60,8 +62,8 @@ func (r *Releaser) Release(ctx context.Context, remoteImgRef *RemoteImageRef, co
 	return imageIndex, nil
 }
 
-func (r *Releaser) buildImageIndex(factory *ImageFactory, common, platformSpecific Artifacts) (v1.ImageIndex, error) {
-	imagePlatforms := make([]PlatformImage, 0)
+func (r *Releaser) buildImageIndex(factory *internal.ImageFactory, common, platformSpecific internal.Artifacts) (v1.ImageIndex, error) {
+	imagePlatforms := make([]internal.PlatformImage, 0)
 	createdAt := time.Now()
 
 	for _, platform := range platformSpecific.Platforms() {
@@ -77,14 +79,14 @@ func (r *Releaser) buildImageIndex(factory *ImageFactory, common, platformSpecif
 			return nil, err
 		}
 
-		imagePlatforms = append(imagePlatforms, PlatformImage{Image: image, Platform: platform})
+		imagePlatforms = append(imagePlatforms, internal.PlatformImage{Image: image, Platform: platform})
 	}
 
 	r.logger.Info("building image index")
 	return factory.BuildImageIndex(createdAt, imagePlatforms...), nil
 }
 
-func (r *Releaser) buildImageLayers(factory *ImageFactory, artifacts Artifacts) ([]v1.Layer, error) {
+func (r *Releaser) buildImageLayers(factory *internal.ImageFactory, artifacts internal.Artifacts) ([]v1.Layer, error) {
 	layers := make([]v1.Layer, 0)
 
 	for _, artifact := range artifacts {
@@ -99,7 +101,7 @@ func (r *Releaser) buildImageLayers(factory *ImageFactory, artifacts Artifacts) 
 	return layers, nil
 }
 
-func (r *Releaser) buildImageLayer(factory *ImageFactory, artifact *Artifact) (v1.Layer, error) {
+func (r *Releaser) buildImageLayer(factory *internal.ImageFactory, artifact *internal.Artifact) (v1.Layer, error) {
 	r.logger.Debug("copying files", "source", artifact.Src, "destination", artifact.Dst)
 	fs, cleanup, err := artifact.FS()
 	if err != nil {
@@ -147,7 +149,7 @@ func (r *Releaser) alreadyPublished(ctx context.Context, imgRef name.Reference) 
 // listPublishedTags lists the tags for the remote image
 // for example, for registry.gitlab.com/gitlab-org/gitlab-runner it will return v17.7.0, v17.7.1, v17.8.0, v17.8.1, etc
 // returns no tags if the repository is not found
-func (r *Releaser) listPublishedTags(ctx context.Context, remoteImgRef *RemoteImageRef) ([]string, error) {
+func (r *Releaser) listPublishedTags(ctx context.Context, remoteImgRef *internal.RemoteImageRef) ([]string, error) {
 	r.logger.Debug("listing published tags")
 
 	tags, err := remote.List(remoteImgRef.Repository(), r.remoteOptions(ctx)...)

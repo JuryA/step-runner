@@ -1,4 +1,4 @@
-package internal_test
+package api_test
 
 import (
 	"fmt"
@@ -11,10 +11,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
+	fetchApi "gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
+
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/api"
 
 	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/internal"
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/internal/testutil/bldr"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/testutil/bldr"
 
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
@@ -41,7 +43,7 @@ func TestReleaser_Release(t *testing.T) {
 			WithTo("/my_step/program").
 			BuildArtifacts()
 
-		imageIndex, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
+		imageIndex, err := api.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
 		require.NoError(t, err)
 		require.NotNil(t, imageIndex)
 
@@ -65,7 +67,7 @@ func TestReleaser_Release(t *testing.T) {
 		}
 		platformSpecific := bldr.OCIArtifact(t).WithPlatform(platform).BuildArtifacts()
 
-		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
+		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
 		imgIndex, err := remote.Index(remoteImgRef.MajorMinorPatch())
@@ -89,7 +91,7 @@ func TestReleaser_Release(t *testing.T) {
 		platform := &v1.Platform{Architecture: "AARCH64", OS: "linux"}
 		platformSpecific := bldr.OCIArtifact(t).WithPlatform(platform).BuildArtifacts()
 
-		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
+		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
 		imgIndex, err := remote.Index(remoteImgRef.MajorMinorPatch())
@@ -130,7 +132,7 @@ func TestReleaser_Release(t *testing.T) {
 				WithTo("/").
 				Build())
 
-		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
+		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
 		require.NoError(t, err)
 
 		amd64Dir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
@@ -154,7 +156,7 @@ func TestReleaser_Release(t *testing.T) {
 			WithTo("/app/my/files").
 			BuildArtifacts()
 
-		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
+		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
 		imageDir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
@@ -176,7 +178,7 @@ func TestReleaser_Release(t *testing.T) {
 		registry.Push(remoteImgRef.MajorMinorPatch(), mainBldr.OCIImage(t).Build())
 
 		platformSpecific := bldr.OCIArtifact(t).BuildArtifacts()
-		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
+		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf("image already published: %s", remoteImgRef), err.Error())
 	})
@@ -197,7 +199,7 @@ func TestReleaser_Release(t *testing.T) {
 			WithTo("/new_image_file").
 			BuildArtifacts()
 
-		_, err := internal.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
+		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
 		imageDir1 := fetch(t, ref1, mainBldr.OCIPlatform.LinuxAMD64)
@@ -219,7 +221,7 @@ func readFile(t *testing.T, path string) string {
 }
 
 func fetch(t *testing.T, imgRef name.Reference, forPlatforms ...*v1.Platform) string {
-	imageDir, err := api.NewClient(t.TempDir()).Pull(t.Context(), imgRef, api.WithPlatforms(forPlatforms...))
+	imageDir, err := fetchApi.NewClient(t.TempDir()).Pull(t.Context(), imgRef, fetchApi.WithPlatforms(forPlatforms...))
 	require.NoError(t, err)
 
 	return imageDir
