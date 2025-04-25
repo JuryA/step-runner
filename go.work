@@ -1,0 +1,9 @@
+go 1.24.1
+
+use (
+	.
+	./.gitlab/steps/changelog
+	./.gitlab/steps/create_gitlab_release
+	./dist/steps/oci/fetch
+	./dist/steps/oci/publish
+)
