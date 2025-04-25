@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/internal/testutil/bldr"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/testutil/bldr"
 
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
