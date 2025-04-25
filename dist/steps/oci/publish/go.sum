@@ -217,6 +217,8 @@ github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 gitlab.com/gitlab-org/step-runner v0.7.0 h1:JtLlXGDHrMFSZXtpJJCyriy5SJr4Co3PvxFZDZ8iLMo=
 gitlab.com/gitlab-org/step-runner v0.7.0/go.mod h1:ecM389cb5e19/iTh/XMl6hA40CmTyssOY+pjRE97/BU=
+gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch v0.0.0-20250424190425-d39951c22e9c h1:uJrjZwH+xb+ZFsYIAD2gJ8wupudVgr8r4D++uGPbxGI=
+gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch v0.0.0-20250424190425-d39951c22e9c/go.mod h1:DqjEhKIAg7Sdv8Y14CsWDErK/A8hK0RtSEyRHCclsSQ=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
 go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
 go.opentelemetry.io/contrib/bridges/prometheus v0.57.0 h1:UW0+QyeyBVhn+COBec3nGhfnFe5lwB0ic1JBVjzhk0w=

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 
+	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/api"
 	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/internal"
 )
 
@@ -23,7 +24,7 @@ func run(args []string, getEnv internal.GetEnv) error {
 
 	slog.SetLogLoggerLevel(inputs.LogLevel)
 
-	imageIndex, err := internal.NewReleaser().Release(context.Background(), inputs.RemoteImageRef, inputs.Common, inputs.PlatformSpecific)
+	imageIndex, err := api.NewReleaser().Release(context.Background(), inputs.RemoteImageRef, inputs.Common, inputs.PlatformSpecific)
 	if err != nil {
 		return err
 	}
