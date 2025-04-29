@@ -18,17 +18,20 @@ import (
 func TestGitFetcher(t *testing.T) {
 	tests := map[string]struct {
 		version          string
+		path             []string
 		expectClonedFile string
 		modifyRepo       func(t *testing.T, repo *git.Repository) string
 	}{
 		"clone using the default branch": {
 			version:          "main",
 			expectClonedFile: "step.yml",
+			path:             []string{"steps", "echo"},
 			modifyRepo:       func(t *testing.T, repo *git.Repository) string { return "" },
 		},
 		"clone using a branch": {
 			version:          "my-branch",
 			expectClonedFile: "step.yml",
+			path:             []string{"steps", "echo"},
 			modifyRepo: func(t *testing.T, repo *git.Repository) string {
 				head, err := repo.Head()
 				require.NoError(t, err)
@@ -42,26 +45,28 @@ func TestGitFetcher(t *testing.T) {
 		"clone using a commit hash": {
 			version:          "<use commit hash returned from modifyRepo>",
 			expectClonedFile: "file.txt",
+			path:             []string{"steps", "echo"},
 			modifyRepo: func(t *testing.T, repo *git.Repository) string {
 				worktree, err := repo.Worktree()
 				require.NoError(t, err)
 
 				return bldr.GitWorktree(t, worktree).
-					CreateFile("file.txt", "data").
-					Stage("file.txt").
+					CreateFile(path.Join("steps", "echo", "file.txt"), "data").
+					Stage(path.Join("steps", "echo", "file.txt")).
 					Commit("Add text file")
 			},
 		},
 		"clone using first eight-letters of commit hash": {
 			version:          "<use commit hash returned from modifyRepo>",
 			expectClonedFile: "file.txt",
+			path:             []string{"steps", "echo"},
 			modifyRepo: func(t *testing.T, repo *git.Repository) string {
 				worktree, err := repo.Worktree()
 				require.NoError(t, err)
 
 				commit := bldr.GitWorktree(t, worktree).
-					CreateFile("file.txt", "data").
-					Stage("file.txt").
+					CreateFile(path.Join("steps", "echo", "file.txt"), "data").
+					Stage(path.Join("steps", "echo", "file.txt")).
 					Commit("Add text file")
 				return commit[:8]
 			},
@@ -69,6 +74,7 @@ func TestGitFetcher(t *testing.T) {
 		"clone using a lightweight tag": {
 			version:          "v1.0.0",
 			expectClonedFile: "step.yml",
+			path:             []string{"steps", "echo"},
 			modifyRepo: func(t *testing.T, repo *git.Repository) string {
 				head, err := repo.Head()
 				require.NoError(t, err)
@@ -81,6 +87,7 @@ func TestGitFetcher(t *testing.T) {
 		"clone using an annotated tag": {
 			version:          "v1.0.0",
 			expectClonedFile: "step.yml",
+			path:             []string{"steps", "echo"},
 			modifyRepo: func(t *testing.T, repo *git.Repository) string {
 				head, err := repo.Head()
 				require.NoError(t, err)
@@ -102,7 +109,7 @@ func TestGitFetcher(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			repo, _ := bldr.GitRepository().InitWithFilesFromDir("../../../e2e_tests/steps/echo").Build(t)
+			repo, _ := bldr.GitRepository().InitWithFilesFromDir("../../../e2e_tests").Build(t)
 			gitServerURL := bldr.StartGitSmartHTTPServer(t, repo)
 
 			hash := test.modifyRepo(t, repo)
@@ -115,7 +122,7 @@ func TestGitFetcher(t *testing.T) {
 			fetcher := gitFetch.New(t.TempDir(), gitFetch.CloneOptions{Depth: 0})
 			clonedDir, err := fetcher.Get(context.Background(), gitServerURL, version)
 			require.NoError(t, err)
-			require.FileExists(t, path.Join(clonedDir, test.expectClonedFile))
+			require.FileExists(t, path.Join(clonedDir, path.Join(test.path...), test.expectClonedFile))
 		})
 	}
 }
