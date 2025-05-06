@@ -19,14 +19,31 @@ message Signature {
 
 message Reference {
   oneof reference_oneof {
-    Git git = 1;
-    Oci oci = 2;
+    Local local = 1;
+    Git git = 2;
+    Oci oci = 3;
+    Dist dist = 4;
+  }
+  message Local {
+    repeated string path = 1;
+    string filename = 2;
   }
   message Git {
-
+    string repository = 1;
+    repeated string path = 2;
+    string filename = 3;
+    string commit = 4;
+    string tag = 5;
   }
   message Oci {
-
+    string registry = 1;
+    repeated string path = 2;
+    string hash = 3;
+    string tag = 4;
+  }
+  message Dist {
+    repeated path = 1;
+    string filename = 2;
   }
 }
 
