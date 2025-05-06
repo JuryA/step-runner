@@ -1,0 +1,70 @@
+syntax = "proto3";
+package proto;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "../proto";
+
+message Function {
+  Signature signature = 1;
+  Body body = 2;
+}
+
+message Signature {
+  map<string,Input> inputs = 1;
+  map<string,Output> outputs = 2;
+  OutputMethod output_method = 3;
+}
+
+enum OutputMethod {
+  output_method_unspecified = 0;
+  outputs = 1;
+  delegate = 2;
+  dynamic = 3;
+}
+
+message Input {
+  ValueType type = 1;
+  bool sensitive = 3;
+}
+
+message Output {
+  ValueType type = 1;
+  bool sensitive = 3;
+}
+
+enum ValueType {
+  value_type_unspecified = 0;
+  string = 1;
+  number = 2;
+  boolean = 3;
+  struct = 4;
+  array = 5;
+  // bytes (by value)
+  // oci (by reference)
+}
+
+message Body {
+  oneof body_oneof {
+    Exec exec = 1;
+    Composition composition = 2;
+  }
+  Environment environment = 3;
+}
+
+message Environment {
+  map<string,string> env = 1;
+  map<string,google.protobuf.Value> inputs = 2;
+  map<string,google.protobuf.Value> outputs = 3;
+  string work_dir = 3;
+}
+
+message Exec {
+  repeated string command = 1;
+}
+
+message Composition {
+
+}
+
