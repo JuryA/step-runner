@@ -17,6 +17,19 @@ message Signature {
   OutputMethod output_method = 3;
 }
 
+message Reference {
+  oneof reference_oneof {
+    Git git = 1;
+    Oci oci = 2;
+  }
+  message Git {
+
+  }
+  message Oci {
+
+  }
+}
+
 enum OutputMethod {
   output_method_unspecified = 0;
   outputs = 1;
