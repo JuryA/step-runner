@@ -186,3 +186,47 @@ func TestCompileOCI(t *testing.T) {
 		require.Equal(t, "${{steps.fetch_step_my_step.outputs.fetched_step_path}}", steps[1].Step.StepPath.(*proto.Step_Reference_PathExp).PathExp)
 	})
 }
+
+func TestCompileGit_InternalFolder(t *testing.T) {
+	tests := []struct {
+		name    string
+		ref     *Reference
+		isValid bool
+	}{
+		{
+			name:    "valid git reference",
+			ref:     &Reference{Git: NewGitReference("gitlab.com/components/script", "v1")},
+			isValid: true,
+		},
+		{
+			name:    "valid git reference with subdirectory",
+			ref:     &Reference{Git: NewGitReference("gitlab.com/components/script", "v1", GitRefDir("subdir"))},
+			isValid: true,
+		},
+		{
+			name:    "invalid git reference to internal folder",
+			ref:     &Reference{Git: NewGitReference("gitlab.com/components/script", "v1", GitRefDir("internal"))},
+			isValid: false,
+		},
+		{
+			name:    "invalid git reference to nested internal folder",
+			ref:     &Reference{Git: NewGitReference("gitlab.com/components/script", "v1", GitRefDir("subdir/internal"))},
+			isValid: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stepRef, err := test.ref.compileGit()
+			if test.isValid {
+				require.NoError(t, err)
+				require.NotNil(t, stepRef)
+				require.Equal(t, proto.StepReferenceProtocol_git, stepRef.Protocol)
+			} else {
+				require.Error(t, err)
+				require.Nil(t, stepRef)
+				require.Contains(t, err.Error(), "steps inside folders named 'internal' cannot be accessed directly")
+			}
+		})
+	}
+}

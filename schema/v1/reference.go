@@ -74,6 +74,12 @@ func (r *Reference) compileGit() (*proto.Step_Reference, error) {
 	if r.Git.Dir != nil {
 		// nolint:staticcheck // SA1019
 		s.Path = strings.Split(*r.Git.Dir, "/")
+
+		// Check if the path contains "internal" segment
+		// nolint:staticcheck // SA1019
+		if hasInternalPathSegment(s.Path) {
+			return nil, fmt.Errorf("steps inside folders named 'internal' cannot be accessed directly from external repositories")
+		}
 	}
 	if r.Git.File != nil {
 		s.Filename = *r.Git.File
@@ -141,4 +147,16 @@ func (r *Reference) compileOCI(stepName string, inputs map[string]*structpb.Valu
 	}
 
 	return stepRef, nil
+}
+
+// hasInternalPathSegment checks if any segment of the path is named "internal".
+// This is used to prevent direct access to internal steps from external repositories.
+// Only local references (starting with "./") can access internal steps.
+func hasInternalPathSegment(path []string) bool {
+	for _, segment := range path {
+		if segment == "internal" {
+			return true
+		}
+	}
+	return false
 }

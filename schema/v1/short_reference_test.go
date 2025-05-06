@@ -91,3 +91,80 @@ func TestShortReference_compileDynamic(t *testing.T) {
 		require.Equal(t, "/path/to/some/steps/${{env.THE_STEP}}", protoStepRef.Url)
 	})
 }
+
+func TestShortReference_compileRemote_InternalFolder(t *testing.T) {
+	tests := []struct {
+		name     string
+		shortRef shortReference
+		isValid  bool
+	}{
+		{
+			name:     "valid remote reference",
+			shortRef: "gitlab.com/components/script@v1",
+			isValid:  true,
+		},
+		{
+			name:     "valid remote reference with subdirectory",
+			shortRef: "gitlab.com/components/script/-/subdir/step.yml@v1",
+			isValid:  true,
+		},
+		{
+			name:     "invalid remote reference to internal folder",
+			shortRef: "gitlab.com/components/script/-/internal/step.yml@v1",
+			isValid:  false,
+		},
+		{
+			name:     "invalid remote reference to nested internal folder",
+			shortRef: "gitlab.com/components/script/-/subdir/internal/step.yml@v1",
+			isValid:  false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			protoStepRef, err := test.shortRef.compile()
+			if test.isValid {
+				require.NoError(t, err)
+				require.NotNil(t, protoStepRef)
+				require.Equal(t, proto.StepReferenceProtocol_git, protoStepRef.Protocol)
+			} else {
+				require.Error(t, err)
+				require.Nil(t, protoStepRef)
+				require.Contains(t, err.Error(), "steps inside folders named 'internal' cannot be accessed directly")
+			}
+		})
+	}
+}
+
+func TestShortReference_compileLocal_InternalFolder(t *testing.T) {
+	tests := []struct {
+		name     string
+		shortRef shortReference
+		isValid  bool
+	}{
+		{
+			name:     "valid local reference to internal folder",
+			shortRef: "./internal/step.yml",
+			isValid:  true,
+		},
+		{
+			name:     "valid local reference to nested internal folder",
+			shortRef: "./path/to/internal/step.yml",
+			isValid:  true,
+		},
+		{
+			name:     "valid absolute reference to internal folder",
+			shortRef: "/path/to/internal/step.yml",
+			isValid:  true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			protoStepRef, err := test.shortRef.compile()
+			require.NoError(t, err)
+			require.NotNil(t, protoStepRef)
+			require.Equal(t, proto.StepReferenceProtocol_local, protoStepRef.Protocol)
+		})
+	}
+}
