@@ -95,6 +95,10 @@ message Exec {
 }
 
 message Composition {
-
+  repeated Invocation invocations = 1;
 }
 
+message Invocation {
+  Reference reference = 1;
+  Environment environment = 2;
+}
