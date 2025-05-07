@@ -59,8 +59,8 @@ message OpReadEnv {
 message OpReadCompositionOutput {
   // FunctionName is the name of the call to access
   string function_name = 1;
-  // Key is the name of the output to read
-  string key = 2;
+  // Path is the subtree of the value to return
+  repeated PathKey path = 2;
 }
 
 // OpReadScope reads a value in a named scope
@@ -68,19 +68,23 @@ message OpReadScope {
   // Scope is the name of the scope to access
   string scope = 1;
   // Path is the subtree of the value to return
-  repeated Key path = 2;
-  message Key {
-    // Key accesses a struct
-    string key = 1;
-    // Index accesses an array
-    int32 index = 2;
-  }
+  repeated PathKey path = 2;
 }
 
 // OpReadInput reads an input value
 message OpReadInput {
   // Key is the name of the input to read
   string key = 1;
+  // Path is the subtree of the value to return
+  repeated PathKey path = 2;
+}
+
+// PathKey is a reference to a piece of a struct or an array
+message PathKey {
+  // Key accesses a struct
+  string key = 1;
+  // Index accesses an array
+  int32 index = 2;
 }
 
 // OpReadWorkDir reads the working directory
