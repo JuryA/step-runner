@@ -72,11 +72,11 @@ message Body {
     // Composition is the composition of multiple functions
     Composition composition = 2;
   }
-  // Environment is the context needed to execute the body
+  // Environment is some of the context needed to execute the body
   Environment environment = 3;
 }
 
-// Environment is all the context necessary to execute a function
+// Environment is context necessary to execute a function
 // A function and an environment together represent a continuation
 message Environment {
   // EnvVars are the variables provided with a system exec call
@@ -84,7 +84,7 @@ message Environment {
   // CompositionOutputs are the outputs of previous function calls in a composition
   map<string,Map> composition_outputs = 8;
   message Map {
-    map<string,Expression> map = 1;
+    map<string,Value> map = 1;
   }
   // Scopes are additional read-only, scoped values
   // For example "job" would container CI variables
@@ -117,7 +117,7 @@ message Composition {
 
 // An invocation is a named function call
 message Invocation {
-  // Name is the key under which this function calls results will appear in composition outputs
+  // Name is the key under which the results of this function call will appear in composition outputs
   string name = 1;
   // Reference is a pointer to the function to call
   Reference reference = 2;
