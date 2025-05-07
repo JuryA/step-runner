@@ -6,48 +6,85 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "../proto";
 
+// An expression is a value which requires evaluation with an environment
 message Expression {
   oneof op {
+    // Literal is an expression which has been fully evaluated
     Value literal = 1;
+    // Concat concatenates multiple compatible expressions
     OpConcat concat = 2;
+    // ReadEnv reads a value from the env variables
     OpReadEnv read_env = 3;
+    // ReadCompositionOutput reads an output value from a named function call in a composition
     OpReadCompositionOutput read_composition_output = 4;
+    // ReadScope reads a value in a named scope
     OpReadScope read_scope = 5;
+    // ReadInput reads an input value
     OpReadInput read_input = 5;
+    // ReadWorkDir reads the working directory
     OpReadWorkDir read_work_dir = 6;
-    OpReadStepDir read_step_dir = 7;
+    // ReadFuncDir reads the directory containing the function and associated files
+    OpReadFuncDir read_func_dir = 7;
   }
 }
 
+// Value is a materialized value
 message Value {
+  // Value is a JSON value minus null
   google.protobuf.Value value = 1;
+  // Sensitive determines if this value is sensitive
+  // Sensitivity is persisted across all operations
   bool sensitive = 2;
   // bytes (by value)
   // oci (by reference)
 }
 
+// OpConcat concatenates multiple compatible expressions
 message OpConcat {
-    repeated Expression expression = 1;
+  // Expressions are the expressions to concatenate
+  // Strings are compatible with strings
+  // Structs are compatible with structs
+  // Arrays are compatible with arrays
+  // All other types return an error
+  repeated Expression expression = 1;
 }
 
+// OpReadEnv reads a value from the env variables
 message OpReadEnv {
+  // Key is the nane of the variable to read
   string key = 1;
 }
 
+// OpReadCompositionOutput reads an output value from a named function call in a composition
 message OpReadCompositionOutput {
+  // FunctionName is the name of the call to access
   string function_name = 1;
+  // Key is the name of the output to read
   string key = 2;
 }
 
+// OpReadScope reads a value in a named scope
 message OpReadScope {
+  // Scope is the name of the scope to access
   string scope = 1;
-  Path path = 2;
+  // Path is the subtree of the value to return
+  repeated Key path = 2;
+  message Key {
+    // Key accesses a struct
+    string key = 1;
+    // Index accesses an array
+    int32 index = 2;
+  }
 }
 
+// OpReadInput reads an input value
 message OpReadInput {
+  // Key is the name of the input to read
   string key = 1;
 }
 
+// OpReadWorkDir reads the working directory
 message OpReadWorkDir {}
 
-message OpReadStepDir {}
+// OpReadFuncDir reads the directory containing the function and associated files
+message OpReadFuncDir {}
