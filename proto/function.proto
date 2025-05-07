@@ -45,6 +45,7 @@ enum ValueType {
   boolean = 3;
   struct = 4;
   array = 5;
+  function = 6;
   // bytes (by value)
   // oci (by reference)
 }
@@ -59,11 +60,12 @@ message Body {
 
 message Environment {
   map<string,string> env = 1;
-  map<string,google.protobuf.Value> inputs = 2;
-  map<string,google.protobuf.Value> outputs = 3;
-  map<string,google.protobuf.Value> scopes = 4;
+  map<string,google.protobuf.Value> scopes = 2;
+  map<string,google.protobuf.Value> inputs = 3;
+  map<string,google.protobuf.Value> outputs = 4;
   string work_dir = 5;
-  map<string,google.protobuf.Value> exports = 6;
+  string step_dir = 6;
+  map<string,google.protobuf.Value> exports = 7;
 }
 
 message Exec {

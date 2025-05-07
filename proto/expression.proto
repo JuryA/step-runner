@@ -7,5 +7,33 @@ import "google/protobuf/timestamp.proto";
 option go_package = "../proto";
 
 message Expression {
+  oneof op {
 
+  }
+}
+
+message Literal {
+  google.protobuf.Value value = 1;
+  bool sensitive = 2;
+}
+
+message OpReadEnv {
+  string key = 1;
+}
+
+message OpReadScope {
+  string scope = 1;
+  Path path = 2;
+}
+
+message OpReadInput {
+  
+}
+
+message OpReadWorkDir {
+  
+}
+
+message OpReadStepDir {
+  
 }
