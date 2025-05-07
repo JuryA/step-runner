@@ -8,17 +8,35 @@ option go_package = "../proto";
 
 message Expression {
   oneof op {
-
+    Value literal = 1;
+    OpConcat concat = 2;
+    OpReadEnv read_env = 3;
+    OpReadCompositionOutput read_composition_output = 4;
+    OpReadScope read_scope = 5;
+    OpReadInput read_input = 5;
+    OpReadWorkDir read_work_dir = 6;
+    OpReadStepDir read_step_dir = 7;
   }
 }
 
-message Literal {
+message Value {
   google.protobuf.Value value = 1;
   bool sensitive = 2;
+  // bytes (by value)
+  // oci (by reference)
+}
+
+message OpConcat {
+    repeated Expression expression = 1;
 }
 
 message OpReadEnv {
   string key = 1;
+}
+
+message OpReadCompositionOutput {
+  string function_name = 1;
+  string key = 2;
 }
 
 message OpReadScope {
@@ -27,13 +45,9 @@ message OpReadScope {
 }
 
 message OpReadInput {
-  
+  string key = 1;
 }
 
-message OpReadWorkDir {
-  
-}
+message OpReadWorkDir {}
 
-message OpReadStepDir {
-  
-}
+message OpReadStepDir {}

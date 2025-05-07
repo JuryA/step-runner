@@ -5,39 +5,51 @@ import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
+import "expression.proto";
+
 option go_package = "../proto";
 
+// Function is an un-nameed callable unit of code
 message Function {
+  // Signature defines the input and outputs types
   Signature signature = 1;
+  // Body is the code to execute and any environment it encapsulates
   Body body = 2;
 }
 
+// Signature defines the intput and output types
 message Signature {
-  map<string,Input> inputs = 1;
-  Outputs outputs = 2;
+  // Inputs are named
+  map<string,Type> inputs = 1;
+  // Outputs can be named but have other options
+  OutputTypes outputs = 2;
 }
 
-message Outputs {
+// OutputTypes are the possibilities for a functions outputs
+message OutputTypes {
   oneof outputs_oneof {
+    // Outputs is a named map of outputs (just like inputs)
     Map outputs = 1;
+    // Dynamic allows a function to output any set of named values dynamically
     google.protobuf.Empty dynamic = 2;
+    // Result returns the entire completed function call and outputs are part of that
+    // This is full delegation
     google.protobuf.Empty result = 3;
   }
   message Map {
-    map<string,Output> outputs = 1;
+    map<string,Type> map = 1;
   }
 }
 
-message Input {
+// Type is the set of types supported by functions
+// Essentially JSON values minus null, and binary data by value and reference
+// All types also have sensitivity metadata which persists across expression ops
+message Type {
   ValueType type = 1;
   bool sensitive = 3;
 }
 
-message Output {
-  ValueType type = 1;
-  bool sensitive = 3;
-}
-
+// Value Types are JSON values minus null, plus binary data by value and reference
 enum ValueType {
   value_type_unspecified = 0;
   string = 1;
@@ -50,44 +62,82 @@ enum ValueType {
   // oci (by reference)
 }
 
+// Body is the executable part of the function
+// It can be either a system-exec call or a composition of other functions
+// The body also carries a captured environment
 message Body {
   oneof body_oneof {
+    // Exec is a system exec call
     Exec exec = 1;
+    // Composition is the composition of multiple functions
     Composition composition = 2;
   }
+  // Environment is the context needed to execute the body
   Environment environment = 3;
 }
 
+// Environment is all the context necessary to execute a function
+// A function and an environment together represent a continuation
 message Environment {
-  map<string,string> env = 1;
-  map<string,google.protobuf.Value> scopes = 2;
-  map<string,google.protobuf.Value> inputs = 3;
-  map<string,google.protobuf.Value> outputs = 4;
+  // EnvVars are the variables provided with a system exec call
+  map<string,Expression> env_vars = 1;
+  // CompositionOutputs are the outputs of previous function calls in a composition
+  map<string,Map> composition_outputs = 8;
+  message Map {
+    map<string,Expression> map = 1;
+  }
+  // Scopes are additional read-only, scoped values
+  // For example "job" would container CI variables
+  map<string,Value> scopes = 2;
+  // Inputs are the provided inputs to a function
+  map<string,Expression> inputs = 3;
+  // Outputs are the named return values of a function
+  map<string,Value> outputs = 4;
+  // WorkDir is the working directory of an system exec call
   string work_dir = 5;
+  // StepDir is the directory which contains the function and its associated files, if any
   string step_dir = 6;
-  map<string,google.protobuf.Value> exports = 7;
+  // Exports are the exported environment variables from a function
+  map<string,Value> exports = 7;
 }
 
+// Exec is a system exec call
 message Exec {
+  // Command is the command to exec and its arguments
   repeated string command = 1;
+  // ExitCode is the exit code of a system exec call
   int32 exit_code = 2;
 }
 
+// Composition is the composition of multiple functions
 message Composition {
+  // Invocations are the individually called functions of a composition
   repeated Invocation invocations = 1;
 }
 
+// An invocation is a named function call
 message Invocation {
-  Reference reference = 1;
-  Environment environment = 2;
-  Result result = 3;
+  // Name is the key under which this function calls results will appear in composition outputs
+  string name = 1;
+  // Reference is a pointer to the function to call
+  Reference reference = 2;
+  // Environment is the context in which to call the function
+  Environment environment = 3;
+  // Result is the function and its outputs after the call
+  // All expressions will be materialized as values
+  Result result = 4;
 }
 
+// Reference is a pointer to a function
 message Reference {
   oneof reference_oneof {
+    // Local is a function in the local filesystem
     Local local = 1;
+    // Git is a function stored in a git repository
     Git git = 2;
+    // Oci is an OCI image in a registry
     Oci oci = 3;
+    // Dist is a function distributed with the function running binary
     Dist dist = 4;
   }
   message Local {
@@ -114,6 +164,5 @@ message Reference {
 }
 
 message Result {
-  Function before = 1;
-  Function after = 2;
+  Function function = 1;
 }
