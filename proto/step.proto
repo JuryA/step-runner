@@ -206,10 +206,10 @@ message Job {
 
 message RunRequest {
   string id = 1;
-  string work_dir = 2;
-  map<string,string> env = 3;
-  Job job = 5;
-  string steps = 6;
+  // Function is what to run
+  Function function = 2;
+  // Environment is the context in which to run it
+  Environment environment = 3;
 }
 
 message RunResponse {
@@ -234,9 +234,17 @@ message FollowLogsResponse {
 message Status {
     string id = 1;
     string message = 2;
-    StepResult.Status status = 3;
+    Status status = 3;
     google.protobuf.Timestamp start_time = 5;
     google.protobuf.Timestamp end_time = 6;
+}
+
+enum Status {
+  status_unspecified = 0;
+  running = 1;
+  success = 2;
+  failure = 3;
+  cancelled = 4;
 }
 
 message StatusRequest {
