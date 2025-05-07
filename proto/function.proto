@@ -21,7 +21,7 @@ message Outputs {
   oneof outputs_oneof {
     Map outputs = 1;
     google.protobuf.Empty dynamic = 2;
-    google.protobuf.Empty results = 3;
+    google.protobuf.Empty result = 3;
   }
   message Map {
     map<string,Output> outputs = 1;
@@ -63,6 +63,7 @@ message Environment {
   map<string,google.protobuf.Value> outputs = 3;
   map<string,google.protobuf.Value> scopes = 4;
   string work_dir = 5;
+  map<string,google.protobuf.Value> exports = 6;
 }
 
 message Exec {
