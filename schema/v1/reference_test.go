@@ -230,3 +230,52 @@ func TestCompileGit_InternalFolder(t *testing.T) {
 		})
 	}
 }
+
+func TestCompileOCI_InternalFolder(t *testing.T) {
+	tests := []struct {
+		name    string
+		ref     *Reference
+		isValid bool
+	}{
+		{
+			name:    "valid OCI reference without directory",
+			ref:     &Reference{OCI: NewOCIReference("registry.gitlab.com", "project/my-repository", "latest")},
+			isValid: true,
+		},
+		{
+			name:    "valid OCI reference with subdirectory",
+			ref:     &Reference{OCI: &OCIReference{Registry: "registry.gitlab.com", Repository: "project/my-repository", Tag: "latest", Dir: ptr("subdir")}},
+			isValid: true,
+		},
+		{
+			name:    "invalid OCI reference to internal folder",
+			ref:     &Reference{OCI: &OCIReference{Registry: "registry.gitlab.com", Repository: "project/my-repository", Tag: "latest", Dir: ptr("internal")}},
+			isValid: false,
+		},
+		{
+			name:    "invalid OCI reference to nested internal folder",
+			ref:     &Reference{OCI: &OCIReference{Registry: "registry.gitlab.com", Repository: "project/my-repository", Tag: "latest", Dir: ptr("subdir/internal")}},
+			isValid: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stepRef, err := test.ref.compileOCI("my_step", map[string]*structpb.Value{}, map[string]string{})
+			if test.isValid {
+				require.NoError(t, err)
+				require.NotNil(t, stepRef)
+				require.Equal(t, proto.StepReferenceProtocol_spec_def, stepRef.Protocol)
+			} else {
+				require.Error(t, err)
+				require.Nil(t, stepRef)
+				require.Contains(t, err.Error(), "steps inside folders named 'internal' cannot be accessed directly")
+			}
+		})
+	}
+}
+
+// Helper function to create string pointers
+func ptr(s string) *string {
+	return &s
+}

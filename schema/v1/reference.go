@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -96,6 +97,12 @@ func (r *Reference) compileOCI(stepName string, inputs map[string]*structpb.Valu
 	dir := ""
 	if r.OCI.Dir != nil {
 		dir = *r.OCI.Dir
+		
+		// Check if the path contains "internal" segment
+		pathSegments := strings.Split(dir, "/")
+		if hasInternalPathSegment(pathSegments) {
+			return nil, fmt.Errorf("steps inside folders named 'internal' cannot be accessed directly from external repositories")
+		}
 	}
 
 	filename := "step.yml"
@@ -153,10 +160,5 @@ func (r *Reference) compileOCI(stepName string, inputs map[string]*structpb.Valu
 // This is used to prevent direct access to internal steps from external repositories.
 // Only local references (starting with "./") can access internal steps.
 func hasInternalPathSegment(path []string) bool {
-	for _, segment := range path {
-		if segment == "internal" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(path, "internal")
 }
