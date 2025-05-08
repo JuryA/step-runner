@@ -1,0 +1,62 @@
+.e2e:manage_runners:
+  image:
+    name: hashicorp/terraform:1.5.6
+    entrypoint: [""]
+  variables:
+    GITLAB_TOKEN: $GITLAB_TOKEN_DEPLOY_RUNNER
+    TF_VAR_gitlab_project_id: $CI_PROJECT_ID
+    TF_VAR_runner_tag: steps-e2e-$CI_PIPELINE_IID
+    TF_VAR_step_runner_image: $IMAGE_TAG
+    TF_HTTP_ADDRESS: "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/terraform/state/steps-e2e-$CI_PIPELINE_ID"
+    TF_HTTP_LOCK_ADDRESS: "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/terraform/state/steps-e2e-$CI_PIPELINE_ID/lock"
+    TF_HTTP_UNLOCK_ADDRESS: "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/terraform/state/steps-e2e-$CI_PIPELINE_ID/lock"
+    TF_HTTP_USERNAME: $GITLAB_USER_LOGIN
+    TF_HTTP_PASSWORD: $GITLAB_TOKEN_TERRAFORM
+    TF_HTTP_LOCK_METHOD: POST
+    TF_HTTP_UNLOCK_METHOD: DELETE
+  before_script:
+    - wget https://gitlab.com/api/v4/projects/48756626/packages/generic/deployer/0.13.1/deployer-linux-amd64 -O ./grit
+    - chmod +x ./grit
+
+e2e:create_runners:
+  stage: e2e:init
+  extends: .e2e:manage_runners
+  script:
+    - ./grit --debug --tf-target ./.gitlab/e2e_runner up
+
+e2e:destroy_runners: &destroy
+  stage: e2e:cleanup
+  extends: .e2e:manage_runners
+  when: always
+  script:
+    - ./grit --debug --tf-target ./.gitlab/e2e_runner down
+
+e2e:destroy_runners:manual:
+  <<: *destroy
+  when: manual
+  needs: [ ]
+
+
+# If you need to destroy resources that are for some reason left over
+# Log into AWS, find the left over ec2 instances. The CI_PIPELINE_IID is in the name, e.g. steps-e2e-1280
+# Using https://gitlab.com/-/graphql-explorer, run the following query, substituting the date with a recent date
+#
+# {
+#	project(fullPath: "gitlab-org/step-runner") {
+#     pipelines(updatedAfter:"2025-05-01T00:00:00+00:00"){
+#       nodes {
+#         id
+#         iid
+#       }
+#     }
+#   }
+# }
+#
+# Look for the IID in the results. For example, for 1280:
+# {
+#   "id": "gid://gitlab/Ci::Pipeline/1807442553",
+#   "iid": "1280"
+# },
+#
+# Navigate to the corresponding pipeline in GitLab, and run the e2e:destroy_runners:manual job
+# https://gitlab.com/gitlab-org/step-runner/-/pipelines/1807442553
