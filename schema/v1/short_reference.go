@@ -69,6 +69,12 @@ func (sr shortReference) compileRemote() (*proto.Step_Reference, error) {
 	url, rest, _ := strings.Cut(rest, "/-/")
 	url = defaultHTTPS(url)
 	path, filename := pathFilename(false, rest)
+
+	// Check if the path contains "internal" segment
+	if hasInternalPathSegment(path) {
+		return nil, fmt.Errorf("steps inside folders named 'internal' cannot be accessed directly from external repositories")
+	}
+
 	path = append([]string{"steps"}, path...)
 	return &proto.Step_Reference{
 		Protocol: proto.StepReferenceProtocol_git,

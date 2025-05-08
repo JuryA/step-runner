@@ -6,6 +6,7 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 
 - Authenticate when pushing to an OCI registry using the `DOCKER_AUTH_CONFIG` environment
   variable. See !220.
+- Disallow remote references to steps inside folders named 'internal' for both Git and OCI references. See !224.
 
 ## v0.10.0
 
