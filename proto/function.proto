@@ -105,7 +105,7 @@ message Environment {
       map<string,Value> map = 1;
     }
     // Scopes are additional read-only, scoped values
-    // For example "job" would container CI variables
+    // For example "job" would contain CI variables
     map<string,Value> scopes = 3;
     // Inputs are the provided inputs to a function
     map<string,Expression> inputs = 4;
