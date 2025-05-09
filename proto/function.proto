@@ -9,7 +9,7 @@ import "expression.proto";
 
 option go_package = "../proto";
 
-// Function is an un-nameed callable unit of code
+// Function is an un-named callable unit of code
 message Function {
   // Signature defines the input and outputs types
   Signature signature = 1;
@@ -32,7 +32,8 @@ message OutputTypes {
     Map outputs = 1;
     // Dynamic allows a function to output any set of named values dynamically
     google.protobuf.Empty dynamic = 2;
-    // Result returns the entire completed function call and outputs are part of that
+    // Result returns the entire completed function call as a proto Result
+    // Outputs are part of that
     // This is full delegation
     google.protobuf.Empty result = 3;
   }

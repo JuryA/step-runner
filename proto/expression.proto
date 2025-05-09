@@ -27,6 +27,8 @@ message Value {
   // Sensitive determines if this value is sensitive
   // Sensitivity is persistant across all operations
   bool sensitive = 2;
+  // Function is a function as a value
+  Function function = 3;
   // bytes (by value)
   // oci (by reference)
 }
