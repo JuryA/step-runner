@@ -64,41 +64,59 @@ enum ValueType {
 
 // Body is the executable part of the function
 // It can be either a system-exec call or a composition of other functions
-// The body also carries a captured environment
+// The body also carries an environment overlay
 message Body {
   oneof body_oneof {
-    // Exec is a system exec call
-    Exec exec = 1;
-    // Composition is the composition of multiple functions
-    Composition composition = 2;
+    // Exp is an expression that evaluates to a Materialized body
+    Expression exp = 1;
+    Materialized body = 2;
   }
-  // Environment is some of the context needed to execute the body
-  Environment environment = 3;
+  // Materialized is the materialized body
+  message Materialized {
+    oneof body_oneof {
+      // Exec is a system exec call
+      Exec exec = 1;
+      // Composition is the composition of multiple functions
+      Composition composition = 2;
+    }
+    // Environment is some of the context needed to execute the body
+    Environment environment = 3;
+  }
 }
 
 // Environment is context necessary to execute a function
 // A function and an environment together represent a continuation
+// As execution encounters additional Environments, they are temporarily overlayed
 message Environment {
-  // EnvVars are the variables provided with a system exec call
-  map<string,Expression> env_vars = 1;
-  // CompositionOutputs are the outputs of previous function calls in a composition
-  map<string,Map> composition_outputs = 8;
-  message Map {
-    map<string,Value> map = 1;
+  oneof environment_oneof{
+    // Exp is an expression that evaluates to a Materialized environment
+    // If exp is OpReadEnvironment this will be a noop
+    Expression exp = 1;
+    Materialized envirionment = 2;
   }
-  // Scopes are additional read-only, scoped values
-  // For example "job" would container CI variables
-  map<string,Value> scopes = 2;
-  // Inputs are the provided inputs to a function
-  map<string,Expression> inputs = 3;
-  // Outputs are the named return values of a function
-  map<string,Value> outputs = 4;
-  // WorkDir is the working directory of an system exec call
-  string work_dir = 5;
-  // FuncDir is the directory which contains the function and its associated files, if any
-  string func_dir = 6;
-  // Exports are the exported environment variables from a function
-  map<string,Value> exports = 7;
+  // Materialized is a materialized environment
+  message Materialized {
+    // EnvVars are the variables provided with a system exec call
+    map<string,Expression> env_vars = 1;
+    // CompositionOutputs are the outputs of previous function calls in a composition
+    map<string,Map> composition_outputs = 2;
+    message Map {
+      map<string,Value> map = 1;
+    }
+    // Scopes are additional read-only, scoped values
+    // For example "job" would container CI variables
+    map<string,Value> scopes = 3;
+    // Inputs are the provided inputs to a function
+    map<string,Expression> inputs = 4;
+    // Outputs are the named return values of a function
+    map<string,Value> outputs = 5;
+    // WorkDir is the working directory of an system exec call
+    string work_dir = 6;
+    // FuncDir is the directory which contains the function and its associated files, if any
+    string func_dir = 7;
+    // Exports are the exported environment variables from a function
+    map<string,Value> exports = 8;
+  }
 }
 
 // Exec is a system exec call
@@ -117,73 +135,87 @@ message Composition {
 
 // An invocation is a named function call
 message Invocation {
-  // Name is the key under which the results of this function call will appear in composition outputs
-  string name = 1;
-  // Reference is a pointer to the function to call
-  Reference reference = 2;
-  // Environment is the context in which to call the function
-  Environment environment = 3;
-  // Result is the function and its outputs after the call
-  // All expressions will be materialized as values
-  Result result = 4;
+  oneof invocation_oneof {
+    // Exp is an expression that evaluates to a Materialized invocation
+    Expression exp = 1;
+    Materialized invocation = 2;
+  }
+  message Materialized {
+    // Name is the key under which the results of this function call will appear in composition outputs
+    string name = 1;
+    // Reference is a pointer to the function to call
+    Reference reference = 2;
+    // Environment is the context in which to call the function
+    Environment environment = 3;
+    // Result is the function and its outputs after the call
+    // All expressions will be materialized as values
+    Result result = 4;
+  }
 }
 
 // Reference is a pointer to a function
 message Reference {
   oneof reference_oneof {
+    // Exp is an expression that evaluates to a Materialized reference
+    Expression exp = 1;
+    Materialized reference = 2;
+  }
+  message Materialized {
+    oneof materialized_oneof {
+      // Local is a function in the local filesystem
+      Local local = 1;
+      // Git is a function stored in a git repository
+      Git git = 2;
+      // Oci is an OCI image in a registry
+      Oci oci = 3;
+      // Dist is a function distributed with the function running binary
+      Dist dist = 4;
+    }
     // Local is a function in the local filesystem
-    Local local = 1;
+    message Local {
+      // Path is where the function is located
+      // Path can be absolute or relative (starting with `.` or `..`)
+      repeated string path = 1;
+      // Filename is the file which contains the proto serialized function
+      string filename = 2;
+    }
     // Git is a function stored in a git repository
-    Git git = 2;
+    message Git {
+      // Repository is the git repo
+      string repository = 1;
+      // Path is where the function is located within the repo
+      // Path is always absolute from the base of the repo
+      repeated string path = 2;
+      // Filename is the file which contains the proto serialized function
+      string filename = 3;
+      // Commit is the version of the function to run as a full commit hash
+      string commit = 4;
+      // Tag is the version of the function to run as a tag
+      // If both tag and commit are provided, the tag must match the commit
+      string tag = 5;
+    }
     // Oci is an OCI image in a registry
-    Oci oci = 3;
+    message Oci {
+      // Registry is the OCI image registry
+      string registry = 1;
+      // Path is where the function is located within the image
+      // Path is always absolute from the base of the image
+      repeated string path = 2;
+      // Hash is the version of the function to run as a full image hash
+      string hash = 3;
+      // Tag is the version of the function to run as a tag
+      // If both tag and commit are provided, the tag must match the hash    
+      string tag = 4;
+    }
     // Dist is a function distributed with the function running binary
-    Dist dist = 4;
-  }
-  // Local is a function in the local filesystem
-  message Local {
-    // Path is where the function is located
-    // Path can be absolute or relative (starting with `.` or `..`)
-    repeated string path = 1;
-    // Filename is the file which contains the proto serialized function
-    string filename = 2;
-  }
-  // Git is a function stored in a git repository
-  message Git {
-    // Repository is the git repo
-    string repository = 1;
-    // Path is where the function is located within the repo
-    // Path is always absolute from the base of the repo
-    repeated string path = 2;
-    // Filename is the file which contains the proto serialized function
-    string filename = 3;
-    // Commit is the version of the function to run as a full commit hash
-    string commit = 4;
-    // Tag is the version of the function to run as a tag
-    // If both tag and commit are provided, the tag must match the commit
-    string tag = 5;
-  }
-  // Oci is an OCI image in a registry
-  message Oci {
-    // Registry is the OCI image registry
-    string registry = 1;
-    // Path is where the function is located within the image
-    // Path is always absolute from the base of the image
-    repeated string path = 2;
-    // Hash is the version of the function to run as a full image hash
-    string hash = 3;
-    // Tag is the version of the function to run as a tag
-    // If both tag and commit are provided, the tag must match the hash    
-    string tag = 4;
-  }
-  // Dist is a function distributed with the function running binary
-  // The binary will know how to find it
-  message Dist {
-    // Path is where the functino is located within the function running binary's repository
-    // Path is always absolute from the base of the repo
-    repeated path = 1;
-    // Filename is the fiel which contains the proto serialized function
-    string filename = 2;
+    // The binary will know how to find it
+    message Dist {
+      // Path is where the functino is located within the function running binary's repository
+      // Path is always absolute from the base of the repo
+      repeated path = 1;
+      // Filename is the fiel which contains the proto serialized function
+      string filename = 2;
+    }
   }
 }
 
