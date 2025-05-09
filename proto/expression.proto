@@ -46,6 +46,7 @@ message OpRead {
   repeated PathKey path = 2;
 }
 
+// OpWrite writes into a value
 message OpWrite {
   // Value is an Expression to be evaluated until it is a Value
   Expression value = 1;
