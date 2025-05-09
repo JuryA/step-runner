@@ -11,12 +11,14 @@ message Expression {
   oneof op {
     // Literal is an expression which has been fully evaluated
     Value literal = 1;
-    // Concat concatenates multiple compatible expressions
-    OpConcat concat = 2;
+    // OpEnvironment returns the current proto Environment
+    OpEnvironment envrionment = 2;
     // OpRead reads into a value
     OpRead read = 3;
-    // OpEnvironment returns the current proto Environment
-    OpEnvironment envrionment = 3;
+    // OpWrite writes into a value
+    OpWrite write = 4; 
+    // Concat concatenates multiple compatible expressions
+    OpConcat concat = 5;
   }
 }
 
@@ -33,6 +35,32 @@ message Value {
   // oci (by reference)
 }
 
+// OpEnvironment returns the current proto Environment
+message OpEnvironment {}
+
+// OpRead reads into a value
+message OpRead {
+  // Value is an Expression to be evaluated until it is a Value
+  Expression value = 1;
+  // Path is the subtree of the value to return
+  repeated PathKey path = 2;
+}
+
+message OpWrite {
+  // Value is an Expression to be evaluated until it is a Value
+  Expression value = 1;
+  // Path is where to write the value
+  repeated PathKey path = 2;
+}
+
+// PathKey is a reference to a piece of a struct or an array
+message PathKey {
+  // Key accesses a struct
+  string key = 1;
+  // Index accesses an array
+  int32 index = 2;
+}
+
 // OpConcat concatenates multiple compatible expressions
 message OpConcat {
   // Expression(s) are the expressions to concatenate
@@ -42,21 +70,3 @@ message OpConcat {
   // All other types return an error
   repeated Expression expression = 1;
 }
-
-// OpRead reads into a value
-message OpRead {
-  // Value is an Expression to be evaluated until it is a Value
-  Expression value = 1;
-  // Path is the subtree of the value to return
-  repeated PathKey path = 2;
-  // PathKey is a reference to a piece of a struct or an array
-  message PathKey {
-    // Key accesses a struct
-    string key = 1;
-    // Index accesses an array
-    int32 index = 2;
-  }
-}
-
-// OpEnvironment returns the current proto Environment
-message OpEnvironment {}
