@@ -1,5 +1,30 @@
 
-verify-image-version:
+# for those tests that use the GitLab Runner deployed
+# as part of the Step Runner pipeline (uses step-runner image created in pipeline)
+.e2e:use-pipeline-runner:
+  stage: e2e
+  tags: ["steps-e2e-${CI_PIPELINE_IID}"]
+  timeout: 10m  # we want jobs to eventually finish so runners get cleaned up
+
+e2e:script:run:
+  extends: .e2e:use-pipeline-runner
+  image: alpine:${ALPINE_VERSION}
+  run:
+    - name: echo_pipeline
+      script: echo ${{job.CI_PIPELINE_ID}} >${{job.CI_PROJECT_DIR}}/output.txt
+  artifacts:
+    paths:
+      - output.txt
+
+e2e:script:verify:
+  stage: e2e
+  image: alpine:${ALPINE_VERSION}
+  needs: ["e2e:script:run"]
+  script:
+    - ECHO_MESSAGE=$(cat output.txt)
+    - "[ $ECHO_MESSAGE == $CI_PIPELINE_ID ]"
+
+e2e:image-version:
   stage: e2e
   image: alpine:${ALPINE_VERSION}
   tags: ["saas-${OS}-medium-${ARCH}"]
@@ -15,27 +40,9 @@ verify-image-version:
     - echo "$STEP_RUNNER_HELP" | grep -q "Step Runner version:" # expect version to be printed
     - echo "$STEP_RUNNER_HELP" | grep -q -v "UNKNOWN" # version should be known
 
-run-e2e:
-  stage: e2e
-  image: alpine:${ALPINE_VERSION}
-  script:
-    - >
-      ./out/bin/step-runner-linux-amd64 run gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@main \
-        --inputs echo='${{job.CI_MOCK_PIPELINE_ID}}' \
-        --job CI_MOCK_PIPELINE_ID=mock_pipeline_id \
-        --write-steps-results
-    - apk add jq
-    - ECHO_MESSAGE=$(jq -r '.subStepResults[0].outputs.echo' step-results.json)
-    - "[ $ECHO_MESSAGE == mock_pipeline_id ]"
-  artifacts:
-    access: developer
-    when: always
-    paths:
-      - step-results.json
-
 ##### Legacy Image tests
 
-run-action-e2e:
+e2e:action:
   stage: e2e
   image: $LEGACY_IMAGE_TAG
   services:
@@ -60,7 +67,7 @@ run-action-e2e:
     paths:
       - step-results.json
 
-run-e2e legacy:
+e2e:legacy:run:
   stage: e2e
   image: $LEGACY_IMAGE_TAG
   variables:
@@ -76,10 +83,10 @@ run-e2e legacy:
     paths:
       - step-results.json
 
-verify-e2e legacy:
+e2e:legacy:verify:
   stage: e2e
   image: alpine:${ALPINE_VERSION}
-  needs: ["run-e2e legacy"]
+  needs: ["e2e:legacy:run"]
   script:
     - apk add jq
     - ECHO_MESSAGE=$(jq -r '.subStepResults[0].outputs.echo' step-results.json)
