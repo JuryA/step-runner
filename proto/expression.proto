@@ -50,8 +50,10 @@ message OpRead {
 message OpWrite {
   // Value is an Expression to be evaluated until it is a Value
   Expression value = 1;
+  // Into is the structure into which to write the Value
+  Expression into = 2;
   // Path is where to write the value
-  repeated PathKey path = 2;
+  repeated PathKey path = 3;
 }
 
 // PathKey is a reference to a piece of a struct or an array
