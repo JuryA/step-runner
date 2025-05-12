@@ -1,3 +1,5 @@
+include Makefile.*.mk
+
 ifeq ($(shell git diff --quiet --exit-code ; echo $$?), 1)
 	export STEP_RUNNER_VERSION = UNKNOWN (uncommitted changes)
 else
