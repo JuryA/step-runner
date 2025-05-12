@@ -30,7 +30,7 @@ module "fleeting" {
     subnet_ids = module.vpc.subnet_ids
   }
 
-  security_group_ids = [module.security_groups.fleeting_id]
+  security_group_ids   = [module.security_groups.fleeting_id]
   instance_type        = local.ephemeral_runner.machine_type
   ephemeral_runner_ami = local.ephemeral_runner.source_image != "" ? local.ephemeral_runner.source_image : module.ami_lookup.ami_id
   scale_min            = var.autoscaling_policy.scale_min
@@ -115,5 +115,5 @@ module "gitlab" {
   url                = var.gitlab_base_url
   project_id         = var.gitlab_project_id
   runner_description = "Runner used in Steps E2E tests"
-  runner_tags = ["steps-e2e", var.runner_tag]
+  runner_tags        = ["steps-e2e", var.runner_tag]
 }

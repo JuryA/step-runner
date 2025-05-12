@@ -36,9 +36,9 @@ variable "max_use_count" {
 
 variable "autoscaling_policy" {
   type = object({
-    scale_min = optional(number, 1)
-    scale_max = optional(number, 3)
-    idle_time = optional(string, "5m")
+    scale_min       = optional(number, 1)
+    scale_max       = optional(number, 3)
+    idle_time       = optional(string, "5m")
     idle_percentage = optional(number, 1)
   })
 

@@ -45,9 +45,9 @@ module "deploy_e2e_runner" {
   max_use_count         = 10
 
   autoscaling_policy = {
-    scale_min = 1 # affects idle_count, which is scale_min * capacity_per_instance
-    scale_max = 5 # affects concurrent, which is scale_max * capacity_per_instance
-    idle_time = "5m" # how long idle capacity is kept around for, useful when idle_count decreases
-    idle_percentage = 1.5 # idle_count = max(active tasks * idle_percentage, idle_count), starts instances to take on future tasks
+    scale_min       = 1    # affects idle_count, which is scale_min * capacity_per_instance
+    scale_max       = 5    # affects concurrent, which is scale_max * capacity_per_instance
+    idle_time       = "5m" # how long idle capacity is kept around for, useful when idle_count decreases
+    idle_percentage = 1.5  # idle_count = max(active tasks * idle_percentage, idle_count), starts instances to take on future tasks
   }
 }
