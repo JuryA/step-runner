@@ -20,6 +20,25 @@ go-lint:
     - apk add git make
     - make go-lint
 
+terraform-fmt:
+  stage: test
+  image:
+    name: hashicorp/terraform:${TERRAFORM_VERSION}
+    entrypoint: [""]
+  script:
+    - apk add git make
+    - make tf-fmt
+
+terraform-lint:
+  stage: test
+  image:
+    name: hashicorp/terraform:${TERRAFORM_VERSION}
+    entrypoint: [""]
+  script:
+    # go isn't used during linting, so let's not worry about the version.
+    - apk add git make curl go
+    - make tf-lint
+
 check-generated:
   stage: test
   image: golang:${GO_VERSION}
