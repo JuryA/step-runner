@@ -4,4 +4,4 @@ components:
     attributes:
       gl/inject-editor: true
     container:
-      image: "registry.gitlab.com/josephburnett/hello-devfle/step-runner"
+      image: "golang:latest"
