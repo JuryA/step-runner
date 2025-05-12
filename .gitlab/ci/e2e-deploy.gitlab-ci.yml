@@ -42,14 +42,14 @@ e2e:destroy_runners:manual:
 # Using https://gitlab.com/-/graphql-explorer, run the following query, substituting the date with a recent date
 #
 # {
-#	project(fullPath: "gitlab-org/step-runner") {
-#     pipelines(updatedAfter:"2025-05-01T00:00:00+00:00"){
-#       nodes {
-#         id
-#         iid
-#       }
-#     }
+#  project(fullPath: "gitlab-org/step-runner") {
+#   pipelines(updatedAfter:"2025-05-01T00:00:00+00:00"){
+#    nodes {
+#     id
+#     iid
+#    }
 #   }
+#  }
 # }
 #
 # Look for the IID in the results. For example, for 1280:
