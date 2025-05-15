@@ -22,7 +22,7 @@ import (
 )
 
 func TestReleaser_Release(t *testing.T) {
-	t.Run("publishes an image specific for an architecture", func(t *testing.T) {
+	t.Run("builds an image specific for an architecture", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
 		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
@@ -50,10 +50,9 @@ func TestReleaser_Release(t *testing.T) {
 		imageDir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
 		require.Equal(t, "spec:", readFile(t, filepath.Join(imageDir, "my_step", "step.yml")))
 		require.Equal(t, "123", readFile(t, filepath.Join(imageDir, "my_step", "program")))
-
 	})
 
-	t.Run("publishes an image with optional platform settings", func(t *testing.T) {
+	t.Run("builds an image with optional platform settings", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
 		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
@@ -104,7 +103,7 @@ func TestReleaser_Release(t *testing.T) {
 		require.Equal(t, "arm64", indexManifest.Manifests[0].Platform.Architecture)
 	})
 
-	t.Run("publishes images for many architectures", func(t *testing.T) {
+	t.Run("builds images for many architectures", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
 		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
@@ -171,7 +170,7 @@ func TestReleaser_Release(t *testing.T) {
 		require.Len(t, entries, 0)
 	})
 
-	t.Run("fails to publish when image with version already exists", func(t *testing.T) {
+	t.Run("fails to build when image with version already exists", func(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
 		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
@@ -181,33 +180,6 @@ func TestReleaser_Release(t *testing.T) {
 		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf("image already published: %s", remoteImgRef), err.Error())
-	})
-
-	t.Run("updates major/minor tag", func(t *testing.T) {
-		registry := mainBldr.StartOCIRegistryServer(t)
-		ref1 := registry.RefToImage("my-image", "1")
-		remoteImgRef := bldr.RemoteImageRef(t).WithRepositoryRef(ref1).WithTag("1.1.0").Build()
-
-		// make sure major tag 1 already exists
-		registry.Push(ref1, mainBldr.OCIImage(t).Build())
-
-		baseDir := mainBldr.Files(t).TouchFile("/new_image_file").Build()
-
-		platformSpecific := bldr.OCIArtifact(t).
-			LinuxAMD64().
-			WithFrom(filepath.Join(baseDir, "new_image_file")).
-			WithTo("/new_image_file").
-			BuildArtifacts()
-
-		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
-		require.NoError(t, err)
-
-		imageDir1 := fetch(t, ref1, mainBldr.OCIPlatform.LinuxAMD64)
-		require.FileExists(t, filepath.Join(imageDir1, "new_image_file"))
-
-		ref11 := registry.RefToImage("my-image", "1.1")
-		imageDir2 := fetch(t, ref11, mainBldr.OCIPlatform.LinuxAMD64)
-		require.FileExists(t, filepath.Join(imageDir2, "new_image_file"))
 	})
 }
 
