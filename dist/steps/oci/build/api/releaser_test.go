@@ -47,7 +47,7 @@ func TestReleaser_Release(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, imageIndex)
 
-		imageDir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
+		imageDir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
 		require.Equal(t, "spec:", readFile(t, filepath.Join(imageDir, "my_step", "step.yml")))
 		require.Equal(t, "123", readFile(t, filepath.Join(imageDir, "my_step", "program")))
 	})
@@ -69,7 +69,7 @@ func TestReleaser_Release(t *testing.T) {
 		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
-		imgIndex, err := remote.Index(remoteImgRef.MajorMinorPatch())
+		imgIndex, err := remote.Index(remoteImgRef)
 		require.NoError(t, err)
 
 		indexManifest, err := imgIndex.IndexManifest()
@@ -93,7 +93,7 @@ func TestReleaser_Release(t *testing.T) {
 		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
-		imgIndex, err := remote.Index(remoteImgRef.MajorMinorPatch())
+		imgIndex, err := remote.Index(remoteImgRef)
 		require.NoError(t, err)
 
 		indexManifest, err := imgIndex.IndexManifest()
@@ -134,11 +134,11 @@ func TestReleaser_Release(t *testing.T) {
 		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, common, platformSpecific)
 		require.NoError(t, err)
 
-		amd64Dir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
+		amd64Dir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
 		require.Equal(t, "spec:", readFile(t, filepath.Join(amd64Dir, "step.yml")))
 		require.Equal(t, "amd64", readFile(t, filepath.Join(amd64Dir, "program")))
 
-		arm64Dir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxARM64)
+		arm64Dir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxARM64)
 		require.Equal(t, "spec:", readFile(t, filepath.Join(arm64Dir, "step.yml")))
 		require.Equal(t, "arm64", readFile(t, filepath.Join(arm64Dir, "program")))
 	})
@@ -158,7 +158,7 @@ func TestReleaser_Release(t *testing.T) {
 		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)
 		require.NoError(t, err)
 
-		imageDir := fetch(t, remoteImgRef.MajorMinorPatch(), mainBldr.OCIPlatform.LinuxAMD64)
+		imageDir := fetch(t, remoteImgRef, mainBldr.OCIPlatform.LinuxAMD64)
 		myFiles := filepath.Join(imageDir, "app", "my", "files")
 
 		stat, err := os.Stat(myFiles)
@@ -174,7 +174,7 @@ func TestReleaser_Release(t *testing.T) {
 		registry := mainBldr.StartOCIRegistryServer(t)
 		remoteImgRef := bldr.RemoteImageRef(t).WithRegistry(registry.Address()).Build()
 
-		registry.Push(remoteImgRef.MajorMinorPatch(), mainBldr.OCIImage(t).Build())
+		registry.Push(remoteImgRef, mainBldr.OCIImage(t).Build())
 
 		platformSpecific := bldr.OCIArtifact(t).BuildArtifacts()
 		_, err := api.NewReleaser().Release(t.Context(), remoteImgRef, internal.NewArtifacts(), platformSpecific)

@@ -233,38 +233,162 @@ func TestParseInputs(t *testing.T) {
 			})
 		}
 	})
-}
 
-func TestInputs_ImgRef(t *testing.T) {
-	tests := []struct {
-		name       string
-		registry   string
-		repository string
-		tag        string
-		expect     string
-	}{
-		{
-			name:       "combined registry, repository, and tag",
-			registry:   "gitlab.registry.com",
-			repository: "my_group/my_project",
-			tag:        "3.4.0",
-			expect:     "gitlab.registry.com/my_group/my_project:3.4.0",
-		},
-		{
-			name:       "removes unnecessary forward slashes",
-			registry:   "gitlab.registry.com/",
-			repository: "/my_project/",
-			tag:        "1.0.0-rc1",
-			expect:     "gitlab.registry.com/my_project:1.0.0-rc1",
-		},
-	}
+	t.Run("parses image reference", func(t *testing.T) {
+		t.Run("registry", func(t *testing.T) {
+			tests := []struct {
+				name      string
+				registry  string
+				expect    string
+				expectErr string
+			}{
+				{
+					name:     "parses",
+					registry: "registry.gitlab.com:5000",
+					expect:   "registry.gitlab.com:5000",
+				},
+				{
+					name:     "trims space",
+					registry: "  registry.gitlab.com  ",
+					expect:   "registry.gitlab.com",
+				},
+				{
+					name:      "cannot be empty",
+					registry:  "",
+					expectErr: "registry is required",
+				},
+			}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			build, env := bldr.CLIInputs(t).WithRegistry(test.registry).WithRepository(test.repository).WithTag(test.tag).Build()
-			inputs, err := internal.ParseInputs(build, env)
-			require.NoError(t, err)
-			require.Equal(t, test.expect, inputs.RemoteImageRef.MajorMinorPatch().Name())
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithRegistry(test.registry).Build())
+
+					if test.expectErr == "" {
+						require.NoError(t, err)
+						require.Equal(t, test.expect, inputs.ImageRef.Context().RegistryStr())
+					} else {
+						require.Error(t, err)
+						require.Contains(t, err.Error(), test.expectErr)
+					}
+				})
+			}
 		})
-	}
+
+		t.Run("repository", func(t *testing.T) {
+			tests := []struct {
+				name       string
+				repository string
+				expect     string
+				expectErr  string
+			}{
+				{
+					name:       "parses",
+					repository: "my_group/my_project/image",
+					expect:     "my_group/my_project/image",
+				},
+				{
+					name:       "trims space",
+					repository: "  my_group/my_project/image  ",
+					expect:     "my_group/my_project/image",
+				},
+				{
+					name:       "cannot be empty",
+					repository: "",
+					expectErr:  "repository is required",
+				},
+			}
+
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithRepository(test.repository).Build())
+
+					if test.expectErr == "" {
+						require.NoError(t, err)
+						require.Equal(t, test.expect, inputs.ImageRef.Context().RepositoryStr())
+					} else {
+						require.Error(t, err)
+						require.Contains(t, err.Error(), test.expectErr)
+					}
+				})
+			}
+		})
+
+		t.Run("tag", func(t *testing.T) {
+			tests := []struct {
+				name      string
+				tag       string
+				expect    string
+				expectErr string
+			}{
+				{
+					name:   "parses",
+					tag:    "1.0.3",
+					expect: "1.0.3",
+				},
+				{
+					name:   "trims space",
+					tag:    "  12.44.32  ",
+					expect: "12.44.32",
+				},
+				{
+					name:      "cannot be empty",
+					tag:       "",
+					expectErr: "tag is required",
+				},
+				{
+					name:   "does not need to be semver",
+					tag:    "pipeline-123343",
+					expect: "pipeline-123343",
+				},
+			}
+
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					inputs, err := internal.ParseInputs(bldr.CLIInputs(t).WithTag(test.tag).Build())
+
+					if test.expectErr == "" {
+						require.NoError(t, err)
+						require.Contains(t, test.expect, inputs.ImageRef.Identifier())
+					} else {
+						require.Error(t, err)
+						require.Contains(t, err.Error(), test.expectErr)
+					}
+				})
+			}
+		})
+
+		t.Run("combined", func(t *testing.T) {
+			tests := []struct {
+				name       string
+				registry   string
+				repository string
+				tag        string
+				expect     string
+			}{
+				{
+					name:       "combined registry, repository, and tag",
+					registry:   "gitlab.registry.com",
+					repository: "my_group/my_project",
+					tag:        "3.4.0",
+					expect:     "gitlab.registry.com/my_group/my_project:3.4.0",
+				},
+				{
+					name:       "removes unnecessary forward slashes",
+					registry:   "gitlab.registry.com/",
+					repository: "/my_project/",
+					tag:        "1.0.0-rc1",
+					expect:     "gitlab.registry.com/my_project:1.0.0-rc1",
+				},
+			}
+
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					build, env := bldr.CLIInputs(t).WithRegistry(test.registry).WithRepository(test.repository).WithTag(test.tag).Build()
+					inputs, err := internal.ParseInputs(build, env)
+					require.NoError(t, err)
+					require.Equal(t, test.expect, inputs.ImageRef.Name())
+				})
+			}
+		})
+	})
 }

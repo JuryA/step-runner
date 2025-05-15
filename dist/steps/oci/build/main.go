@@ -24,11 +24,11 @@ func run(args []string, getEnv internal.GetEnv) error {
 
 	slog.SetLogLoggerLevel(inputs.LogLevel)
 
-	imageIndex, err := api.NewReleaser().Release(context.Background(), inputs.RemoteImageRef, inputs.Common, inputs.PlatformSpecific)
+	imageIndex, err := api.NewReleaser().Release(context.Background(), inputs.ImageRef, inputs.Common, inputs.PlatformSpecific)
 	if err != nil {
 		return err
 	}
 
-	slog.Info("published step", "image", inputs.RemoteImageRef.MajorMinorPatch().Name())
-	return internal.NewOutputs(inputs.OutputFile).Write(inputs.RemoteImageRef.MajorMinorPatch(), imageIndex)
+	slog.Info("published step", "image", inputs.ImageRef.Name())
+	return internal.NewOutputs(inputs.OutputFile).Write(inputs.ImageRef, imageIndex)
 }

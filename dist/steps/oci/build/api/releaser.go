@@ -26,12 +26,12 @@ func NewReleaser() *Releaser {
 	}
 }
 
-func (r *Releaser) Release(ctx context.Context, remoteImgRef *internal.RemoteImageRef, common internal.Artifacts, platformSpecific internal.Artifacts) (v1.ImageIndex, error) {
+func (r *Releaser) Release(ctx context.Context, remoteImgRef name.Reference, common internal.Artifacts, platformSpecific internal.Artifacts) (v1.ImageIndex, error) {
 	factory := internal.NewImageFactory(internal.WithLogger(r.logger))
 	defer factory.CleanUp()
 
-	if r.alreadyPublished(ctx, remoteImgRef.MajorMinorPatch()) {
-		return nil, fmt.Errorf("image already published: %s", remoteImgRef.MajorMinorPatch())
+	if r.alreadyPublished(ctx, remoteImgRef) {
+		return nil, fmt.Errorf("image already published: %s", remoteImgRef)
 	}
 
 	imageIndex, err := r.buildImageIndex(factory, common, platformSpecific)
@@ -39,7 +39,7 @@ func (r *Releaser) Release(ctx context.Context, remoteImgRef *internal.RemoteIma
 		return nil, err
 	}
 
-	if err := r.pushImageIndex(ctx, remoteImgRef.MajorMinorPatch(), imageIndex); err != nil {
+	if err := r.pushImageIndex(ctx, remoteImgRef, imageIndex); err != nil {
 		return nil, err
 	}
 
