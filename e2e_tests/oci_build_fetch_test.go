@@ -11,7 +11,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )
 
-func TestCanFetchAPublishedImage(t *testing.T) {
+func TestCanBuildAndFetchAnImage(t *testing.T) {
 	registry := bldr.StartOCIRegistryServer(t, bldr.WithRequireAuth("fred", "c0d3_n1nj4"))
 
 	baseDir := bldr.Files(t).
@@ -23,12 +23,12 @@ func TestCanFetchAPublishedImage(t *testing.T) {
 spec:
 ---
 run:
-  - name: publish_image
-    step: dist://oci/publish
+  - name: build_image
+    step: dist://oci/build
     inputs:
       registry: %s
       repository: my-image
-      tag: 1.0.2
+      tag: pipeline-111234
       common:
         files:
           %s/step.yml: step.yml
@@ -36,26 +36,26 @@ run:
         %s/%s:  
           files:
             %s/files/templates_dir: /app/files/templates
-  - name: run_published_step
+  - name: run_built_image
     step:
       oci:
         registry: %s
         repository: my-image
-        tag: "1"
+        tag: pipeline-111234
   - name: echo_registry
-    script: "echo reg: ${{steps.publish_image.outputs.registry}}"
+    script: "echo reg: ${{steps.build_image.outputs.registry}}"
   - name: echo_repository
-    script: "echo repo: ${{steps.publish_image.outputs.repository}}"
+    script: "echo repo: ${{steps.build_image.outputs.repository}}"
   - name: echo_tag
-    script: "echo tag: ${{steps.publish_image.outputs.tag}}"
+    script: "echo tag: ${{steps.build_image.outputs.tag}}"
   - name: echo_ref
-    script: "echo ref: ${{steps.publish_image.outputs.ref}}"
+    script: "echo ref: ${{steps.build_image.outputs.ref}}"
   - name: echo_algorithm
-    script: "echo algorithm: ${{steps.publish_image.outputs.digest.algorithm}}"
+    script: "echo algorithm: ${{steps.build_image.outputs.digest.algorithm}}"
   - name: echo_hash
-    script: "echo hash: ${{steps.publish_image.outputs.digest.hash}}"
+    script: "echo hash: ${{steps.build_image.outputs.digest.hash}}"
   - name: echo_digest
-    script: "echo digest: ${{steps.publish_image.outputs.digest.value}}"`
+    script: "echo digest: ${{steps.build_image.outputs.digest.value}}"`
 
 	platform := bldr.OCIPlatform.ThisPlatform
 	registryAddr := registry.Address()
@@ -68,15 +68,14 @@ run:
 		Run(testStep)
 	require.NoError(t, err)
 	require.Contains(t, logs, "Hello, World!")
-	require.Contains(t, logs, `Running step "publish_image"`)
-	require.Regexp(t, `INFO published step image=.*/my-image:1.0.2`, logs)
-	require.Contains(t, logs, `Running step "run_published_step"`)
+	require.Contains(t, logs, `Running step "build_image"`)
+	require.Regexp(t, `INFO fetched step image=.*/my-image:pipeline-111234`, logs)
+	require.Contains(t, logs, `Running step "run_built_image"`)
 	require.Contains(t, logs, "Hello, World!")
 	require.Contains(t, logs, "reg: "+registryAddr)
 	require.Contains(t, logs, "repo: my-image")
-	require.Contains(t, logs, "tag: 1")
-	require.Contains(t, logs, "ref: 1")
-	require.Regexp(t, `ref: .*/my-image:1.0.2`, logs)
+	require.Contains(t, logs, "tag: pipeline-111234")
+	require.Regexp(t, `ref: .*/my-image:pipeline-111234`, logs)
 	require.Contains(t, logs, "algorithm: sha256")
 	require.Regexp(t, `hash: [0-9a-f]{64}`, logs)
 	require.Regexp(t, `digest: sha256:[0-9a-f]{64}`, logs)
