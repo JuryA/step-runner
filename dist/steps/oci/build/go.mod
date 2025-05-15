@@ -1,4 +1,4 @@
-module gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish
+module gitlab.com/gitlab-org/step-runner/dist/steps/oci/build
 
 go 1.24.1
 
