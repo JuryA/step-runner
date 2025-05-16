@@ -237,6 +237,7 @@ message Status {
     StepResult.Status status = 3;
     google.protobuf.Timestamp start_time = 5;
     google.protobuf.Timestamp end_time = 6;
+    StepResult result = 7;
 }
 
 message StatusRequest {
