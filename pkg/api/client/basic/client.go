@@ -56,6 +56,7 @@ func fromProto(statuses []*proto.Status) []client.Status {
 			Message:   st.Message,
 			State:     client.State(st.Status),
 			StartTime: st.StartTime.AsTime(),
+			Result:    st.Result,
 		}
 		if st.EndTime != nil {
 			res.EndTime = st.EndTime.AsTime()

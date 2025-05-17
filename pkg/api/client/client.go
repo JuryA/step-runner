@@ -2,6 +2,8 @@ package client
 
 import (
 	"time"
+
+	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 // State is an enumerations of the states a step can be in during execution.
@@ -33,6 +35,7 @@ type (
 		State     State
 		StartTime time.Time
 		EndTime   time.Time
+		Result    *proto.StepResult
 	}
 
 	Variable struct {
