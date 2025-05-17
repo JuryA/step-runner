@@ -23,8 +23,9 @@ import (
 type Job struct {
 	TmpDir  string
 	WorkDir string
-	Ctx     context.Context // The context used to manage the Job's entire lifetime.
-	ID      string          // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
+	Ctx     context.Context   // The context used to manage the Job's entire lifetime.
+	ID      string            // The ID of the job to run/being run. Must be unique. Typically this will be the CI job ID.
+	Result  *proto.StepResult // The result of the job.
 
 	cancel     func()    // Used to cancel the Ctx.
 	err        error     // Captures any error returned when executing steps.
@@ -154,6 +155,7 @@ func (j *Job) onRunCompletion(stepResult *proto.StepResult, err error) {
 		j.err = err
 		j.status = stepResult.Status
 	}
+	j.Result = stepResult
 }
 
 // Close() cancels jobs (if still running) and cleans up all resources associated with managing the job.
@@ -200,6 +202,7 @@ func (j *Job) Status() *proto.Status {
 	st := proto.Status{
 		Id:     j.ID,
 		Status: j.status,
+		Result: j.Result,
 	}
 
 	if !j.startTime.IsZero() {
