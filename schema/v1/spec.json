@@ -3,11 +3,17 @@
     "$id": "https://gitlab.com/gitlab-org/step-runner/schema/v1/spec",
     "$ref": "#/definitions/spec",
     "definitions": {
+        "description": {
+            "type": "string"
+        },
         "spec": {
             "type": "object",
             "description": "Spec is a document describing the interface of a step.",
             "additionalProperties": false,
             "properties": {
+                "description": {
+                    "type": "string"
+                },
                 "spec": {
                     "$ref": "#/definitions/signature"
                 }
