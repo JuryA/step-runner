@@ -2,22 +2,18 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/publish/internal"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/build/internal"
 )
 
 type Releaser struct {
@@ -30,12 +26,12 @@ func NewReleaser() *Releaser {
 	}
 }
 
-func (r *Releaser) Release(ctx context.Context, remoteImgRef *internal.RemoteImageRef, common internal.Artifacts, platformSpecific internal.Artifacts) (v1.ImageIndex, error) {
+func (r *Releaser) Release(ctx context.Context, remoteImgRef name.Reference, common internal.Artifacts, platformSpecific internal.Artifacts) (v1.ImageIndex, error) {
 	factory := internal.NewImageFactory(internal.WithLogger(r.logger))
 	defer factory.CleanUp()
 
-	if r.alreadyPublished(ctx, remoteImgRef.MajorMinorPatch()) {
-		return nil, fmt.Errorf("image already published: %s", remoteImgRef.MajorMinorPatch())
+	if r.alreadyPublished(ctx, remoteImgRef) {
+		return nil, fmt.Errorf("image already published: %s", remoteImgRef)
 	}
 
 	imageIndex, err := r.buildImageIndex(factory, common, platformSpecific)
@@ -43,20 +39,8 @@ func (r *Releaser) Release(ctx context.Context, remoteImgRef *internal.RemoteIma
 		return nil, err
 	}
 
-	tags, err := r.listPublishedTags(ctx, remoteImgRef)
-	if err != nil {
+	if err := r.pushImageIndex(ctx, remoteImgRef, imageIndex); err != nil {
 		return nil, err
-	}
-
-	semVerRefs, err := remoteImgRef.SemVerRefs(tags)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ref := range semVerRefs {
-		if err := r.pushImageIndex(ctx, ref, imageIndex); err != nil {
-			return nil, err
-		}
 	}
 
 	return imageIndex, nil
@@ -146,56 +130,9 @@ func (r *Releaser) alreadyPublished(ctx context.Context, imgRef name.Reference) 
 	return descriptor != nil
 }
 
-// listPublishedTags lists the tags for the remote image
-// for example, for registry.gitlab.com/gitlab-org/gitlab-runner it will return v17.7.0, v17.7.1, v17.8.0, v17.8.1, etc
-// returns no tags if the repository is not found
-func (r *Releaser) listPublishedTags(ctx context.Context, remoteImgRef *internal.RemoteImageRef) ([]string, error) {
-	r.logger.Debug("listing published tags")
-
-	tags, err := remote.List(remoteImgRef.Repository(), r.remoteOptions(ctx)...)
-
-	if err != nil {
-		if isErrorNameUnknown(err) {
-			r.logger.Debug("no published tags, repository not found")
-			return []string{}, nil
-		}
-
-		return nil, fmt.Errorf("listing published tags: %w", err)
-	}
-
-	if r.logger.Enabled(ctx, slog.LevelDebug) {
-		for chunk := range slices.Chunk(tags, 20) {
-			r.logger.Debug("published tags", "tags", strings.Join(chunk, ","))
-		}
-
-		if len(tags) == 0 {
-			r.logger.Debug("no published tags")
-		}
-	}
-
-	return tags, nil
-}
-
 func (r *Releaser) remoteOptions(ctx context.Context) []remote.Option {
 	return []remote.Option{
 		remote.WithContext(ctx),
 		remote.WithAuthFromKeychain(api.NewAuthLookupKeychain(os.LookupEnv)),
 	}
-}
-
-func isErrorNameUnknown(err error) bool {
-	for err != nil {
-		transportErr, ok := err.(*transport.Error)
-		if ok {
-			for _, diagnostic := range transportErr.Errors {
-				if diagnostic.Code == transport.NameUnknownErrorCode {
-					return true
-				}
-			}
-		}
-
-		err = errors.Unwrap(err)
-	}
-
-	return false
 }
