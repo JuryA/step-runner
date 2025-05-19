@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/build/internal"
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/build/testutil/bldr"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/build/internal"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/build/testutil/bldr"
 )
 
 func TestParseInputs(t *testing.T) {

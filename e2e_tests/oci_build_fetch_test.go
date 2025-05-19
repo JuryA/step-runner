@@ -24,7 +24,7 @@ spec:
 ---
 run:
   - name: build_image
-    step: dist://oci/build
+    step: dist://step/oci/build
     inputs:
       registry: %s
       repository: my-image

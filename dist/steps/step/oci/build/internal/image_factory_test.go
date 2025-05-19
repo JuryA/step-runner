@@ -13,9 +13,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/build/internal"
-
 	"gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
+
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/build/internal"
 )
 
 func TestImageFactory_BuildLayer(t *testing.T) {

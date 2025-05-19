@@ -198,7 +198,7 @@ dist-steps-run-make-target:
 
 # runs a command for every directory that contains a go.mod
 .PHONY: run-for-all-go-modules
-run-for-all-go-modules: GO_MODS := $(wildcard ./go.mod */*/go.mod */*/*/go.mod */*/*/*/go.mod .gitlab/*/*/go.mod)
+run-for-all-go-modules: GO_MODS := $(wildcard ./go.mod */go.mod */*/go.mod */*/*/go.mod */*/*/*/go.mod */*/*/*/*/go.mod .gitlab/*/*/go.mod)
 run-for-all-go-modules: GO_DIRS := $(dir $(GO_MODS))
 run-for-all-go-modules:
 	@for dir in $(GO_DIRS); do \

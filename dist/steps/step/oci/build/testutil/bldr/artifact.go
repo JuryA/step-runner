@@ -5,7 +5,7 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/build/internal"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/build/internal"
 
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 )

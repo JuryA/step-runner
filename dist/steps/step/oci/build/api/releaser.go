@@ -13,7 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/build/internal"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/build/internal"
 )
 
 type Releaser struct {

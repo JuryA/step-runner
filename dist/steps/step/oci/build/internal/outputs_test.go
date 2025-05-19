@@ -9,9 +9,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/build/internal"
-
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
+
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/build/internal"
 )
 
 func TestOutputs_Write(t *testing.T) {

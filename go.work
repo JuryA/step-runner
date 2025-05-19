@@ -5,6 +5,6 @@ use (
 	./.gitlab/steps/changelog
 	./.gitlab/steps/create_gitlab_release
 	./dist/steps/oci/fetch
-	./dist/steps/oci/build
+	./dist/steps/step/oci/build
 	e2e_tests
 )
