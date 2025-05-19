@@ -1,4 +1,4 @@
-package e2e_tests
+package integration_test
 
 import (
 	"encoding/base64"

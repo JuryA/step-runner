@@ -5,7 +5,7 @@ type:steps
       protocol: local
       path: ".."
       path: ".."
-      path: "e2e_tests"
+      path: "integration_test"
       path: "steps"
       path: "echo"
       filename: "step.yml"
@@ -23,7 +23,7 @@ type:steps
       protocol: local
       path: ".."
       path: ".."
-      path: "e2e_tests"
+      path: "integration_test"
       path: "steps"
       path: "echo"
       filename: "step.yml"
