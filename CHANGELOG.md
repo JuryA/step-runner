@@ -4,6 +4,8 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 
 ## v0.11.0
 
+- Rename `oci/publish` to `step/oci/build` and remove the requirement for tag to comply with
+  Semantic Versioning. See !227.
 - Authenticate when pushing to an OCI registry using the `DOCKER_AUTH_CONFIG` environment
   variable. See !220.
 

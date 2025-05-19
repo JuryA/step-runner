@@ -9,16 +9,18 @@ import (
 	"log/slog"
 	"maps"
 	"os"
+	"path"
 	"slices"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 type GetEnv func(key string) string
 
 type Inputs struct {
-	RemoteImageRef   *RemoteImageRef
+	ImageRef         name.Reference
 	Common           Artifacts
 	PlatformSpecific Artifacts
 	LogLevel         slog.Level
@@ -41,9 +43,9 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 		return nil, err
 	}
 
-	remoteImgRef, err := NewRemoteImageRef(registry, repository, tag)
+	imageRef, err := parseImageRef(registry, repository, tag)
 	if err != nil {
-		return nil, fmt.Errorf("version: %w", err)
+		return nil, fmt.Errorf("image ref: %w", err)
 	}
 
 	common, err := parseCommon(commonJSON)
@@ -66,7 +68,7 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 	}
 
 	inputs := &Inputs{
-		RemoteImageRef:   remoteImgRef,
+		ImageRef:         imageRef,
 		Common:           common,
 		PlatformSpecific: platform,
 		LogLevel:         logLevel,
@@ -74,6 +76,31 @@ func ParseInputs(args []string, getenv GetEnv) (*Inputs, error) {
 	}
 
 	return inputs, nil
+}
+
+func parseImageRef(registry, repository, tag string) (name.Reference, error) {
+	registry = strings.TrimSpace(registry)
+	repository = strings.TrimSpace(repository)
+	tag = strings.TrimSpace(tag)
+
+	if registry == "" {
+		return nil, errors.New("registry is required")
+	}
+
+	if repository == "" {
+		return nil, errors.New("repository is required")
+	}
+
+	if tag == "" {
+		return nil, errors.New("tag is required")
+	}
+
+	imageRef, err := name.ParseReference(fmt.Sprintf("%s:%s", path.Join(registry, repository), tag))
+	if err != nil {
+		return nil, fmt.Errorf("parsing image reference: %w", err)
+	}
+
+	return imageRef, nil
 }
 
 func parsePlatforms(platformsJSON string) (Artifacts, error) {
