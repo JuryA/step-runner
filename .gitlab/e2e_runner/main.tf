@@ -21,7 +21,7 @@ locals {
   aws_zone        = "us-east-1a"
   aws_region      = "us-east-1"
   gitlab_base_url = "https://gitlab.com"
-  runner_version  = "17.11.1-1"
+  runner_version  = "17.10.1-1"
 }
 
 provider "gitlab" {
