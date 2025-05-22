@@ -27,6 +27,12 @@ func TestSpecSchemaValidate(t *testing.T) {
 spec: {}
 `,
 	}, {
+		name: "spec with description",
+		spec: `
+description: This is a test step
+spec: {}
+`,
+	}, {
 		name:    "spec with additional properties",
 		wantErr: "additionalProperties 'additional' not allowed",
 		spec: `
@@ -48,6 +54,15 @@ spec:
       type: struct
     bow:
       type: boolean
+`,
+	}, {
+		name: "spec with input description",
+		spec: `
+spec:
+  inputs:
+    foo:
+      type: string
+      description: This is a test input
 `,
 	}, {
 		name:    "spec with invalid input type",

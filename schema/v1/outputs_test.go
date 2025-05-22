@@ -53,6 +53,37 @@ spec:
 				Outputs: "delegate",
 			},
 		},
+	}, {
+		name: "spec with description",
+		json: `{"description":"This is a test step","spec":{}}`,
+		yaml: `
+description: This is a test step
+spec: {}
+`,
+		wantSpec: Spec{
+			Description: "This is a test step",
+			Spec:        &Signature{},
+		},
+	}, {
+		name: "spec with description and outputs",
+		json: `{"description":"This is a test step","spec":{"outputs":{"name":{"type":"string"}}}}`,
+		yaml: `
+description: This is a test step
+spec:
+  outputs:
+    name:
+      type: string
+`,
+		wantSpec: Spec{
+			Description: "This is a test step",
+			Spec: &Signature{
+				Outputs: &Outputs{
+					"name": {
+						Type: func() *OutputType { o := OutputType("string"); return &o }(),
+					},
+				},
+			},
+		},
 	}}
 
 	data, err := os.ReadFile("spec.json")

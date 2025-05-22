@@ -72,6 +72,21 @@ exec:
         - echo
         - hello world
 `,
+	}, {
+		name: "step with description",
+		yaml: `
+description: This is a test step
+spec:
+    inputs:
+        name:
+            description: This is a test input
+            type: string
+---
+exec:
+    command:
+        - echo
+        - hello world
+`,
 	}}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
