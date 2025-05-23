@@ -41,7 +41,11 @@ func (gf *GitFetcher) Get(ctx context.Context, url, version string) (string, err
 		return "", fmt.Errorf("parsing git endpoint: %w", err)
 	}
 
-	repoDir, err := module.EscapePath(filepath.Join(endpoint.Host, endpoint.Path))
+	path := endpoint.Path
+	if path == "/" {
+		path = ""
+	}
+	repoDir, err := module.EscapePath(endpoint.Host + path)
 	if err != nil {
 		return "", fmt.Errorf("escaping path: %w", err)
 	}
