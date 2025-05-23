@@ -1,0 +1,23 @@
+spec:
+  inputs:
+    from_image:
+      type: string
+    to_registry:
+      type: string
+    to_repository:
+      type: string
+    to_version:
+      type: string
+---
+exec:
+  work_dir: ${{step_dir}}
+  command:
+    - "${{step_dir}}/run"
+    - "--from-image"
+    - "${{inputs.from_image}}"
+    - "--to-registry"
+    - "${{inputs.to_registry}}"
+    - "--to-repository"
+    - "${{inputs.to_repository}}"
+    - "--to-version"
+    - "${{inputs.to_version}}"
