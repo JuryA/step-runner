@@ -26,7 +26,7 @@ func TestRunCmd(t *testing.T) {
 		cmd := NewCmd()
 		cmd.SetArgs([]string{
 			"--write-steps-results",
-			"../../e2e_tests/steps/secret_factory",
+			"../../integration_test/steps/secret_factory",
 			"--inputs",
 			"secret_override=secrety.secret",
 			"--env",
@@ -54,7 +54,7 @@ func TestRunCmd(t *testing.T) {
 
 		cmd := NewCmd()
 		cmd.SetArgs([]string{
-			"step: ../../e2e_tests/steps/exit",
+			"step: ../../integration_test/steps/exit",
 			"--inputs",
 			"exit_code=0",
 			"--write-steps-results",
@@ -78,7 +78,7 @@ func TestRunCmd(t *testing.T) {
 
 		cmd := NewCmd()
 		cmd.SetArgs([]string{
-			"../../e2e_tests/steps/exit",
+			"../../integration_test/steps/exit",
 			"--inputs",
 			"exit_code=99",
 			"--write-steps-results",
@@ -131,7 +131,7 @@ func TestRunCmd(t *testing.T) {
 		registry := bldr.StartOCIRegistryServer(t)
 		remoteImgRef := registry.RefToImage("my-image", "latest")
 
-		echoStepContents, err := os.ReadFile("../../e2e_tests/steps/echo/step.yml")
+		echoStepContents, err := os.ReadFile("../../integration_test/steps/echo/step.yml")
 		require.NoError(t, err)
 
 		img := bldr.OCIImage(t).WithFile("/step.yml", echoStepContents).Build()

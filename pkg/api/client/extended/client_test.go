@@ -139,7 +139,7 @@ func Test_StepRunnerClient_RunAndFollow_Concurrent(t *testing.T) {
 		defer wg.Done()
 		rr := test.RunRequest(t, `run:
   - name: hello_world
-    step: ../../../../e2e_tests/steps/echo
+    step: ../../../../integration_test/steps/echo
     inputs:
         echo: hi
 `, nil, nil)

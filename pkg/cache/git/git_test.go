@@ -102,7 +102,7 @@ func TestGitFetcher(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			repo, _ := bldr.GitRepository().InitWithFilesFromDir("../../../e2e_tests/steps/echo").Build(t)
+			repo, _ := bldr.GitRepository().InitWithFilesFromDir("../../../integration_test/steps/echo").Build(t)
 			gitServerURL := bldr.StartGitSmartHTTPServer(t, repo)
 
 			hash := test.modifyRepo(t, repo)
@@ -122,7 +122,7 @@ func TestGitFetcher(t *testing.T) {
 
 func TestGitFetcher_Caching(t *testing.T) {
 	t.Run("clone repository that has been cloned before", func(t *testing.T) {
-		repo, _ := bldr.GitRepository().InitWithFilesFromDir("../../../e2e_tests/steps/echo").Build(t)
+		repo, _ := bldr.GitRepository().InitWithFilesFromDir("../../../integration_test/steps/echo").Build(t)
 
 		head, err := repo.Head()
 		require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestGitFetcher_Caching(t *testing.T) {
 	})
 
 	t.Run("fetch when previously cloned repository is missing version", func(t *testing.T) {
-		repo, worktree := bldr.GitRepository().InitWithFilesFromDir("../../../e2e_tests/steps/echo").Build(t)
+		repo, worktree := bldr.GitRepository().InitWithFilesFromDir("../../../integration_test/steps/echo").Build(t)
 		gitServerURL := bldr.StartGitSmartHTTPServer(t, repo)
 		fetcher := gitFetch.New(t.TempDir(), gitFetch.CloneOptions{Depth: 0})
 
