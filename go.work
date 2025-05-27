@@ -7,4 +7,5 @@ use (
 	./dist/steps/oci/fetch
 	./dist/steps/step/oci/build
 	integration_test
+	./dist/steps/step/oci/promote
 )
