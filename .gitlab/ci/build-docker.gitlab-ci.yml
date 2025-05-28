@@ -44,9 +44,29 @@ docker image windows:
       - WINDOWS_VERSION:
           - 2019
           - 2022
-  before_script:  # To prevent this error: open //./pipe/docker_engine: The system cannot find the file specified.
-    - while (!(docker version 2>$null)) { Write-Host "Waiting for Docker..."; Start-Sleep 5 }
-    - Write-Host "Docker is ready, resuming job"
+  before_script: # To prevent this error: open //./pipe/docker_engine: The system cannot find the file specified.
+    - |
+      $timeout = 300  # 5 minutes
+      $interval = 5
+      $elapsed = 0
+
+      while ($elapsed -lt $timeout) {
+        try {
+          docker info
+          Write-Host "Docker daemon is ready, continuing job"
+          break
+        }
+        catch {
+          Write-Host "Waiting for Docker daemon... ($elapsed/$timeout seconds)"
+          Start-Sleep -Seconds $interval
+          $elapsed += $interval
+        }
+      }
+
+      if ($elapsed -ge $timeout) {
+        Write-Host "Timeout waiting for Docker daemon"
+        exit 1
+      }
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build --tag "${IMAGE_TAG}-windows-amd64-${WINDOWS_VERSION}" --build-arg TARGETOS=windows --build-arg TARGETARCH=amd64 --build-arg BASE_IMAGE="mcr.microsoft.com/windows/nanoserver:ltsc${WINDOWS_VERSION}" .
