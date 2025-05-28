@@ -12,7 +12,7 @@ message Expression {
     // Literal is an expression which has been fully evaluated
     Value literal = 1;
     // OpEnvironment returns the current proto Environment
-    OpEnvironment envrionment = 2;
+    OpEnvironment environment = 2;
     // OpRead reads into a value
     OpRead read = 3;
     // OpWrite writes into a value
@@ -22,17 +22,41 @@ message Expression {
   }
 }
 
-// Value is a materialized value
+// Value is a materialized value that represents a fully evaluated expression
+// It supports various data types similar to JSON plus function references
 message Value {
-  // Value is a JSON value minus null
-  google.protobuf.Value value = 1;
-  // Sensitive determines if this value is sensitive
-  // Sensitivity is persistant across all operations
-  bool sensitive = 2;
-  // Function is a function as a value
-  Function function = 3;
-  // bytes (by value)
-  // oci (by reference)
+  // Only one of these types can be present at a time
+  oneof type {
+    // String value for text data
+    string string = 1;
+    // Numeric value for floating point numbers
+    float64 number = 2;
+    // Boolean value for true/false conditions
+    bool boolean = 3;
+    // Array of nested Values for ordered collections
+    Array array = 4;
+    // Map of string keys to Values for structured data
+    Map map = 5;
+    // Function reference for callable code units
+    Function function = 6;
+    // Future extensions:
+    // bytes (by value) - for binary data
+    // oci (by reference) - for container images
+  }
+  // Sensitive determines if this value contains sensitive information
+  // Sensitivity is persistent across all operations and is propagated
+  // when values are transformed or combined
+  bool sensitive = 7;
+
+  // Array is a wrapper for an array of Values
+  message Array {
+    repeated Value values = 1;
+  }
+
+  // Map is a wrapper for a map of string to Value
+  message Map {
+    map<string, Value> values = 1;
+  }
 }
 
 // OpEnvironment returns the current proto Environment

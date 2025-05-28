@@ -211,10 +211,10 @@ message Reference {
     // Dist is a function distributed with the function running binary
     // The binary will know how to find it
     message Dist {
-      // Path is where the functino is located within the function running binary's repository
+      // Path is where the function is located within the function running binary's repository
       // Path is always absolute from the base of the repo
-      repeated path = 1;
-      // Filename is the fiel which contains the proto serialized function
+      repeated string path = 1;
+      // Filename is the file which contains the proto serialized function
       string filename = 2;
     }
   }
