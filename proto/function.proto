@@ -21,23 +21,29 @@ message Function {
   }
 }
 
-// Signature defines the intput and output types
+// Signature defines the input and output types of a function
 message Signature {
-  // Inputs are named
-  map<string,Type> inputs = 1;
-  // Outputs can be named but have other options
-  OutputTypes outputs = 2;
+  // Input parameters define what the function accepts
+  InputParameters input_parameters = 1;
+  // Return parameters define what the function produces
+  ReturnParameters return_parameters = 2;
 }
 
-// OutputTypes are the possibilities for a functions outputs
-message OutputTypes {
-  oneof outputs_oneof {
-    // Outputs is a named map of outputs (just like inputs)
-    Map outputs = 1;
-    // Dynamic allows a function to output any set of named values dynamically
+// InputParameters define what a function accepts
+message InputParameters {
+  // Named map of input parameter types
+  map<string,Type> parameters = 1;
+}
+
+// ReturnParameters define what a function produces
+message ReturnParameters {
+  oneof returns_oneof {
+    // Named map of return parameters (similar to input parameters)
+    Map parameters = 1;
+    // Dynamic allows a function to return any set of named values dynamically
     google.protobuf.Empty dynamic = 2;
     // Result returns the entire completed function call as a proto Result
-    // Outputs are part of that
+    // Return parameters are part of that
     // This is full delegation
     google.protobuf.Empty result = 3;
   }
@@ -91,7 +97,7 @@ message Body {
 message Environment {
   // EnvVars are the variables provided with a system exec call
   map<string,Expression> env_vars = 1;
-  // CompositionOutputs are the outputs of previous function calls in a composition
+  // CompositionOutputs are the return parameters of previous function calls in a composition
   map<string,Map> composition_outputs = 2;
   message Map {
     map<string,Value> map = 1;
@@ -99,10 +105,10 @@ message Environment {
   // Scopes are additional read-only, scoped values
   // For example "job" would contain CI variables
   map<string,Value> scopes = 3;
-  // Inputs are the provided inputs to a function
-  map<string,Expression> inputs = 4;
-  // Outputs are the named return values of a function
-  map<string,Value> outputs = 5;
+  // InputParameters are the provided input parameters to a function
+  map<string,Expression> input_parameters = 4;
+  // ReturnParameters are the named return values of a function
+  map<string,Value> return_parameters = 5;
   // WorkDir is the working directory of an system exec call
   string work_dir = 6;
   // FuncDir is the directory which contains the function and its associated files, if any
@@ -215,7 +221,7 @@ message Reference {
 
 // Result is a copy of the executed function after the call
 // All expressions will be materialized values
-// All outputs and exports will be populated
+// All return parameters and exports will be populated
 message Result {
   // Function is the materialized and completed function call
   Function function = 1;
