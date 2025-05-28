@@ -67,7 +67,8 @@ message OpRead {
   // Value is an Expression to be evaluated until it is a Value
   Expression value = 1;
   // Path is the subtree of the value to return
-  repeated PathKey path = 2;
+  // Each Expression in the path is evaluated to determine the path element
+  repeated Expression path = 2;
 }
 
 // OpWrite writes into a value
@@ -77,15 +78,8 @@ message OpWrite {
   // Into is the structure into which to write the Value
   Expression into = 2;
   // Path is where to write the value
-  repeated PathKey path = 3;
-}
-
-// PathKey is a reference to a piece of a struct or an array
-message PathKey {
-  // Key accesses a struct
-  string key = 1;
-  // Index accesses an array
-  int32 index = 2;
+  // Each Expression in the path is evaluated to determine the path element
+  repeated Expression path = 3;
 }
 
 // OpConcat concatenates multiple compatible expressions
