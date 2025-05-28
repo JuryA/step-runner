@@ -46,7 +46,7 @@ message Value {
   // Sensitive determines if this value contains sensitive information
   // Sensitivity is persistent across all operations and is propagated
   // when values are transformed or combined
-  bool sensitive = 7;
+  optional bool sensitive = 7;
 
   // Array is a wrapper for an array of Values
   message Array {
@@ -65,7 +65,7 @@ message OpEnvironment {}
 // OpRead reads into a value
 message OpRead {
   // Value is an Expression to be evaluated until it is a Value
-  Expression value = 1;
+  optional Expression value = 1;
   // Path is the subtree of the value to return
   // Each Expression in the path is evaluated to determine the path element
   repeated Expression path = 2;
@@ -74,9 +74,9 @@ message OpRead {
 // OpWrite writes into a value
 message OpWrite {
   // Value is an Expression to be evaluated until it is a Value
-  Expression value = 1;
+  optional Expression value = 1;
   // Into is the structure into which to write the Value
-  Expression into = 2;
+  optional Expression into = 2;
   // Path is where to write the value
   // Each Expression in the path is evaluated to determine the path element
   repeated Expression path = 3;

@@ -12,7 +12,7 @@ option go_package = "../proto";
 // Function is an un-named callable unit of code
 message Function {
   // Signature defines the input and outputs types
-  Signature signature = 1;
+  optional Signature signature = 1;
   // Body is the code to execute and any environment it encapsulates
   // Can be an Expression that evaluates to a Body
   oneof body_oneof {
@@ -24,9 +24,9 @@ message Function {
 // Signature defines the input and output types of a function
 message Signature {
   // Input parameters define what the function accepts
-  InputParameters input_parameters = 1;
+  optional InputParameters input_parameters = 1;
   // Return parameters define what the function produces
-  ReturnParameters return_parameters = 2;
+  optional ReturnParameters return_parameters = 2;
 }
 
 // InputParameters define what a function accepts
@@ -56,21 +56,21 @@ message ReturnParameters {
 // Essentially JSON values minus null, and binary data by value and reference
 // All types also have sensitivity metadata which persists across expression ops
 message Type {
-  ValueType type = 1;
-  bool sensitive = 3;
+  optional ValueType type = 1;
+  optional bool sensitive = 3;
 }
 
 // Value Types are JSON values minus null, plus binary data by value and reference
 enum ValueType {
-  value_type_unspecified = 0;
-  string = 1;
-  number = 2;
-  boolean = 3;
-  struct = 4;
-  array = 5;
-  function = 6;
-  // bytes (by value)
-  // oci (by reference)
+  VALUE_TYPE_UNSPECIFIED = 0;
+  STRING = 1;
+  NUMBER = 2;
+  BOOLEAN = 3;
+  STRUCT = 4;
+  ARRAY = 5;
+  FUNCTION = 6;
+  // BYTES = 7;  // (by value)
+  // OCI = 8;    // (by reference)
 }
 
 // Body is the executable part of the function
@@ -110,9 +110,9 @@ message Environment {
   // ReturnParameters are the named return values of a function
   map<string,Value> return_parameters = 5;
   // WorkDir is the working directory of an system exec call
-  string work_dir = 6;
+  optional string work_dir = 6;
   // FuncDir is the directory which contains the function and its associated files, if any
-  string func_dir = 7;
+  optional string func_dir = 7;
   // Exports are the exported environment variables from a function
   map<string,Value> exports = 8;
 }
@@ -122,7 +122,7 @@ message Exec {
   // Command is the command to exec and its arguments
   repeated string command = 1;
   // ExitCode is the exit code of a system exec call
-  int32 exit_code = 2;
+  optional int32 exit_code = 2;
 }
 
 // Composition is the composition of multiple functions
@@ -142,7 +142,7 @@ message InvocationOrExpression {
 // An invocation is a named function call
 message Invocation {
   // Name is the key under which the results of this function call will appear in composition outputs
-  string name = 1;
+  optional string name = 1;
   // Reference is a pointer to the function to call
   // Can be an Expression that evaluates to a Reference
   oneof reference_oneof {
@@ -157,7 +157,7 @@ message Invocation {
   }
   // Result is the function and its outputs after the call
   // All expressions will be materialized as values
-  Result result = 6;
+  optional Result result = 6;
 }
 
 // Reference is a pointer to a function
@@ -178,35 +178,35 @@ message Reference {
     // Path can be absolute or relative (starting with `.` or `..`)
     repeated string path = 1;
     // Filename is the file which contains the proto serialized function
-    string filename = 2;
+    optional string filename = 2;
   }
   // Git is a function stored in a git repository
   message Git {
     // Repository is the git repo
-    string repository = 1;
+    optional string repository = 1;
     // Path is where the function is located within the repo
     // Path is always absolute from the base of the repo
     repeated string path = 2;
     // Filename is the file which contains the proto serialized function
-    string filename = 3;
+    optional string filename = 3;
     // Commit is the version of the function to run as a full commit hash
-    string commit = 4;
+    optional string commit = 4;
     // Tag is the version of the function to run as a tag
     // If both tag and commit are provided, the tag must match the commit
-    string tag = 5;
+    optional string tag = 5;
   }
   // Oci is an OCI image in a registry
   message Oci {
     // Registry is the OCI image registry
-    string registry = 1;
+    optional string registry = 1;
     // Path is where the function is located within the image
     // Path is always absolute from the base of the image
     repeated string path = 2;
     // Hash is the version of the function to run as a full image hash
-    string hash = 3;
+    optional string hash = 3;
     // Tag is the version of the function to run as a tag
     // If both tag and commit are provided, the tag must match the hash    
-    string tag = 4;
+    optional string tag = 4;
   }
   // Dist is a function distributed with the function running binary
   // The binary will know how to find it
@@ -215,7 +215,7 @@ message Reference {
     // Path is always absolute from the base of the repo
     repeated string path = 1;
     // Filename is the file which contains the proto serialized function
-    string filename = 2;
+    optional string filename = 2;
   }
 }
 
@@ -224,5 +224,5 @@ message Reference {
 // All return parameters and exports will be populated
 message Result {
   // Function is the materialized and completed function call
-  Function function = 1;
+  optional Function function = 1;
 }
