@@ -4,16 +4,52 @@ package proto;
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
+import "metadata.proto";
+
 option go_package = "../proto";
 
-// Version information for protocol compatibility
-message Version {
-  // Major version for incompatible changes
-  uint32 major = 1;
-  // Minor version for backwards-compatible feature additions
-  uint32 minor = 2;
-  // Patch version for backwards-compatible bug fixes
-  uint32 patch = 3;
+// Value is a materialized value that represents a fully evaluated expression
+// It supports various data types similar to JSON plus function references
+message Value {
+  // Only one of these types can be present at a time
+  oneof type {
+    // String value for text data
+    string string = 1;
+    
+    // Numeric value for floating point numbers
+    double number = 2;
+    
+    // Boolean value for true/false conditions
+    bool boolean = 3;
+    
+    // Array of nested Values for ordered collections
+    Array array = 4;
+    
+    // Map of string keys to Values for structured data
+    Map map = 5;
+    
+    // Function reference for callable code units
+    //Function function = 6;
+    
+    // Future extensions:
+    // bytes (by value) - for binary data
+    // oci (by reference) - for container images
+  }
+  
+  // Sensitive determines if this value contains sensitive information
+  // Sensitivity is persistent across all operations and is propagated
+  // when values are transformed or combined
+  optional bool sensitive = 7;
+
+  // Array is a wrapper for an array of Values
+  message Array {
+    repeated Value values = 1;
+  }
+
+  // Map is a wrapper for a map of string to Value
+  message Map {
+    map<string, Value> values = 1;
+  }
 }
 
 // An expression is a value which requires evaluation with an environment
@@ -42,74 +78,6 @@ message Expression {
   
   // Debug metadata for tracing back to source code
   optional DebugMetadata debug_metadata = 7;
-}
-
-// Debug metadata provides information to link execution back to source code
-message DebugMetadata {
-  // Original source file path
-  optional string source_file = 1;
-  
-  // Line number in the source file
-  optional int32 line_number = 2;
-  
-  // Column number in the source file
-  optional int32 column_number = 3;
-  
-  // Original source code snippet
-  optional string source_snippet = 4;
-  
-  // Source language (YAML, etc.)
-  optional string source_language = 5;
-  
-  // Compiler/translator version that generated this proto
-  optional string compiler_version = 6;
-  
-  // Additional context-specific debug information
-  map<string, string> annotations = 7;
-}
-
-// Value is a materialized value that represents a fully evaluated expression
-// It supports various data types similar to JSON plus function references
-message Value {
-  // Only one of these types can be present at a time
-  oneof type {
-    // String value for text data
-    string string = 1;
-    
-    // Numeric value for floating point numbers
-    float64 number = 2;
-    
-    // Boolean value for true/false conditions
-    bool boolean = 3;
-    
-    // Array of nested Values for ordered collections
-    Array array = 4;
-    
-    // Map of string keys to Values for structured data
-    Map map = 5;
-    
-    // Function reference for callable code units
-    Function function = 6;
-    
-    // Future extensions:
-    // bytes (by value) - for binary data
-    // oci (by reference) - for container images
-  }
-  
-  // Sensitive determines if this value contains sensitive information
-  // Sensitivity is persistent across all operations and is propagated
-  // when values are transformed or combined
-  optional bool sensitive = 7;
-
-  // Array is a wrapper for an array of Values
-  message Array {
-    repeated Value values = 1;
-  }
-
-  // Map is a wrapper for a map of string to Value
-  message Map {
-    map<string, Value> values = 1;
-  }
 }
 
 // OpEnvironment returns the current proto Environment
@@ -162,4 +130,3 @@ message OpConcat {
   // All other types return an error
   repeated Expression expression = 1;
 }
- 

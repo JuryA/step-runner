@@ -5,19 +5,10 @@ import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
+import "metadata.proto";
 import "expression.proto";
 
 option go_package = "../proto";
-
-// Version information for protocol compatibility
-message Version {
-  // Major version for incompatible changes
-  uint32 major = 1;
-  // Minor version for backwards-compatible feature additions
-  uint32 minor = 2;
-  // Patch version for backwards-compatible bug fixes
-  uint32 patch = 3;
-}
 
 // Function is an un-named callable unit of code that can be executed either 
 // directly through system execution or as a composition of other functions.
@@ -352,11 +343,17 @@ message Result {
   // Execution-specific results based on function type
   oneof results {
     // ExitCode is the exit code of a system exec call (for Exec type functions)
-    optional int32 exit_code = 3;
+    int32 exit_code = 3;
     
     // Invocation results for composite functions (for Composition type functions)
     // These mirror the structure of the execution tree
-    repeated Result invocation_results = 4;
+    InvocationResults invocation_results = 4;
+  }
+  
+  // Wrapper message for repeated Results (since oneof fields can't be repeated)
+  message InvocationResults {
+    // Collection of results from invocations in a composition
+    repeated Result results = 1;
   }
   
   // Error information if execution failed
@@ -368,60 +365,6 @@ message Result {
   
   // Debug metadata generated during execution
   optional DebugMetadata debug_metadata = 7;
-}
-
-// Error provides detailed information about execution failures
-message Error {
-  // Error code as a machine-readable identifier
-  optional string code = 1;
-  
-  // Human-readable error message
-  optional string message = 2;
-  
-  // Detailed error information for debugging
-  optional string details = 3;
-  
-  // Source of the error (system, runtime, user code, etc.)
-  optional string source = 4;
-  
-  // Stack trace or execution path that led to the error
-  optional string stack_trace = 5;
-}
-
-// ExecutionTiming captures performance metrics for a function execution
-message ExecutionTiming {
-  // When execution started
-  optional google.protobuf.Timestamp start_time = 1;
-  
-  // When execution completed
-  optional google.protobuf.Timestamp end_time = 2;
-  
-  // Total duration in milliseconds
-  optional int64 duration_ms = 3;
-}
-
-// DebugMetadata provides information to link execution back to source code
-message DebugMetadata {
-  // Original source file path
-  optional string source_file = 1;
-  
-  // Line number in the source file
-  optional int32 line_number = 2;
-  
-  // Column number in the source file
-  optional int32 column_number = 3;
-  
-  // Original source code snippet
-  optional string source_snippet = 4;
-  
-  // Source language (YAML, etc.)
-  optional string source_language = 5;
-  
-  // Compiler/translator version that generated this proto
-  optional string compiler_version = 6;
-  
-  // Additional context-specific debug information
-  map<string, string> annotations = 7;
 }
 
 message Return {

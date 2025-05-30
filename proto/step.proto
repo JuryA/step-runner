@@ -1,8 +1,9 @@
 syntax = "proto3";
 package proto;
 
-import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+
+import "function.proto";
 
 option go_package = "../proto";
 
@@ -52,20 +53,20 @@ message FollowLogsResponse {
     bytes data = 1;
 }
 
-message Status {
+message StatusInfo {
     string id = 1;
     string message = 2;
-    Status status = 3;
+    StatusType status = 3;
     google.protobuf.Timestamp start_time = 5;
     google.protobuf.Timestamp end_time = 6;
 }
 
-enum Status {
-  status_unspecified = 0;
-  running = 1;
-  success = 2;
-  failure = 3;
-  cancelled = 4;
+enum StatusType {
+  STATUS_TYPE_UNSPECIFIED = 0;
+  RUNNING = 1;
+  SUCCESS = 2;
+  FAILURE = 3;
+  CANCELLED = 4;
 }
 
 message StatusRequest {
@@ -73,5 +74,5 @@ message StatusRequest {
 }
 
 message StatusResponse {
-    repeated Status jobs = 1;
+    repeated StatusInfo jobs = 1;
 }
