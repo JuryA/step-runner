@@ -6,20 +6,66 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "../proto";
 
+// Version information for protocol compatibility
+message Version {
+  // Major version for incompatible changes
+  uint32 major = 1;
+  // Minor version for backwards-compatible feature additions
+  uint32 minor = 2;
+  // Patch version for backwards-compatible bug fixes
+  uint32 patch = 3;
+}
+
 // An expression is a value which requires evaluation with an environment
+// Expressions allow for dynamic computation and late binding of values
 message Expression {
+  // Version of the expression definition for protocol compatibility
+  optional Version version = 1;
+
+  // The operation to perform
   oneof op {
     // Literal is an expression which has been fully evaluated
-    Value literal = 1;
+    Value literal = 2;
+    
     // OpEnvironment returns the current proto Environment
-    OpEnvironment environment = 2;
+    OpEnvironment environment = 3;
+    
     // OpRead reads into a value
-    OpRead read = 3;
+    OpRead read = 4;
+    
     // OpWrite writes into a value
-    OpWrite write = 4; 
+    OpWrite write = 5; 
+    
     // Concat concatenates multiple compatible expressions
-    OpConcat concat = 5;
+    OpConcat concat = 6;
   }
+  
+  // Debug metadata for tracing back to source code
+  optional DebugMetadata debug_metadata = 7;
+}
+
+// Debug metadata provides information to link execution back to source code
+message DebugMetadata {
+  // Original source file path
+  optional string source_file = 1;
+  
+  // Line number in the source file
+  optional int32 line_number = 2;
+  
+  // Column number in the source file
+  optional int32 column_number = 3;
+  
+  // Original source code snippet
+  optional string source_snippet = 4;
+  
+  // Source language (YAML, etc.)
+  optional string source_language = 5;
+  
+  // Compiler/translator version that generated this proto
+  optional string compiler_version = 6;
+  
+  // Additional context-specific debug information
+  map<string, string> annotations = 7;
 }
 
 // Value is a materialized value that represents a fully evaluated expression
@@ -29,20 +75,27 @@ message Value {
   oneof type {
     // String value for text data
     string string = 1;
+    
     // Numeric value for floating point numbers
     float64 number = 2;
+    
     // Boolean value for true/false conditions
     bool boolean = 3;
+    
     // Array of nested Values for ordered collections
     Array array = 4;
+    
     // Map of string keys to Values for structured data
     Map map = 5;
+    
     // Function reference for callable code units
     Function function = 6;
+    
     // Future extensions:
     // bytes (by value) - for binary data
     // oci (by reference) - for container images
   }
+  
   // Sensitive determines if this value contains sensitive information
   // Sensitivity is persistent across all operations and is propagated
   // when values are transformed or combined
@@ -60,29 +113,47 @@ message Value {
 }
 
 // OpEnvironment returns the current proto Environment
+// This is used to access the environment context during expression evaluation
 message OpEnvironment {}
 
 // OpRead reads into a value
+// This is used to access nested values within a structure
 message OpRead {
   // Value is an Expression to be evaluated until it is a Value
+  // This is the base value to read from
   optional Expression value = 1;
+  
   // Path is the subtree of the value to return
   // Each Expression in the path is evaluated to determine the path element
+  // Path elements must be valid for the structure being accessed:
+  // - For arrays: numeric indices
+  // - For maps: string keys
+  // - Attempts to access invalid paths will result in evaluation errors
   repeated Expression path = 2;
 }
 
 // OpWrite writes into a value
+// This is used to modify values within a structure
 message OpWrite {
   // Value is an Expression to be evaluated until it is a Value
+  // This is the value to write
   optional Expression value = 1;
+  
   // Into is the structure into which to write the Value
+  // This is the base value to modify
   optional Expression into = 2;
+  
   // Path is where to write the value
   // Each Expression in the path is evaluated to determine the path element
+  // Path elements must be valid for the structure being modified:
+  // - For arrays: numeric indices
+  // - For maps: string keys
+  // - Attempts to access invalid paths will result in evaluation errors
   repeated Expression path = 3;
 }
 
 // OpConcat concatenates multiple compatible expressions
+// This allows for combining values of the same type
 message OpConcat {
   // Expression(s) are the expressions to concatenate
   // Strings are compatible with strings
@@ -91,3 +162,4 @@ message OpConcat {
   // All other types return an error
   repeated Expression expression = 1;
 }
+ 
