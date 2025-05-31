@@ -1,0 +1,87 @@
+version {
+  major: 1
+  minor: 0
+  patch: 0
+}
+
+body {
+  composition {
+    invocations {
+      invocation {
+        name: "first_step"
+        reference {
+          local {
+            path: "examples"
+            filename: "hello_world.textproto"
+          }
+        }
+        environment {
+          env_vars {
+            key: "STEP_NUMBER"
+            value {
+              literal {
+                string: "1"
+              }
+            }
+          }
+        }
+      }
+    }
+    invocations {
+      invocation {
+        name: "second_step"
+        reference {
+          local {
+            path: "examples"
+            filename: "echo_env.textproto"
+          }
+        }
+        environment {
+          env_vars {
+            key: "STEP_NUMBER"
+            value {
+              literal {
+                string: "2"
+              }
+            }
+          }
+          env_vars {
+            key: "PREVIOUS_STEP"
+            value {
+              read {
+                value {
+                  environment {}
+                }
+                path {
+                  literal {
+                    string: "composition_outputs"
+                  }
+                }
+                path {
+                  literal {
+                    string: "first_step"
+                  }
+                }
+                path {
+                  literal {
+                    string: "stdout"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  environment {
+    env_vars {
+      key: "COMPOSITION_VAR"
+      value {
+        literal {
+          string: "composition value"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+version {
+  major: 1
+  minor: 0
+  patch: 0
+}
+
+body {
+  exec {
+    command: "echo"
+    command: "Hello, World!"
+  }
+  environment {
+    env_vars {
+      key: "MY_ENV_VAR"
+      value {
+        literal {
+          string: "example value"
+        }
+      }
+    }
+  }
+}
