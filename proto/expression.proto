@@ -1,0 +1,132 @@
+syntax = "proto3";
+package proto;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+import "metadata.proto";
+
+option go_package = "../proto";
+
+// Value is a materialized value that represents a fully evaluated expression
+// It supports various data types similar to JSON plus function references
+message Value {
+  // Only one of these types can be present at a time
+  oneof type {
+    // String value for text data
+    string string = 1;
+    
+    // Numeric value for floating point numbers
+    double number = 2;
+    
+    // Boolean value for true/false conditions
+    bool boolean = 3;
+    
+    // Array of nested Values for ordered collections
+    Array array = 4;
+    
+    // Map of string keys to Values for structured data
+    Map map = 5;
+    
+    // Function reference for callable code units
+    //Function function = 6;
+    
+    // Future extensions:
+    // bytes (by value) - for binary data
+    // oci (by reference) - for container images
+  }
+  
+  // Sensitive determines if this value contains sensitive information
+  // Sensitivity is persistent across all operations and is propagated
+  // when values are transformed or combined
+  optional bool sensitive = 7;
+
+  // Array is a wrapper for an array of Values
+  message Array {
+    repeated Value values = 1;
+  }
+
+  // Map is a wrapper for a map of string to Value
+  message Map {
+    map<string, Value> values = 1;
+  }
+}
+
+// An expression is a value which requires evaluation with an environment
+// Expressions allow for dynamic computation and late binding of values
+message Expression {
+  // Version of the expression definition for protocol compatibility
+  optional Version version = 1;
+
+  // The operation to perform
+  oneof op {
+    // Literal is an expression which has been fully evaluated
+    Value literal = 2;
+    
+    // OpEnvironment returns the current proto Environment
+    OpEnvironment environment = 3;
+    
+    // OpRead reads into a value
+    OpRead read = 4;
+    
+    // OpWrite writes into a value
+    OpWrite write = 5; 
+    
+    // Concat concatenates multiple compatible expressions
+    OpConcat concat = 6;
+  }
+  
+  // Debug metadata for tracing back to source code
+  optional DebugMetadata debug_metadata = 7;
+}
+
+// OpEnvironment returns the current proto Environment
+// This is used to access the environment context during expression evaluation
+message OpEnvironment {}
+
+// OpRead reads into a value
+// This is used to access nested values within a structure
+message OpRead {
+  // Value is an Expression to be evaluated until it is a Value
+  // This is the base value to read from
+  optional Expression value = 1;
+  
+  // Path is the subtree of the value to return
+  // Each Expression in the path is evaluated to determine the path element
+  // Path elements must be valid for the structure being accessed:
+  // - For arrays: numeric indices
+  // - For maps: string keys
+  // - Attempts to access invalid paths will result in evaluation errors
+  repeated Expression path = 2;
+}
+
+// OpWrite writes into a value
+// This is used to modify values within a structure
+message OpWrite {
+  // Value is an Expression to be evaluated until it is a Value
+  // This is the value to write
+  optional Expression value = 1;
+  
+  // Into is the structure into which to write the Value
+  // This is the base value to modify
+  optional Expression into = 2;
+  
+  // Path is where to write the value
+  // Each Expression in the path is evaluated to determine the path element
+  // Path elements must be valid for the structure being modified:
+  // - For arrays: numeric indices
+  // - For maps: string keys
+  // - Attempts to access invalid paths will result in evaluation errors
+  repeated Expression path = 3;
+}
+
+// OpConcat concatenates multiple compatible expressions
+// This allows for combining values of the same type
+message OpConcat {
+  // Expression(s) are the expressions to concatenate
+  // Strings are compatible with strings
+  // Structs are compatible with structs (each overlaying the previous)
+  // Arrays are compatible with arrays (each extending the array)
+  // All other types return an error
+  repeated Expression expression = 1;
+}

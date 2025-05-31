@@ -1,0 +1,378 @@
+syntax = "proto3";
+package proto;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+import "metadata.proto";
+import "expression.proto";
+
+option go_package = "../proto";
+
+// Function is an un-named callable unit of code that can be executed either 
+// directly through system execution or as a composition of other functions.
+// Functions are the primary building blocks of the execution model.
+message Function {
+  // Version of the function definition for protocol compatibility
+  optional Version version = 1;
+  
+  // Signature defines the input and outputs types
+  // This determines what the function accepts and produces
+  optional Signature signature = 2;
+  
+  // Body is the code to execute and any environment it encapsulates
+  // Can be either a direct Body or an Expression that evaluates to a Body
+  // This allows for late binding and dynamic generation of the function body
+  oneof body_oneof {
+    Body body = 3;
+    Expression body_exp = 4;
+  }
+  
+  // Debug metadata for tracing back to source code
+  // Used for debugging and error reporting to reference original source
+  optional DebugMetadata debug_metadata = 5;
+}
+
+// Signature defines the input and output types of a function
+// This establishes the contract for what the function accepts and produces
+message Signature {
+  // Input parameters define what the function accepts
+  optional InputParameters input_parameters = 1;
+  
+  // Return parameters define what the function produces
+  optional ReturnParameters return_parameters = 2;
+}
+
+// InputParameters define what a function accepts
+message InputParameters {
+  // Named map of input parameter types
+  // Keys are parameter names, values are their types
+  map<string,Type> parameters = 1;
+}
+
+// ReturnParameters define what a function produces
+message ReturnParameters {
+  oneof returns_oneof {
+    // Named map of return parameters (similar to input parameters)
+    Map parameters = 1;
+    
+    // Dynamic allows a function to return any set of named values dynamically
+    // This is used when the return structure cannot be known in advance
+    google.protobuf.Empty dynamic = 2;
+    
+    // Result returns the entire completed function call as a proto Result
+    // Return parameters are part of that
+    // This is full delegation and allows for complete transparency of execution
+    google.protobuf.Empty result = 3;
+  }
+  message Map {
+    map<string,Type> map = 1;
+  }
+}
+
+// Type is the set of types supported by functions
+// Essentially JSON values minus null, and binary data by value and reference
+// All types also have sensitivity metadata which persists across expression ops
+message Type {
+  optional ValueType type = 1;
+  
+  // Sensitive flag indicates whether this data should be treated as sensitive
+  // (e.g., redacted from logs, masked in UIs, etc.)
+  optional bool sensitive = 3;
+}
+
+// Value Types are JSON values minus null, plus binary data by value and reference
+enum ValueType {
+  VALUE_TYPE_UNSPECIFIED = 0;
+  STRING = 1;
+  NUMBER = 2;
+  BOOLEAN = 3;
+  STRUCT = 4;
+  ARRAY = 5;
+  FUNCTION = 6;
+  // BYTES = 7;  // (by value)
+  // OCI = 8;    // (by reference)
+}
+
+// Body is the executable part of the function
+// It can be either a system-exec call or a composition of other functions
+// The body also carries an environment overlay
+message Body {
+  oneof body_oneof {
+    // Exec is a system exec call (runs a command in the underlying OS)
+    Exec exec = 1;
+    
+    // Composition is the composition of multiple functions
+    // Allows for building complex functionality from simpler building blocks
+    Composition composition = 2;
+  }
+  
+  // Environment is the context needed to execute the body
+  // Can be a direct Environment or an Expression that evaluates to an Environment
+  oneof environment_oneof {
+    Environment environment = 3;
+    Expression environment_exp = 4;
+  }
+  
+  // Debug metadata for tracing back to source
+  optional DebugMetadata debug_metadata = 5;
+}
+
+// Environment is context necessary to execute a function
+// A function and an environment together represent a continuation
+// As execution encounters additional Environments, they are temporarily overlayed
+// to provide the complete execution context
+message Environment {
+  // EnvVars are the variables provided with a system exec call
+  // Keys are environment variable names, values are expressions that evaluate to their values
+  map<string,Expression> env_vars = 1;
+  
+  // CompositionOutputs are the return parameters of previous function calls in a composition
+  // Allows for passing data between function calls in a composition
+  map<string,Map> composition_outputs = 2;
+  message Map {
+    map<string,Value> map = 1;
+  }
+  
+  // Scopes are additional read-only, scoped values
+  // For example "job" would contain CI variables
+  // These provide contextual information but cannot be modified
+  map<string,Value> scopes = 3;
+  
+  // InputParameters are the provided input parameters to a function
+  // These are explicitly provided when calling the function
+  map<string,Expression> input_parameters = 4;
+  
+  // ReturnParameters are the named return values of a function
+  // These are populated during/after execution
+  map<string,Value> return_parameters = 5;
+  
+  // WorkDir is the working directory of an system exec call
+  // All relative paths in the exec call are relative to this directory
+  // Must be an absolute path or will be interpreted relative to the current working directory
+  optional string work_dir = 6;
+  
+  // FuncDir is the directory which contains the function and its associated files, if any
+  // This is useful for functions that need to reference their own resources
+  optional string func_dir = 7;
+}
+
+// Exec is a system exec call
+// Represents a direct call to the underlying operating system
+message Exec {
+  // Command is the command to exec and its arguments
+  // The first element is the command, subsequent elements are arguments
+  // Path resolution follows standard OS rules
+  repeated string command = 1;
+  
+  // Debug metadata for tracing back to source
+  optional DebugMetadata debug_metadata = 2;
+}
+
+// Composition is the composition of multiple functions
+// Allows building complex functions by combining simpler ones
+message Composition {
+  // Invocations are the individually called functions of a composition
+  // These are executed in order, with each having access to the outputs of previous invocations
+  repeated InvocationOrExpression invocations = 1;
+  
+  // Debug metadata for tracing back to source
+  optional DebugMetadata debug_metadata = 2;
+}
+
+// InvocationOrExpression represents either an Invocation or an Expression that evaluates to an Invocation
+// This allows for dynamic generation of invocations during execution
+message InvocationOrExpression {
+  oneof invocation_oneof {
+    Invocation invocation = 1;
+    Expression invocation_exp = 2;
+  }
+  
+  // Debug metadata for tracing back to source
+  optional DebugMetadata debug_metadata = 3;
+}
+
+// An invocation is a named function call within a composition
+message Invocation {
+  // Name is the key under which the results of this function call will appear in composition outputs
+  // Must be unique within the composition to avoid output collisions
+  optional string name = 1;
+  
+  // Reference is a pointer to the function to call
+  // Can be a direct Reference or an Expression that evaluates to a Reference
+  oneof reference_oneof {
+    Reference reference = 2;
+    Expression reference_exp = 3;
+  }
+  
+  // Environment is the context in which to call the function
+  // Can be a direct Environment or an Expression that evaluates to an Environment
+  oneof environment_oneof {
+    Environment environment = 4;
+    Expression environment_exp = 5;
+  }
+  
+  // Result is the function and its outputs after the call
+  // All expressions will be materialized as values
+  // This is populated after execution
+  optional Result result = 6;
+  
+  // Debug metadata for tracing back to source
+  optional DebugMetadata debug_metadata = 7;
+}
+
+// Reference is a pointer to a function
+// It can be a local file, a git repository, an OCI image, or a distributed function
+message Reference {
+  oneof materialized_oneof {
+    // Local is a function in the local filesystem
+    Local local = 1;
+    
+    // Git is a function stored in a git repository
+    Git git = 2;
+    
+    // Oci is an OCI image in a registry
+    Oci oci = 3;
+    
+    // Dist is a function distributed with the function running binary
+    Dist dist = 4;
+  }
+  
+  // Local is a function in the local filesystem
+  message Local {
+    // Path is where the function is located
+    // Path can be absolute or relative (starting with `.` or `..`)
+    // Path segments should not contain ".." to navigate up directories
+    // Path segments should not begin with "/" to prevent accessing system root
+    repeated string path = 1;
+    
+    // Filename is the file which contains the proto serialized function
+    // Must not contain path separators or ".." segments
+    optional string filename = 2;
+    
+    // Debug metadata for tracing back to source
+    optional DebugMetadata debug_metadata = 3;
+  }
+  
+  // Git is a function stored in a git repository
+  message Git {
+    // Repository is the git repo URL
+    // Must be a valid git URL format (https://, git://, etc.)
+    optional string repository = 1;
+    
+    // Path is where the function is located within the repo
+    // Path is always absolute from the base of the repo
+    // Path segments should not contain ".." to navigate up directories
+    // Path segments should not begin with "/" (this is implicit)
+    repeated string path = 2;
+    
+    // Filename is the file which contains the proto serialized function
+    // Must not contain path separators or ".." segments
+    optional string filename = 3;
+    
+    // Commit is the version of the function to run as a full commit hash
+    // Must be a valid git commit hash (40 or 7 character hex)
+    optional string commit = 4;
+    
+    // Tag is the version of the function to run as a tag
+    // If both tag and commit are provided, the tag must match the commit
+    optional string tag = 5;
+    
+    // Debug metadata for tracing back to source
+    optional DebugMetadata debug_metadata = 6;
+  }
+  
+  // Oci is an OCI image in a registry
+  message Oci {
+    // Registry is the OCI image registry
+    // Must be a valid OCI registry URL
+    optional string registry = 1;
+    
+    // Path is where the function is located within the image
+    // Path is always absolute from the base of the image
+    // Path segments should not contain ".." to navigate up directories
+    // Path segments should not begin with "/" (this is implicit)
+    repeated string path = 2;
+    
+    // Hash is the version of the function to run as a full image hash
+    // Must be a valid OCI image hash
+    optional string hash = 3;
+    
+    // Tag is the version of the function to run as a tag
+    // If both tag and commit are provided, the tag must match the hash    
+    optional string tag = 4;
+    
+    // Debug metadata for tracing back to source
+    optional DebugMetadata debug_metadata = 5;
+  }
+  
+  // Dist is a function distributed with the function running binary
+  // The binary will know how to find it
+  message Dist {
+    // Path is where the function is located within the function running binary's repository
+    // Path is always absolute from the base of the repo
+    // Path segments should not contain ".." to navigate up directories
+    // Path segments should not begin with "/" (this is implicit)
+    repeated string path = 1;
+    
+    // Filename is the file which contains the proto serialized function
+    // Must not contain path separators or ".." segments
+    optional string filename = 2;
+    
+    // Debug metadata for tracing back to source
+    optional DebugMetadata debug_metadata = 3;
+  }
+  
+  // Debug metadata for tracing back to source
+  optional DebugMetadata debug_metadata = 5;
+}
+
+// Result is a copy of the executed function after the call
+// All expressions will be materialized values
+// All return parameters and exports will be populated
+// The Result structure mirrors the execution structure, allowing for
+// tracing exactly what was run and what each output or export was
+message Result {
+  // Function is the materialized and completed function call
+  optional Function function = 1;
+  
+  // Return values and exports from the function execution
+  optional Return return = 2;
+  
+  // Execution-specific results based on function type
+  oneof results {
+    // ExitCode is the exit code of a system exec call (for Exec type functions)
+    int32 exit_code = 3;
+    
+    // Invocation results for composite functions (for Composition type functions)
+    // These mirror the structure of the execution tree
+    InvocationResults invocation_results = 4;
+  }
+  
+  // Wrapper message for repeated Results (since oneof fields can't be repeated)
+  message InvocationResults {
+    // Collection of results from invocations in a composition
+    repeated Result results = 1;
+  }
+  
+  // Error information if execution failed
+  // This provides structured error details beyond just exit codes
+  optional Error error = 5;
+  
+  // Execution timing information for performance analysis
+  optional ExecutionTiming timing = 6;
+  
+  // Debug metadata generated during execution
+  optional DebugMetadata debug_metadata = 7;
+}
+
+message Return {
+  // Outputs are the outputs of a function
+  // These are the explicitly returned values as defined in the signature
+  map<string,Value> outputs = 1;
+  
+  // Exports are the exported environment variables from a function's execution
+  // These can be used by subsequent functions in a composition
+  map<string,Value> exports = 2;
+}

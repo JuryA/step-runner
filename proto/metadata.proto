@@ -1,0 +1,72 @@
+syntax = "proto3";
+package proto;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "../proto";
+
+// Version information for protocol compatibility
+message Version {
+  // Major version for incompatible changes
+  uint32 major = 1;
+  // Minor version for backwards-compatible feature additions
+  uint32 minor = 2;
+  // Patch version for backwards-compatible bug fixes
+  uint32 patch = 3;
+}
+
+// Debug metadata provides information to link execution back to source code
+// This is used for debugging and error reporting to reference original source
+message DebugMetadata {
+  // Original source file path
+  optional string source_file = 1;
+  
+  // Line number in the source file
+  optional int32 line_number = 2;
+  
+  // Column number in the source file
+  optional int32 column_number = 3;
+  
+  // Original source code snippet
+  optional string source_snippet = 4;
+  
+  // Source language (YAML, etc.)
+  optional string source_language = 5;
+  
+  // Compiler/translator version that generated this proto
+  optional string compiler_version = 6;
+  
+  // Additional context-specific debug information
+  map<string, string> annotations = 7;
+}
+
+// ExecutionTiming captures performance metrics for a function execution
+message ExecutionTiming {
+  // When execution started
+  optional google.protobuf.Timestamp start_time = 1;
+  
+  // When execution completed
+  optional google.protobuf.Timestamp end_time = 2;
+  
+  // Total duration in milliseconds
+  optional int64 duration_ms = 3;
+}
+
+// Error provides detailed information about execution failures
+message Error {
+  // Error code as a machine-readable identifier
+  optional string code = 1;
+  
+  // Human-readable error message
+  optional string message = 2;
+  
+  // Detailed error information for debugging
+  optional string details = 3;
+  
+  // Source of the error (system, runtime, user code, etc.)
+  optional string source = 4;
+  
+  // Stack trace or execution path that led to the error
+  optional string stack_trace = 5;
+}

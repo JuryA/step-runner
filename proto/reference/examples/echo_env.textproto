@@ -1,0 +1,23 @@
+version {
+  major: 1
+  minor: 0
+  patch: 0
+}
+
+body {
+  exec {
+    command: "sh"
+    command: "-c"
+    command: "echo \"Step $STEP_NUMBER - Previous step output: $PREVIOUS_STEP\""
+  }
+  environment {
+    env_vars {
+      key: "ECHO_SPECIFIC_VAR"
+      value {
+        literal {
+          string: "specific value"
+        }
+      }
+    }
+  }
+}
