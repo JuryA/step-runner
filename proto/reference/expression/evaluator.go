@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 // Evaluator handles the evaluation of expressions with a given environment

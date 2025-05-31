@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/gitlab-org/step-runner/proto"
-	"github.com/gitlab-org/step-runner/proto/reference/environment"
-	"github.com/gitlab-org/step-runner/proto/reference/expression"
-	"github.com/gitlab-org/step-runner/proto/reference/executor"
+	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/proto/reference/environment"
+	"gitlab.com/gitlab-org/step-runner/proto/reference/expression"
+	"gitlab.com/gitlab-org/step-runner/proto/reference/executor"
 	"google.golang.org/protobuf/encoding/prototext"
 )
 

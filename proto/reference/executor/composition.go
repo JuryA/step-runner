@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gitlab-org/step-runner/proto"
-	"github.com/gitlab-org/step-runner/proto/reference/environment"
-	"github.com/gitlab-org/step-runner/proto/reference/expression"
+	"gitlab.com/gitlab-org/step-runner/proto"
+	"gitlab.com/gitlab-org/step-runner/proto/reference/environment"
+	"gitlab.com/gitlab-org/step-runner/proto/reference/expression"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
