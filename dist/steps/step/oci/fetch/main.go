@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/internal"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch/api"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch/internal"
 )
 
 func main() {

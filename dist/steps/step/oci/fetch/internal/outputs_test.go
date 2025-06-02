@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/internal"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch/internal"
 )
 
 func TestOutputs_Write(t *testing.T) {

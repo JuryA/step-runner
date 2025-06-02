@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/testutil/bldr"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch/testutil/bldr"
 )
 
 func TestRun(t *testing.T) {
