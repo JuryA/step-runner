@@ -29,7 +29,7 @@ func (o *Outputs) Write(downloadDir string, imgRef name.Reference, stepPath stri
 	if err != nil {
 		return fmt.Errorf("opening output file: %w", err)
 	}
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	outputValues := []OutputValue{
 		{Name: "fetched_step_path", Value: filepath.Join(downloadDir, stepPath)},

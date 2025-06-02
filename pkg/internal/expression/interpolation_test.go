@@ -53,10 +53,10 @@ func TestExpandString(t *testing.T) {
 		wantErr: errors.New(`job["${{ job.key }}"]: the "job[\"${{ job" was not found`),
 	}, {
 		value:   `${{ job.job_id`,
-		wantErr: errors.New(`The " job.job_id" is not closed: ${{ ... }}`),
+		wantErr: errors.New(`the " job.job_id" is not closed: ${{ ... }}`),
 	}, {
 		value:   `${{ job.job_id }} }}`,
-		wantErr: errors.New(`The " job.job_id }} " has extra '}}'`),
+		wantErr: errors.New(`the " job.job_id }} " has extra '}}'`),
 	}, {
 		value: `${{inputs.light_cycle}}`,
 		want:  `{"color":"yellow","number":3}`,

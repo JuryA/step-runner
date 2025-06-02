@@ -17,7 +17,7 @@ go-lint:
   stage: test
   image: golang:${GO_VERSION}-alpine
   script:
-    - apk add git make
+    - apk add git make curl
     - make go-lint
 
 terraform-fmt:

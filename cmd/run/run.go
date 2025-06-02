@@ -197,34 +197,34 @@ func yamlStep(options *Options) ([]byte, error) {
 	yml := bytes.NewBufferString("")
 
 	if strings.HasPrefix(options.Step, "step:") {
-		yml.WriteString(fmt.Sprintf("- %s\n", options.Step))
+		_, _ = fmt.Fprintf(yml, "- %s\n", options.Step)
 	} else if options.Step != "" {
-		yml.WriteString(fmt.Sprintf("- step: %s\n", options.Step))
+		_, _ = fmt.Fprintf(yml, "- step: %s\n", options.Step)
 	} else if options.GitURL != "" {
 		yml.WriteString("- step:\n")
 		yml.WriteString("    git:\n")
-		yml.WriteString(fmt.Sprintf("      url: %s\n", options.GitURL))
+		_, _ = fmt.Fprintf(yml, "      url: %s\n", options.GitURL)
 
 		if options.GitRev != "" {
-			yml.WriteString(fmt.Sprintf("      rev: %s\n", options.GitRev))
+			_, _ = fmt.Fprintf(yml, "      rev: %s\n", options.GitRev)
 		}
 
 		if options.GitDir != "" {
-			yml.WriteString(fmt.Sprintf("      dir: %s\n", options.GitDir))
+			_, _ = fmt.Fprintf(yml, "      dir: %s\n", options.GitDir)
 		}
 	} else if options.OCIRegistry != "" {
 		yml.WriteString("- step:\n")
 		yml.WriteString("    oci:\n")
-		yml.WriteString(fmt.Sprintf("      registry: %s\n", options.OCIRegistry))
-		yml.WriteString(fmt.Sprintf("      repository: %s\n", options.OCIRepository))
-		yml.WriteString(fmt.Sprintf("      tag: %s\n", options.OCITag))
+		_, _ = fmt.Fprintf(yml, "      registry: %s\n", options.OCIRegistry)
+		_, _ = fmt.Fprintf(yml, "      repository: %s\n", options.OCIRepository)
+		_, _ = fmt.Fprintf(yml, "      tag: %s\n", options.OCITag)
 
 		if options.OCIDir != "" {
-			yml.WriteString(fmt.Sprintf("      dir: %s\n", options.OCIDir))
+			_, _ = fmt.Fprintf(yml, "      dir: %s\n", options.OCIDir)
 		}
 
 		if options.OCIFilename != "" {
-			yml.WriteString(fmt.Sprintf("      file: %s\n", options.OCIFilename))
+			_, _ = fmt.Fprintf(yml, "      file: %s\n", options.OCIFilename)
 		}
 	} else {
 		return nil, fmt.Errorf("no step specified")
@@ -243,7 +243,7 @@ func yamlObject(name string, values map[string]string) string {
 	yml := bytes.NewBufferString(fmt.Sprintf("  %s:\n", name))
 
 	for name, value := range values {
-		yml.WriteString(fmt.Sprintf("    %s: %s\n", name, value))
+		_, _ = fmt.Fprintf(yml, "    %s: %s\n", name, value)
 	}
 
 	return yml.String()

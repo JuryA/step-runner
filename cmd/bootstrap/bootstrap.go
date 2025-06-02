@@ -39,13 +39,13 @@ func run(source, destination string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open source file %q: %w", source, err)
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	dest, err := os.Create(destination)
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer dest.Close()
+	defer func() { _ = dest.Close() }()
 
 	_, err = io.Copy(dest, src)
 	if err != nil {

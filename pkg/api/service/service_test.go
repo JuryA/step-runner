@@ -3,7 +3,6 @@ package service_test
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -238,7 +237,8 @@ func Test_StepRunnerService_Run_Vars(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, "foobarbaz", strings.TrimSpace(string(data)))
 
-			apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
+			_, err = apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
+			require.NoError(t, err)
 			assert.NoDirExists(t, job.TmpDir)
 		})
 	}
@@ -281,20 +281,22 @@ func Test_StepRunnerService_FollowLogs(t *testing.T) {
 	require.NoError(t, err)
 
 	logs := bytes.Buffer{}
+	reachedEOF := false
 
 	for {
 		p, ierr := stream.Recv()
 		if ierr == io.EOF {
-			err = ierr
+			reachedEOF = true
 			break
 		}
 		logs.Write(p.Data)
-		require.NoError(t, err)
+		require.NoError(t, ierr)
 	}
 
-	apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
+	_, err = apiClient.Close(bg, &proto.CloseRequest{Id: rr.Id})
+	require.NoError(t, err)
 
-	require.True(t, errors.Is(err, io.EOF))
+	require.True(t, reachedEOF)
 	require.Contains(t, logs.String(), `Running step "Test_StepRunnerService_FollowLogs"`)
 	require.Contains(t, logs.String(), "foo bar baz\n")
 }

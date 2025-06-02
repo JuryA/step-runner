@@ -66,13 +66,13 @@ func (a *Artifact) copyFile(src string, dst string) error {
 	if err != nil {
 		return fmt.Errorf(`open source file: %w`, err)
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
 	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE, 0444)
 	if err != nil {
 		return fmt.Errorf(`open destination file: %w`, err)
 	}
-	defer dstFile.Close()
+	defer func() { _ = dstFile.Close() }()
 
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
 		return fmt.Errorf(`copy source file to destination file: %w`, err)
