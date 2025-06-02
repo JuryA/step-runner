@@ -8,6 +8,7 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
   Semantic Versioning. See !227.
 - Authenticate when pushing to an OCI registry using the `DOCKER_AUTH_CONFIG` environment
   variable. See !220.
+- Upgrade Go to use version `1.24`. See !235.
 
 ## v0.10.0
 
