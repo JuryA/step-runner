@@ -12,17 +12,11 @@ e2e:script:run:
   run:
     - name: echo_pipeline
       script: echo ${{job.CI_PIPELINE_ID}} >${{job.CI_PROJECT_DIR}}/output.txt
+    - name: verify_echo
+      script: "[ $(cat ${{job.CI_PROJECT_DIR}}/output.txt) == ${{job.CI_PIPELINE_ID}} ]"
   artifacts:
     paths:
       - output.txt
-
-e2e:script:verify:
-  stage: e2e
-  image: alpine:${ALPINE_VERSION}
-  needs: ["e2e:script:run"]
-  script:
-    - ECHO_MESSAGE=$(cat output.txt)
-    - "[ $ECHO_MESSAGE == $CI_PIPELINE_ID ]"
 
 e2e:image-version:
   stage: e2e
@@ -61,11 +55,6 @@ e2e:action:
         action_runner_image: registry.gitlab.com/components/action-runner:v0
         inputs:
           cmd: echo ["Hi, ${{job.CI_PROJECT_NAME}}!"] | yq .[0]
-  artifacts:
-    access: developer
-    when: always
-    paths:
-      - step-results.json
 
 e2e:legacy:run:
   stage: e2e
@@ -73,21 +62,9 @@ e2e:legacy:run:
   variables:
     CI_STEPS_DEBUG: "true"
   run:
-    - name: ci_variables
+    - name: echo_pipeline_id
       step: gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@main
       inputs:
         echo: "${{job.CI_PIPELINE_ID}}"
-  artifacts:
-    access: developer
-    when: always
-    paths:
-      - step-results.json
-
-e2e:legacy:verify:
-  stage: e2e
-  image: alpine:${ALPINE_VERSION}
-  needs: ["e2e:legacy:run"]
-  script:
-    - apk add jq
-    - ECHO_MESSAGE=$(jq -r '.subStepResults[0].outputs.echo' step-results.json)
-    - "[ $ECHO_MESSAGE == $CI_PIPELINE_ID ]"
+    - name: verify_pipeline_id
+      script: "[ ${{steps.echo_pipeline_id.outputs.echo}} == ${{job.CI_PIPELINE_ID}} ]"
