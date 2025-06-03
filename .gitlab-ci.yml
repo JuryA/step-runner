@@ -6,6 +6,7 @@ e2e:action:
   variables:
     TMPDIR: /builds
     DOCKER_HOST: tcp://docker:2375
+    CI_STEPS_DEBUG: true
   run:
     - name: test_yq
       step:
