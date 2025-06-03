@@ -43,7 +43,7 @@ func interpolateString(obj *InterpolationContext, value string) (*context.Value,
 			insideString := value[open_idx:loc[0]]
 
 			if depth < 0 {
-				return nil, fmt.Errorf("The %q has extra '}}'", insideString)
+				return nil, fmt.Errorf("the %q has extra '}}'", insideString)
 			} else if depth > 0 {
 				break
 			}
@@ -66,7 +66,7 @@ func interpolateString(obj *InterpolationContext, value string) (*context.Value,
 	}
 
 	if depth > 0 {
-		return nil, fmt.Errorf("The %q is not closed: ${{ ... }}", value[open_idx:])
+		return nil, fmt.Errorf("the %q is not closed: ${{ ... }}", value[open_idx:])
 	}
 
 	// add suffix to output

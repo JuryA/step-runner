@@ -31,8 +31,8 @@ PROTO_GEN := $(wildcard proto/*.pb.go)
 GOIMPORTS := goimports
 GOIMPORTS_VERSION := v0.23.0
 
-GOLANGCI_LINT := golangci-lint
-GOLANGCI_LINT_VERSION := v1.64.7
+GOLANGCI_LINT := $(localBin)/golangci-lint
+GOLANGCI_LINT_VERSION := v2.1.6
 
 GOTESTSUM := gotestsum
 GOTESTSUM_VERSION := v1.12.1
@@ -153,9 +153,8 @@ go-fmt: $(GOIMPORTS)
 	COMMAND='git ls-files "**/*.go" | xargs $(GOIMPORTS) -w -local `awk '\''NR==1{print $$$$2; exit}'\'' go.mod`' \
 	run-for-all-go-modules
 
-.PHONY: $(GOLANGCI_LINT)
 $(GOLANGCI_LINT):
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(localBin) $(GOLANGCI_LINT_VERSION)
 
 .PHONY: go-lint
 go-lint: $(GOLANGCI_LINT)

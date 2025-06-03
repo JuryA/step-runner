@@ -112,8 +112,8 @@ func Test_Streamer(t *testing.T) {
 			filename := test.TestDirName(t)
 			s, err := New(filename)
 			require.NoError(t, err)
-			defer os.Remove(filename)
-			defer s.Close()
+			defer func() { _ = os.Remove(filename) }()
+			defer func() { _ = s.Close() }()
 
 			errs := errgroup.Group{}
 			errs.Go(func() error {
@@ -141,8 +141,8 @@ func Test_Streamer_StopBeforeFollow(t *testing.T) {
 	filename := test.TestDirName(t)
 	s, err := New(filename)
 	require.NoError(t, err)
-	defer os.Remove(filename)
-	defer s.Close()
+	defer func() { _ = os.Remove(filename) }()
+	defer func() { _ = s.Close() }()
 
 	buf := test.SyncBuff{}
 
@@ -169,8 +169,8 @@ func Test_Streamer_MultipleFollowers(t *testing.T) {
 	filename := test.TestDirName(t)
 	s, err := New(filename)
 	require.NoError(t, err)
-	defer os.Remove(filename)
-	defer s.Close()
+	defer func() { _ = os.Remove(filename) }()
+	defer func() { _ = s.Close() }()
 
 	numFollowers := 5
 	bufs := []*test.SyncBuff{}
