@@ -19,4 +19,4 @@ e2e:action:
         inputs:
           cmd: echo ["Hi, ${{job.CI_PROJECT_NAME}}!"] | yq .[0]
     - name: verify_test_yq
-      script: "[ '${{ steps.test_yq.outputs.result }}' == 'hello world' ]"`
+      script: "[ '${{ steps.test_yq.outputs.result }}' == 'hello world' ]"
