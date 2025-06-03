@@ -33,6 +33,7 @@ docker image unix:
 docker image windows:
   stage: build
   tags: [saas-windows-medium-amd64]
+  retry: 2
   needs:
     - job: binaries
       parallel:
