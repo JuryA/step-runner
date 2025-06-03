@@ -30,7 +30,7 @@ func (o *Outputs) Write(imgRef name.Reference, image v1.ImageIndex) error {
 	if err != nil {
 		return fmt.Errorf("opening output file: %w", err)
 	}
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	digest, err := image.Digest()
 	if err != nil {

@@ -39,7 +39,7 @@ func (w *DiskLayerWriter) writeLayerToDisk(layer v1.Layer, dir string) error {
 	if err != nil {
 		return fmt.Errorf("opening uncompressed reader: %w", err)
 	}
-	defer layerRd.Close()
+	defer func() { _ = layerRd.Close() }()
 
 	tr := tar.NewReader(layerRd)
 
@@ -85,7 +85,7 @@ func (w *DiskLayerWriter) writeFile(path string, content io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("creating file %q: %w", path, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if _, err := io.Copy(file, content); err != nil {
 		return fmt.Errorf("writing to file %q: %w", path, err)

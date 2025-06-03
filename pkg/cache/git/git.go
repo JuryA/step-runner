@@ -111,7 +111,7 @@ func (gf *GitFetcher) clone(ctx context.Context, repoDir, url, version string) (
 	if err != nil {
 		return "", fmt.Errorf("creating temporary worktree dir: %w", err)
 	}
-	defer os.RemoveAll(worktreeDir)
+	defer func() { _ = os.RemoveAll(worktreeDir) }()
 
 	if err := tree.Files().ForEach(func(f *object.File) error {
 		dest := filepath.Join(worktreeDir, f.Name)
@@ -119,11 +119,11 @@ func (gf *GitFetcher) clone(ctx context.Context, repoDir, url, version string) (
 			return err
 		}
 
-		src, err := f.Blob.Reader()
+		src, err := f.Blob.Reader() // nolint:staticcheck
 		if err != nil {
 			return err
 		}
-		defer src.Close()
+		defer func() { _ = src.Close() }()
 
 		mode, err := f.Mode.ToOSFileMode()
 		if err != nil {
@@ -134,7 +134,7 @@ func (gf *GitFetcher) clone(ctx context.Context, repoDir, url, version string) (
 		if err != nil {
 			return err
 		}
-		defer dst.Close()
+		defer func() { _ = dst.Close() }()
 
 		_, err = io.Copy(dst, src)
 		return err

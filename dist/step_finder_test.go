@@ -21,7 +21,7 @@ func TestFindDistributedStep(t *testing.T) {
 
 		helloTxt, err := stepFS.Open("files/hello.txt")
 		require.NoError(t, err)
-		defer helloTxt.Close()
+		defer func() { _ = helloTxt.Close() }()
 
 		helloTxtContents, err := io.ReadAll(helloTxt)
 		require.NoError(t, err)

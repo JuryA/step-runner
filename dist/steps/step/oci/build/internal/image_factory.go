@@ -140,7 +140,7 @@ func (f *ImageFactory) archive(archiveFS fs.FS) (string, error) {
 
 	// potentially unreliable, however in practice, fs.FS will be os.dirFS (a string)
 	hash := sha256.New()
-	hash.Write([]byte(fmt.Sprintf("%s", archiveFS)))
+	_, _ = fmt.Fprintf(hash, "%s", archiveFS)
 	archiveName := filepath.Join(workDir, fmt.Sprintf("%x.tar.zstd", hash.Sum([]byte{})))
 
 	if _, err := os.Stat(archiveName); err == nil {
@@ -152,16 +152,16 @@ func (f *ImageFactory) archive(archiveFS fs.FS) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("archive %s: creating file: %w", archiveName, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	zw, err := zstd.NewWriter(file)
 	if err != nil {
 		return "", fmt.Errorf("archive %s: creating zstd writer: %w", archiveName, err)
 	}
-	defer zw.Close()
+	defer func() { _ = zw.Close() }()
 
 	tw := tar.NewWriter(zw)
-	defer tw.Close()
+	defer func() { _ = tw.Close() }()
 
 	if err := tw.AddFS(archiveFS); err != nil {
 		return "", fmt.Errorf("archive: tar directory %s: %w", archiveFS, err)

@@ -69,7 +69,7 @@ func Test_Variable_Write_File(t *testing.T) {
 
 	tmp, err := os.MkdirTemp("", t.Name()+"_")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 
 	v := Variable{
 		v:       &pv,
@@ -113,7 +113,7 @@ func Test_Variables_Write(t *testing.T) {
 
 	tmp, err := os.MkdirTemp("", t.Name()+"_")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 
 	vs := New(pvs, tmp)
 	assert.Len(t, vs, len(pvs))
@@ -143,7 +143,7 @@ func Test_Prepare(t *testing.T) {
 
 	tmp, err := os.MkdirTemp("", t.Name()+"_")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 
 	vs, err := Prepare(&proto.Job{Variables: pvs}, tmp)
 	require.NoError(t, err)
