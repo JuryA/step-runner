@@ -1,4 +1,22 @@
 
-include:
-  - local: /.gitlab/ci/variables.gitlab-ci.yml
-  - local: /.gitlab/ci/e2e.gitlab-ci.yml
+e2e:action:
+  image: registry.gitlab.com/gitlab-org/step-runner:v0
+  services:
+    - docker:27.3.1-dind
+  variables:
+    TMPDIR: /builds
+    DOCKER_HOST: tcp://docker:2375
+  run:
+    - name: test_yq
+      step:
+        git:
+          url: https://gitlab.com/cam_swords/cams-action-runner
+          rev: main
+          dir: ./
+      inputs:
+        action: mikefarah/yq@master
+        action_runner_image: registry.gitlab.com/components/action-runner:v0
+        inputs:
+          cmd: echo ["Hi, ${{job.CI_PROJECT_NAME}}!"] | yq .[0]
+    - name: verify_test_yq
+      script: "[ '${{ steps.test_yq.outputs.result }}' == 'hello world' ]"`
