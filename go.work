@@ -6,6 +6,7 @@ use (
 	./.gitlab/steps/create_gitlab_release
 	./dist/steps/oci/fetch
 	./dist/steps/step/oci/build
-	integration_test
+	./dist/steps/step/oci/fetch
 	./dist/steps/step/oci/promote
+	integration_test
 )
