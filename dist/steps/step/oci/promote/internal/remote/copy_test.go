@@ -7,7 +7,7 @@ import (
 	remoteRepo "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 
-	fetchBldr "gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/testutil/bldr"
+	fetchBldr "gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch/testutil/bldr"
 	mainBldr "gitlab.com/gitlab-org/step-runner/pkg/testutil/bldr"
 
 	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/promote/internal/remote"

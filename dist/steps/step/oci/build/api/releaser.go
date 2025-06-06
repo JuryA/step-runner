@@ -11,7 +11,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	"gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
+	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch/api"
 
 	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/build/internal"
 )
