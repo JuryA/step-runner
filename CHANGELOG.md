@@ -10,6 +10,7 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
   variable. See !220.
 - Upgrade Go to use version `1.24`. See !235.
 - Promote built steps image using `step/oci/promote`. See !241.
+- Rename `oci/fetch` to `step/oci/fetch`. See !240
 
 ## v0.10.0
 
