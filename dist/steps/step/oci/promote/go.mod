@@ -6,7 +6,8 @@ require (
 	github.com/google/go-containerregistry v0.20.4
 	github.com/stretchr/testify v1.10.0
 	gitlab.com/gitlab-org/step-runner v0.10.0
-	gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch v0.0.0-20250519101345-0a1f15d2ff01
+	gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch v0.0.0-20250612100951-bbf327f52469
+	gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch v0.0.0-20250605152642-12bc6b4c595e
 )
 
 require (

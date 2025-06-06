@@ -9,7 +9,7 @@ require (
 	github.com/klauspost/compress v1.18.0
 	github.com/stretchr/testify v1.10.0
 	gitlab.com/gitlab-org/step-runner v0.7.0
-	gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch v0.0.0-20250424190425-d39951c22e9c
+	gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch v0.0.0-20250605152642-12bc6b4c595e
 	google.golang.org/protobuf v1.36.3
 )
 
