@@ -330,6 +330,11 @@ The following operations result in runtime errors:
 - Calling a non-function value
 - Accessing properties on `null`
 - Division by zero
+- Unknown identifiers
+- Accessing non-existent object properties
+- Array index out of bounds
+
+Note: The `||` operator has special handling for property-not-found and index-out-of-bounds errors. See [Logical Operators](#logical-operators) for details.
 
 ### Short-Circuit Evaluation
 
@@ -494,6 +499,8 @@ Note: Comparison operators can compare values of any type. See [Comparison Seman
 
 Note: Logical operators use short-circuit evaluation and return the actual operand value, not a boolean.
 
+**Special `||` behavior**: When the left operand results in a property-not-found or index-out-of-bounds error, `||` treats this as a falsy value and evaluates the right operand instead of propagating the error.
+
 Examples:
 
 ```js
@@ -501,6 +508,11 @@ Examples:
 null && "bar"      // null (returns left when left is falsy)
 "foo" || "bar"     // "foo" (returns left when left is truthy)
 false || "default" // "default" (returns right when left is falsy)
+
+// Special || error handling
+obj.missing || "default"    // "default" (missing property treated as falsy)
+array[999] || "fallback"    // "fallback" (out of bounds treated as falsy)
+obj.exists || "default"     // obj.exists value
 ```
 
 String concatenation examples:
