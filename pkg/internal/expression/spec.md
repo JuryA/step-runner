@@ -37,6 +37,7 @@
   - [Operators](#operators)
     - [Unary Operators](#unary-operators)
     - [Binary Operators](#binary-operators)
+  - [Template Expressions](#template-expressions)
   - [Truthiness](#truthiness)
   - [Operator Precedence](#operator-precedence)
 - [Grammar Summary](#grammar-summary)
@@ -58,6 +59,7 @@ The language is a superset of JSON - any valid JSON document is also a valid exp
 - Computed object keys
 - Single-quoted strings
 - Trailing commas in arrays and objects
+- Template expressions in strings
 
 ## Notation
 
@@ -187,6 +189,7 @@ Single-quoted strings support minimal escape sequences:
 
 - `\\` - backslash
 - `\'` - single quote
+- `\$` - single dollar sign
 
 Double-quoted strings support standard escape sequences:
 
@@ -199,13 +202,38 @@ Double-quoted strings support standard escape sequences:
 - `\v` - vertical tab
 - `\\` - backslash
 - `\"` - double quote
+- `\$` - single dollar sign
+
+Both string types support template expressions using `${{ }}` syntax. The expression inside must evaluate to a string. See [Template Expressions](#template-expressions) for details.
 
 ```ebnf
 string_lit         = single_quoted | double_quoted .
-single_quoted      = "'" { unicode_char | single_escape } "'" .
-double_quoted      = `"` { unicode_char | double_escape } `"` .
-single_escape      = `\` ( `\` | "'" ) .
-double_escape      = `\` ( "a" | "b" | "f" | "n" | "r" | "t" | "v" | `\` | `"` ) .
+single_quoted      = "'" { unicode_char | single_escape | template } "'" .
+double_quoted      = `"` { unicode_char | double_escape | template } `"` .
+single_escape      = `\` ( `\` | "'" | "$" ) .
+double_escape      = `\` ( "a" | "b" | "f" | "n" | "r" | "t" | "v" | `\` | `"` | "$" ) .
+template           = "${{" Expression "}}" .
+```
+
+Examples:
+
+```js
+// Single-quoted strings
+'Hello, world!'
+'It\'s a beautiful day'  // Escaped single quote
+'Path: C:\\Users\\Alice' // Escaped backslashes
+
+// Double-quoted strings
+"Hello, world!"
+"She said, \"Hello!\""   // Escaped double quotes
+"Line 1\nLine 2\nLine 3" // Newline characters
+"Name:\tJohn\nAge:\t30"  // Tab and newline
+"Alert\a\tBackspace\b"   // Special characters
+
+// Template expressions
+"Hello, ${{ name }}!"                                 // Simple variable interpolation
+'User: ${{ user.firstName + " " + user.lastName }}'  // Expression in single quotes
+"Path: ${{ dir }}/${{ file }}"                       // Multiple templates
 ```
 
 ## Types
@@ -393,9 +421,9 @@ Example:
 ```js
 {"name": "John", "age": 30}
 {"key": value}
-{computed_key: value}  // computed_key must evaluate to string
+{computed_key: value}          // computed_key must evaluate to string
 {"prefix" + "_suffix": value}  // expressions that produce strings
-{obj.prop: value,}  // trailing comma allowed
+{obj.prop: value,}             // trailing comma allowed
 ```
 
 Note: Object keys must evaluate to strings at runtime. Non-string keys will result in a runtime error.
@@ -515,11 +543,40 @@ array[999] || "fallback"    // "fallback" (out of bounds treated as falsy)
 obj.exists || "default"     // obj.exists value
 ```
 
-String concatenation examples:
+### Template Expressions
+
+Template expressions allow embedding expressions within string literals using the `${{ }}` syntax. Both single and double-quoted strings support templates.
+
+```ebnf
+template = "${{" Expression "}}" .
+```
+
+The expression inside the template must evaluate to a string at runtime. Non-string values will result in a runtime error. `\${{` can be used to escape template expressions.
+
+Examples:
 
 ```js
-"Hello, " + "world"     // "Hello, world"
-"Count: " + count       // Error: cannot concatenate string and number
+// Simple variable interpolation
+"Hello, ${{ name }}!"                    // "Hello, Alice!"
+'Welcome ${{ user }}'                    // "Welcome Bob"
+
+// Expressions with operators
+"Full name: ${{ firstName + " " + lastName }}"
+"Path: ${{ dir }}/${{ file }}"
+
+// Multiple templates in one string
+"${{ greeting }}, ${{ name }}! Today is ${{ day }}."
+
+// Complex expressions
+"User: ${{ user.firstName }} (${{ user.role }})"
+"Items: ${{ items[0] }}, ${{ items[1] }}"
+
+// Escape template
+"Hello, \${{ \"world!\" }}"             // "Hello, ${{ \"world!\" }}"
+
+// Errors - expression must return string
+"Count: ${{ 42 }}"                      // Error: number not string
+"Total: ${{ price + tax }}"             // Error: number not string
 ```
 
 ### Truthiness
@@ -562,6 +619,9 @@ digit  = "0" … "9" .
 escaped_single = `\` ( `\` | "'" ) .
 escaped_double = `\` ( "a" | "b" | "f" | "n" | "r" | "t" | "v" | `\` | `"` ) .
 
+// Template expressions
+template = "${{" Expression "}}" .
+
 // Tokens (lexical rules)
 identifier = letter { letter | unicode_digit } . /* except reserved */
 int_lit    = digit { digit } .
@@ -570,8 +630,8 @@ exponent   = ( "e" | "E" ) [ "+" | "-" ] digit { digit } .
 number     = int_lit | float_lit .
 
 string_lit     = single_quoted | double_quoted .
-single_quoted  = "'" { unicode_char | escaped_single } "'" .
-double_quoted  = `"` { unicode_char | escaped_double } `"` .
+single_quoted  = "'" { unicode_char | escaped_single | template } "'" .
+double_quoted  = `"` { unicode_char | escaped_double | template } `"` .
 string         = string_lit .
 
 // Operators
