@@ -15,14 +15,20 @@ func (tt TokenType) String() string {
 const (
 	Error TokenType = iota
 	EOF
+	Reserved
 
+	// types & identifiers
+	Ident
 	Number
 	String
-	Ident
 	Null
 	True
 	False
-	Reserved
+
+	// nested expressions
+	OpenExpr
+	CloseExpr
+	Template
 
 	// logical operators
 	Equal
@@ -54,6 +60,11 @@ const (
 	Dot
 )
 
+const (
+	openExprTag  = "${{"
+	closeExprTag = "}}"
+)
+
 var (
 	tokenNames = []string{
 		Error:            "error",
@@ -65,6 +76,9 @@ var (
 		True:             "true",
 		False:            "false",
 		Reserved:         "reserved",
+		OpenExpr:         openExprTag,
+		CloseExpr:        closeExprTag,
+		Template:         "template",
 		Equal:            "==",
 		NotEqual:         "!=",
 		And:              "&&",
@@ -109,6 +123,12 @@ type Scanner struct {
 
 	current Token
 	next    Token
+
+	// handle expressions in template strings
+	expr       int    // track open expressions
+	expectExpr bool   // track when Scan() should return an OpenExpr
+	brace      []int  // track open braces
+	template   []rune // track template terminations
 }
 
 type Token struct {
@@ -120,7 +140,7 @@ type Token struct {
 
 // NewScanner returns a new scanner.
 func NewScanner(expr string) *Scanner {
-	s := &Scanner{r: strings.NewReader(expr)}
+	s := &Scanner{r: strings.NewReader(expr), brace: make([]int, 1, 10)}
 	s.Scan()
 
 	return s
@@ -133,6 +153,13 @@ func (s *Scanner) Reset(expr string) {
 	s.idx = 0
 	s.current = Token{}
 	s.next = Token{}
+
+	s.expr = 0
+	s.expectExpr = false
+	s.brace = s.brace[:1]
+	clear(s.brace)
+	s.template = s.template[:0]
+
 	s.Scan()
 }
 
@@ -142,7 +169,7 @@ func (s *Scanner) Scan() Token {
 	s.next.Type = s.scan()
 	s.next.Lexeme = s.buf.String()
 	s.next.Length = utf8.RuneCountInString(s.next.Lexeme)
-	s.next.Offset = s.idx - s.next.Length
+	s.next.Offset = max(0, s.idx-s.next.Length)
 
 	return s.current
 }
@@ -159,6 +186,14 @@ func (s *Scanner) Token() Token {
 
 func (s *Scanner) scan() TokenType {
 	s.buf.Reset()
+
+	if s.expectExpr {
+		return s.handleOpenExpr()
+	}
+
+	if s.current.Type == CloseExpr {
+		return s.scanString()
+	}
 
 	// ignore whitespace
 	for unicode.IsSpace(s.read()) {
@@ -204,9 +239,9 @@ func (s *Scanner) scan() TokenType {
 	case ']':
 		return s.scanMonographOp(CloseBracket)
 	case '{':
-		return s.scanMonographOp(OpenBrace)
+		return s.scanBrace(OpenBrace)
 	case '}':
-		return s.scanMonographOp(CloseBrace)
+		return s.scanBrace(CloseBrace)
 	case ':':
 		return s.scanMonographOp(Colon)
 	case ',':
@@ -252,6 +287,25 @@ func isNumber(r rune) bool {
 	return '0' <= r && r <= '9'
 }
 
+func (s *Scanner) handleOpenExpr() TokenType {
+	s.expectExpr = false
+
+	s.expr++
+	s.brace = append(s.brace, 0)
+	s.idx += len(openExprTag)
+	s.buf.WriteString(openExprTag)
+
+	return OpenExpr
+}
+
+func (s *Scanner) handleCloseExpr() TokenType {
+	s.expr--
+	s.brace, _ = pop(s.brace)
+	s.buf.WriteRune(s.read())
+
+	return CloseExpr
+}
+
 func (s *Scanner) scanDigraphOp(next rune, typ TokenType) TokenType {
 	s.buf.WriteRune(s.read())
 	if s.peek() == next {
@@ -274,6 +328,29 @@ func (s *Scanner) scanMonoOrDigraphOp(monoTyp TokenType, next rune, diTyp TokenT
 func (s *Scanner) scanMonographOp(typ TokenType) TokenType {
 	s.buf.WriteRune(s.read())
 	return typ
+}
+
+func (s *Scanner) scanBrace(typ TokenType) TokenType {
+	s.buf.WriteRune(s.read())
+
+	switch typ {
+	case OpenBrace:
+		s.brace[s.expr]++
+		return OpenBrace
+
+	case CloseBrace:
+		if s.brace[s.expr] == 0 && s.expr > 0 && s.peek() == '}' {
+			return s.handleCloseExpr()
+		}
+
+		s.brace[s.expr]--
+		if s.brace[s.expr] < 0 {
+			break
+		}
+		return CloseBrace
+	}
+
+	return Error
 }
 
 func (s *Scanner) scanNumber() TokenType {
@@ -317,27 +394,60 @@ func (s *Scanner) scanNumber() TokenType {
 }
 
 func (s *Scanner) scanString() TokenType {
-	terminating := s.read()
-	s.buf.WriteRune(terminating)
+	var terminating rune
 
+	// a string must start with " or ', and be closed with the same, on
+	// CloseExpr, we pop the terminator from string that started the template
+	if s.current.Type == CloseExpr {
+		s.template, terminating = pop(s.template)
+	} else {
+		terminating = s.read()
+		s.buf.WriteRune(terminating)
+	}
+
+	var idx int
 	for {
 		r := s.read()
-		switch r {
-		case -1:
+
+		switch {
+		case r == -1:
 			return Error
 
-		case terminating:
+		case r == terminating:
 			s.buf.WriteRune(terminating)
+			if s.current.Type == CloseExpr {
+				return Template
+			}
 			return String
 
-		case '\\':
+		case r == '\\':
 			p := s.peek()
 
-			if p == terminating || p == '\\' {
+			if p == terminating || p == '\\' || p == '$' {
 				s.buf.WriteRune(r)
 				s.buf.WriteRune(s.read())
 				continue
 			}
+
+		case byte(r) == openExprTag[idx]:
+			idx++
+			if idx == len(openExprTag) {
+				s.idx -= len(openExprTag)
+				s.template = append(s.template, terminating)
+				s.expectExpr = true
+
+				// if template string is empty, move to OpenExpr
+				if s.buf.Len() == 0 {
+					return s.handleOpenExpr()
+				}
+
+				return Template
+			}
+			continue
+
+		case idx > 0:
+			s.buf.WriteString(openExprTag[0:idx])
+			idx = 0
 		}
 
 		s.buf.WriteRune(r)
@@ -364,4 +474,10 @@ func (s *Scanner) scanIdent() TokenType {
 	}
 
 	return Ident
+}
+
+func pop[Slice []E, E any](slice []E) ([]E, E) {
+	item := slice[len(slice)-1]
+
+	return slice[:len(slice)-1], item
 }
