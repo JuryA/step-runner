@@ -9,6 +9,7 @@ See [Releases](https://gitlab.com/gitlab-org/step-runner/-/releases) for when ch
 - Authenticate when pushing to an OCI registry using the `DOCKER_AUTH_CONFIG` environment
   variable. See !220.
 - Upgrade Go to use version `1.24`. See !235.
+- Promote built steps image using `step/oci/promote`. See !241.
 
 ## v0.10.0
 
