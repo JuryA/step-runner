@@ -34,7 +34,7 @@ func TestRun(t *testing.T) {
 		err := run(cliArgs, getEnv)
 		require.NoError(t, err)
 
-		publishedImgRef := registry.RefToImage("published/image", "1.0.1")
+		publishedImgRef := registry.RefToImage("published/image", "1")
 		imageDir := fetch(t, publishedImgRef, mainBldr.OCIPlatform.ThisPlatform)
 
 		stepYaml, err := os.ReadFile(filepath.Join(imageDir, "steps", "my-step", "step.yml"))
