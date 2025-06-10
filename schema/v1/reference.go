@@ -113,7 +113,7 @@ func (r *Reference) compileOCI(stepName string, inputs map[string]*structpb.Valu
 						Name: fetchStepName,
 						Step: &proto.Step_Reference{
 							Protocol: proto.StepReferenceProtocol_dist,
-							Path:     []string{"oci", "fetch"},
+							Path:     []string{"step", "oci", "fetch"},
 							Filename: "step.yml",
 						},
 						Inputs: map[string]*structpb.Value{ // inline the inputs
