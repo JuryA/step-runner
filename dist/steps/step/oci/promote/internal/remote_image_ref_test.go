@@ -141,3 +141,54 @@ func TestParseRemoteImageRef(t *testing.T) {
 		}
 	})
 }
+
+func TestRemoteImageRef_SemVerRefs(t *testing.T) {
+	tests := []struct {
+		name              string
+		existingTags      []string
+		publish           string
+		expectPublishTags []string
+	}{
+		{
+			name:              "publishes sem ver tags when promoting latest version",
+			existingTags:      []string{"3", "3.5", "3.5.0"},
+			publish:           "3.5.1",
+			expectPublishTags: []string{"3.5.1", "3.5", "3", "latest"},
+		},
+		{
+			name:              "don't update sem ver tags when publishing a release candidate",
+			existingTags:      []string{"3", "3.5", "3.5.0"},
+			publish:           "3.5.1-rc1",
+			expectPublishTags: []string{"3.5.1-rc1"},
+		},
+		{
+			name:              "malformed existing tags are ignored",
+			existingTags:      []string{"5.7ish"},
+			publish:           "5.7.1",
+			expectPublishTags: []string{"5.7.1", "5.7", "5", "latest"},
+		},
+		{
+			name:              "published release candidates are ignored",
+			existingTags:      []string{"5.7.1-rc1"},
+			publish:           "5.7.0",
+			expectPublishTags: []string{"5.7.0", "5.7", "5", "latest"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			remoteImgRef, err := internal.ParseRemoteImageRef("registry.gitlab.com", "project/image", test.publish)
+			require.NoError(t, err)
+
+			refs, err := remoteImgRef.SemVerRefs(test.existingTags)
+			require.NoError(t, err)
+
+			tags := make([]string, 0, len(refs))
+			for _, ref := range refs {
+				tags = append(tags, ref.Identifier())
+			}
+
+			require.Equal(t, test.expectPublishTags, tags)
+		})
+	}
+}

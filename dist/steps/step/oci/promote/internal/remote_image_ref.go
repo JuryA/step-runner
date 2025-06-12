@@ -83,3 +83,36 @@ func (ri *RemoteImageRef) String() string {
 func (ri *RemoteImageRef) Repository() name.Repository {
 	return ri.ref.Context()
 }
+
+// SemVerRefs determines which tags should be created for the published release.
+// Releasing will update the appropriate major and major.minor tags.
+// Releasing will update the latest tag if it is the latest version to be released.
+// Releasing a release candidate (e.g. 1.4.5-rc1) does not update major/minor/patch tags.
+func (ri *RemoteImageRef) SemVerRefs(existingTags []string) ([]name.Reference, error) {
+	if ri.version.IsReleaseCandidate() {
+		return []name.Reference{ri.ref}, nil
+	}
+
+	newTags := ri.version.TagsToUpdate(ParseSemanticVersions(existingTags))
+	refs := make([]name.Reference, 0, len(newTags))
+
+	for _, tag := range newTags {
+		ref, err := ri.buildRefForTag(tag)
+		if err != nil {
+			return nil, fmt.Errorf("finding tags to publish: %w", err)
+		}
+
+		refs = append(refs, ref)
+	}
+
+	return refs, nil
+}
+
+func (ri *RemoteImageRef) buildRefForTag(tag string) (name.Reference, error) {
+	ref, err := name.ParseReference(fmt.Sprintf("%s:%s", ri.ref.Context().Name(), tag))
+	if err != nil {
+		return nil, fmt.Errorf("creating ref for tag %s: %w", tag, err)
+	}
+
+	return ref, nil
+}

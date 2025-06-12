@@ -26,5 +26,15 @@ func run(args []string, getEnv internal.GetEnv) error {
 
 	slog.SetLogLoggerLevel(inputs.LogLevel)
 
-	return remote.Copy(ctx, inputs.FromImageRef, inputs.ToImageRef.MajorMinorPatch())
+	tags, err := remote.ListTags(ctx, inputs.ToImageRef.Repository())
+	if err != nil {
+		return err
+	}
+
+	toRefs, err := inputs.ToImageRef.SemVerRefs(tags)
+	if err != nil {
+		return err
+	}
+
+	return remote.CopyAll(ctx, inputs.FromImageRef, toRefs...)
 }
