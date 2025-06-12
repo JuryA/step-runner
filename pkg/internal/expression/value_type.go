@@ -25,6 +25,8 @@ func ObjectToProtoValue(object any) (*structpb.Value, error) {
 		return &v, nil
 	case *structpb.Value:
 		return v, nil
+	case map[string]*structpb.Value:
+		return structpb.NewStructValue(&structpb.Struct{Fields: v}), nil
 	default:
 		return structpb.NewValue(object)
 	}

@@ -11,6 +11,9 @@ import (
 )
 
 type Input struct {
+	// Description is a human-readable description of the input.
+	Description string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
+
 	// AdditionalProperties corresponds to the JSON schema field
 	// "additionalProperties".
 	AdditionalProperties any `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty" mapstructure:"additionalProperties,omitempty"`

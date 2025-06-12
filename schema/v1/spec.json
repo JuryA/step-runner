@@ -8,6 +8,9 @@
             "description": "Spec is a document describing the interface of a step.",
             "additionalProperties": false,
             "properties": {
+                "description": {
+                    "type": "string"
+                },
                 "spec": {
                     "$ref": "#/definitions/signature"
                 }
@@ -52,6 +55,9 @@
                 "type"
             ],
             "properties": {
+                "description":{
+                    "type": "string"
+                },
                 "type": {
                     "type": "string",
                     "description": "Type is the value type of the input.",

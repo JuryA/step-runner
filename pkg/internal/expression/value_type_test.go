@@ -12,6 +12,49 @@ type TestFoo struct {
 	Inherited int
 }
 
+func TestObjectToProtoValue(t *testing.T) {
+	cases := []struct {
+		name    string
+		object  any
+		want    *structpb.Value
+		wantErr bool
+	}{{
+		name:   "structpb.Value pointer",
+		object: structpb.NewStringValue("test"),
+		want:   structpb.NewStringValue("test"),
+	}, {
+		name:   "structpb.Value struct",
+		object: *structpb.NewStringValue("test"),
+		want:   structpb.NewStringValue("test"),
+	}, {
+		name: "map[string]*structpb.Value",
+		object: map[string]*structpb.Value{
+			"foo": structpb.NewStringValue("bar"),
+			"num": structpb.NewNumberValue(42),
+		},
+		want: structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
+			"foo": structpb.NewStringValue("bar"),
+			"num": structpb.NewNumberValue(42),
+		}}),
+	}, {
+		name:   "string",
+		object: "hello",
+		want:   structpb.NewStringValue("hello"),
+	}}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := ObjectToProtoValue(c.object)
+			if c.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, c.want, got)
+			}
+		})
+	}
+}
+
 func TestDigObject(t *testing.T) {
 	cases := []struct {
 		object  any
