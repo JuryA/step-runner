@@ -40,7 +40,7 @@ func TestOCIRegistry_Pull_Image(t *testing.T) {
 		client := api.NewClient(t.TempDir())
 		_, err := client.Pull(context.Background(), remoteImgRef, api.WithPlatforms(bldr.OCIPlatform.Generic))
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "fetching index: unexpected media type for ImageIndex(): application/vnd.docker.distribution.manifest.v2+json; call Image() instead")
+		require.Contains(t, err.Error(), "MANIFEST_UNKNOWN: OCI manifest found, but accept header does not support OCI manifests")
 	})
 
 	t.Run("fails if image does not exist on registry", func(t *testing.T) {

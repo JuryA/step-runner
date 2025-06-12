@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,7 +45,7 @@ func (b *OCIImageBuilder) WithEmptyFile(path string) *OCIImageBuilder {
 }
 
 func (b *OCIImageBuilder) Build() v1.Image {
-	img := empty.Image
+	img := mutate.MediaType(empty.Image, types.OCIManifestSchema1)
 
 	img, err := mutate.AppendLayers(img, b.layers...)
 	require.NoError(b.t, err)

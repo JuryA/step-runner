@@ -219,8 +219,10 @@ github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 gitlab.com/gitlab-org/step-runner v0.10.0 h1:DzlZwjwBcaeKM7VyDsIlB0IbzUnrzpi+Qr6ir3W0XcY=
 gitlab.com/gitlab-org/step-runner v0.10.0/go.mod h1:sO+VipCeHfOb59j5ScOU95O5AsRkErZD4/Jew4W3N+o=
-gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch v0.0.0-20250519101345-0a1f15d2ff01 h1:q3cIczGZUoZUYkDuJ2wr81meF+C+S+1LxFMQ2IE/HbE=
-gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch v0.0.0-20250519101345-0a1f15d2ff01/go.mod h1:D+K845S/CW8aUlOmwpPnAa9rqhPZB/Mxxvi7BVr1mgU=
+gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch v0.0.0-20250612100951-bbf327f52469 h1:ZSjrQ4BD1i2BKvTbI7H0Q3R1wVVnTWAcPVBkAIGrFSA=
+gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch v0.0.0-20250612100951-bbf327f52469/go.mod h1:D+K845S/CW8aUlOmwpPnAa9rqhPZB/Mxxvi7BVr1mgU=
+gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch v0.0.0-20250605152642-12bc6b4c595e h1:BwGJu2nD0L2zHcBY9URM7geGwkVAivggcLr5/JvxZLU=
+gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch v0.0.0-20250605152642-12bc6b4c595e/go.mod h1:LzCRwql0cSUFIELRQMV3rcjdSZd3tHNe/GLURdYxwcA=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
 go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
 go.opentelemetry.io/contrib/bridges/prometheus v0.57.0 h1:UW0+QyeyBVhn+COBec3nGhfnFe5lwB0ic1JBVjzhk0w=

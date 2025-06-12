@@ -16,6 +16,7 @@ spec:
       type: string
 ---
 exec:
+  work_dir: ${{step_dir}}
   command:
     - "${{step_dir}}/run"
     - "--registry"

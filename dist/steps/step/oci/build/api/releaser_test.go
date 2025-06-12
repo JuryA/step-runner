@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 
-	fetchApi "gitlab.com/gitlab-org/step-runner/dist/steps/oci/fetch/api"
+	fetchApi "gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/fetch/api"
 
 	"gitlab.com/gitlab-org/step-runner/dist/steps/step/oci/build/api"
 
